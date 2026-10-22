@@ -465,9 +465,10 @@ take down, but it is not a sandbox: a script runs with the editor's rights, like
 user runs.
 
 **Claude** (`editor/Desktop/ClaudeServer.cs`, `editor/Desktop/ClaudeTools.cs`, user docs in [claude.md](claude.md)):
-an MCP server inside the editor, on when Settings → Claude says so. It listens on `127.0.0.1` only
-(port 5731 by default), answers only a request with `Authorization: Bearer <token>` and a local
-`Host`, which keeps web pages out. `--mcp-stdio` (`editor/Desktop/ClaudeRelay.cs`) relays stdin/stdout to it
+an MCP server inside the editor, on when Settings → Claude says so. It listens on `127.0.0.1`
+(port 5731 by default; Settings' Address can choose another of this computer's addresses, or `0.0.0.0`),
+answers only a request with `Authorization: Bearer <token>` and, on `127.0.0.1`, a local `Host`, which keeps
+web pages out. `--mcp-stdio` (`editor/Desktop/ClaudeRelay.cs`) relays stdin/stdout to it
 for clients that start a program. The tools (each a `[McpServerTool]` method in `ClaudeTools`) look
 at what is open and change it as the user would, through the same code: `run_script` goes through
 `ScriptHost`, `place_pieces` through the `Hammer`, `support_check` through `Stability`.

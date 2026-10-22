@@ -24,8 +24,10 @@ public static partial class SettingsDialog
         private readonly Func<IEnumerable<string>> _readWorlds = null!;
         private CheckBox _claude = null!;
         private TextBox _port = null!;
+        private ComboBox _address = null!;
         private string _token = "";
         private TextBox _command = null!;
+        private TextBlock _remote = null!;
         private StackPanel _claudeDetails = null!;
         private CheckBox _scripts = null!;
         private TextBox _desktop = null!;

@@ -55,7 +55,54 @@ public class SettingsChoicesTests
         Assert.True(kept.ClaudeConnect);
         Assert.True(kept.ClaudeScripts);
         Assert.Equal(6000, kept.ClaudePort);
+        Assert.Equal("127.0.0.1", kept.ClaudeAddress);
         Assert.Equal(token, kept.ClaudeToken);
+    }
+
+    // The address: picked from a list that says each in words (this computer only, every network, then this computer's
+    // networks) or typed; the saved one shown as its choice; a name or nonsense is refused; another address shows in
+    // the command; every network shows this computer's 127.0.0.1 there, and under it the address another computer uses
+    // (this computer's name); saved as the address alone.
+    [AvaloniaFact]
+    public async Task ClaudesAddressIsChosenAndChecked()
+    {
+        using var t = new Temp();
+        var settings = new AppSettings { ClaudeConnect = true };
+        var owner = Owner();
+        var shown = SettingsDialog.Show(owner, settings);
+        var d = TestWindows.Shown(owner);
+        var address = d.GetLogicalDescendants().OfType<ComboBox>().Single(b => b.Name == "ClaudeAddress");
+        var command = Named(d, "ClaudeCommand");
+        var remote = d.GetLogicalDescendants().OfType<TextBlock>().Single(b => b.Name == "ClaudeRemote");
+        var choices = address.Items.Cast<string>().ToList();
+        Assert.Equal(["127.0.0.1 (this computer only)", "0.0.0.0 (every network)"], choices.Take(2));
+        Assert.All(choices.Skip(2), c => Assert.Matches(@"^\d+\.\d+\.\d+\.\d+ \(.+\)$", c));
+        Assert.Equal("127.0.0.1 (this computer only)", address.Text);
+        Assert.False(remote.IsVisible);
+        address.Text = "my-pc.local";
+        Click(Buttons(d, "Save").Single());
+        Assert.Contains(Texts(d).Split(" | "), x => x.Contains("must be an IP address"));
+        Assert.Single(owner.OwnedWindows);
+        address.Text = "192.168.1.20";
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains("http://192.168.1.20:5731/mcp", command.Text);
+        Assert.False(remote.IsVisible);
+        address.SelectedIndex = 1;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("0.0.0.0 (every network)", address.Text);
+        Assert.Contains("http://127.0.0.1:5731/mcp", command.Text);
+        Assert.True(remote.IsVisible);
+        Assert.Contains(ClaudeServer.RemoteUrl(5731), remote.Text);
+        Click(Buttons(d, "Save").Single());
+        Assert.True(await shown);
+        Assert.Equal("0.0.0.0", AppSettings.Load().ClaudeAddress);
+
+        // Opened again: the saved address shown as its choice.
+        var again = SettingsDialog.Show(owner, AppSettings.Load());
+        var d2 = TestWindows.Shown(owner);
+        Assert.Equal("0.0.0.0 (every network)", d2.GetLogicalDescendants().OfType<ComboBox>().Single(b => b.Name == "ClaudeAddress").Text);
+        Click(Buttons(d2, "Cancel").Single());
+        Assert.False(await again);
     }
 
     // Drawing: only on Windows; the driver's OpenGL off at first, saved when chosen.

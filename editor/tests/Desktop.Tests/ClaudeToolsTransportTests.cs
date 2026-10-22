@@ -129,4 +129,62 @@ public class ClaudeToolsTransportTests
         Assert.Contains("--header \"Authorization: Bearer abc\"", ClaudeServer.ClaudeCodeCommand(5731, "abc"));
         Assert.Equal(48, ClaudeServer.NewToken().Length);
     }
+
+    // On every address (Settings, Address 0.0.0.0): other computers reach it under this one's names, so any Host is
+    // taken; the token is still asked for.
+    [AvaloniaFact]
+    public async Task OnEveryAddressAnyHostIsTakenButNotWithoutTheToken()
+    {
+        using var r = new ClaudeRun();
+        var probe = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        probe.Start();
+        int port = ((IPEndPoint)probe.LocalEndpoint).Port;
+        probe.Stop();
+        var server = await ClaudeServer.Start(port, "secret", r.T, IPAddress.Any);
+        try
+        {
+            using var http = new HttpClient();
+            HttpRequestMessage Init(string? token) => new(HttpMethod.Post, ClaudeServer.Url(port, "0.0.0.0"))
+            {
+                Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1\"}}}", Encoding.UTF8, "application/json"),
+                Headers =
+                {
+                    Host = $"my-pc.local:{port}",
+                    Accept = { new MediaTypeWithQualityHeaderValue("application/json"), new MediaTypeWithQualityHeaderValue("text/event-stream") },
+                    Authorization = token == null ? null : new AuthenticationHeaderValue("Bearer", token),
+                },
+            };
+            var ct = TestContext.Current.CancellationToken;
+            Assert.Equal(HttpStatusCode.Unauthorized, (await http.SendAsync(Init(null), ct)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await http.SendAsync(Init("secret"), ct)).StatusCode);
+        }
+        finally
+        {
+            await server.Stop();
+        }
+    }
+
+    // The address Claude connects to: this computer's 127.0.0.1 for 127.0.0.1 and every address, else the one chosen.
+    [Fact]
+    public void TheUrlFollowsTheAddress()
+    {
+        Assert.Equal("http://127.0.0.1:5731/mcp", ClaudeServer.Url(5731));
+        Assert.Equal("http://127.0.0.1:5731/mcp", ClaudeServer.Url(5731, "0.0.0.0"));
+        Assert.Equal("http://127.0.0.1:5731/mcp", ClaudeServer.Url(5731, "::"));
+        Assert.Equal("http://192.168.1.20:5731/mcp", ClaudeServer.Url(5731, " 192.168.1.20 "));
+        Assert.Equal("http://[fe80::1]:5731/mcp", ClaudeServer.Url(5731, "fe80::1"));
+        Assert.Equal("http://127.0.0.1:5731/mcp", ClaudeServer.Url(5731, "not an address"));
+        Assert.Contains("http://192.168.1.20:6000/mcp --header", ClaudeServer.ClaudeCodeCommand(6000, "abc", "192.168.1.20"));
+        Assert.Null(ClaudeServer.ParseAddress("my-pc.local"));
+        Assert.Equal(IPAddress.Any, ClaudeServer.ParseAddress("0.0.0.0"));
+        // A choice of Settings' list reads as its address.
+        Assert.Equal(IPAddress.Any, ClaudeServer.ParseAddress("0.0.0.0 (every network)"));
+        Assert.Equal("http://192.168.1.20:5731/mcp", ClaudeServer.Url(5731, "192.168.1.20 (Ethernet)"));
+        Assert.True(ClaudeServer.IsEveryAddress(IPAddress.IPv6Any));
+        Assert.False(ClaudeServer.IsEveryAddress(IPAddress.Loopback));
+        // Another computer: this one's name, with .local when it has no domain.
+        Assert.Matches(@"^http://[^/:]+\.[^/:]+:5731/mcp$", ClaudeServer.RemoteUrl(5731));
+        Assert.StartsWith($"http://{Dns.GetHostName()}", ClaudeServer.RemoteUrl(5731), StringComparison.OrdinalIgnoreCase);
+        Assert.All(ClaudeServer.LocalAddresses(), a => Assert.False(IPAddress.IsLoopback(IPAddress.Parse(a.Address))));
+    }
 }
