@@ -20,9 +20,6 @@ public sealed partial class Scenes
     /// <summary>The direction of a row laid along the bare zone's diagonal (north-east), a unit vector.</summary>
     private static readonly (double X, double Z) GroundDiagonal = (Math.Sqrt(0.5), Math.Sqrt(0.5));
 
-    /// <summary>Pixels copied one to one between pictures.</summary>
-    private static readonly SKSamplingOptions Exact = new(SKFilterMode.Nearest);
-
     /// <summary>A point on the bare zone's diagonal, t metres north-east of its middle.</summary>
     private static (double X, double Z) OnDiagonal(double t) => P(t * GroundDiagonal.X, t * GroundDiagonal.Z);
 
@@ -389,7 +386,7 @@ public sealed partial class Scenes
         e.Send("wait 300");
         string full = Out("mask-warning-full.jpg");
         e.Shot(full);
-        GroundCrop(full, Out("mask-warning.jpg"), new SKRectI(GroundPairLeft - 6, 64, 718, 408));
+        Crop(full, Out("mask-warning.jpg"), new SKRectI(GroundPairLeft - 6, 64, 718, 408));
         File.Delete(full);
     }
 
@@ -485,9 +482,9 @@ public sealed partial class Scenes
         }
         try
         {
-            using var a = SKImage.FromEncodedData(before) ?? throw new InvalidOperationException($"{before}: not a picture");
-            using var b = SKImage.FromEncodedData(after) ?? throw new InvalidOperationException($"{after}: not a picture");
-            using var v = ring ? null : SKImage.FromEncodedData(view) ?? throw new InvalidOperationException($"{view}: not a picture");
+            using var a = LoadPicture(before);
+            using var b = LoadPicture(after);
+            using var v = ring ? null : LoadPicture(view);
             using var result = new SKBitmap(b.Width, b.Height);
             using (var canvas = new SKCanvas(result))
             {
@@ -505,7 +502,7 @@ public sealed partial class Scenes
                 GroundLabel(canvas, labels.Before, GroundPairLeft + half / 2f);
                 GroundLabel(canvas, labels.After, GroundPairLeft + half * 1.5f);
             }
-            GroundSave(result, Out(file));
+            SavePicture(result, Out(file));
         }
         finally
         {
@@ -529,7 +526,7 @@ public sealed partial class Scenes
         e.Shot(Out(file));
         try
         {
-            using var b = SKImage.FromEncodedData(brush) ?? throw new InvalidOperationException($"{brush}: not a picture");
+            using var b = LoadPicture(brush);
             using var shot = SKBitmap.Decode(Out(file)) ?? throw new InvalidOperationException($"{file}: not a picture");
             using (var canvas = new SKCanvas(shot))
             {
@@ -538,7 +535,7 @@ public sealed partial class Scenes
                     canvas.DrawImage(b, r, r, Exact);
                 }
             }
-            GroundSave(shot, Out(file));
+            SavePicture(shot, Out(file));
         }
         finally
         {
@@ -556,26 +553,6 @@ public sealed partial class Scenes
         var r = new SKRect(x - width / 2, GroundPairBottom - 52, x + width / 2, GroundPairBottom - 18);
         canvas.DrawRoundRect(r, 8, 8, box);
         canvas.DrawText(text, x, r.Bottom - 11, SKTextAlign.Center, font, ink);
-    }
-
-    /// <summary>A part of a picture saved as a picture of its own.</summary>
-    private static void GroundCrop(string from, string to, SKRectI part)
-    {
-        using var shot = SKImage.FromEncodedData(from) ?? throw new InvalidOperationException($"{from}: not a picture");
-        using var result = new SKBitmap(part.Width, part.Height);
-        using (var canvas = new SKCanvas(result))
-        {
-            canvas.DrawImage(shot, part, new SKRect(0, 0, part.Width, part.Height), Exact);
-        }
-        GroundSave(result, to);
-    }
-
-    /// <summary>A picture saved as a JPEG, as the editor's shots are.</summary>
-    private static void GroundSave(SKBitmap picture, string path)
-    {
-        using var jpeg = picture.Encode(SKEncodedImageFormat.Jpeg, 85);
-        using var file = File.Create(path);
-        jpeg.SaveTo(file);
     }
 
     /// <summary>
@@ -603,15 +580,15 @@ public sealed partial class Scenes
             int my = int.Parse(pointer.First(l => l.StartsWith("Y=", StringComparison.Ordinal))[2..], inv);
             // The window's top left on the display: where the pointer is less where it was put in the window.
             var (left, top) = (mx - x, my - y);
-            using var display = SKImage.FromEncodedData(screen) ?? throw new InvalidOperationException($"{screen}: not a picture");
-            using var shot = SKBitmap.Decode(path) ?? throw new InvalidOperationException($"{path}: not a picture");
+            using var display = LoadPicture(screen);
+            using var shot = LoadBitmap(path);
             using (var canvas = new SKCanvas(shot))
             {
                 // The panel's column below the box, where the list opens.
                 var part = new SKRectI(100, y - 20, 400, 849);
                 canvas.DrawImage(display, new SKRectI(part.Left + left, part.Top + top, part.Right + left, part.Bottom + top), part, Exact);
             }
-            GroundSave(shot, path);
+            SavePicture(shot, path);
         }
         finally
         {

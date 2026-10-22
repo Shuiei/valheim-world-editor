@@ -41,10 +41,7 @@ public sealed partial class Scenes
     /// </summary>
     private void SelectCtrlClick(Editor e)
     {
-        Bare(e, unsaved: false);
-        Level(e);
-        Hut(e, P(-4, -3), P(4, 3));
-        e.Send("key E");
+        HutToSelect(e);
         Camera(e, 3, 0, 200, 24, 16);
         e.Send("wait 300");
         // Points inside the hut: the ray to each crosses the near (north) wall's lower row.
@@ -96,10 +93,7 @@ public sealed partial class Scenes
     /// </summary>
     private void SelectMoving(Editor e)
     {
-        Bare(e, unsaved: false);
-        Level(e);
-        Hut(e, P(-4, -3), P(4, 3));
-        e.Send("key E");
+        HutToSelect(e);
         Camera(e, 4, 0, 200, 40, 26);
         e.Send("wait 300");
         Click(e, P(4, 0));
@@ -195,5 +189,14 @@ public sealed partial class Scenes
     {
         RunOnDisplay("xdotool", "type", "--delay", "40", text);
         e.Send("wait 300");
+    }
+
+    /// <summary>A hut on levelled ground of the bare zone, and the Select tool in hand.</summary>
+    private void HutToSelect(Editor e)
+    {
+        Bare(e, unsaved: false);
+        Level(e);
+        Hut(e, P(-4, -3), P(4, 3));
+        e.Send("key E");
     }
 }

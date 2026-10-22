@@ -328,7 +328,7 @@ public sealed partial class Scenes
     /// <summary>Names written on a picture, white on a dark rounded box, centred on each point.</summary>
     private static void Label(string file, (string Text, int X, int Y)[] labels)
     {
-        using var bitmap = SKBitmap.Decode(file) ?? throw new InvalidOperationException($"{file}: not a picture");
+        using var bitmap = LoadBitmap(file);
         using (var canvas = new SKCanvas(bitmap))
         {
             using var font = new SKFont(SKTypeface.FromFamilyName("Noto Sans", SKFontStyle.Bold), 17);
@@ -341,19 +341,19 @@ public sealed partial class Scenes
                 canvas.DrawText(text, x, y, SKTextAlign.Center, font, ink);
             }
         }
-        Save(bitmap, file);
+        SavePicture(bitmap, file);
     }
 
     /// <summary>A picture cut down to a rectangle of it.</summary>
     private static void Crop(string file, SKRectI keep)
     {
-        using var bitmap = SKBitmap.Decode(file) ?? throw new InvalidOperationException($"{file}: not a picture");
+        using var bitmap = LoadBitmap(file);
         using var part = new SKBitmap(keep.Width, keep.Height);
         if (!bitmap.ExtractSubset(part, keep))
         {
             throw new InvalidOperationException($"{file}: {keep} is not inside the picture");
         }
-        Save(part, file);
+        SavePicture(part, file);
     }
 
     /// <summary>A part of another picture drawn small, framed, over a corner of this one.</summary>
@@ -363,8 +363,8 @@ public sealed partial class Scenes
     /// <param name="to">Where it goes on this one.</param>
     private static void Inset(string file, string other, SKRectI from, SKRectI to)
     {
-        using var bitmap = SKBitmap.Decode(file) ?? throw new InvalidOperationException($"{file}: not a picture");
-        using var inset = SKBitmap.Decode(other) ?? throw new InvalidOperationException($"{other}: not a picture");
+        using var bitmap = LoadBitmap(file);
+        using var inset = LoadBitmap(other);
         using (var canvas = new SKCanvas(bitmap))
         {
             using var image = SKImage.FromBitmap(inset);
@@ -372,14 +372,6 @@ public sealed partial class Scenes
             canvas.DrawImage(image, from, to, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
             canvas.DrawRect(to, frame);
         }
-        Save(bitmap, file);
-    }
-
-    /// <summary>A picture written over its file as a JPEG.</summary>
-    private static void Save(SKBitmap bitmap, string file)
-    {
-        using var jpeg = bitmap.Encode(SKEncodedImageFormat.Jpeg, 85);
-        using var stream = File.Create(file);
-        jpeg.SaveTo(stream);
+        SavePicture(bitmap, file);
     }
 }

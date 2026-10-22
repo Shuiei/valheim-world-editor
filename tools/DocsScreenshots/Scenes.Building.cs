@@ -295,26 +295,6 @@ public sealed partial class Scenes
         File.Delete(full);
     }
 
-    /// <summary>A part of a picture saved as a picture of its own.</summary>
-    private static void Crop(string from, string to, SKRectI part)
-    {
-        using var shot = SKImage.FromEncodedData(from) ?? throw new InvalidOperationException($"{from}: not a picture");
-        using var result = new SKBitmap(part.Width, part.Height);
-        using (var canvas = new SKCanvas(result))
-        {
-            canvas.DrawImage(shot, part, new SKRect(0, 0, part.Width, part.Height), new SKSamplingOptions(SKFilterMode.Nearest));
-        }
-        SaveJpeg(result, to);
-    }
-
-    /// <summary>A picture saved as a JPEG, as the editor's shots are.</summary>
-    private static void SaveJpeg(SKBitmap picture, string path)
-    {
-        using var jpeg = picture.Encode(SKEncodedImageFormat.Jpeg, 85);
-        using var file = File.Create(path);
-        jpeg.SaveTo(file);
-    }
-
     /// <summary>
     /// The generator's picture: the window with the Dungeon panel at its top (the heading and the choices), and over
     /// the 3D view, the plan box of each level (with the Level buttons) and the summary, taken from the same panel
@@ -329,7 +309,7 @@ public sealed partial class Scenes
         var plan = new SKRectI(108, 376, 390, 600);
         var summary = new SKRectI(108, 600, 390, 652);
         const float Scale = 1.6f, Left = 456, Top = 120, Gap = 24;
-        using var window = SKBitmap.Decode(top) ?? throw new InvalidOperationException($"{top}: not a picture");
+        using var window = LoadBitmap(top);
         using (var canvas = new SKCanvas(window))
         {
             using var back = new SKPaint { Color = new SKColor(22, 25, 31) };
@@ -340,7 +320,7 @@ public sealed partial class Scenes
             canvas.DrawRoundRect(all, 8, 8, frame);
             for (int i = 0; i < levels.Count; i++)
             {
-                using var level = SKImage.FromEncodedData(levels[i]) ?? throw new InvalidOperationException($"{levels[i]}: not a picture");
+                using var level = LoadPicture(levels[i]);
                 float x = Left + i * (width + Gap);
                 canvas.DrawImage(level, plan, new SKRect(x, Top, x + width, Top + height), new SKSamplingOptions(SKFilterMode.Linear));
                 if (i == 0)
@@ -349,7 +329,7 @@ public sealed partial class Scenes
                 }
             }
         }
-        SaveJpeg(window, to);
+        SavePicture(window, to);
     }
 
     /// <summary>

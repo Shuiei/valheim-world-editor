@@ -306,8 +306,8 @@ public sealed partial class Scenes
     {
         try
         {
-            using var a = SKImage.FromEncodedData(before) ?? throw new InvalidOperationException($"{before}: not a picture");
-            using var b = SKImage.FromEncodedData(after) ?? throw new InvalidOperationException($"{after}: not a picture");
+            using var a = LoadPicture(before);
+            using var b = LoadPicture(after);
             using var result = new SKBitmap(b.Width, b.Height);
             using (var canvas = new SKCanvas(result))
             {
@@ -330,7 +330,7 @@ public sealed partial class Scenes
                 GroundLabel(canvas, labels.Before, at.Left + half / 2f);
                 GroundLabel(canvas, labels.After, at.Left + half * 1.5f);
             }
-            GroundSave(result, file);
+            SavePicture(result, file);
         }
         finally
         {
