@@ -47,4 +47,5 @@ them from the player's own Valheim install, on their computer.
   and textures from its own files, [AssetsTools.NET](https://github.com/nesrak1/AssetsTools.NET) (MIT)
   and [BCnEncoder.NET](https://github.com/Nominom/BCnEncoder.NET) (MIT or Unlicense); for Claude's
   connection, the [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk) (Apache License 2.0)
-  with ASP.NET Core (MIT).
+  with ASP.NET Core (MIT); and, to read the documentation in the Help window,
+  [Markdig](https://github.com/xoofx/markdig) (BSD 2-Clause).

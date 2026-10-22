@@ -218,16 +218,15 @@ public sealed class StartupTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void TheWindowHasItsIconAndTheStartPageLinksTheDocumentation()
+    public void TheWindowHasItsIconAndTheStartPageOpensTheHelp()
     {
         var w = new MainWindow(load: false);
         Assert.NotNull(w.Icon);
         Assert.Equal($"Valheim World Editor {BuildInfo.Version}", w.Title);
         var page = new StartPage(new AppSettings());
-        Uri? opened = null;
-        page.OpenUrl = u => { opened = u; return Task.FromResult(true); };
+        int opened = 0;
+        page.OpenHelp = () => opened++;
         page.DocsLink.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
-        Assert.Equal(new Uri(StartPage.DocsUrl), opened);
-        Assert.Equal("https://github.com/Shuiei/valheim-world-editor#readme", StartPage.DocsUrl);
+        Assert.Equal(1, opened);
     }
 }

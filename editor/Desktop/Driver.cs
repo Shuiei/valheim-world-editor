@@ -41,6 +41,10 @@ namespace TerrainEditor.Desktop;
 ///    hit &lt;n&gt;                        the search's result n (from 0) picked, as a click in its list
 ///    zones                          the map's zone filter: show the matching zones
 ///    workshop [file.blueprint]      the Workshop opened (on that blueprint); how long it took
+///    docs &lt;page[#anchor]&gt;            the Help window on that place of the documentation ("map.md#controls")
+///    docs search &lt;words&gt;            the Help window's search: {"hits": what it found}
+///    docs shot &lt;file.png&gt;            a picture of the Help window
+///    docs close                     the Help window closed
 ///    state                          what is shown, the objects, what is pending, frames drawn
 ///    quit
 /// </code>
@@ -106,6 +110,7 @@ public static partial class Driver
         ["bench"] = CmdBench,
         ["workshop"] = CmdWorkshop,
         ["bounds"] = CmdBounds,
+        ["docs"] = CmdDocs,
         ["state"] = CmdState,
         ["quit"] = CmdState,
     };
