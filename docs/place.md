@@ -6,9 +6,12 @@ Put trees, rocks, bushes, crops, building pieces and spawn points into the world
 **Build** instead: see [Workshop](workshop.md))
 
 ![The Meadows woods preset in Brush mode over open grass](images/plant-brush.jpg)
-*The see-through trees and bushes inside the brush circle are exactly what a click places.*
+*The see-through trees and bushes standing in the brush circle are exactly what a click places; the panel shows
+the Meadows woods preset and its kinds.*
 
-<!-- picture: place-brush-before-after.jpg: two frames side by side on the same empty meadow, Place tool, Brush mode, Meadows woods preset, Brush size 10 m: left the see-through preview in the brush circle before the click, right the same spot after one click with the trees standing; Place panel visible on the left of each frame -->
+![The Meadows woods brush on an empty meadow, before and after one click](images/place-brush-before-after.jpg)
+*Left: the see-through preview in the brush circle. Right: the same spot after one click, the trees and bushes
+standing where the preview showed them.*
 
 ## Use it
 

@@ -18,7 +18,10 @@ rest of the world.
 7. Press **Restore the selection (Enter)**.
 8. Look at the result. If it is right, **Save to world** (or **Apply live**).
 
-<!-- picture: area-backup.jpg: a polygon round a griefed hut (walls missing), Restore from a backup chosen, Backup list open showing "Game · date" rows, Your buildings chip on; second half: the same view after Restore the selection with the walls back -->
+![A griefed hut restored from the game's backup, before and after](../images/area-backup.jpg)
+*Left: a polygon round a hut with part of its near wall gone, **Restore from a backup** chosen, the **Backup**
+list open on the game's backup and **Your buildings** on. Right: after **Restore the selection**, the wall is
+whole again; the line above the button names the backup's save, the status bar counts what came back.*
 
 ## Check it worked
 

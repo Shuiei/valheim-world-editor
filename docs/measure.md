@@ -49,7 +49,9 @@ lines fall on multiples of the step, so sea level (30 m) always has one and the 
 *Height lines every 2 m over two mounds and a hollow, zone borders off. The View panel shows **Height lines every**
 2 m under **GROUND (game look)**; every fifth line is darker.*
 
-<!-- picture: slope-colours.jpg: one mound with gentle and steep sides plus a cliff cut, Slope colours on, Zone borders off, camera 35° above so all five colours (green, yellow-green, yellow, orange, red) show on the one mound; View panel scrolled to GROUND (game look) with Slope colours ticked -->
+![A mound with a gentle side and a cliff cut, coloured by slope; the View panel at its GROUND section](images/slope-colours.jpg)
+*Slope colours on one mound: green on the flat ground, then yellow-green, yellow and orange up its gentle side, and red
+on the cliff cut into it. The View panel shows **Slope colours** ticked under **GROUND (game look)**.*
 
 ## Shortcuts
 

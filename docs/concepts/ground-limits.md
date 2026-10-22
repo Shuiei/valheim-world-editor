@@ -91,10 +91,9 @@ The editor shows the ground with that levelling already done, and your edits go 
 the bottom left of the 3D view counts the locations in the area (and within 40 m of it), and **View → Location
 flattening** draws where they level: a ring for the flat part, a fainter one where it blends into the land.
 
-<!-- picture: concept-location-flattening.jpg: a 3 × 3 area round a Meadows village (or the trader's camp) in Game
-look, seen from above at an angle: View panel open with Location flattening on and its rings drawn round the
-location (the solid ring of the flat part, the fainter ring where it blends), the note at the bottom left counting the
-locations, nothing else selected -->
+![Location flattening round the altar of Eikthyr: a solid ring round the levelled ground, a fainter one where it blends](../images/concept-location-flattening.jpg)
+*View → **Location flattening** on, round the altar of Eikthyr: the solid ring is the flat part the game levels, the
+fainter ring where it blends back into the land. The note at the bottom left counts the locations in the area.*
 
 Why it matters:
 

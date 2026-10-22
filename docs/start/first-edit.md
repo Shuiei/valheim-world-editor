@@ -76,7 +76,8 @@ back to it, **Remove** takes out that one change only. Press `L` again to close 
 2. Read the question: it says what it writes and the **World folder**. Check that the folder is your world, not the
    copy, then click **Save**.
 
-<!-- picture: save-confirm.jpg: a saved world with a few raised zones and new trees pending; Save to world pressed; the "Save into the world" question in the middle of the window with its counts, the world folder and the three bullet points readable; the top bar's pending line visible behind it -->
+![The Save into the world question over a raised hill and new trees: what will be written, the World folder, three warnings, Save and Cancel](../images/save-confirm.jpg)
+*The question before saving: check the **World folder** line, then click **Save**.*
 
 **What you should see:** the status bar says "Saved 1 zone(s), … new object(s) to save #…", the top bar says "All
 saved", and the green dots are gone. The editor wrote a new save next to the old one and read it back to check it.

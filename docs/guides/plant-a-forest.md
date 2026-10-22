@@ -16,7 +16,9 @@ Fill a stretch of land with trees in natural groves, a field of crops in rows, o
 7. Press `Enter` to plant it.
 8. Click **Save to world** (or **Apply live**).
 
-<!-- picture: guide-forest-zone.jpg: Place tool, Zone mode, Meadows woods preset, Clumping 50%, Patch size 30 m; a zone of about 60 x 40 m drawn on open meadow with the see-through preview in groves and clearings; camera 40 m up at an angle; Place panel visible with the ZONE FILL section -->
+![Meadows woods previewed in a zone with Clumping 50% and Patch size 30 m: groves and clearings](../images/guide-forest-zone.jpg)
+*A zone of about 58 × 40 m with **Clumping** 50% and **Patch size** 30 m (and **Density** 1.5): the see-through
+trees gather in groves with clearings between them. The **ZONE FILL** rows are at the bottom of the panel.*
 
 ## A field
 

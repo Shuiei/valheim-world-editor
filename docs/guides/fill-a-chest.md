@@ -20,7 +20,9 @@ Put items into a chest, take them out, or write new text on a sign, with the Ins
 How many is cut to the largest stack the game allows for that item. Changed contents stay the chest's own: a chest
 nobody has opened does not fill itself with the game's loot over them.
 
-<!-- picture: guide-chest-slot.jpg: a wood chest selected and open in the Inspector, one slot clicked with Find an item… filled with "IronScrap", How many 20; three other slots holding items with their icons; Apply changes visible -->
+![A wood chest in the Inspector: three slots filled, the fourth taking IronScrap, How many 20](../images/guide-chest-slot.jpg)
+*Slot 4 clicked, IronScrap chosen in **Find an item…** and **How many** set to 20; Wood, Coins and Resin fill the
+first three slots. **Apply changes** puts them into the chest.*
 
 ## A sign
 

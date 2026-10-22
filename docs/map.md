@@ -81,8 +81,9 @@ only when your text starts with `_` too.
 
 ## Reset zones across the world
 
-![Reset zones across the world after Mark for reset: matching zones blue, marked zones red, the count line under the buttons](images/map-reset.jpg)
-*Blue zones match the filter; red zones are marked for reset. The line under the buttons counts them.*
+![Reset zones across the world: Meadows zones marked for reset in red, Black Forest zones matching in blue, the count line under the buttons](images/map-reset.jpg)
+*The Meadows zones were marked for reset (red), then **Black Forest** chosen and **Show matching** pressed (blue). The
+line under the buttons counts both.*
 
 Pick zones anywhere in the world by what they are, and have the game generate them again: new trees, rocks, ore and
 dungeons, for example after a Valheim update, in places nobody built. To reset the zones under one selection, use the
@@ -122,7 +123,8 @@ again and the history starts over.
 height points (`h`) and paint points (`p`) were changed, the range of the height changes (`-2.4 … 6.0 m`), and "(not
 saved)" when some changes are pending. Click a row to zoom in on that zone and pick it, ready for **Edit in 3D**.
 
-<!-- picture: map-edited-zones.jpg: world map zoomed so a dozen zones fill the view, Outline edited zones on, a few zones outlined yellow (saved changes) and two orange (pending), the Edited zones (N) section open in the side panel with one row "(not saved)" -->
+![The map close in: six edited zones outlined, the Edited zones (6) list with h and p counts, two rows marked (not saved)](images/map-edited-zones.jpg)
+*Four zones saved and two edited since: every edited zone is outlined, and the list marks the pending ones "(not saved)".*
 
 ## Shortcuts
 

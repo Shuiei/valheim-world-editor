@@ -51,8 +51,9 @@ The panel shows the settings every brush shares, then the chosen brush's own. Sh
 | **Ring** | Only a band: nothing inside 40% of the size, full strength at 70%, nothing at the edge. For crater rims, moats and earth walls. |
 | **Ragged (noise)** | A round brush whose edge comes and goes by up to a third of the size. The pattern is fixed to the world, so two strokes over the same place have the same edge. |
 
-![Five dabs of paved paint, one per brush shape, with the Shape list open](images/brush-shapes.jpg)
-*From left: Circle, Square, Ring, Ragged (noise) and the Crater rim stamp, each a dab of Paved paint.*
+![Five dabs of paved paint, one per brush shape, each labelled, with the Shape list open](images/brush-shapes.jpg)
+*One dab of Paved paint per shape, each labelled: Circle, Square, Ring, Ragged (noise) and the Crater rim stamp. The
+Shape list is open in the panel.*
 
 ### Falloffs
 
@@ -65,8 +66,9 @@ The panel shows the settings every brush shares, then the chosen brush's own. Sh
 | **Peak** | Strong only near the middle. | Spires and pits. |
 | **Sharp edge (pickaxe)** | Full strength right to the edge, nothing beyond. | Steep walls and straight cuts. |
 
-![Six mounds raised by the same stroke, one per falloff, seen from above at an angle](images/brush-falloffs.jpg)
-*The same Raise stroke with each falloff. From left: Smooth, Linear, Dome, Flat top, Peak, Sharp edge (pickaxe).*
+![Six mounds raised by the same stroke, one per falloff, each labelled, seen from above at an angle](images/brush-falloffs.jpg)
+*The same Raise stroke with each falloff, labelled: Smooth, Linear, Dome, Flat top, Peak, Sharp edge (pickaxe). Slope
+colours are on: the steeper the side, the redder.*
 
 ## Sculpt brushes
 
@@ -80,7 +82,9 @@ The panel shows the settings every brush shares, then the chosen brush's own. Sh
 | **Erode** | `O` | Weathers the ground: steep slopes slide down, or rain cuts gullies. |
 | **Restore** | `5` | Brings the ground back to how the world generated it, and removes paint. |
 
-<!-- picture: lower-smooth-restore.jpg: one strip of three before/after pairs on flat Meadows ground, same camera height: a Lower pit (Lower panel visible), a rough mound after Smooth, a raised mound half taken away by a Restore stroke with the ring on it -->
+![A pit dug with Lower, a rough mound half smoothed, and a mound half taken back with Restore; the Restore panel](images/lower-smooth-restore.jpg)
+*Labelled from left: a pit dug with Lower; a rough mound whose right half Smooth evened out; a raised mound whose right
+half Restore took back to the generated ground, the brush's ring on it.*
 
 Flatten, Smooth, Naturalize and Restore never overshoot: each moment they move the ground a share of the way to their
 aim, so holding longer only brings it closer.
@@ -89,7 +93,7 @@ aim, so holding longer only brings it closer.
 
 ![The top of a big mound levelled by one Flatten stroke started on it](images/flatten.jpg)
 *One Flatten stroke started on the mound's top levelled it. **Level to the height where the stroke starts** is on, so
-**Height (m)** is greyed and shows the height it took: 42.4 m.*
+**Height (m)** is greyed and shows the height it took: 43.4 m.*
 
 | Setting | What it does |
 |---|---|
@@ -112,9 +116,9 @@ A second stroke over the same place does not pile up more bumps. The pattern is 
 strokes join without seams. The [Path](path.md) tool's **Natural look** and the [Area](area.md) tool's **Naturalize**
 use the same settings and pattern.
 
-![Levelled ground, its left half naturalized, slope colours off](images/naturalize.jpg)
-*Levelled ground, the same camera before and after: the left half was naturalized and shows soft bumps, the right
-half stays flat.*
+![Levelled ground with slope colours on, its left half naturalized into bumps, its right half flat](images/naturalize.jpg)
+*Levelled ground with slope colours on. The left half was naturalized (Bumps 3 m, Bump size 12 m): its bumps show as
+yellow patches. The right half stays flat and plain green.*
 
 ### Erode
 
@@ -127,9 +131,9 @@ half stays flat.*
 Material that slides or washes out of the brush can land just outside it. The [Area](area.md) tool's **Erode** does
 both kinds over a whole selection at once.
 
-![The same steep mound before and after Erode (Water), the Erode panel on the left](images/erode.jpg)
-*Left: a steep, smooth-sided mound as it was raised. Right: the same mound after Erode (Water), with gullies, ragged
-flanks and material spread at its foot.*
+![The same mound before and after Erode (Water), the Erode panel on the left](images/erode.jpg)
+*The same mound from the same camera. Left: as it was raised. Right: after two seconds of Erode (Water): the rain has
+worn its top down and streaked its flanks with small gullies.*
 
 ### Restore
 
@@ -182,7 +186,9 @@ and turns with **Turn**. It works with every sculpt and paint brush.
 *Each built-in stamp put in with Stamp once. Front row from left: Mountain, Mesa (flat top), Crater rim. Back row
 from left: Dunes, Rocky ground.*
 
-<!-- picture: stamp-once.jpg: Raise, Shape Stamp: Mesa (flat top), Stamp once on, Height 8 m, panel visible with these rows; left half of the shot the square outline on flat ground before the click, right half the mesa after it, same camera -->
+![Raise with the Mesa stamp and Stamp once: the stamp's outline before the click, the mesa after it](images/stamp-once.jpg)
+*Raise with Shape **Stamp: Mesa (flat top)**, **Stamp once** on and **Height** 8 m. Left: the stamp's square outline
+on flat ground before the click. Right: the whole mesa, put in by one click.*
 
 ## No limit
 
@@ -190,7 +196,9 @@ The game keeps every ground change within 8 m of the ground it generated. A brus
 and the status bar says "Reached the game limit: ground can only move 8 m from its original height (red points)."
 See [The game's 8 m limit](concepts/ground-limits.md#the-games-8-m-limit).
 
-<!-- picture: limit-red.jpg: a Raise stroke held on flat ground until it stops at 8 m, Limit marks on in View, the mound's top tinted red, the status bar showing "Reached the game limit…" and the cursor readout "at the ±8 m limit" -->
+![A Raise stroke stopped at the game's 8 m limit, its top tinted red, and the status bar's message](images/limit-red.jpg)
+*Raise held until the ground stopped 8 m up. With **Limit marks** on, its top is tinted red; the status bar shows the
+message and the cursor readout ends "at the ±8 m limit".*
 
 **No limit: past the game's ±8 m**, at the bottom of the brush settings, lets the ground tools go up to 400 m from the
 generated ground: cliffs, canyons, spires, deep caves. It works with every sculpt brush, Stamp once,
@@ -203,7 +211,7 @@ starts. [Mountain](mountain.md) and pasting a copied place always go past the li
 
 ![The same Raise stroke twice: stopped at 8 m on the left, a tall spire with No limit on the right](images/no-limit.jpg)
 *The same Raise stroke with No limit off (left: stopped at 8 m, its top red) and on (right: far higher). The panel
-shows the switch.*
+shows the switch ticked, as for the right one.*
 
 When you save, ground past ±8 m becomes invisible ground discs that every player's game builds the same way. The save
 message says how many discs were made and how many trees and rocks were taken away, for example "No limit ground: 312

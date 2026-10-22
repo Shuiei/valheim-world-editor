@@ -5,7 +5,8 @@ Change the world of your own running game (single player, or the world you host)
 **You need:** Valheim on this computer, the editor, and about 5 minutes to install BepInEx and the WorldEditorBridge
 plugin once.
 
-<!-- picture: start-game-setup.jpg: start page, My game chosen in the side menu, Valheim without BepInEx: the card "Your game needs BepInEx and the WorldEditorBridge plugin (once, about 5 minutes)" with its three numbered steps fully visible -->
+![My game before setup: the card "Your game needs BepInEx and the WorldEditorBridge plugin" with its three steps](../images/start-game-setup.jpg)
+*What **My game** says before BepInEx and the plugin are installed: the steps below, in short.*
 
 1. Install **BepInEx** in your Valheim, once: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
    with a mod manager (r2modman, Thunderstore Mod Manager) or by hand into the Valheim folder, as its page explains.

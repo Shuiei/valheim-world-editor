@@ -63,7 +63,9 @@ The Select panel, top to bottom.
 | Double-click a part of a ship | Selects the whole ship: see [Ships and other linked objects](#ships-and-other-linked-objects). |
 | Click empty ground, or `Alt+A` | Clears the selection. |
 
-<!-- picture: select-ctrl-click.jpg: a small wooden hut in the Workshop or a test world, Select tool, three wall pieces selected with Ctrl + click, the last one clicked outlined in lighter yellow, the other two in orange; Select panel visible on the left; camera at eye height 8 m from the hut -->
+![Three wall pieces of a hut selected with Ctrl + click](images/select-ctrl-click.jpg)
+*A click on one wall piece, then `Ctrl` + click on two more: the last one clicked is outlined in lighter yellow,
+the others in orange, and the status bar counts the three.*
 
 ## Select many at once
 
@@ -86,7 +88,7 @@ one wall.
 hidden behind the near wall are left out. The status bar counts the objects.*
 
 ![The same box with Select through](images/select-through.jpg)
-*The same box with **Select through** on: 33 pieces, the floor and the chest behind the near wall too.*
+*The same box with **Select through** on: 34 pieces, the floor and the chest behind the near wall too.*
 
 ![A box over a hut with Built pieces only](images/select-pick.jpg)
 ***Pick: Built pieces only** and a box over the whole hut among rocks and bushes: the hut's 58 pieces alone.*
@@ -120,7 +122,8 @@ The status bar follows the move: "Moving 12 object(s): 4.5 m, turned 15°, +0.25
 object keeps its data: a chest its contents, a sign its text, a piece its builder. See
 [Snapping](concepts/objects.md#snapping) for how a move lands.
 
-<!-- picture: select-moving.jpg: a small wooden hut selected whole in a test world, Select tool, mid-drag on the red X arrow with Put each object on the ground on; status bar reads "Moving N object(s): 4.5 m"; arrows and ring visible; Select panel on the left -->
+![A hut selected whole, its red X arrow being dragged](images/select-moving.jpg)
+*Dragging the red X arrow of a hut selected whole: the status bar follows the move, "Moving 40 object(s): 4.5 m".*
 
 ## Copy, cut and paste
 
@@ -134,9 +137,9 @@ paint). `Ctrl+X` cuts: the same copy, then the objects leave the world, so pasti
 The Inspector shows everything one object holds in the save and lets you change it. Open it with **Inspect data (I)**,
 or double-click a chest (or any object that is not a building piece).
 
-![A chest with three items open in the Inspector](images/inspector.jpg)
-*Close on a chest holding three items, open in the Inspector: its slots as in game with the item icons, then every
-value under DATA.*
+![A chest with four items open in the Inspector](images/inspector.jpg)
+*Close on a chest holding four items, open in the Inspector: its slots as in game, each with the item's name and
+how many, then every value under DATA.*
 
 At the top: the object's name, id, place and turn. For a spawn point or a nest, what it spawns
 (`Spawn point: Boar · 0–2 ★ · spawns once`); for a mod's object, which mod it is from.

@@ -7,8 +7,8 @@ saving, History and the View panel.
 `F3` for the help card · **Works in:** saved worlds, live, the Workshop
 
 ![The 3D editor with Raise chosen: tool rail, Raise's panel, top bar, View panel and status bar](images/overview.jpg)
-*A small base with the Raise brush chosen. Left: the tool rail and the tool's panel. Top: the top bar. Right: the
-View panel. Bottom: the status bar.*
+*A small base in a 3 × 3 area, the Raise brush chosen (its ring on the grass). Left: the tool rail and the tool's
+panel. Top: the top bar. Right: the View panel. Bottom: the status bar, reading the ground under the pointer.*
 
 ## Use it
 
@@ -91,8 +91,9 @@ formula, Select's options, which Place categories are open, the right-hand panel
 In the view, every new object not saved or applied yet carries a **green dot**, except while it is selected (its
 outline marks it then). **View → Unsaved marks** hides the dots; the objects stay.
 
-![New trees on levelled ground, each with a green dot](images/unsaved.jpg)
-*Close up on trees just planted: each carries a green dot until it is saved, and the pending line counts them.*
+![Ten young beeches just planted on levelled ground, each with a green dot at its foot, one enlarged in the corner](images/unsaved.jpg)
+*Young trees just planted: each carries a small green dot at its foot until it is saved (one enlarged in the
+corner), and the pending line counts them: "Unsaved: 1 zone, 10 added".*
 
 ## The tool rail
 
@@ -160,7 +161,8 @@ game. The area controls are not in the Workshop.
 folder. Close Valheim (the game or the server) before you save: a running game writes over your changes the next
 time it saves.
 
-<!-- picture: save-confirm.jpg: a saved world with a few raised zones and new trees pending; Save to world pressed; the "Save into the world" question in the middle of the window with its counts, the world folder and the three bullet points readable; the top bar's pending line visible behind it -->
+![The Save into the world question over a raised hill and new trees: what will be written, the World folder, three warnings, Save and Cancel](images/save-confirm.jpg)
+*Nothing is written until you click **Save**: the question counts what goes in, names the **World folder** and warns you to close Valheim first.*
 
 The result says what was saved ("Saved 4 zone(s), 2 deleted object(s), 12 new object(s) to save #37.") and lists
 what could not be, with the reason:
@@ -279,9 +281,9 @@ already includes the flattening the game does around them. Close it with its ×.
 
 ## The help card
 
-![The Controls help card over the zone, scrolled down to This computer](images/help.jpg)
-*The **Controls** card (`F3`), scrolled down: the main keys, then **This computer** with the graphics card and the
-frame rate.*
+![The Controls help card scrolled to its end: the last keys, then This computer with the frame rate and graphics card](images/help.jpg)
+*The **Controls** card (`F3`), scrolled to its end: the last keys, then **This computer** with the frame rate, the
+graphics card and **Record frame rates**.*
 
 **?**, `?` or `F3` opens the **Controls** card: the main mouse actions and keys, with a reminder of the ±8 m limit and
 the locked edge. Every key is on [Shortcuts](help/shortcuts.md).
@@ -321,8 +323,9 @@ editor finds the usual places by itself: Valheim in every Steam library (Flatpak
 BepInEx in the Valheim folder and in the default r2modman and Thunderstore Mod Manager profiles, and worlds in
 Valheim's own world folders (Proton's too).
 
-![The Settings dialog](images/settings.jpg)
-*Settings, from **Language** at the top down to **History** and **Drawing**.*
+![Settings in two halves: Language, the folders and Claude (off) on the left; Mod extensions, Add-ons, History and Save on the right](images/settings.jpg)
+*Settings scrolls: its top on the left, its end on the right, down to **History** and **Save**. **Drawing** shows only
+on Windows.*
 
 | Setting | What it does |
 |---|---|

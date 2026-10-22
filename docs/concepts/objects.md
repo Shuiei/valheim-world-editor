@@ -153,10 +153,9 @@ piece in the colours of the game's build mode:
 | Grausten | 2000 | 100 | 33 % | 10 % |
 | Ancient | 5000 | 100 | 25 % | 7 % |
 
-<!-- picture: concept-support-stone-wood.jpg: the Workshop plot, Support check on, two builds side by side seen from
-the side: left a stone wall three pieces high with one stone wall piece reaching 1 m out sideways from its top (that
-piece red, falling count in the top bar), right a wood wall with wood beams reaching three or four metres out (green to
-yellow to orange along the beams); top bar visible -->
+![Stone walls with a red overhang beside wood walls whose overhang goes green, yellow, orange](../images/concept-support-stone-wood.jpg)
+*Left, three stone walls stacked: light blue on the ground, green above, and the one wall reaching out 2 m from the top
+red, the "1 would fall" in the top bar. Right, wood walls hanging out 6 m from a post: green, then yellow, then orange.*
 
 That is why stone stands tall but cannot reach out (one metre sideways takes all its support), and why wood reaches
 further out than stone but not as high.
@@ -257,10 +256,9 @@ A copy (from the Area tool or a blueprint) holds:
 The Select tool's copy differs: trees, rocks and the like each land on the ground where they go, and building pieces
 keep the building's shape with the ground under them.
 
-<!-- picture: concept-paste-clear-site.jpg: two copies of the same small hut pasted side by side into the slope of a
-mound, Game look, seen from the side and a little above: left pasted with Clear the site off (the hill runs through
-the walls and floor), right with it on (the ground dug out round the hut down to its floor, trees in the footprint
-gone); Paste panel visible with the Clear the site switch -->
+![A stone hut pasted into the side of a mound with Clear the site on, before and after the click](../images/paste-clear-site.jpg)
+*Before the click (left), the paste outline cuts into the mound; after it (right), the ground in the hut's way is dug
+out down to its floor, in the same undo step.*
 
 With **Clear the site** on, each paste also makes room for itself, in the same undo step:
 

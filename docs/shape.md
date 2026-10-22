@@ -5,9 +5,10 @@ you write as a formula.
 
 **Where:** tool rail, **CREATE** section · **Key:** `G` · **Works in:** saved worlds, live
 
-![Six Shape presets placed side by side, each labelled, with the Shape panel](images/shape.jpg)
+![Six Shape presets side by side, each named, slope colours on, with the Shape panel showing the Mound formula](images/shape.jpg)
 *Front row from left: Mound, Cone, Mesa. Back row from left: Crater, Moat (ring ditch), Ridged hill, each at the
-default radius of 16 m. The panel shows the Mound preset and its formula `h * smooth(1 - d / r)`.*
+default radius of 16 m and height of 5 m, with **Slope colours** on in View so their slopes read. The panel shows the
+Mound preset and its formula `h * smooth(1 - d / r)`; the ring round the mound is the radius.*
 
 ## Use it
 
@@ -26,7 +27,9 @@ default radius of 16 m. The panel shows the Mound preset and its formula `h * sm
 | **Height** | How high it rises, or how deep craters, moats and bowls dig (m, default 5). It is `h` in the formula. |
 | **Formula** | How many metres to add to the ground at each point within the radius; a negative number digs. A mistake shows in orange under the box, and the shape cannot be placed until it is fixed. |
 
-<!-- picture: shape-formula-error.jpg: Shape panel only, cropped to the panel, Formula… chosen, the formula box holding `h * smooth(1 - d / ` (unfinished), the orange error line under it -->
+![The Shape panel with an unfinished formula and the orange error line under the formula box](images/shape-formula-error.jpg)
+*An unfinished formula: the list switched to **Formula…**, and the orange line under the box says what is wrong
+("the formula ends too early").*
 
 ## Write a formula
 

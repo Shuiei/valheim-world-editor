@@ -7,7 +7,7 @@ See a seed's world before it exists, search many seeds for one that suits you, a
 
 ![A seed's world on the New world page: land coloured by biome, the start, bosses' altars and traders' spots marked, the seed's facts on the right](images/new-world.jpg)
 *The red dot is the start, purple diamonds are bosses' altars, the yellow, green and pink dots are the traders' spots.
-The column on the right lists the seed's facts.*
+The column on the right lists the seed's facts, here scrolled down to the bosses' nearest altars.*
 
 The world you create is a normal Valheim world, made by the game's own rules from its seed: players join it without
 any mod, console players on crossplay included (unless you choose a world generation mod's generator, see
@@ -62,7 +62,8 @@ them: the editor replays the game's placement rules, read from your Valheim's fi
 ## Dungeons
 
 ![The same seed with four kinds of dungeon shown as small coloured squares, and the Dungeons (the nearest) list](images/new-world-dungeons.jpg)
-*Each small square is one dungeon; its colour is its kind, as in the switches and the list.*
+*Four kinds switched on: each small square is one dungeon, its colour its kind, as in the switches and in
+**Dungeons (the nearest)** (distance, biome, how many in the world and within 2 km).*
 
 The **Dungeons** switches show **Burial chambers**, **Troll caves**, **Sunken crypts**, **Frost caves**, **Infested
 mines**, **Charred fortresses** and **Hildir's dungeons**. The editor starts finding them as soon as a seed is shown
@@ -94,7 +95,9 @@ land joined to land without crossing deeper water.
 ## Find a seed
 
 ![Find a seed: the wish list, then the best seeds found, each as a small map with its seed and score](images/new-world-find.jpg)
-*The wishes on the left; the best seeds found under **Found seeds**, best first. Click one to see it on the large map.*
+*The wishes (here a large landmass with land all around, a Swamp within 1500 m and a Mountain within 2000 m, 150
+seeds); the best seeds found under **Found seeds**, best first. The first was clicked: its border lights up and its
+world fills the large map.*
 
 **Find a seed** looks at many random seeds in the background and keeps the best for your wishes. 0 in a distance box
 means "no wish". For a step-by-step search, see [Find a seed with what you want near the start](guides/find-a-seed.md).

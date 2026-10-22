@@ -82,4 +82,50 @@ public sealed partial class Scenes
         e.Send($"choose {action}");
         e.Send(apply ? "key Return" : "state");
     }
+
+    /// <summary>
+    /// A left click on a point of the editor's window (pixels from its top left) with xdotool, for what the driver
+    /// cannot click by its name (a row of a list that is not a drop-down); the pointer is then moved off the window.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">xdotool is missing or fails, or the window is not found.</exception>
+    private static void ClickWindow(Editor e, int x, int y)
+    {
+        string window = RunXdotool("search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault()
+            ?? throw new InvalidOperationException("the editor's window was not found");
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        RunXdotool("mousemove", "--window", window, x.ToString(inv), y.ToString(inv), "click", "1");
+        RunXdotool("mousemove", "1915", "1075");
+        e.Send("wait 300");
+    }
+
+    /// <summary>
+    /// The programs a scene may run on the display: xdotool (pointer and keys the driver cannot give), ImageMagick's
+    /// import (the screen as it is, an open list included) and timeout (a wait for a window, with a limit).
+    /// </summary>
+    private static readonly string[] DisplayPrograms = ["xdotool", "import", "timeout"];
+
+    /// <summary>
+    /// Runs one of <see cref="DisplayPrograms"/> with these arguments, each passed as it is (no shell), and waits for it.
+    /// </summary>
+    /// <returns>What it wrote.</returns>
+    /// <exception cref="InvalidOperationException">It is not one of them, does not start or fails.</exception>
+    private static string RunOnDisplay(string program, params string[] args)
+    {
+        if (!DisplayPrograms.Contains(program))
+        {
+            throw new InvalidOperationException($"{program} is not a display program");
+        }
+        var start = new System.Diagnostics.ProcessStartInfo(program) { RedirectStandardOutput = true, UseShellExecute = false };
+        foreach (string a in args)
+        {
+            start.ArgumentList.Add(a);
+        }
+        using var p = System.Diagnostics.Process.Start(start) ?? throw new InvalidOperationException($"{program} did not start");
+        string output = p.StandardOutput.ReadToEnd();
+        p.WaitForExit();
+        return p.ExitCode == 0 ? output : throw new InvalidOperationException($"{program} {string.Join(' ', args)}: exit code {p.ExitCode}");
+    }
+
+    /// <summary>Runs xdotool with these arguments (RunOnDisplay); its output, trimmed.</summary>
+    private static string RunXdotool(params string[] args) => RunOnDisplay("xdotool", args).Trim();
 }
