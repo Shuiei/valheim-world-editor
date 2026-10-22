@@ -5,17 +5,21 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// A program folder and a BepInEx folder of the test's own, where add-ons are installed as players install them (a
 /// folder of the add-on's name in the addons folder next to the program) and mods as a mod manager installs them; the
-/// editor's manifests and extensions forgotten, and everything put back, when it is disposed.
+/// editor's manifests and extensions forgotten, and everything put back, when it is disposed. Its settings are saved in
+/// a data folder of its own.
 /// </summary>
 internal sealed class AddOnSandbox : IDisposable
 {
     private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
+    private readonly string? _dataDir = AppSettings.DataDirOverride;
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-addon-check-" + Guid.NewGuid().ToString("N")[..8]);
 
     public AddOnSandbox()
     {
         LocalGame.SearchDefaultPlaces = false;
         AddOns.FolderForTests = _dir;
+        // A data folder of its own: the editor's host reads the settings saved there (Run saves them).
+        AppSettings.DataDirOverride = Path.Combine(_dir, "data");
         Settings.BepInExFolders = [Path.Combine(_dir, "BepInEx")];
         Directory.CreateDirectory(Path.Combine(_dir, "BepInEx", "plugins"));
     }
@@ -48,11 +52,18 @@ internal sealed class AddOnSandbox : IDisposable
         }
     }
 
-    /// <summary>Installs an add-on and its mod and has the editor read the manifests and load the extensions.</summary>
+    /// <summary>
+    /// Installs an add-on and its mod, saves the settings (what the editor's host reads, as in a real run) and has the
+    /// editor read the manifests and load the extensions.
+    /// </summary>
     public void Run(string name)
     {
         Install(name);
         InstallMod(name);
+        if (Settings.Save() is { } problem)
+        {
+            throw new InvalidOperationException("the sandbox's settings could not be saved: " + problem);
+        }
         ModManifests.Refresh(Settings);
         ModExtensions.Refresh(Settings);
     }
@@ -63,6 +74,7 @@ internal sealed class AddOnSandbox : IDisposable
         ModExtensions.Forget();
         ModManifests.Forget();
         AddOns.FolderForTests = null;
+        AppSettings.DataDirOverride = _dataDir;
         LocalGame.SearchDefaultPlaces = _defaults;
         if (Directory.Exists(_dir))
         {

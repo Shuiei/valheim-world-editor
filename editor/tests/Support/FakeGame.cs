@@ -99,19 +99,7 @@ public sealed partial class FakeGame : IDisposable
     }
 
     // The fixture world as the plugin sends it.
-    public static string Snapshot
-    {
-        get
-        {
-            string? root = AppContext.BaseDirectory;
-            while (root != null && !File.Exists(Path.Combine(root, "tests", "fixtures", "CITest.snapshot")))
-            {
-                root = Path.GetDirectoryName(root);
-            }
-            Assert.NotNull(root);
-            return Path.Combine(root, "tests", "fixtures", "CITest.snapshot");
-        }
-    }
+    public static string Snapshot => Fixtures.Snapshot;
 
     /// <summary>
     /// A local TCP port free right now.
