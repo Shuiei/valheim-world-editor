@@ -7,8 +7,9 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The rules worlds are generated with (WorldRulesSource, ModExtensions.FirstRules): a running extension's world rules
-/// provider is asked first, with the world as the editor read it; one giving the game's own, or nothing, leaves the next
-/// to answer; one that throws turns its extension off. Runs alone (the extensions are shared).
+/// provider is asked first, with the world as the editor read it (its keys, loaded keys and grid, and the game when
+/// live); one giving the game's own, or nothing, leaves the next to answer; one that throws turns its extension off, and
+/// the editor's own one faulting leaves the game's own rules. Runs alone (the extensions are shared).
 /// </summary>
 [Collection("DataDir")]
 public sealed class WorldRulesSourceTests : IDisposable
@@ -40,6 +41,7 @@ public sealed class WorldRulesSourceTests : IDisposable
         using var w = new TempWorld();
         var save = w.Load();
         save.StartingGlobalKeys.Add("mod_size 3");
+        save.Zones!.GlobalKeys.Add("defeated_eikthyr");
 
         var rules = await WorldRulesSource.ForWorld(save, null, new AppSettings());
 
@@ -47,9 +49,39 @@ public sealed class WorldRulesSourceTests : IDisposable
         var asked = Assert.Single(mod.Asked);
         Assert.Equal(save.Name, asked.Name);
         Assert.Contains("mod_size 3", asked.StartingGlobalKeys);
+        Assert.Equal(save.Zones.GlobalKeys, asked.LoadedGlobalKeys);
+        Assert.Contains("defeated_eikthyr", asked.LoadedGlobalKeys!);
         Assert.Equal(save.GridWidth, asked.GridWidth);
         Assert.Null(asked.Live);
         Assert.Equal(30000f, WorldRulesSource.ForNewWorld(new AppSettings()).Radius);
+    }
+
+    [Fact]
+    public async Task ALiveWorldsProvidersAreHandedTheGame()
+    {
+        var mod = new Rules(() => null);
+        ModExtensions.UseForTests(("Live", mod));
+        using var w = new TempWorld();
+        using var game = new FakeGame { Plugins = [("sized", "Sized", "1.0.0")] };
+        using var bridge = new TerrainEditor.Save.LiveBridge(game.Url, game.Token);
+        var live = new LiveGame(bridge, ["Live"]);
+
+        Assert.True((await WorldRulesSource.ForWorld(w.Load(), live, new AppSettings())).IsVanilla);
+
+        var asked = Assert.Single(mod.Asked);
+        Assert.Same(live, asked.Live);
+        Assert.Equal("sized", Assert.Single((await asked.Live!.Plugins(TestContext.Current.CancellationToken))!).Id);
+    }
+
+    [Fact]
+    public async Task TheEditorsOwnProviderFaultingLeavesTheGamesOwnRules()
+    {
+        var broken = new Rules(() => throw new InvalidOperationException("no rules"));
+        var world = new WorldRulesRequest("w", [], null, 512, null);
+
+        Assert.Null(await WorldRulesSource.BuiltIn(p => p.ForWorld(world), broken));
+        Assert.Single(broken.Asked);
+        Assert.Equal(30000f, (await WorldRulesSource.BuiltIn(p => p.ForWorld(world), new Rules(() => new WorldRules { Radius = 30000f })))!.Radius);
     }
 
     [Fact]

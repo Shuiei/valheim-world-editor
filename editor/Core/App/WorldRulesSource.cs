@@ -27,6 +27,26 @@ public static class WorldRulesSource
     /// <summary>The first rules other than the game's own the providers give; the game's own when none does.</summary>
     private static async Task<WorldRules> First(Func<IWorldRulesProvider, Task<WorldRules?>> ask, AppSettings settings) =>
         await ModExtensions.FirstRules(ask).ConfigureAwait(false)
-        ?? await ask(new ExpandWorldRules(new EditorHost(() => settings), () => settings)).ConfigureAwait(false)
+        ?? await BuiltIn(ask, new ExpandWorldRules(new EditorHost(() => settings), () => settings)).ConfigureAwait(false)
         ?? WorldRules.Vanilla;
+
+    /// <summary>
+    /// The editor's own provider's rules, faults held as an extension's are: one that throws leaves the game's own
+    /// rules (said in the log), so a world still opens.
+    /// </summary>
+    /// <param name="ask">Asks the provider.</param>
+    /// <param name="provider">The editor's own provider.</param>
+    internal static async Task<WorldRules?> BuiltIn(Func<IWorldRulesProvider, Task<WorldRules?>> ask, IWorldRulesProvider provider)
+    {
+        try
+        {
+            return await ask(provider).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            // Whatever reading the mods' files throws that the readers do not hold themselves: the world is not held up.
+            Log.Caught(e, "working out the world's Expand World rules (the game's own are used)");
+            return null;
+        }
+    }
 }

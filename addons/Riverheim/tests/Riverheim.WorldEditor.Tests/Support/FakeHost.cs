@@ -1,4 +1,5 @@
 using ValheimWorldEditor.Sdk;
+using WorldEditor.Tests;
 
 namespace Riverheim.WorldEditor.Tests;
 
@@ -6,7 +7,7 @@ namespace Riverheim.WorldEditor.Tests;
 /// The editor as the add-on sees it: the player's Riverheim where set (none by default) and the game's Managed folder;
 /// no game connected, no game components, no settings, no BepInEx folders, none of the game's world rules.
 /// </summary>
-internal sealed class FakeHost : IEditorHost, IGameData, IWorldGameData
+internal sealed class FakeHost : IEditorHost, IGameData
 {
     /// <summary>The player's Riverheim; null: not installed.</summary>
     public PluginFile? Riverheim { get; init; }
@@ -21,13 +22,7 @@ internal sealed class FakeHost : IEditorHost, IGameData, IWorldGameData
 
     public string DataFolder => "";
 
-    public IWorldGameData World => this;
-
-    public bool LocationsRead => false;
-
-    public ValheimGen.LocationRuleSet Locations { get; } = new();
-
-    public IReadOnlyList<ValheimGen.VegetationRule> Vegetation => [];
+    public IWorldGameData World { get; } = new NoWorldGameData();
 
     public PluginFile? FindPlugin(string dllName) => dllName == RiverheimMod.DllName ? Riverheim : null;
 
@@ -38,10 +33,4 @@ internal sealed class FakeHost : IEditorHost, IGameData, IWorldGameData
     }
 
     public IReadOnlyList<GameComponent> Components(string scriptClass) => [];
-
-    public Task ReadLocations() => Task.CompletedTask;
-
-    public bool HasPrefab(string name) => false;
-
-    public bool IsGameRoom(string name) => false;
 }
