@@ -16,7 +16,7 @@ public sealed partial class Scenes
     /// <returns>The part to show.</returns>
     private static SKRectI NearestDot(string path)
     {
-        using var shot = SKBitmap.Decode(path) ?? throw new InvalidOperationException($"{path}: not a picture");
+        using var shot = LoadBitmap(path);
         var best = (X: -1, Y: -1);
         double nearest = double.MaxValue;
         for (int y = 80; y < shot.Height - 80; y++)
@@ -83,12 +83,12 @@ public sealed partial class Scenes
         {
             foreach (var (shot, x) in new[] { (left, 0), (right, d.Width) })
             {
-                using var bitmap = SKBitmap.Decode(shot) ?? throw new InvalidOperationException($"{shot}: not a picture");
+                using var bitmap = LoadBitmap(shot);
                 using var image = SKImage.FromBitmap(bitmap);
                 canvas.DrawImage(image, d, SKRect.Create(x, 0, d.Width, d.Height), new SKSamplingOptions(SKFilterMode.Nearest));
             }
         }
-        Save(picture, path);
+        SavePicture(picture, path);
     }
 
     /// <summary>Writes texts over a shot, in the text boxes' monospace font (12 pixels) and colour.</summary>
@@ -96,7 +96,7 @@ public sealed partial class Scenes
     /// <param name="edits">The texts.</param>
     private static void Retext(string path, Retyped[] edits)
     {
-        using var picture = SKBitmap.Decode(path) ?? throw new InvalidOperationException($"{path}: not a picture");
+        using var picture = LoadBitmap(path);
         using (var canvas = new SKCanvas(picture))
         using (var font = new SKFont(SKTypeface.FromFamilyName("Noto Sans Mono"), 12))
         using (var ink = new SKPaint { Color = new SKColor(238, 242, 248), IsAntialias = true })
@@ -108,7 +108,7 @@ public sealed partial class Scenes
                 canvas.DrawText(edit.Text, edit.X, edit.Baseline, SKTextAlign.Left, font, ink);
             }
         }
-        Save(picture, path);
+        SavePicture(picture, path);
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public sealed partial class Scenes
         // The area's corners on the shot (the ground's edge), and 12 m (23 pixels) inside them.
         SKPoint[] edge = [new(409, 146), new(1011, 158), new(1027, 762), new(405, 762)];
         SKPoint[] follow = [new(432, 169), new(988, 181), new(1004, 739), new(428, 739)];
-        using var picture = SKBitmap.Decode(path) ?? throw new InvalidOperationException($"{path}: not a picture");
+        using var picture = LoadBitmap(path);
         using (var canvas = new SKCanvas(picture))
         {
             using var band = new SKPaint { Color = new SKColor(255, 214, 64), Style = SKPaintStyle.Stroke, StrokeWidth = 3, IsAntialias = true };
@@ -138,7 +138,7 @@ public sealed partial class Scenes
             Tag(canvas, "locked edge", 1150, 266);
             Tag(canvas, "Follow grows the area past here", 1240, 426);
         }
-        Save(picture, path);
+        SavePicture(picture, path);
     }
 
     /// <summary>A name written on a picture: white on a dark rounded box, centred on the point.</summary>
