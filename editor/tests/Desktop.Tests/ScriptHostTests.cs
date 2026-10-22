@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
@@ -29,16 +30,15 @@ public class ScriptHostTests
         }
     }
 
-    // A script with no statement (empty, or only comments) runs and changes nothing, not a mistake about a Main.
+    // A script with no statement (empty, or only comments) is said to have nothing to run, not a mistake about a Main.
     [Theory]
     [InlineData("")]
     [InlineData("// nothing yet")]
-    public void AScriptWithoutAStatementChangesNothing(string code)
+    public void AScriptWithoutAStatementSaysItHasNothingToRun(string code)
     {
         var (image, _, errors) = ScriptHost.Compile(code);
-        Assert.NotNull(image);
-        Assert.Empty(errors);
-        Assert.True(Run(TestScenes.Flat(1), code).Empty);
+        Assert.Null(image);
+        Assert.Equal([Lang.T("script.error.nothingToRun")], errors);
     }
 
     [Fact]

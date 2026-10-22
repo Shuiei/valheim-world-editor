@@ -51,11 +51,13 @@ public sealed class MountainPanelLangTests
             // Near the edge: it does not fit.
             await w.PutMountain(5, 5);
             Assert.Empty(PseudoLang.Untranslated(w.MessageText));
-            Assert.Matches($@"^The {name} reaches \d+ m around the click and does not fit in the open area: ", w.LastMessageEn);
+            // The rolling hills are many: they reach and do not fit, and are placed without "a".
+            bool many = preset.Name.EndsWith('s');
+            Assert.Matches($@"^The {name} {(many ? "reach" : "reaches")} \d+ m around the click and {(many ? "do" : "does")} not fit in the open area: ", w.LastMessageEn);
             // In the middle: placed, with what it buried, and one step to take back.
             await w.PutMountain(64, 64);
             Assert.Empty(PseudoLang.Untranslated(w.MessageText));
-            Assert.Matches($@"^Placed a {name}, \d+ m high(; \d+ tree\(s\) and rock\(s\) it buried taken away)?\. Ctrl\+Z takes it back; saving turns it into ground discs\.$", w.LastMessageEn);
+            Assert.Matches($@"^Placed {(many ? "" : "a ")}{name}, \d+ m high(; \d+ tree\(s\) and rock\(s\) it buried taken away)?\. Ctrl\+Z takes it back; saving turns it into ground discs\.$", w.LastMessageEn);
             if (i == 0)
             {
                 Assert.Contains("; 1 tree(s) and rock(s) it buried taken away.", w.LastMessageEn, StringComparison.Ordinal);

@@ -142,8 +142,10 @@ public class MainWindowDungeonTests
             Dispatcher.UIThread.RunJobs();
             Assert.True(w.DungeonPanel.Gen.ToDungeon.IsEnabled);
             Assert.Equal(Lang.T("dungeon.hint.piecesPlaced"), w.DungeonPanel.Empty.Text);
-            // Undone and replaced by another step: forgotten.
+            // Undone and replaced by another step: forgotten. (The window sees the undo before the next edit, as it does
+            // between two key presses or clicks.)
             Assert.True(s.Undo());
+            Dispatcher.UIThread.RunJobs();
             s.Commit("Something else", null, [], [(new NewObject(0, Portal, new Vector3(1, 30, 1), Vector3.Zero, 0), false)]);
             Dispatcher.UIThread.RunJobs();
             Assert.Null(w.LastPlaced);

@@ -7,6 +7,8 @@ the plugin is unchanged in versions without that part.
 ## v1.108.1 — 2026-10-22
 
 ### Fixed
+- **Saving after an undo.** Undoing something you had saved (a placement, a deletion) and saving again now really
+  takes it out of the world or puts it back: it said "Nothing to save" and left the world as last saved.
 - **Saving and undo.** After a save, undoing a placement is counted as what the next save does (deleted, not added),
   offline and live; Discard puts back saved steps you had undone instead of losing them; the object count under the
   world's name follows your edits and undos; the map shows the new save number after saving.
@@ -23,7 +25,7 @@ the plugin is unchanged in versions without that part.
 - **Workshop.** Save blueprint warns about falling pieces even with Support check off; a long cost line no longer
   pushes the top bar's buttons off the window.
 - **Scripts.** Scripts move or remove a ship and its pieces as one, like the Select tool; the Terraced hill example only
-  clears the nature it buries; an empty script no longer shows a confusing error.
+  clears the nature it buries; an empty script says plainly that it has nothing to run.
 - **Claude.** Opening a world closes the Workshop or the previous world properly; saving a blueprint again keeps its
   description and tags; flatten, road and paint stay within the game's ±8 m; unknown dungeon choices are refused
   with the valid ones listed; its errors go into the log.
