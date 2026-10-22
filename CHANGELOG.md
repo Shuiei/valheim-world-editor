@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.103.3 — 2026-10-21
+
+### Fixed
+- **A mod's object changed twice before applying is updated in place in the game.** When a mod's tool changed the
+  same object twice before the changes were applied live (two digs in one tunnel column, say), the game's object was
+  removed and a new one made instead of being updated; with Tunnelheim, which keeps its records, the column then held
+  two records.
+
 ## v1.103.2 — 2026-10-21
 
 ### Fixed
