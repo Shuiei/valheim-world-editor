@@ -30,6 +30,8 @@
     <ProjectReference Include="../../src/ExpandWorld.WorldEditor/ExpandWorld.WorldEditor.csproj" />
     <ProjectReference Include="../../../../sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" />
     <ProjectReference Include="../../../../editor/Core/ValheimWorldEditor.Core.csproj" />
+    <!-- The developer checks that read the mods' files with the add-on's readers (ExpandWorldFiles). -->
+    <ProjectReference Include="../../../../tools/WorldCheck/WorldCheck.csproj" />
     <!-- The editor's tests' shared helpers (the test world, the fixtures, a stand-in game, the real mods' installer),
          and the few of Core's tests these use. -->
     <Compile Include="../../../../editor/tests/Support/**/*.cs" LinkBase="Support/Editor" />
