@@ -2224,7 +2224,7 @@
   "tip.build.librarySearch": "Find blueprints by name, description or tags.",
   "tip.build.open": "This blueprint alone on the plot (asks first when what is there is not saved).",
   "tip.build.add": "Add this blueprint to the plot, in its middle, with what is there (one undo step).",
-  "tip.history.claude": "Takes out every change Claude made in this area's history and keeps yours, even those made after them. Claude's changes made in other areas are taken out from those areas.",
+  "tip.history.claude": "Takes out every change Claude made in this area's history and keeps yours, even those made after them. Claude's changes made in other areas stay: open those areas to take them back there.",
   "tip.history.older": "Shows the next older changes of the history.",
   "tip.history.byClaude": "Claude made this change (Settings: Allow Claude to connect).",
   "tip.start.new": "Make a new world: look at seeds before their world exists, find one that suits you, and create it for the game.",

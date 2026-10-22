@@ -90,8 +90,14 @@ public sealed partial class PasteTool
     }
 
     /// <summary>
+    /// The Mask's weight at a grid point (x, z) as the paste applies it (null: no Mask), so that what is shown before
+    /// the click stands where the paste puts it; the 3D view sets it from the session it shows.
+    /// </summary>
+    internal Func<int, int, float>? MaskAt { get; set; }
+
+    /// <summary>
     /// The ground's height at a point once the copy's ground is pasted there (Ground on), as ShapeCell lays it on the
-    /// nearest grid point, without the Mask: where an object that follows the ground stands after the paste.
+    /// nearest grid point, the Mask included (MaskAt): where an object that follows the ground stands after the paste.
     /// </summary>
     /// <param name="c">The copy.</param>
     /// <param name="ca">The copy's anchor point on the grid.</param>
@@ -100,7 +106,9 @@ public sealed partial class PasteTool
     /// <param name="h">The ground's height there before the paste.</param>
     internal float GroundAfter(CopyData c, Vector2 ca, float anchor, Vector2 p, float h)
     {
-        int i = Ground ? CopyPoint(c, ca, (int)MathF.Round(p.X), (int)MathF.Round(p.Y)) : -1;
-        return i < 0 || c.Wt[i] <= 0 ? h : h + (anchor + c.Rel[i] - h) * c.Wt[i];
+        int gx = (int)MathF.Round(p.X), gz = (int)MathF.Round(p.Y);
+        int i = Ground ? CopyPoint(c, ca, gx, gz) : -1;
+        float w = i < 0 ? 0 : c.Wt[i] * (MaskAt?.Invoke(gx, gz) ?? 1);
+        return w <= 0 ? h : h + (anchor + c.Rel[i] - h) * w;
     }
 }
