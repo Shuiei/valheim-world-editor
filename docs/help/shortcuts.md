@@ -20,7 +20,7 @@ Mac, press `Cmd` wherever this page says `Ctrl` (`Cmd+Z` undoes, `Cmd`+click add
 | `W` `A` `S` `D` or the arrow keys | Move around. The further you are zoomed out, the faster. Not while `Ctrl` or `Alt` is held. |
 | `F` | Walk at eye height, then Fly, then back to the usual view. While pasting, `F` mirrors instead. |
 | `Shift` (Walk) | Run: 12 m/s instead of 6. |
-| `Space` / `C` (Fly) | Go up / down. `Shift`: 45 m/s instead of 15. |
+| `Space` / `C` (Fly) | Go up / down, through the ground too (into a mod's tunnels and cellars). `Shift`: 45 m/s instead of 15. |
 
 While walking or flying the wheel does not zoom and drags do not slide the view. See
 [Walk and Fly](../editor-basics.md#walk-and-fly).

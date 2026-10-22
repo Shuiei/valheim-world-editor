@@ -23,7 +23,7 @@ public sealed partial class GlView
         Orbit,
         /// <summary>On the ground, 6 m/s (Shift: 12).</summary>
         Walk,
-        /// <summary>Free in the air, 15 m/s (Shift: 45), kept above the ground.</summary>
+        /// <summary>Free in the air, 15 m/s (Shift: 45), through the ground too: into tunnels and cellars.</summary>
         Fly,
     }
     /// <summary>How the camera moves now.</summary>
@@ -50,7 +50,7 @@ public sealed partial class GlView
                     _eye = EyeMode.Walk;
                     _eyePos = _target;
                     _pitch = 0.05f;
-                    KeepOverGround(walk: true);
+                    KeepOverGround();
                     break;
                 case EyeMode.Walk:
                     _eye = EyeMode.Fly;
@@ -78,18 +78,17 @@ public sealed partial class GlView
     internal const float InteriorHeight = 3000f;
 
     /// <summary>
-    /// Walking: the eyes 1.8 m over the ground (or the water); flying: never below that. Not in a
-    /// dungeon (the ground is far below).
+    /// Walking: the eyes 1.8 m over the ground (or the water). Not in a dungeon (the ground is far below).
+    /// Flying is free, under the ground too: a mod's tunnels and cellars are inside it.
     /// </summary>
-    private void KeepOverGround(bool walk)
+    private void KeepOverGround()
     {
         var s = Scene;
         if (s == null || _eyePos.Y > InteriorHeight)
         {
             return;
         }
-        float floor = Math.Max(Picking.HeightAt(s, _eyePos.X, _eyePos.Z), s.Water) + EyeHeight;
-        _eyePos.Y = walk ? floor : Math.Max(_eyePos.Y, floor);
+        _eyePos.Y = Math.Max(Picking.HeightAt(s, _eyePos.X, _eyePos.Z), s.Water) + EyeHeight;
     }
     /// <summary>The camera of the last frame, to tell whether it moved.</summary>
     private Matrix4x4 _lastView;

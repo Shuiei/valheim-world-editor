@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.109.0 — 2026-10-22
+
+### Changed
+- **Fly goes through the ground.** In Fly (`F` twice), `C` now takes the camera below the ground, into what a mod digs
+  under it: Tunnelheim's tunnels and cellars, which the 3D view draws but no camera could reach. Space brings it back
+  up. Walk still keeps the eyes 1.8 m over the ground, and the usual view turns around a point on it.
+
 ## v1.108.1 — 2026-10-22
 
 ### Fixed

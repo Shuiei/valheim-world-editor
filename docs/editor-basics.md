@@ -131,8 +131,8 @@ building pieces, `T`), **Select** and **View**.
 1. **Walk**: your eyes are 1.8 m above the ground (or above the water where it is deeper). You start where the usual
    view was looking. `W` `A` `S` `D` move where you look at 6 m/s; `Shift` runs at 12 m/s. Right drag looks around.
    You keep to the ground as it rises and falls, edited ground included.
-2. **Fly**: `F` again. `Space` goes up, `C` goes down, at 15 m/s (`Shift`: 45 m/s). You never go below eye height
-   over the ground.
+2. **Fly**: `F` again. `Space` goes up, `C` goes down, at 15 m/s (`Shift`: 45 m/s). `C` also takes you through the
+   ground, into what a mod digs under it (Tunnelheim's tunnels and cellars); `Space` brings you back up.
 3. **The usual view**: `F` a third time. The view turns around a point on the ground 20 m ahead of where you were.
 
 The status bar says which mode is on and its keys. While walking or flying the wheel does not zoom and drags do not

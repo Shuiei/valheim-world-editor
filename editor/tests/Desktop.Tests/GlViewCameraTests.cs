@@ -117,7 +117,7 @@ public class GlViewCameraTests
     }
 
     [AvaloniaFact]
-    public void WalkingAndFlyingGoAtTheirSpeedsAndNeverUnderTheEyes()
+    public void WalkingAndFlyingGoAtTheirSpeedsAndFlyingGoesUnderTheGround()
     {
         var (w, v) = Open();
         v.CycleEye();
@@ -131,7 +131,7 @@ public class GlViewCameraTests
         // Flying 15 m/s, 45 with Shift.
         Assert.Equal(1.5f, Moved(w, v, Key.S), 3);
         Assert.Equal(4.5f, Moved(w, v, Key.D, Key.RightShift), 3);
-        // Space goes up, C down, never under the eyes' height over the ground.
+        // Space goes up, C down, through the ground too (a mod's tunnels and cellars are under it).
         Hold(w, Key.Space, true);
         Assert.True(v.Step(0.1f));
         Hold(w, Key.Space, false);
@@ -139,9 +139,17 @@ public class GlViewCameraTests
         Hold(w, Key.C, true);
         Assert.True(v.Step(0.05f));
         Assert.Equal(35 + 1.8f + 0.75f, v.EyePosition.Y, 3);
-        Assert.True(v.Step(1));
+        // A step moves 0.1 s at most (1.5 m flying): three more take the eye 4.5 m lower, under the ground at 35 m.
+        Assert.True(v.Step(0.4f));
+        Assert.Equal(35 + 1.8f + 0.75f - 1.5f, v.EyePosition.Y, 3);
+        Assert.True(v.Step(0.1f));
+        Assert.True(v.Step(0.1f));
         Hold(w, Key.C, false);
-        Assert.Equal(35 + 1.8f, v.EyePosition.Y, 3);
+        Assert.Equal(35 + 1.8f + 0.75f - 4.5f, v.EyePosition.Y, 3);
+        Assert.True(v.EyePosition.Y < 35, $"the eye stayed at {v.EyePosition.Y} m, over the ground at 35 m");
+        // Moving under the ground keeps the height.
+        Assert.Equal(1.5f, Moved(w, v, Key.W), 3);
+        Assert.Equal(35 + 1.8f + 0.75f - 4.5f, v.EyePosition.Y, 3);
         v.CycleEye();
         Assert.Equal(GlView.EyeMode.Orbit, v.Eye);
     }
