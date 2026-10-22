@@ -591,13 +591,13 @@ public sealed partial class Scenes
     {
         e.Shot(path);
         e.Point(x, y);
-        string[] pointer = RunTool("xdotool", "getmouselocation", "--shell").Split('\n');
-        RunTool("xdotool", "click", "1");
+        string[] pointer = RunOnDisplay("xdotool", "getmouselocation", "--shell").Split('\n');
+        RunOnDisplay("xdotool", "click", "1");
         e.Send("wait 600");
         string screen = path + ".display.png";
         try
         {
-            RunTool("import", "-window", "root", screen);
+            RunOnDisplay("import", "-window", "root", screen);
             var inv = System.Globalization.CultureInfo.InvariantCulture;
             int mx = int.Parse(pointer.First(l => l.StartsWith("X=", StringComparison.Ordinal))[2..], inv);
             int my = int.Parse(pointer.First(l => l.StartsWith("Y=", StringComparison.Ordinal))[2..], inv);
@@ -616,22 +616,8 @@ public sealed partial class Scenes
         finally
         {
             File.Delete(screen);
-            RunTool("xdotool", "key", "Escape");
+            RunOnDisplay("xdotool", "key", "Escape");
         }
-    }
-
-    /// <summary>Runs a program on the display, waits for it; its output (a failure throws).</summary>
-    private static string RunTool(string program, params string[] args)
-    {
-        var start = new System.Diagnostics.ProcessStartInfo(program) { RedirectStandardOutput = true, UseShellExecute = false };
-        foreach (string a in args)
-        {
-            start.ArgumentList.Add(a);
-        }
-        using var p = System.Diagnostics.Process.Start(start) ?? throw new InvalidOperationException($"{program} did not start");
-        string output = p.StandardOutput.ReadToEnd();
-        p.WaitForExit();
-        return p.ExitCode == 0 ? output : throw new InvalidOperationException($"{program} failed ({p.ExitCode})");
     }
 
     /// <summary>

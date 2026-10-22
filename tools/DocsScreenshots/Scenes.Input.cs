@@ -98,18 +98,34 @@ public sealed partial class Scenes
         e.Send("wait 300");
     }
 
-    /// <summary>Runs xdotool with these arguments and returns its output.</summary>
-    /// <exception cref="InvalidOperationException">It fails.</exception>
-    private static string RunXdotool(params string[] args)
+    /// <summary>
+    /// The programs a scene may run on the display: xdotool (pointer and keys the driver cannot give), ImageMagick's
+    /// import (the screen as it is, an open list included) and timeout (a wait for a window, with a limit).
+    /// </summary>
+    private static readonly string[] DisplayPrograms = ["xdotool", "import", "timeout"];
+
+    /// <summary>
+    /// Runs one of <see cref="DisplayPrograms"/> with these arguments, each passed as it is (no shell), and waits for it.
+    /// </summary>
+    /// <returns>What it wrote.</returns>
+    /// <exception cref="InvalidOperationException">It is not one of them, does not start or fails.</exception>
+    private static string RunOnDisplay(string program, params string[] args)
     {
-        var start = new System.Diagnostics.ProcessStartInfo("xdotool") { RedirectStandardOutput = true, UseShellExecute = false };
+        if (!DisplayPrograms.Contains(program))
+        {
+            throw new InvalidOperationException($"{program} is not a display program");
+        }
+        var start = new System.Diagnostics.ProcessStartInfo(program) { RedirectStandardOutput = true, UseShellExecute = false };
         foreach (string a in args)
         {
             start.ArgumentList.Add(a);
         }
-        using var p = System.Diagnostics.Process.Start(start) ?? throw new InvalidOperationException("xdotool did not start");
+        using var p = System.Diagnostics.Process.Start(start) ?? throw new InvalidOperationException($"{program} did not start");
         string output = p.StandardOutput.ReadToEnd();
         p.WaitForExit();
-        return p.ExitCode == 0 ? output.Trim() : throw new InvalidOperationException($"xdotool {string.Join(' ', args)}: exit code {p.ExitCode}");
+        return p.ExitCode == 0 ? output : throw new InvalidOperationException($"{program} {string.Join(' ', args)}: exit code {p.ExitCode}");
     }
+
+    /// <summary>Runs xdotool with these arguments (RunOnDisplay); its output, trimmed.</summary>
+    private static string RunXdotool(params string[] args) => RunOnDisplay("xdotool", args).Trim();
 }

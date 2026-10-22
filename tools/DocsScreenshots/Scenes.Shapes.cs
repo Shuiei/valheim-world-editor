@@ -46,10 +46,10 @@ public sealed partial class Scenes
         e.Send("choose Mound");
         // The formula box has no label the driver can set it by: typed into on the display.
         e.Point(250, 290);
-        Xdotool("click", "1");
-        Xdotool("key", "ctrl+a");
-        Xdotool("type", "--delay", "20", "h * smooth(1 - d / ");
-        Xdotool("mousemove", "1915", "1075");
+        RunXdotool("click", "1");
+        RunXdotool("key", "ctrl+a");
+        RunXdotool("type", "--delay", "20", "h * smooth(1 - d / ");
+        RunXdotool("mousemove", "1915", "1075");
         e.Send("wait 500");
         string shot = Out("shape-formula-error.jpg");
         e.Shot(shot);
@@ -323,22 +323,6 @@ public sealed partial class Scenes
         Camera(e, 0, 0, 200, 89, 110 * size);
         AreaAction(e, a, b, "Remove objects");
         e.Send("click Clear (Esc)");
-    }
-
-    /// <summary>Runs xdotool on the display with these arguments (the pointer and keys the driver cannot give).</summary>
-    private static void Xdotool(params string[] args)
-    {
-        var start = new System.Diagnostics.ProcessStartInfo("xdotool") { UseShellExecute = false };
-        foreach (string a in args)
-        {
-            start.ArgumentList.Add(a);
-        }
-        using var p = System.Diagnostics.Process.Start(start) ?? throw new InvalidOperationException("xdotool did not start");
-        p.WaitForExit();
-        if (p.ExitCode != 0)
-        {
-            throw new InvalidOperationException($"xdotool {string.Join(' ', args)}: exit code {p.ExitCode}");
-        }
     }
 
     /// <summary>Names written on a picture, white on a dark rounded box, centred on each point.</summary>
