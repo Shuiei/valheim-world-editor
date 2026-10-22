@@ -370,7 +370,8 @@ jobs:
   # reports in one upload, kept only part of the app tests' coverage, and Microsoft's dotnet-coverage
   # merge dropped the lines' branch counts. The orb's fail_on_error does nothing (its
   # set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing
-  # report is caught before, and a failed upload leaves Codecov with the last full figure.
+  # report is caught before the upload, and a refused or unprocessed one after it, by asking Codecov for
+  # this commit's coverage (Codecov then keeps the last full figure, and the job fails).
   coverage:
     executor: dotnet
     steps:
@@ -404,6 +405,23 @@ jobs:
       - codecov/upload:
           dir: /tmp/upload
           plugins: noop
+      - run:
+          name: Codecov has this commit's coverage
+          command: |
+            # Codecov processes a report after taking it: its public API is asked for this commit's, every 10 s for
+            # up to ten minutes (the merged report is large). None (the upload refused, or never processed) fails
+            # the job.
+            url="https://api.codecov.io/api/v2/github/$CIRCLE_PROJECT_USERNAME/repos/$CIRCLE_PROJECT_REPONAME/commits/$CIRCLE_SHA1/"
+            for _ in $(seq 60); do
+              commit=$(curl -fsS "$url" 2>/dev/null || true)
+              if printf '%s' "$commit" | grep -Eq '"state": *"complete"'; then
+                echo "Codecov has $CIRCLE_SHA1: $(printf '%s' "$commit" | grep -Eo '"coverage": *[0-9.]+' | head -1)"
+                exit 0
+              fi
+              sleep 10
+            done
+            echo "Codecov has no processed coverage for $CIRCLE_SHA1 after ten minutes: the upload was refused or failed."
+            exit 1
 
   packages:
     executor: dotnet
