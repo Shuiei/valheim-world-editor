@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using TerrainEditor.Save;
+using ValheimWorldEditor.Sdk;
 
 namespace TerrainEditor.App;
 
@@ -39,7 +40,7 @@ public static class ModSettings
     /// <summary>
     /// Reads each file again from the game's BepInEx/config, through its bridge (GET /config): the game's settings are the
     /// world's (a server's synced ones the players get). A file the game does not have gives no settings. A bridge older
-    /// than <see cref="ExpandWorld.BridgeFilesVersion"/> leaves those of the local folders (<see cref="Refresh"/>), and a
+    /// than <see cref="LiveBridge.FilesVersion"/> leaves those of the local folders (<see cref="Refresh"/>), and a
     /// file the bridge fails to give keeps its local ones, said in the log. Never throws.
     /// </summary>
     /// <param name="live">The game's bridge.</param>
@@ -70,7 +71,7 @@ public static class ModSettings
             {
                 return true;
             }
-            Console.WriteLine($"Mods' settings: the game's WorldEditorBridge does not serve its files (needs {ExpandWorld.BridgeFilesVersion} or newer): the local BepInEx folders' are used.");
+            Console.WriteLine($"Mods' settings: the game's WorldEditorBridge does not serve its files (needs {LiveBridge.FilesVersion} or newer): the local BepInEx folders' are used.");
         }
         catch (Exception e) when (e is HttpRequestException or InvalidOperationException or TaskCanceledException or JsonException)
         {
@@ -112,21 +113,7 @@ public static class ModSettings
     /// first); comments and blank lines passed over.
     /// </summary>
     /// <param name="text">The file's text.</param>
-    public static IEnumerable<(string Section, string Key, string Value)> Entries(string text)
-    {
-        string section = "";
-        foreach (string line in text.TrimStart('﻿').Split('\n').Select(l => l.Trim()))
-        {
-            if (line.Length > 1 && line[0] == '[' && line[^1] == ']')
-            {
-                section = line[1..^1].Trim();
-            }
-            else if (line.Split('=', 2) is [string key, string value] && key.Length > 0 && key[0] is not ('#' or '['))
-            {
-                yield return (section, key.Trim(), value.Trim());
-            }
-        }
-    }
+    public static IEnumerable<(string Section, string Key, string Value)> Entries(string text) => SettingsFile.Entries(text);
 
     /// <summary>A settings file's text; null when there is no file or it cannot be read (said in the log: the mod's defaults then apply).</summary>
     /// <param name="path">The file; null for none.</param>

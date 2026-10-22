@@ -4,9 +4,9 @@ namespace Tunnelheim.WorldEditor.Tests;
 
 /// <summary>
 /// The editor as the add-on sees it outside the hooks: no game connected, no game components (no hoe strokes), the
-/// mod's settings as set (none by default: the mod's defaults).
+/// mod's settings as set (none by default: the mod's defaults); no BepInEx folders, none of the game's world rules.
 /// </summary>
-internal sealed class FakeHost : IEditorHost, IGameData
+internal sealed class FakeHost : IEditorHost, IGameData, IWorldGameData
 {
     public ILiveGame? Live => null;
 
@@ -22,9 +22,27 @@ internal sealed class FakeHost : IEditorHost, IGameData
 
     public IGameData Game => this;
 
+    public IReadOnlyList<BepInExFolder> BepInExFolders => [];
+
+    public string DataFolder => "";
+
+    public IWorldGameData World => this;
+
+    public bool LocationsRead => false;
+
+    public ValheimGen.LocationRuleSet Locations { get; } = new();
+
+    public IReadOnlyList<ValheimGen.VegetationRule> Vegetation => [];
+
     public void Redraw()
     {
     }
 
     public IReadOnlyList<GameComponent> Components(string scriptClass) => [];
+
+    public Task ReadLocations() => Task.CompletedTask;
+
+    public bool HasPrefab(string name) => false;
+
+    public bool IsGameRoom(string name) => false;
 }

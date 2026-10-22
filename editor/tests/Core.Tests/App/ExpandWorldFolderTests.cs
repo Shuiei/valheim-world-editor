@@ -21,30 +21,33 @@ public class ExpandWorldFolderTests : AppSettingsTestBase
         return bep;
     }
 
+    /// <summary>The folder with the mods, among those these settings name.</summary>
+    private static ExpandWorld.Found Find(AppSettings settings) => ExpandWorld.Find(new EditorHost(() => settings).BepInExFolders, settings.ExpandWorldFolder);
+
     [Fact]
     public void TheFolderInSettingsComesFirstWhenItHasTheMods()
     {
         string first = Bep("first", "[1. General]\nWorld radius = 15000\n"), chosen = Bep("chosen", "[1. General]\nWorld radius = 20000\n");
         var settings = new AppSettings { BepInExFolders = { first }, ExpandWorldFolder = chosen };
-        Assert.Equal(chosen, ExpandWorld.Find(settings).Folder);
-        Assert.Equal("the Expand World folder in Settings", ExpandWorld.Find(settings).Where);
+        Assert.Equal(chosen, Find(settings).Folder);
+        Assert.Equal("the Expand World folder in Settings", Find(settings).Where);
         // A folder in Settings without the mods: the others are looked at.
         string empty = Path.Combine(Data, "empty");
         Directory.CreateDirectory(empty);
-        Assert.Equal(first, ExpandWorld.Find(new AppSettings { BepInExFolders = { first }, ExpandWorldFolder = empty }).Folder);
-        Assert.Equal(first, ExpandWorld.Find(new AppSettings { BepInExFolders = { first }, ExpandWorldFolder = "" }).Folder);
+        Assert.Equal(first, Find(new AppSettings { BepInExFolders = { first }, ExpandWorldFolder = empty }).Folder);
+        Assert.Equal(first, Find(new AppSettings { BepInExFolders = { first }, ExpandWorldFolder = "" }).Folder);
     }
 
     [Fact]
     public void ANewWorldsRulesComeFromTheFolderWhenTheSwitchIsOn()
     {
         string bep = Bep("bep", "[1. General]\nWorld radius = 20000\n");
-        Assert.True(ExpandWorld.ForNewWorld(new AppSettings { ExpandWorldFolder = bep }).IsVanilla);
-        var rules = ExpandWorld.ForNewWorld(new AppSettings { ExpandWorld = true, ExpandWorldFolder = bep });
+        Assert.True(WorldRulesSource.ForNewWorld(new AppSettings { ExpandWorldFolder = bep }).IsVanilla);
+        var rules = WorldRulesSource.ForNewWorld(new AppSettings { ExpandWorld = true, ExpandWorldFolder = bep });
         Assert.Equal(20000f, rules.Radius);
         Assert.True(rules.SizeInstalled);
         // No folder with the mods: the game's own values.
-        Assert.True(ExpandWorld.ForNewWorld(new AppSettings { ExpandWorld = true, ExpandWorldFolder = Path.Combine(Data, "nowhere") }).IsVanilla);
+        Assert.True(WorldRulesSource.ForNewWorld(new AppSettings { ExpandWorld = true, ExpandWorldFolder = Path.Combine(Data, "nowhere") }).IsVanilla);
     }
 
     [Fact]

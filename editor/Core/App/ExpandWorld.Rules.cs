@@ -110,8 +110,8 @@ public static partial class ExpandWorld
     /// </summary>
     private static (LocationRuleSet? Locations, IReadOnlyList<VegetationRule>? Vegetation) Places(DataFiles data, Found found, BiomeTable table, WorldRules size, IEnumerable<string>? globalKeys)
     {
-        var game = SeedLocations.Current;
-        bool gameRead = SeedLocations.Available;
+        var game = Game.Locations;
+        bool gameRead = Game.LocationsRead;
         string? blueprints = BlueprintFolder(data, found);
         var dataTable = new DataTable(data.DataEntries);
         List<LocationRule>? kinds = null;
@@ -144,7 +144,7 @@ public static partial class ExpandWorld
         if (data.Vegetation is { Count: > 0 } vegEntries)
         {
             var keys = (globalKeys ?? []).Select(k => k.Split(' ', 2)[0].Trim().ToLowerInvariant()).Where(k => k != "").ToHashSet();
-            vegetation = VegetationOf(vegEntries, Regrow.GameRules, table, size.Radius, keys, data.Notes, dataTable, blueprints);
+            vegetation = VegetationOf(vegEntries, Game.Vegetation, table, size.Radius, keys, data.Notes, dataTable, blueprints);
         }
         return (locations, vegetation);
     }

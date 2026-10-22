@@ -69,7 +69,7 @@ public static partial class ExpandWorld
     /// <summary>What a room of the file is made of: a game room (no blueprint), or the blueprint of its name; not known when neither.</summary>
     private static (bool Known, RoomBlueprint? Blueprint) Source(Fields f, string game, BlueprintSource from)
     {
-        if (Editing.Dungeons.IsGameRoom(game))
+        if (Game.IsGameRoom(game))
         {
             return (true, null);
         }

@@ -1,3 +1,5 @@
+using ValheimWorldEditor.Sdk;
+
 namespace TerrainEditor.App;
 
 /// <summary>
@@ -102,5 +104,5 @@ public static class AddOns
 
     /// <summary>Whether a mod's DLL is in one of the plugins folders the settings name (or found by themselves).</summary>
     internal static bool IsInstalled(AppSettings settings, string dll) =>
-        LocalGame.BepInExFolders(settings).Any(f => ExpandWorld.HasPlugin(Path.Combine(f.BepInEx, "plugins"), dll));
+        LocalGame.BepInExFolders(settings).Any(f => PluginFiles.Has(Path.Combine(f.BepInEx, "plugins"), dll, Console.WriteLine));
 }

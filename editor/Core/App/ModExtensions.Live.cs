@@ -55,27 +55,6 @@ public static partial class ModExtensions
     /// <summary>Asks for the shapes and cuts to be made again (IEditorHost.Redraw): a generation more.</summary>
     public static void Redraw() => Interlocked.Increment(ref _generation);
 
-    /// <summary>What an extension asks of the editor.</summary>
-    private sealed class EditorHost : IEditorHost
-    {
-        /// <inheritdoc/>
-        public ILiveGame? Live => _live;
-
-        /// <inheritdoc/>
-        public IGameData Game => ModComponents.View;
-
-        /// <inheritdoc/>
-        public string? Setting(string file, string section, string key) => ModSettings.Value(file, section, key);
-
-        /// <inheritdoc/>
-        public PluginFile? FindPlugin(string dllName) =>
-            LocalGame.FindPlugin(AppSettings.Load(), dllName) is var (dll, bep) ? new PluginFile(dll, bep) : null;
-
-        /// <inheritdoc/>
-        public string? GameManagedFolder =>
-            GameLook.FindValheim(AppSettings.Load().ValheimPath) is { } valheim && GameLook.DataDir(valheim) is { } data ? Path.Combine(data, "Managed") : null;
-
-        /// <inheritdoc/>
-        public void Redraw() => ModExtensions.Redraw();
-    }
+    /// <summary>The game the editor is connected to, as extensions see it (IEditorHost.Live); null when it is not.</summary>
+    internal static ILiveGame? Live => _live;
 }

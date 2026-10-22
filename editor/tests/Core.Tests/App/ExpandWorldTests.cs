@@ -1,4 +1,5 @@
 using TerrainEditor.App;
+using TerrainEditor.Save;
 using ValheimGen;
 using Xunit;
 
@@ -23,17 +24,6 @@ public class ExpandWorldTests : AppSettingsTestBase
         Assert.Equal("1024", keys["ews_gridwidth"]);
         Assert.Equal("", keys["ews_flag"]);
         Assert.Equal("ews_world_edge_size", ExpandWorld.KeyOf("World edge size"));
-    }
-
-    [Fact]
-    public void TheSavedGridIsReadFromTheKeysWithinWhatAChunkIdCanName()
-    {
-        Assert.Equal(512, ExpandWorld.SavedGridWidth([], "w"));
-        Assert.Equal(1024, ExpandWorld.SavedGridWidth(["ews_gridwidth 1024"], "w"));
-        Assert.Equal(2048, ExpandWorld.SavedGridWidth(["ews_gridwidth 2048"], "w"));
-        Assert.Equal(512, ExpandWorld.SavedGridWidth(["ews_gridwidth 256"], "w"));
-        Assert.Equal(512, ExpandWorld.SavedGridWidth(["ews_gridwidth 4096"], "w"));
-        Assert.Equal(512, ExpandWorld.SavedGridWidth(["ews_gridwidth wide"], "w"));
     }
 
     [Fact]
@@ -180,11 +170,14 @@ public class ExpandWorldTests : AppSettingsTestBase
         Directory.CreateDirectory(Path.Combine(bep, "plugins"));
         var found = ExpandWorld.Look(bep, "test");
         Assert.False(found.Any);
-        Assert.False(ExpandWorld.Find(new AppSettings { BepInExFolders = { bep } }).Any);
+        Assert.False(ExpandWorld.Find([new ValheimWorldEditor.Sdk.BepInExFolder(bep, "test")], null).Any);
         // A folder that is not there holds none either.
         Assert.False(ExpandWorld.Look(Path.Combine(Data, "nowhere"), "test").Any);
         Assert.True(ExpandWorld.Rules(new Dictionary<string, string>(), ExpandWorld.Found.None).IsVanilla);
     }
+
+    /// <summary>A saved world's rules with these settings (WorldRulesSource).</summary>
+    private static WorldRules Resolve(WorldSave world, AppSettings settings) => WorldRulesSource.ForWorld(world, null, settings).GetAwaiter().GetResult();
 
     [Fact]
     public void TheSettingsSwitchKeepsEveryWorldVanillaWhileOff()
@@ -194,22 +187,22 @@ public class ExpandWorldTests : AppSettingsTestBase
         world.StartingGlobalKeys.Add("ews_world_radius 20000");
         string bep = Path.Combine(Data, "sized", "BepInEx");
         TestMods.Install(bep, TestMods.Size);
-        Assert.True(ExpandWorld.Resolve(world, new AppSettings { BepInExFolders = { bep } }).IsVanilla);
-        var on = ExpandWorld.Resolve(world, new AppSettings { ExpandWorld = true, BepInExFolders = { bep } });
+        Assert.True(Resolve(world, new AppSettings { BepInExFolders = { bep } }).IsVanilla);
+        var on = Resolve(world, new AppSettings { ExpandWorld = true, BepInExFolders = { bep } });
         Assert.Equal(20000f, on.Radius);
         Assert.False(on.IsVanilla);
         // Switch on, but no folder has the mod: the game without it ignores the keys, the editor too.
-        Assert.True(ExpandWorld.Resolve(world, new AppSettings { ExpandWorld = true }).IsVanilla);
+        Assert.True(Resolve(world, new AppSettings { ExpandWorld = true }).IsVanilla);
         // A world with no keys and no folder: the game's own values, switch or no switch.
         world.StartingGlobalKeys.Clear();
-        Assert.True(ExpandWorld.Resolve(world, new AppSettings { ExpandWorld = true }).IsVanilla);
+        Assert.True(Resolve(world, new AppSettings { ExpandWorld = true }).IsVanilla);
     }
 
     [Fact]
     public void TheRulesAreDescribedInAFewWords()
     {
-        Assert.Equal("the game's own values", ExpandWorld.Describe(WorldRules.Vanilla));
-        string text = ExpandWorld.Describe(new WorldRules { Radius = 20000f, Stretch = 2f, AltitudeDelta = 5f, Rivers = false });
+        Assert.Equal("the game's own values", WorldRulesText.Describe(WorldRules.Vanilla));
+        string text = WorldRulesText.Describe(new WorldRules { Radius = 20000f, Stretch = 2f, AltitudeDelta = 5f, Rivers = false });
         Assert.Contains("radius 20000 + 500 m", text);
         Assert.Contains("stretch 2", text);
         Assert.Contains("+5 m", text);

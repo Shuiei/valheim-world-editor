@@ -317,7 +317,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Equal(1, Assert.Single(rules.Vegetation!).enable);
         Assert.False(rules.ZoneSpawners);
         Assert.True(rules.RandomLocations);
-        string text = ExpandWorld.Describe(rules);
+        string text = WorldRulesText.Describe(rules);
         Assert.Contains("locations (2 kinds)", text);
         Assert.Contains("vegetation (1 rules)", text);
         Assert.Contains("no zone spawners", text);

@@ -143,7 +143,7 @@ public static partial class ExpandWorld
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
-                Log.Caught(ex, $"reading {file} (passed over)");
+                Caught(ex, $"reading {file} (passed over)");
                 notes.Add($"{Path.GetFileName(file)} could not be read and was passed over: {ex.Message}");
             }
         }
@@ -163,7 +163,7 @@ public static partial class ExpandWorld
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Log.Caught(ex, $"listing {folder} for {pattern} (taken as none)");
+            Caught(ex, $"listing {folder} for {pattern} (taken as none)");
             notes.Add($"{folder} could not be searched for {pattern}: {ex.Message}");
             return [];
         }

@@ -1,5 +1,7 @@
 #nullable disable
 
+using System;
+
 namespace ValheimGen;
 
 /// <summary>

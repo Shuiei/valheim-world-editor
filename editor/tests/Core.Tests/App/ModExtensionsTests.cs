@@ -178,6 +178,12 @@ public sealed class ModExtensionsTests : IDisposable
         public IReadOnlyList<string> Mods => ["ExampleVehicles"];
 
         public Task<byte[]> CallAsync(string modId, string name, byte[] body, CancellationToken cancel = default) => Task.FromResult<byte[]>([.. body]);
+
+        public Task<IReadOnlyList<GamePlugin>?> Plugins(CancellationToken cancel = default) => Task.FromResult<IReadOnlyList<GamePlugin>?>(null);
+
+        public Task<byte[]?> ConfigFile(string path, CancellationToken cancel = default) => Task.FromResult<byte[]?>(null);
+
+        public Task<IReadOnlyList<ConfigEntry>?> ConfigFolder(string path, CancellationToken cancel = default) => Task.FromResult<IReadOnlyList<ConfigEntry>?>(null);
     }
 
     /// <summary>An extension keeping what its live listener was told.</summary>

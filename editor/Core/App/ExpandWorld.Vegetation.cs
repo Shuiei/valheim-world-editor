@@ -1,4 +1,5 @@
 using ValheimGen;
+using ValheimWorldEditor.Sdk;
 
 namespace TerrainEditor.App;
 
@@ -63,7 +64,7 @@ public static partial class ExpandWorld
         List<ContentField> fields = [.. values.Fields];
         if (f.Str("drops") is { Length: > 0 } drops)
         {
-            fields.Add(new ContentField("ints", DropsKey, Save.StableHash.Of(drops).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            fields.Add(new ContentField("ints", DropsKey, GameHash.Of(drops).ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
         rule.data = fields.Count > 0 ? fields : null;
         if (rule.prefabs == null && !Known(rule.prefab))
@@ -77,7 +78,7 @@ public static partial class ExpandWorld
     }
 
     /// <summary>The data key of the drop table Expand World Data gives an object ("ews_drops").</summary>
-    private static readonly int DropsKey = Save.StableHash.Of("ews_drops");
+    private static readonly int DropsKey = GameHash.Of("ews_drops");
 
     /// <summary>One rule from its entry.</summary>
     private static VegetationRule VegetationOf(Fields f, string[] prefabs, BiomeTable biomes, float radius, IReadOnlySet<string> globalKeys, List<string> notes)

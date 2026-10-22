@@ -84,7 +84,8 @@ public static class WorldGenerators
     }
 
     /// <summary>
-    /// The rules a new world is made and looked at with (the New world page): Expand World's for a new world, with the
+    /// The rules a new world is made and looked at with (the New world page): the world rules providers' for a new world
+    /// (WorldRulesSource), with the
     /// first generator in use that makes new worlds (as the game makes every new world with the mod while it is
     /// installed); the game's own when none does, or the generator cannot get ready (said in the log). The extensions are
     /// run first when which run has not been decided yet.
@@ -93,7 +94,7 @@ public static class WorldGenerators
     public static WorldRules ForNewWorld(AppSettings settings)
     {
         Decide(settings);
-        var rules = ExpandWorld.ForNewWorld(settings);
+        var rules = WorldRulesSource.ForNewWorld(settings);
         foreach (var g in ModExtensions.Generators)
         {
             if (g.NewWorldSettings() is not { } made)

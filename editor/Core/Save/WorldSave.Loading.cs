@@ -108,7 +108,7 @@ public sealed partial class WorldSave
         Generator = meta.Generator;
         StartingGlobalKeys.Clear();
         StartingGlobalKeys.AddRange(meta.StartingGlobalKeys);
-        GridWidth = ExpandWorld.SavedGridWidth(StartingGlobalKeys, Name);
+        GridWidth = SavedGridWidth(StartingGlobalKeys, Name);
     }
 
     /// <summary>The save number to load, as <c>CommittedSave</c> picks it.</summary>

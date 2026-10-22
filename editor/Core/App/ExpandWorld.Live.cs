@@ -1,6 +1,6 @@
 using System.Text.Json;
-using TerrainEditor.Save;
 using ValheimGen;
+using ValheimWorldEditor.Sdk;
 
 namespace TerrainEditor.App;
 
@@ -10,67 +10,41 @@ public static partial class ExpandWorld
     /// <summary>The first WorldEditorBridge that serves the game's files (GET /plugins, /config, /world/meta).</summary>
     public const string BridgeFilesVersion = "1.54.0";
 
-    /// <summary>Where a live game's settings and data files are copied to, laid out as a BepInEx folder (the data folder's live-bepinex).</summary>
-    public static string LiveFolder => Path.Combine(AppSettings.DataDir, "live-bepinex");
+    /// <summary>Where a live game's settings and data files are copied to, laid out as a BepInEx folder: the editor's data folder's live-bepinex.</summary>
+    /// <param name="dataFolder">The editor's data folder (IEditorHost.DataFolder).</param>
+    public static string LiveFolder(string dataFolder) => Path.Combine(dataFolder, "live-bepinex");
 
     /// <summary>
-    /// A live world's rules: the game's own values while the Expand World switch is off; else the mods the game runs
-    /// and their settings and data files as its bridge serves them (copied to <see cref="LiveFolder"/>, laid out as a
-    /// BepInEx folder, and read as a local one), with the world's keys from its file on the game's disk. A bridge older
-    /// than <see cref="BridgeFilesVersion"/>, or one that fails, leaves the local BepInEx folders to answer
-    /// (<see cref="Resolve(WorldSave, AppSettings)"/>), said in the log. The YamlDotNet library the data files need is the local folders':
-    /// the bridge serves nothing from plugins.
+    /// A live world's rules: the mods the game runs and their settings and data files as its bridge serves them (copied
+    /// to <see cref="LiveFolder"/>, laid out as a BepInEx folder, and read as a local one), with the world's keys as
+    /// the request has them (its file's on the game's disk). A bridge older than <see cref="BridgeFilesVersion"/>, or
+    /// one that fails, leaves the local BepInEx folders to answer, said in the log. The YamlDotNet library the data
+    /// files need is the local folders': the bridge serves nothing from plugins.
     /// </summary>
-    /// <param name="save">The world as read from the game (its starting global keys are replaced by its file's when the bridge serves it).</param>
-    /// <param name="settings">The editor's settings.</param>
-    /// <param name="live">The game's bridge.</param>
-    public static async Task<WorldRules> ResolveLive(WorldSave save, AppSettings settings, LiveBridge live)
+    /// <param name="world">The world as read from the game.</param>
+    /// <param name="host">The editor.</param>
+    /// <param name="chosen">The Expand World folder named in Settings.</param>
+    /// <param name="live">The game.</param>
+    private static async Task<WorldRules> ResolveLive(WorldRulesRequest world, IEditorHost host, string? chosen, ILiveGame live)
     {
         try
         {
-            await TakeLiveKeys(save, live);
-            if (!settings.ExpandWorld)
-            {
-                return await ResolveLocal(save, settings);
-            }
             var plugins = await live.Plugins();
             if (plugins == null)
             {
-                Console.WriteLine($"Expand World: the game's WorldEditorBridge does not serve its files (needs {BridgeFilesVersion} or newer): the local BepInEx folders are used.");
-                return await ResolveLocal(save, settings);
+                Note($"Expand World: the game's WorldEditorBridge does not serve its files (needs {BridgeFilesVersion} or newer): the local BepInEx folders are used.");
+                return await ResolveLocal(world, host.BepInExFolders, chosen);
             }
-            var found = await FetchLive(live, plugins, settings);
+            var found = await FetchLive(live, plugins, host, chosen);
             var data = ReadData(found);
             await FetchBlueprints(live, found, data);
             await NeedGameRules(data);
-            return Resolve(save, Keys(save.StartingGlobalKeys), found, data);
+            return Resolve(world, Keys(world.StartingGlobalKeys), found, data);
         }
         catch (Exception e) when (e is HttpRequestException or InvalidOperationException or TaskCanceledException or JsonException or IOException or UnauthorizedAccessException)
         {
-            Log.Caught(e, "reading the mods' files through the game's bridge (the local BepInEx folders are used)");
-            return await ResolveLocal(save, settings);
-        }
-    }
-
-    /// <summary>
-    /// Takes the world's starting global keys from its file on the game's disk (GET /world/meta): the loaded list the
-    /// snapshot carries has none of Expand World Size's, which the mod takes out. An older bridge, a game without a
-    /// world file, or a bridge that cannot serve it (an error status, said in the log) leaves the snapshot's: the mods'
-    /// files are still read through the bridge.
-    /// </summary>
-    private static async Task TakeLiveKeys(WorldSave save, LiveBridge live)
-    {
-        try
-        {
-            byte[]? meta = await live.WorldMeta();
-            if (meta != null)
-            {
-                save.TakeKeys(WorldSave.ReadMetadata(new MemoryStream(meta)));
-            }
-        }
-        catch (Exception e) when (e is InvalidOperationException or EndOfStreamException or InvalidDataException or IOException)
-        {
-            Log.Caught(e, "reading the world file through the game's bridge (its keys are left as the game loaded them)");
+            Caught(e, "reading the mods' files through the game's bridge (the local BepInEx folders are used)");
+            return await ResolveLocal(world, host.BepInExFolders, chosen);
         }
     }
 
@@ -78,12 +52,13 @@ public static partial class ExpandWorld
     /// Copies the mods' files the game has to <see cref="LiveFolder"/>: each installed mod's settings file, and Expand
     /// World Data's data folder (its yaml files, at any depth). Which mods are installed is what the game loaded.
     /// </summary>
-    /// <param name="live">The game's bridge.</param>
+    /// <param name="live">The game.</param>
     /// <param name="plugins">The plugins the game loaded.</param>
-    /// <param name="settings">The editor's settings (where the YamlDotNet library is looked for).</param>
-    private static async Task<Found> FetchLive(LiveBridge live, IReadOnlyList<LiveBridge.Plugin> plugins, AppSettings settings)
+    /// <param name="host">The editor (its data folder, and its BepInEx folders the YamlDotNet library is looked for in).</param>
+    /// <param name="chosen">The Expand World folder named in Settings, looked in first.</param>
+    private static async Task<Found> FetchLive(ILiveGame live, IReadOnlyList<GamePlugin> plugins, IEditorHost host, string? chosen)
     {
-        string root = LiveFolder, config = Path.Combine(root, "config");
+        string root = LiveFolder(host.DataFolder), config = Path.Combine(root, "config");
         if (Directory.Exists(root))
         {
             Directory.Delete(root, true);
@@ -107,9 +82,9 @@ public static partial class ExpandWorld
             files += n;
             bytes += b;
         }
-        Console.WriteLine($"Expand World: {files} files ({bytes} bytes) of the game's read through WorldEditorBridge into {root}.");
+        Note($"Expand World: {files} files ({bytes} bytes) of the game's read through WorldEditorBridge into {root}.");
         var found = Look(root, "the game's BepInEx folder, through WorldEditorBridge");
-        return found with { Size = size, Data = data, Rivers = rivers, PluginsFolder = LocalPlugins(settings) };
+        return found with { Size = size, Data = data, Rivers = rivers, PluginsFolder = LocalPlugins(host, chosen) };
     }
 
     /// <summary>
@@ -118,7 +93,7 @@ public static partial class ExpandWorld
     /// when given (the others are still copied), else fails the copy.
     /// </summary>
     /// <returns>How many files were copied, and their bytes.</returns>
-    private static async Task<(int Files, long Bytes)> CopyFolder(LiveBridge live, string path, string into, Func<string, bool> keep, Action<string, InvalidOperationException>? refused = null)
+    private static async Task<(int Files, long Bytes)> CopyFolder(ILiveGame live, string path, string into, Func<string, bool> keep, Action<string, InvalidOperationException>? refused = null)
     {
         var entries = await live.ConfigFolder(path);
         if (entries == null)
@@ -153,7 +128,7 @@ public static partial class ExpandWorld
     /// one, and a blueprint may hold others. One the bridge refuses (too large) is noted and left out, as the mod
     /// leaves out a blueprint it cannot read.
     /// </summary>
-    private static async Task FetchBlueprints(LiveBridge live, Found found, DataFiles data)
+    private static async Task FetchBlueprints(ILiveGame live, Found found, DataFiles data)
     {
         if (data.Locations is not { Count: > 0 } && data.Vegetation is not { Count: > 0 })
         {
@@ -162,13 +137,13 @@ public static partial class ExpandWorld
         string folder = BlueprintFolderOf(data.Cfg);
         await CopyFolder(live, folder, Path.Combine(found.Folder, "config", folder), name => BlueprintExtensions.Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase), (path, e) =>
         {
-            Log.Caught(e, $"copying the blueprint {path} from the game (left out)");
+            Caught(e, $"copying the blueprint {path} from the game (left out)");
             data.Notes.Add($"the blueprint {path} could not be read from the game: {e.Message}");
         });
     }
 
     /// <summary>A file under the game's BepInEx/config; null when <paramref name="refused"/> takes the bridge's refusal of it.</summary>
-    private static async Task<byte[]?> ConfigFileOr(LiveBridge live, string path, Action<string, InvalidOperationException>? refused)
+    private static async Task<byte[]?> ConfigFileOr(ILiveGame live, string path, Action<string, InvalidOperationException>? refused)
     {
         if (refused == null)
         {
@@ -190,14 +165,14 @@ public static partial class ExpandWorld
     /// folder the editor knows (the Expand World folder in Settings first) that has it; without one, the first folder
     /// known, so the log names a real place; without any, the live folder's own (which has none).
     /// </summary>
-    private static string LocalPlugins(AppSettings settings)
+    private static string LocalPlugins(IEditorHost host, string? chosen)
     {
         List<string> candidates = [];
-        if (!string.IsNullOrWhiteSpace(settings.ExpandWorldFolder))
+        if (!string.IsNullOrWhiteSpace(chosen))
         {
-            candidates.Add(Path.Combine(settings.ExpandWorldFolder, "plugins"));
+            candidates.Add(Path.Combine(chosen, "plugins"));
         }
-        candidates.AddRange(LocalGame.BepInExFolders(settings).Select(f => Path.Combine(f.BepInEx, "plugins")));
-        return candidates.FirstOrDefault(p => YamlReader.FindDll(p) != null) ?? candidates.FirstOrDefault() ?? Path.Combine(LiveFolder, "plugins");
+        candidates.AddRange(host.BepInExFolders.Select(f => Path.Combine(f.Path, "plugins")));
+        return candidates.FirstOrDefault(p => YamlReader.FindDll(p) != null) ?? candidates.FirstOrDefault() ?? Path.Combine(LiveFolder(host.DataFolder), "plugins");
     }
 }

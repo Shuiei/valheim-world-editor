@@ -83,7 +83,7 @@ public sealed partial class WorldEditorBridgePlugin
     private static byte[] Gzip(byte[] raw)
     {
         using MemoryStream packed = new();
-        using (GZipStream gz = new(packed, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+        using (GZipStream gz = new(packed, CompressionLevel.Fastest, leaveOpen: true))
         {
             gz.Write(raw, 0, raw.Length);
         }

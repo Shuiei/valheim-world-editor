@@ -1,9 +1,10 @@
-using ValheimGen;
+using System.Collections.Generic;
+using System.Globalization;
 
-namespace TerrainEditor.App;
+namespace ValheimGen;
 
-// What a world's rules say, in a few words.
-public static partial class ExpandWorld
+/// <summary>What a world's rules say, in a few words (the log, the New world page).</summary>
+public static class WorldRulesText
 {
     /// <summary>What the rules say, in a few words, for the log.</summary>
     public static string Describe(WorldRules r)
@@ -30,7 +31,7 @@ public static partial class ExpandWorld
 
     /// <summary>The room and dungeon files in a few words ("rooms (40), dungeons (12)"); empty for none.</summary>
     private static string DungeonsText(DungeonRules? d) => d == null ? ""
-        : $"rooms ({(d.Rooms == null ? "the game's" : d.Rooms.Count.ToString(System.Globalization.CultureInfo.InvariantCulture))}), dungeons ({d.Dungeons.Count})";
+        : $"rooms ({(d.Rooms == null ? "the game's" : d.Rooms.Count.ToString(CultureInfo.InvariantCulture))}), dungeons ({d.Dungeons.Count})";
 
     /// <summary>Adds a part to the description unless the settings it describes are the game's own.</summary>
     private static void AddUnless(List<string> parts, bool plain, string part)

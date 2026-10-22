@@ -112,7 +112,7 @@ public static partial class ExpandWorld
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or OverflowException)
         {
-            Log.Caught(ex, $"reading the blueprint {file}");
+            Caught(ex, $"reading the blueprint {file}");
             notes.Add($"the blueprint {Path.GetFileName(file)} could not be read: {ex.Message}");
             return null;
         }

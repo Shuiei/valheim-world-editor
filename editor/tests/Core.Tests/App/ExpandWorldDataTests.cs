@@ -256,7 +256,7 @@ public class ExpandWorldDataTests : AppSettingsTestBase
         Assert.Equal(1000f, rules.World[0].MaxDistance);
         Assert.Equal("top", Assert.Single(rules.Territories).Name);
         Assert.False(rules.IsVanilla);
-        string text = ExpandWorld.Describe(rules);
+        string text = WorldRulesText.Describe(rules);
         Assert.Contains("biome data (10 biomes)", text);
         Assert.Contains("world rules (2, legacy)", text);
         Assert.Contains("territories (1)", text);
@@ -281,7 +281,7 @@ public class ExpandWorldDataTests : AppSettingsTestBase
         var room = Assert.Single(rules.Dungeons!.Rooms!);
         Assert.Equal(("cave_new_corridor01:Lit", "lit"), (room.Name, Assert.Single(room.Connections).Type));
         Assert.Equal(new RoomLimit("cave_new_corridor05", 0, 2, 0), Assert.Single(Assert.Single(rules.Dungeons.Dungeons).Limits));
-        Assert.Contains("rooms (1), dungeons (1)", ExpandWorld.Describe(rules));
+        Assert.Contains("rooms (1), dungeons (1)", WorldRulesText.Describe(rules));
         // The switches off: the game's.
         Assert.Null(ExpandWorld.Rules(new Dictionary<string, string>(), ExpandWorld.Look(Bep("[3. Data]\nRoom data = false\n", true, ("expand_rooms.yaml", "- name: x\n")), "test")).Dungeons);
     }
