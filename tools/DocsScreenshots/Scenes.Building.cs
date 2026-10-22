@@ -387,7 +387,7 @@ public sealed partial class Scenes
 
     /// <summary>
     /// dungeon-rooms.jpg: a dungeon the game lays out (the game's own rooms), placed where the view looks, opened with Go
-    /// inside and cut 2 m above the floor.
+    /// to the dungeon and cut 2 m above the floor.
     /// </summary>
     private void DungeonRooms(Editor e)
     {
@@ -401,11 +401,11 @@ public sealed partial class Scenes
         e.Send("click Go to the dungeon");
         e.Send("wait 3000");
         e.Scroll(250, 600, 30);
-        // Go inside frames the dungeon's rooms (wherever its layout put them) and cuts their roofs at 4 m.
-        e.Send("click Go inside");
+        // The list's Go to the dungeon frames the dungeon's rooms (wherever its layout put them) and cuts their roofs at 4 m.
+        e.Send("click Go to the dungeon");
         e.Send("wait 1500");
         e.Send("set Cut 4 m above the floor|2");
-        // Closer, with the wheel over the rooms in the middle of the view (Go inside frames them from afar).
+        // Closer, with the wheel over the rooms in the middle of the view (Go to the dungeon frames them from afar).
         e.Scroll(730, 470, -4);
         // Off the rooms (onto the sky), so none is marked as hovered.
         e.Point(1300, 150);
@@ -423,7 +423,7 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// dungeon-inside.jpg (a Frost Cave of the game's own rooms, 5000 m up, after Go inside: cut 4 m above the floor,
+    /// dungeon-inside.jpg (a Frost Cave of the game's own rooms, 5000 m up, after Go to the dungeon: cut 4 m above the floor,
     /// one room deleted so its neighbours' open ends show green, the doors' squares orange and blue) and
     /// dungeon-add-room.jpg (an ice corridor picked in ROOMS, shown see-through at an open end under the cursor).
     /// </summary>
@@ -440,7 +440,7 @@ public sealed partial class Scenes
         e.Send("click Go to the dungeon");
         e.Send("wait 3000");
         e.Scroll(250, 600, 30);
-        e.Send("click Go inside");
+        e.Send("click Go to the dungeon");
         e.Send("wait 2000");
         // The same seed lays out the same rooms: an end cap, then the slope room it closes, deleted where they lie.
         foreach (var (camera, x, z) in new[] { ("", -636, -350), ("camera -650 -350 30 85 75 5035", -650, -320) })

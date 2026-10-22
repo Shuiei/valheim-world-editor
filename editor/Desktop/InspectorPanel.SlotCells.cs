@@ -33,7 +33,7 @@ public sealed partial class InspectorPanel
             {
                 Children =
                 {
-                    new TextBlock { Text = it.Name, FontSize = 9, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, MaxLines = 2 },
+                    new TextBlock { Text = SlotName(it.Name), FontSize = 9, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, MaxLines = 2 },
                     new TextBlock { Text = it.Stack > 1 ? it.Stack.ToString(CultureInfo.InvariantCulture) : "", FontSize = 11, FontWeight = FontWeight.SemiBold,
                         HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom },
                 },
@@ -45,6 +45,25 @@ public sealed partial class InspectorPanel
         }
         cell.Click += (_, _) => SlotClicked(at);
         return cell;
+    }
+
+    /// <summary>
+    /// An item's name as a slot shows it: an invisible break between the words of a name written as one
+    /// ("Iron|Scrap", "Trophy|Deer"), so a narrow slot wraps it there rather than in the middle of a word.
+    /// </summary>
+    /// <param name="name">The item's name.</param>
+    internal static string SlotName(string name)
+    {
+        var b = new System.Text.StringBuilder(name.Length + 4);
+        for (int i = 0; i < name.Length; i++)
+        {
+            if (i > 0 && ((char.IsUpper(name[i]) && char.IsLower(name[i - 1])) || char.IsDigit(name[i]) != char.IsDigit(name[i - 1]) || name[i - 1] == '_'))
+            {
+                b.Append('\u200B');
+            }
+            b.Append(name[i]);
+        }
+        return b.ToString();
     }
 
     /// <summary>

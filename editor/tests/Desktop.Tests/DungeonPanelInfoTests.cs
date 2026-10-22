@@ -57,10 +57,10 @@ public class DungeonPanelInfoTests
             var names = ((IEnumerable<string>)p.DungeonBox.ItemsSource!).ToList();
             Assert.Equal(2, names.Count);
             // The other dungeon chosen in the list, then the first again.
-            p.DungeonBox.SelectedIndex = names.FindIndex(n => n.Contains("1 rooms", StringComparison.Ordinal));
+            p.DungeonBox.SelectedIndex = names.FindIndex(n => n.Contains("1 room(s)", StringComparison.Ordinal));
             Assert.Single(t.Dungeon!.Rooms);
             Assert.DoesNotContain("overlapping", p.Info.Text, StringComparison.Ordinal);
-            p.DungeonBox.SelectedIndex = names.FindIndex(n => n.Contains("3 rooms", StringComparison.Ordinal));
+            p.DungeonBox.SelectedIndex = names.FindIndex(n => n.Contains("3 room(s)", StringComparison.Ordinal));
             Assert.Equal(3, t.Dungeon!.Rooms.Count);
             Assert.Contains("1 overlapping pair(s).", p.Info.Text, StringComparison.Ordinal);
             // A corridor chosen in the list, pointed (from below) at the entrance's first opening: it would

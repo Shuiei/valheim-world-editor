@@ -7,8 +7,8 @@ namespace TerrainEditor.Desktop;
 public partial class MainWindow
 {
     /// <summary>
-    /// The support check over the plot's building pieces (Stability), shown as coloured outlines; pieces that would
-    /// fall in pink.
+    /// The support check over the plot's building pieces (Stability), each piece tinted with its support; pieces that
+    /// would fall in red.
     /// </summary>
     internal void RefreshSupport()
     {

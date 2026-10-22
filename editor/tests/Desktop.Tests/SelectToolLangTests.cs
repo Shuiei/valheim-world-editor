@@ -75,11 +75,11 @@ public sealed class SelectToolLangTests
         // Zones on the ground: the wall alone, the runestone added, then nothing.
         v.Tool.ZoneOnGround = true;
         v.Drag(KeyModifiers.None, (26, 46), (34, 46), (34, 54), (26, 54), (26, 47));
-        Check("Selected 1 object(s) inside the zone.");
+        Check("Selected 1 object(s).");
         v.Drag(KeyModifiers.Control, (23, 27), (29, 27), (29, 33), (23, 33));
-        Check("Selected 1 object(s) inside the zone (2 in all).");
+        Check("Selected 1 more object(s) (2 in all).");
         v.Drag(KeyModifiers.Control, (20, 20), (24, 20), (24, 24), (20, 24));
-        Check("Nothing shown inside the zone.");
+        Check("Nothing shown there.");
 
         // The ship, a group a mod links: selected whole, kept at its height, moved whole, deleted whole.
         v.Click(40, 38, clicks: 2);

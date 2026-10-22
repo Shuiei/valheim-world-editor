@@ -45,7 +45,8 @@ public sealed partial class MapPage
         return Section(Lang.T("map.head.zones"), false,
             new TextBlock { Text = Lang.T("map.hint.zones"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
             biomes,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { NoBuildBox, DistBox, new TextBlock { Text = Lang.T("map.label.zones"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
+            // The check box takes what is left of the width and wraps its words: in a row it ran past the panel.
+            new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Children = { NoBuildBox, Ui.Col(DistBox, 1), Ui.Col(new TextBlock { Text = Lang.T("map.label.zones"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, 2) } },
             NoEditBox, OnlyGenBox,
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = Lang.T("map.label.fromCentre"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMinBox, new TextBlock { Text = Lang.T("map.label.to"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMaxBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
             GroundBox,

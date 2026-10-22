@@ -124,8 +124,10 @@ rounds ("the roof overhangs on the east side, fix it"), or start from one of you
 
 - `Ctrl+Z` takes back the last step, Claude's or yours.
 - In **History**, **Remove** on a step tagged **Claude** takes that step out and keeps everything done after it.
-- **Take back Claude's changes** (at the top of History, while Claude has changes in) removes every step Claude made,
-  newest first, and keeps yours, even those made after Claude's. The status bar says how many were taken back.
+- **Take back Claude's changes** (at the top of History, while Claude has changes in) removes every step Claude made
+  in the open area's history, newest first, and keeps yours, even those made after Claude's. The status bar says how
+  many were taken back, and how many of Claude's steps made in other areas are kept: open those areas to take them
+  back too (see [The history belongs to the world](concepts/saving-and-history.md#the-history-belongs-to-the-world)).
 - **Discard** throws away everything not saved, yours too.
 
 This works after saving or applying too: the next **Save to world** or **Apply live** writes it. See

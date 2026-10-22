@@ -340,8 +340,8 @@ every point is not needed.
   [Select](select.md) tool.
 - A moved object keeps all its data; live, it moves in the game as the same object when it can (see
   [Moving things](live-mode.md#moving-things)).
-- A script handles each object on its own: it does not take a mod's linked group (a ship and its pieces) whole, as
-  the Select tool does. Move or remove such groups with the Select tool.
+- A part of a mod's linked group (a ship and its pieces) never goes or moves alone: `Objects.Remove` or
+  `Objects.Move` of one part takes away or moves its whole group, in its shape, as the Select tool does.
 - Scripts are C# 12. [Claude](claude.md) runs scripts through the same engine, and can do a dry run that only says
   what a script would change.
 

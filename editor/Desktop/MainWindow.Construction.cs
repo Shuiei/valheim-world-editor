@@ -80,6 +80,7 @@ public sealed partial class MainWindow
         Surface = surface;
         SetUpDrops(surface);
         SetUpEditorWorld();
+        KeepNoteBesideTools(tools);
         ViewPanelCard = ViewPanel();
         LayOutRightPanels();
         _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, TopBar(), StatusBar() } };

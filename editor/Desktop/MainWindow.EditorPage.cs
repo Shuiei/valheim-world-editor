@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -73,6 +74,8 @@ public sealed partial class MainWindow
         MapButton.IsVisible = scene.Owner != null && !Options.Direct;
         TitleText.Text = scene.Name;
         SubtitleText.Text = Lang.T("world.areaInfo", scene.ZonesX, scene.ZonesZ, scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1, scene.Things.Count(t => !t.Gone));
+        // Read whole on hover where a narrow window ends it in "…".
+        ToolTip.SetTip(SubtitleText, SubtitleText.Text);
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);

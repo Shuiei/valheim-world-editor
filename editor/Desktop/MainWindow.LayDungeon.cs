@@ -32,7 +32,7 @@ public partial class MainWindow
             AddPortalPair(scene, lay, d);
         }
         session.Commit(d.Step, null, [], lay.Adds);
-        LastPlaced = new PlacedDungeon(at, lay.Arrival, lay.Arrival.Y + 3.5f, lay.DungeonAt);
+        LastPlaced = new PlacedDungeon(at, lay.Arrival, lay.Arrival.Y + 3.5f, lay.DungeonAt, session.UndoList[^1]);
         Msg(d.Done(lay.Adds.Count) + way
             + (lay.Skipped > 0 ? Said.Of("dungeon.msg.skipped", lay.Skipped) : Said.Empty) + Said.Of("dungeon.msg.goUp"));
         // The view stays on the ground, looking at the entrance.

@@ -89,6 +89,22 @@ public sealed class WorldSessionTests : WorldsFolder
         Assert.True(o.Done, o.Message);
     }
 
+    // The session's save number is the one it opened until it saves, then each of its own saves' (the map's header).
+    [Fact]
+    public void TheSaveNumberFollowsTheSessionsSaves()
+    {
+        WorldCreator.Create(Folder("Number"), "Number", Seed, radius: 1);
+        using var world = WorldSession.Open(Folder("Number"));
+        int opened = world.World.SaveNumber;
+        Assert.Equal(opened, world.SaveNumber);
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        var o = world.Save();
+        Assert.True(o.Done, o.Message);
+        Assert.Equal(o.Saved!.Number, world.SaveNumber);
+        Assert.True(world.SaveNumber > opened);
+    }
+
     // Leaving a world after saving it, with its latest save unreadable by then (another program writing it): the save
     // it was opened from is left, said in the log only.
     [Fact]

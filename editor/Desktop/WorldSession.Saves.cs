@@ -60,7 +60,7 @@ public sealed partial class WorldSession
     /// </summary>
     public int? GameSaveSince()
     {
-        int known = _lastNumber ?? World.SaveNumber;
+        int known = SaveNumber;
         return !IsLive && Directory.Exists(World.Directory) && WorldSave.CommittedSave(World.Directory) is int newest && newest > known ? newest : null;
     }
 

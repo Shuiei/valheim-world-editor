@@ -54,7 +54,8 @@ public sealed partial class PasteTool
     }
 
     /// <summary>
-    /// Where one object of a copy stands: its grid point and its height (following the ground, or at the anchor).
+    /// Where one object of a copy stands: its grid point and its height (following the ground as the paste leaves it, its
+    /// copied ground included: GroundAfter; or at the anchor).
     /// </summary>
     /// <param name="o">The copied object.</param>
     /// <param name="ca">The copy's anchor point on the grid.</param>
@@ -64,7 +65,8 @@ public sealed partial class PasteTool
     private (Vector2 P, float Y) ObjectSpot(CopyData.Obj o, Vector2 ca, float up, float anchor, Func<Vector2, float> heightAt)
     {
         var p = ca + Xf(new Vector2(o.Dx, o.Dz));
-        float y = o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy;
+        // Stacked upwards, the ground is the first copy's, laid at the anchor without the lift.
+        float y = o.Follow ? GroundAfter(Clip!, ca, anchor - up, p, heightAt(p)) + o.Dy + up : anchor + o.Dy;
         return (p, y);
     }
 }

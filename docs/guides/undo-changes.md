@@ -13,7 +13,8 @@ everything not saved yet.
 4. To take back one change and keep everything done after it, click **Remove** on that change in **History**. It is
    struck through, and the removal is a step of its own: `Ctrl+Z` brings the change back.
 5. To take back everything Claude did and keep your own changes, click **Take back Claude's changes** in **History**
-   (shown only when Claude made changes).
+   (shown only when Claude made changes in the open area). Do it in each area Claude changed: the status bar says how
+   many of Claude's changes in other areas are kept.
 6. To drop everything not saved or applied yet, click **Discard** in the top bar, then confirm. Saved and applied
    changes stay.
 7. To take back a change you already saved, undo it (or **Remove** it), then **Save to world** again. Live, undo it

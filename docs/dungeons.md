@@ -28,7 +28,8 @@ To generate a dungeon and put it in the world:
 7. Click **Save to world** (or **Apply live**).
 
 The whole placement is one undo step: `Ctrl+Z` takes it all back. The same choices and seed always make the same
-dungeon. For the full walk-through, see [Generate a dungeon and put it in the world](guides/make-a-dungeon.md).
+dungeon of building pieces; one of [the game's own rooms](#made-of-the-games-own-rooms) also depends on where its
+entrance stands and the way it faces. For the full walk-through, see [Generate a dungeon and put it in the world](guides/make-a-dungeon.md).
 
 ![The generator's choices in the Dungeon panel, and its plan of both levels drawn larger beside it](images/dungeon-generate.jpg)
 ***Generate a dungeon** for a Black Forest dungeon, Medium, 2 levels, boss behind a gate. Beside the panel, its plan
@@ -51,7 +52,7 @@ treasury on level 2, and the summary under them.*
 | **Style** | **The biome's**, or **Crypt**, **Catacombs**, **Temple**, **Fortress**, **Prison**, **Dvergr hold**, **Goblin warren**, **Ruins**: which rooms it has and how they are laid out. |
 | **Walls** | **The biome's**, or **Stone**, **Marble**, **Wood**, **Stave**, **Grausten**, **Dvergr**, **Goblin**. |
 | **Levels** | **1 level** to **16 levels** (2 by default), joined by stairs. The boss waits on the last. |
-| **Loot: × 1** | Chests and treasure: **none** to twice the usual. Deeper levels hold more. |
+| **Loot: × 1** | Chests and treasure: **none** to twice the usual. Deeper levels hold more. With the game's own rooms, it keeps or doubles the rooms' chests. |
 | **Light** | **Dark**, **Dim** (the default) or **Bright**: how many torches and braziers. |
 | **Furniture** | **Bare**, **Furnished** (the default) or **Rich**. |
 | **Ruin: 15 %** | How ruined it is, 0 to 100 %: rubble, fallen pillars, torches gone out. Picking a style sets its own value. |
@@ -63,7 +64,7 @@ treasury on level 2, and the summary under them.*
 | **Seed** and **Randomize** | The dungeon's own number; any whole number makes another dungeon with the same choices. |
 
 Changing **Light** or **Ruin** changes nothing else about the dungeon. With **The game's own rooms**, only **Biome**,
-**Size**, **Monsters** and the seed are used; the other rows are hidden. What the generator puts where is in
+**Size**, **Monsters**, **Loot** and the seed are used; the other rows, and the plan, are hidden. What the generator puts where is in
 [How the generator lays out a dungeon](concepts/dungeons.md#how-the-generator-lays-out-a-dungeon) and
 [Furnishing, light and guards](concepts/dungeons.md#furnishing-light-and-guards).
 
@@ -91,7 +92,7 @@ left out`).
 |---|---|
 | **Place in the world** | Puts the entrance on the ground at the middle of the view, its door facing you, and the dungeon 5000 m above it. |
 | **Open in the Workshop** | Writes the dungeon (building pieces) as a blueprint and opens it in the [Workshop](workshop.md) to change it. |
-| **Go to the dungeon** / **Go to the entrance** | Shown once the dungeon is placed: take the view up into the first level with the roofs cut away, and back down. |
+| **Go to the dungeon** / **Go to the entrance** | Shown once the dungeon is placed (and until `Ctrl+Z` takes it back): take the view up into the first level with the roofs cut away, and back down. |
 
 ![The entrance of a generated dungeon on the ground](images/dungeon-entrance.jpg)
 *A burial chamber's mound placed by **Place in the world**, its door facing the camera. Under the summary, **Go to
@@ -103,9 +104,9 @@ Below the generator, with a dungeon in the area, the panel lists its dungeons an
 
 | Setting | What it does |
 |---|---|
-| Dungeon list | The area's dungeons, each with its kind, rooms and place (`Frost Cave, 34 rooms, at 1520, -2240`). Fuling villages and Meadows farms, laid out the same way on the ground, show too. |
-| **Go inside** | Takes the view up to the middle of the dungeon's rooms and cuts their roofs away (at 4 m above the floor when the cut was off). |
-| **Go to entrance** | Takes the view back down to the entrance on the ground, with nothing cut. |
+| Dungeon list | The area's dungeons, each with its kind, rooms and place (`Frost Cave, 34 room(s), at 1520, -2240`). Fuling villages and Meadows farms, laid out the same way on the ground, show too. |
+| **Go to the dungeon** | Takes the view up to the middle of the dungeon's rooms and cuts their roofs away (at 4 m above the floor when the cut was off). |
+| **Go to the entrance** | Takes the view back down to the entrance on the ground, with nothing cut. |
 | **Build here** | Opens the Workshop's Build panel over the dungeon: see [Build inside a dungeon](#build-inside-a-dungeon). |
 | **Cut 4 m above the floor** | How high above the floor of the dungeon's entrance the roofs are cut, 0 to 29 m. The right end, **Cut: off (roofs shown)**, shows the roofs; the left end cuts at the floor. |
 | **ROOMS** + **Find a room…** | The rooms this kind of dungeon can take; type to narrow them by name. End caps and entrance rooms are marked `(end cap)` and `(entrance)`. |
@@ -115,14 +116,14 @@ Below the generator, with a dungeon in the area, the panel lists its dungeons an
 | **Delete room (Del)** | Removes the selected room. |
 | **Close open ends** | Puts the game's end cap on every open end, so nothing leads out. The message says how many open ends have no end cap of their kind. |
 
-The line at the bottom counts the rooms, open ends and overlapping pairs (`24 rooms, 3 open end(s). 1 overlapping
+The line at the bottom counts the rooms, open ends and overlapping pairs (`24 room(s), 3 open end(s). 1 overlapping
 pair(s).`).
 
 ## Open a dungeon
 
 1. Open the area over a dungeon's entrance (the map's location markers show the entrances).
 2. Click **Dungeon** on the tool rail: the list shows the area's dungeons.
-3. Click **Go inside**.
+3. Click **Go to the dungeon** under the list.
 4. Optional: move the cut slider to see more or less of the walls.
 
 Up there the camera no longer follows the ground: orbit, slide and fly round the rooms as usual. **Dungeon rooms** in
@@ -131,8 +132,8 @@ the [View panel](editor-basics.md) shows or hides them.
 A dungeon nobody has been near has no rooms yet: the panel says *The game has not laid this dungeon out yet (nobody
 has been near it).* Visit it in game, then open the area again.
 
-![A Frost Cave seen from above after Go inside, cut 4 m above the floor, with green open ends and orange door squares](images/dungeon-inside.jpg)
-*A Frost Cave after **Go inside**, its roofs cut 4 m above the floor: the panel lists it (`Frost Cave, 17 rooms, at
+![A Frost Cave seen from above after Go to the dungeon, cut 4 m above the floor, with green open ends and orange door squares](images/dungeon-inside.jpg)
+*A Frost Cave after **Go to the dungeon**, its roofs cut 4 m above the floor: the panel lists it (`Frost Cave, 17 rooms, at
 -640, -350`). Green frames mark open ends (a room was deleted), orange squares where rooms meet without a door.*
 
 ## Add rooms
@@ -178,11 +179,14 @@ With **Made of** set to **The game's own rooms**, the editor joins the biome's d
 chamber in the Meadows and Black Forest, a sunken crypt in the Swamp, a Frost Cave in the Mountain and Deep North, an
 infested mine in the Mistlands, and the Ashlands' and Plains' own. It adds rooms until there are about 8, 14, 20 or
 26 (by **Size**), without overlaps, closes every open end, fills each room with what the game would put there, and puts
-doors where the game would. **Monsters** copies each spawner about that many times. A dungeon kind with no rooms to
+doors where the game would. **Monsters** copies each spawner about that many times; **Loot** keeps each chest by that
+chance below × 1 and adds a second beside it by the chance above. A dungeon kind with no rooms to
 join (a camp, a village) becomes a Frost Cave, and the summary says so.
 
 Placed in the world, it is one dungeon of rooms, exactly as the game keeps its own: it shows in the dungeon list, to
-edit room by room. With Expand World Data's room and dungeon files on, the generator, the room list and the rooms drawn
+edit room by room. Its rooms are laid out again from the entrance, as the game lays out its own: from where the
+entrance puts the dungeon, kept inside that zone's space. So the rooms placed are not the summary's, and placing it
+elsewhere in a zone, or facing another way, gives other rooms; the same spot and facing give the same ones again. With Expand World Data's room and dungeon files on, the generator, the room list and the rooms drawn
 follow them: see [Edit a world made with Expand World, Riverheim or Tunnelheim](guides/use-mods-worlds.md).
 
 ## Open it in the Workshop
@@ -232,13 +236,14 @@ All the editor's keys are in [Shortcuts](help/shortcuts.md).
 ## Tips and limits
 
 - **Recover:** each placement, room or door is one undo step (`Ctrl+Z`). Lost a layout you liked? The same choices
-  and seed make the same dungeon again. Nothing is written until **Save to world** or **Apply live**.
+  and seed make the same dungeon of building pieces again (one of the game's own rooms needs the same spot and facing
+  too). Nothing is written until **Save to world** or **Apply live**.
 - **One dungeon per zone** (64 × 64 m): behind the game's own entrance, when something is already up there, the
   editor says so and places nothing; put the entrance in another zone. In the Plains (portal way in) it goes higher
   instead, below.
 - A dungeon of building pieces is ordinary objects, not a dungeon of rooms: [Select](select.md) moves and deletes its
-  pieces, and the dungeon list does not show it (the panel may say *No dungeon in this area*). Use **Go to the
-  dungeon**.
+  pieces, and the dungeon list does not show it (the panel says it is built of pieces, with no rooms to edit). Use
+  **Go to the dungeon**.
 - Everything a generated dungeon places has no builder, like the game's own: raids ignore it, it is no base for fires,
   and taking it apart gives back a third of the materials. See
   [Player-built pieces](concepts/objects.md#player-built-pieces).

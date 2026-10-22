@@ -33,7 +33,7 @@ public sealed partial class PlacePanel
     internal CheckBox AlongBox { get; } = new() { Content = Lang.T("place.label.along"), IsChecked = true, FontSize = 12 };
 
     /// <summary>Line (Points): a smooth curve through the points.</summary>
-    internal CheckBox CurveBox { get; } = new() { Content = Lang.T("path.label.curve"), IsChecked = true, FontSize = 12 };
+    internal CheckBox CurveBox { get; } = new() { Content = Lang.T("place.label.curve"), IsChecked = true, FontSize = 12 };
 
     /// <summary>The tilt, rotation, random turn, single, end-to-end, layers and loop controls.</summary>
     private void WireFacingControls(PlaceTool t)

@@ -1,5 +1,7 @@
 using System.Numerics;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
@@ -118,6 +120,42 @@ public class MainWindowDungeonTests
     }
 
     [AvaloniaFact]
+    public void TheDungeonPanelSaysADungeonOfPiecesWasPlacedNotThatThereIsNone()
+    {
+        // A dungeon of pieces is objects, no dungeon of rooms for the list: the panel said "No dungeon in this area"
+        // right beside Go to the dungeon.
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var (w, s) = Open(dir);
+            Assert.Equal(Lang.T("dungeon.hint.none"), w.DungeonPanel.Empty.Text);
+            var settings = new DungeonGen.Settings(Biome: "Black Forest", Size: 1, Levels: 1, Seed: 12345);
+            w.PlaceGenerated(settings, DungeonGen.Make(settings));
+            Assert.NotNull(w.LastPlaced);
+            Assert.Equal(Lang.T("dungeon.hint.piecesPlaced"), w.DungeonPanel.Empty.Text);
+            // Undone, nothing is there to go to (the buttons took the view to empty sky); redone, it is again.
+            Assert.True(s.Undo());
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(w.DungeonPanel.Gen.ToDungeon.IsEnabled);
+            Assert.Equal(Lang.T("dungeon.hint.none"), w.DungeonPanel.Empty.Text);
+            Assert.True(s.Redo());
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(w.DungeonPanel.Gen.ToDungeon.IsEnabled);
+            Assert.Equal(Lang.T("dungeon.hint.piecesPlaced"), w.DungeonPanel.Empty.Text);
+            // Undone and replaced by another step: forgotten.
+            Assert.True(s.Undo());
+            s.Commit("Something else", null, [], [(new NewObject(0, Portal, new Vector3(1, 30, 1), Vector3.Zero, 0), false)]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(w.LastPlaced);
+            Assert.False(w.DungeonPanel.Gen.ToDungeon.IsEnabled);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
     public void ABiomeWithoutAnEntranceGetsTwoLinkedPortals()
     {
         string dir = Fixtures.CopyFixture();
@@ -166,7 +204,7 @@ public class MainWindowDungeonTests
             // 5000 m over the entrance's ground.
             Assert.Equal((0f, -30f), (dungeon.Position.X, dungeon.Position.Z));
             Assert.Equal(w.LastPlaced!.Entrance.Y + 5000, dungeon.Position.Y, 0.01f);
-            var z = ZdoData.Parse(TerrainEditor.App.ObjectData.Bytes(s.Scene.World, s.Edits, dungeon.Id)!);
+            var z = ZdoData.Parse(ObjectData.Bytes(s.Scene.World, s.Edits, dungeon.Id)!);
             var rooms = Dungeons.Read(z.GetBytes(Dungeons.RoomDataKey)!);
             Assert.True(rooms.Count > 5);
             var first = rooms[0];
@@ -285,14 +323,14 @@ public class MainWindowDungeonTests
         var settings = new DungeonGen.Settings(Size: 1, Levels: 1, Seed: 7, Name: "Test crypt");
         await r.W.OpenGeneratedInWorkshop(settings);
         Assert.True(r.W.Tools.Workshop);
-        string path = Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Test crypt"));
+        string path = Path.Combine(r.Homestead, Homestead.FileName("Test crypt"));
         Assert.True(File.Exists(path));
         Assert.Contains(r.W.View.Scene!.Things, t => !t.Gone);
         // Tagged a dungeon, with a portal marking where players arrive.
-        var entry = TerrainEditor.App.Homestead.Read(path)!;
+        var entry = Homestead.Read(path)!;
         Assert.True(entry.Details.Dungeon);
         Assert.Equal(1, entry.Kinds["portal_wood"]);
         await r.W.OpenGeneratedInWorkshop(settings);
-        Assert.True(File.Exists(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Test crypt (2)"))));
+        Assert.True(File.Exists(Path.Combine(r.Homestead, Homestead.FileName("Test crypt (2)"))));
     }
 }

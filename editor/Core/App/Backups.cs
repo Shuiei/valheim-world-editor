@@ -1,8 +1,9 @@
 namespace TerrainEditor.App;
 
 /// <summary>
-/// A world's backups: the editor's own (&lt;World&gt;_backup_terraineditor-&lt;date&gt;) and the game's
-/// (&lt;World&gt;_backup_auto-&lt;date&gt;), next to the world folder. Used to restore an area from a backup.
+/// A world's backups: the game's (&lt;World&gt;_backup_auto-&lt;date&gt;) and the other copies named &lt;World&gt;_backup_…
+/// (older editors made &lt;World&gt;_backup_terraineditor-&lt;date&gt;; a copy made by hand), next to the world folder. Used
+/// to restore an area from a backup.
 /// </summary>
 public static class Backups
 {
@@ -12,7 +13,7 @@ public static class Backups
     /// <param name="Path">The backup's folder.</param>
     /// <param name="Name">The folder's name.</param>
     /// <param name="Date">The folder's last write time.</param>
-    /// <param name="Kind">"game" for the game's own auto backups, "editor" for the editor's.</param>
+    /// <param name="Kind">"game" for the game's own auto backups, "editor" for the other copies.</param>
     public sealed record Info(string Path, string Name, DateTime Date, string Kind);
 
     /// <summary>

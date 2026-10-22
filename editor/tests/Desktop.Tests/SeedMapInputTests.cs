@@ -1,7 +1,9 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Media;
 using TerrainEditor.App;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SeedMapRun;
@@ -44,6 +46,34 @@ public class SeedMapInputTests
         float x1 = map.CenterX;
         w.MouseMove(new Point(100, 100));
         Assert.Equal(x1, map.CenterX);
+    }
+
+    [AvaloniaFact]
+    public void ADragOrTheWheelOnAMarkOverTheMapMovesTheMap()
+    {
+        // The map under a layer with a mark at the middle, as the new-world page lays the start's mark.
+        var map = new SeedMap();
+        var mark = new Border { Width = 12, Height = 12, Background = Brushes.Red };
+        Canvas.SetLeft(mark, 194);
+        Canvas.SetTop(mark, 144);
+        var marks = new Canvas { Children = { mark } };
+        map.TakePointerOver(marks);
+        var w = new Window { Width = 400, Height = 300, Content = new Panel { Children = { map, marks } } };
+        using var open = new SeedMapWindow(w, map);
+        w.Show();
+        Settle();
+        map.Show(Preview());
+        map.LookAt(0, 0, 20);
+        // A drag that begins on the mark slides the world.
+        float x0 = map.CenterX;
+        w.MouseDown(new Point(200, 150), MouseButton.Left);
+        w.MouseMove(new Point(240, 150));
+        w.MouseUp(new Point(240, 150), MouseButton.Left);
+        Assert.Equal(x0 - 40 * 20, map.CenterX, 1);
+        // The wheel on it zooms.
+        w.MouseMove(new Point(200, 150));
+        w.MouseWheel(new Point(200, 150), new Vector(0, 1));
+        Assert.Equal(20 / 1.25f, map.MetersPerPixel, 3);
     }
 
     [AvaloniaFact]

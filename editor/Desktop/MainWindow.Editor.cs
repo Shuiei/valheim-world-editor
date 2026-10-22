@@ -47,7 +47,7 @@ public sealed partial class MainWindow
     /// <summary>The note about the area's locations.</summary>
     internal TextBlock LocationText { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.Parse("#f3d29b")) };
     /// <summary>
-    /// The card holding <c>LocationText</c>, over the view's lower left; made in <c>SetUpEditorWorld</c>.
+    /// The card holding <c>LocationText</c>, over the view's bottom, right of the tool column; made in <c>SetUpEditorWorld</c>.
     /// </summary>
     internal Border LocationNote { get; private set; } = null!;
     /// <summary>The live players to go to, by name.</summary>

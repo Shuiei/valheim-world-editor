@@ -38,13 +38,13 @@ connection instead of the save number). **Worlds** goes back to the start page.
 |---|---|
 | **Show buildings (N player-built pieces)** | Draws every player-built piece: footprints close up, dots further out, nothing zoomed far out. Ruins players built onto are drawn with the building. On at first. |
 | **Show ruins (spoilers)** | Also draws the world's ruins (stone towers, ruined houses, Mistlands and Ashlands ruins), fainter. Off at first, because it shows where they are. |
-| **Outline edited zones** | Outlines zones whose ground was changed: yellow for changes already in the world, orange for changes not saved or applied yet. On at first. |
+| **Outline edited zones** | Outlines zones whose ground was changed: a thin yellow line for changes already in the world, a thicker orange line for changes not saved or applied yet. On at first. |
 | **Show painted ground (dirt, paved, fields) when zoomed in** | Close up, the map is drawn at 1 m detail with your pending ground changes; this also shows dirt, paved and cultivated ground. On at first. |
 | **Zone grid** | Draws the lines between the 64 m [zones](concepts/areas-and-zones.md#zones), when zoomed in enough. |
 | **Clouds (as in game)** | Draws the drifting cloud shadows of the in-game map. |
 | **Edit in 3D** | Opens the 3D editor on the area around the picked zone. |
 | Size list (next to **Edit in 3D**) | How much ground the editor loads: **3 × 3 zones (192 m)**, **5 × 5 zones (320 m)** (default), **7 × 7**, **9 × 9**, **13 × 13** or **17 × 17 zones (1088 m)**. Use 5 × 5 for most work, 9 × 9 or more to paste a town or raise a big mountain. Bigger areas are slower. You can change it later in the top bar. |
-| **Save to world…** / **Apply live** | Writes every pending change into the world files (live: sends it to the running game). The line above says what is waiting, for example "Not saved yet: 3 zones of ground, 12 deleted, 40 added, 25 zone reset." |
+| **Save to world…** / **Apply live** | Writes every pending change into the world files (live: sends it to the running game). The line above says what is waiting, for example "Not saved yet: 3 zones of ground, 12 deleted, 40 added, 25 zone reset(s)." |
 | **Discard** | Throws away every change not saved or applied yet, after asking. |
 | **Reload from the game** | Live only: reads the whole world again from the running game. The line above lists the players online ("Live world · 2 player(s) online: Ragnar, Freya"). |
 

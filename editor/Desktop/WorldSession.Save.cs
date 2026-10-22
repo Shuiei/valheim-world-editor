@@ -16,7 +16,7 @@ public sealed partial class WorldSession
     /// </summary>
     public Outcome Save()
     {
-        int known = _lastNumber ?? World.SaveNumber;
+        int known = SaveNumber;
         if (WorldWriter.Newer(World.Directory, known) is Said newer)
         {
             return new Outcome(false, newer, false, new WorldWriter.Result(false, newer.Shown, null, 0, 0, []) { Report = newer });

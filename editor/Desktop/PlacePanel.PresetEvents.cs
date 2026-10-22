@@ -17,7 +17,8 @@ public sealed partial class PlacePanel
             }
             if (PresetAt(PresetBox.SelectedIndex) is not { } chosen)
             {
-                // None, after a preset: its kinds are unticked.
+                // None, after a preset: its kinds are unticked (while a preset shows, the kinds chosen are its own:
+                // changing them shows None, and one that loads nothing is not shown).
                 if (PresetBox.SelectedIndex == 0 && T.Chosen.Count > 0)
                 {
                     T.Chosen.Clear();
@@ -25,11 +26,7 @@ public sealed partial class PlacePanel
                 }
                 return;
             }
-            var known = Creatable().Select(c => c.Name).ToHashSet();
-            Say(t.Load(chosen.Preset, known.Contains));
-            Remember();
-            Fill();
-            FillList();
+            LoadPreset(t, chosen.Preset);
         };
         SavePresetButton.Tip("place.savePreset");
         SavePresetButton.Click += async (_, _) =>
@@ -60,5 +57,27 @@ public sealed partial class PlacePanel
             Memory.Save();
             FillPresets();
         };
+    }
+
+    /// <summary>
+    /// Loads the preset chosen in the list. When the world can make none of its kinds nothing is loaded and the list says
+    /// None again: choosing None next would untick the kinds chosen before it.
+    /// </summary>
+    /// <param name="t">The Place tool.</param>
+    /// <param name="preset">The preset chosen.</param>
+    private void LoadPreset(PlaceTool t, PlaceTool.Preset preset)
+    {
+        var known = Creatable().Select(c => c.Name).ToHashSet();
+        Say(t.Load(preset, known.Contains));
+        if (!preset.Kinds.Keys.Any(known.Contains))
+        {
+            _filling = true;
+            PresetBox.SelectedIndex = 0;
+            _filling = false;
+            return;
+        }
+        Remember();
+        Fill();
+        FillList();
     }
 }

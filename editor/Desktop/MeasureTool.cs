@@ -86,8 +86,9 @@ public sealed class MeasureTool
     public sealed record Result(float Distance, float AlongSlope, float HeightA, float HeightB, float Rise, float? SlopePercent, float SlopeDegrees, float Lowest, float Highest, float? WaterDepth);
 
     /// <summary>
-    /// What the tape measures; heightAt gives the ground's height at a world point (for the lowest and highest points
-    /// along it), sampled about every metre.
+    /// What the tape measures, on the ground as it is now: heightAt gives the ground's height at a world point (both
+    /// ends', which the ground under them may have changed since they were clicked, and the lowest and highest points
+    /// along it, sampled about every metre).
     /// </summary>
     /// <param name="heightAt">Ground height at a world (x, z).</param>
     /// <param name="water">The water level, in metres.</param>
@@ -98,9 +99,9 @@ public sealed class MeasureTool
         {
             return null;
         }
-        float flat = MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Z - a.Z) * (b.Z - a.Z)), rise = b.Y - a.Y;
-        // The clicked heights count too: the ground may have changed under them since.
-        float lo = MathF.Min(a.Y, b.Y), hi = MathF.Max(a.Y, b.Y);
+        float ya = heightAt(a.X, a.Z), yb = heightAt(b.X, b.Z);
+        float flat = MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Z - a.Z) * (b.Z - a.Z)), rise = yb - ya;
+        float lo = MathF.Min(ya, yb), hi = MathF.Max(ya, yb);
         int n = Math.Max(2, (int)MathF.Ceiling(flat));
         for (int i = 0; i <= n; i++)
         {
@@ -108,8 +109,8 @@ public sealed class MeasureTool
             lo = MathF.Min(lo, h);
             hi = MathF.Max(hi, h);
         }
-        float low = MathF.Min(a.Y, b.Y);
-        return new Result(flat, MathF.Sqrt(flat * flat + rise * rise), a.Y, b.Y, rise, flat > 0.01f ? rise / flat * 100 : null,
+        float low = MathF.Min(ya, yb);
+        return new Result(flat, MathF.Sqrt(flat * flat + rise * rise), ya, yb, rise, flat > 0.01f ? rise / flat * 100 : null,
             MathF.Atan2(MathF.Abs(rise), flat) * 180 / MathF.PI, lo, hi, low < water ? water - low : null);
     }
 

@@ -52,6 +52,8 @@ public sealed partial class MainWindow
             QueueSupport();
             UpdateSaveBar();
             History.Refresh();
+            // The dungeon last placed may have been undone or redone.
+            FollowPlaced();
             // The dungeon's rooms changed (an edit, undo): the Dungeon tool's list follows.
             if (Tools.Mode == ToolMode.Dungeon)
             {

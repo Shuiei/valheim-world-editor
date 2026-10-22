@@ -28,9 +28,15 @@ public sealed partial class NewWorldPage : IDisposable
     /// </summary>
     internal Button Generate { get; } = new Button { Content = Lang.T("newWorld.label.generate"), FontSize = 12, IsEnabled = false }.Classed("primary");
     /// <summary>
-    /// Which of the game's world folders to create the world in; its <c>Tag</c> holds the full paths.
+    /// Which of the game's world folders to create the world in; its <c>Tag</c> holds the full paths. A path too long
+    /// for the box loses its middle ("/opt/Ste…/IronGate/Valheim/worlds_local"), not its end.
     /// </summary>
-    internal ComboBox Where { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
+    internal ComboBox Where { get; } = new()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        FontSize = 12,
+        ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<string>((path, _) => new TextBlock { Text = path, TextTrimming = TextTrimming.PrefixCharacterEllipsis }),
+    };
     /// <summary>
     /// Checks the name and seed, then asks the window to create the world.
     /// </summary>

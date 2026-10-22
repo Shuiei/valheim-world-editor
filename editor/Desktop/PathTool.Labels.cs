@@ -27,7 +27,7 @@ public sealed partial class PathTool
     public static CavePreset[] CavePresets() =>
     [
         new(Lang.T("cave.preset.tunnel"), 5, 1.5f, 6, 3.5f, Lang.T("cave.preset.tunnelHelp")),
-        new(Lang.T("rail.label.cave"), 8, 2.5f, 7.5f, 4.5f, Lang.T("cave.preset.caveHelp")),
+        new(Lang.T("cave.preset.cave"), 8, 2.5f, 7.5f, 4.5f, Lang.T("cave.preset.caveHelp")),
         new(Lang.T("cave.preset.cavern"), 14, 3.5f, 8, 5.5f, Lang.T("cave.preset.cavernHelp")),
     ];
 

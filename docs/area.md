@@ -115,7 +115,7 @@ the Select tool); `Ctrl+V` works in any tool.
 
 | Setting | What it does |
 |---|---|
-| **Copy (Ctrl+C)** | Copies every shown object inside (whatever the kind chips say), and the ground their buildings stand on. Kinds the world cannot make are left out. The copy is remembered: paste it in another area, another world, or after restarting the editor. |
+| **Copy (Ctrl+C)** | Copies every shown object inside (whatever the kind chips say), and the ground their buildings stand on. Pasted, trees, rocks and the like keep their height above the ground where each lands; building pieces keep the building's shape. Kinds the world cannot make are left out. The copy is remembered: paste it in another area, another world, or after restarting the editor. |
 | **Cut (Ctrl+X)** | The same copy, then the copied objects leave the world (`Ctrl+Z` brings them back), so a paste moves them. The ground stays. A selection with no objects copies its ground only and removes nothing. |
 | **Paste (Ctrl+V)** | Starts pasting: the copy follows the cursor; click to put it down. Paste as many as you like; `Esc` stops. |
 | **Save blueprint…** / **Blueprints…** | See [Blueprints](#blueprints). |
@@ -267,9 +267,6 @@ zones… (Enter)**: both zones outlined red, the status bar counting them. Nothi
 
 ## Tips and limits
 
-- **Pasted trees and rocks can float or sink** on uneven ground: an Area copy keeps heights relative to the copy, not
-  to the ground under each object. To move only trees and rocks, copy them with the [Select](select.md) tool, where
-  each lands on the ground.
 - **Draw the selection a few metres wider than the buildings**: the copied ground fades within the **Soft edge**, so a
   building close to the outline takes less of its ground.
 - **A big town needs a big area**: choose 9 × 9 or more in the area size list before pasting.

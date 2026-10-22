@@ -63,7 +63,7 @@ public sealed partial class CopyData
     /// <param name="Rotation">Its turn, Unity Euler degrees.</param>
     /// <param name="Scale">Its scale.</param>
     /// <param name="SourceId">What it was copied from (its data goes with it), null when nothing.</param>
-    /// <param name="Follow">Dy is from the ground under it: objects copied with the Select tool.</param>
+    /// <param name="Follow">Dy is from the ground under it: trees and the like, not building pieces (CopyData.KeepsShape).</param>
     /// <param name="Data">
     /// What it holds, set on it as it is made (see ObjectField): all of the original's data when copied in a world (a
     /// chest's contents, a sign's text, its builder...), what a blueprint keeps.

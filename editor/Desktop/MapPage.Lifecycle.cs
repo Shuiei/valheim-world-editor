@@ -60,7 +60,7 @@ public sealed partial class MapPage
         var w = session.World;
         Meta.Text = session.IsLive
             ? Lang.T("map.meta.live", w.Name, session.Label, w.SeedName, w.ObjectCount)
-            : Lang.T("map.meta.file", w.Name, w.SeedName, w.SaveNumber, w.ObjectCount, w.ChunkCount);
+            : Lang.T("map.meta.file", w.Name, w.SeedName, session.SaveNumber, w.ObjectCount, w.ChunkCount);
         _liveBox.IsVisible = session.IsLive;
         SaveButton.Content = session.IsLive ? Lang.T("save.label.apply") : Lang.T("map.label.save");
         SaveButton.Tip(session.IsLive ? "map.apply" : "map.save");

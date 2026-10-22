@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -238,5 +239,32 @@ public class MainWindowEditorWorldTests
         Assert.True(r.W.MapShown);
         Assert.Null(r.W.Session);
         Assert.Null(world.Area);
+    }
+
+    // The locations note sits beside the tool rail and a tall tool panel, not over them (it covered both).
+    [AvaloniaFact]
+    public void TheLocationsNoteLeavesTheToolColumnClear()
+    {
+        var w = new MainWindow(load: false) { Width = 1440, Height = 900 };
+        w.Show();
+        var s = TestScenes.Flat(2);
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        w.Tools.ChooseMode(ToolMode.Place);
+        w.LocationText.Text = "3 location(s) here.";
+        w.LocationNote.IsVisible = true;
+        // The note's place follows the column after a layout pass.
+        for (int pass = 0; pass < 3; pass++)
+        {
+            w.UpdateLayout();
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+        var note = new Rect(w.LocationNote.TranslatePoint(default, w)!.Value, w.LocationNote.Bounds.Size);
+        var column = Avalonia.VisualTree.VisualExtensions.GetVisualParent(w.Tools.Rail)!;
+        foreach (var card in Avalonia.VisualTree.VisualExtensions.GetVisualChildren(column).OfType<Avalonia.Controls.Control>().Where(c => c.IsVisible))
+        {
+            var r = new Rect(card.TranslatePoint(default, w)!.Value, card.Bounds.Size);
+            Assert.False(note.Intersects(r), $"note {note} covers {r}");
+        }
     }
 }

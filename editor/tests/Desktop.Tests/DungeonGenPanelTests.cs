@@ -1,4 +1,6 @@
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
@@ -59,6 +61,33 @@ public class DungeonGenPanelTests
         await Settled(p);
 
         Assert.True(p.Place.IsEnabled);
+    }
+
+    /// <summary>Whether a control and every one it is in are shown.</summary>
+    private static bool Shown(Control c) => c.GetSelfAndLogicalAncestors().OfType<Control>().All(a => a.IsVisible);
+
+    [AvaloniaFact]
+    public async Task TheGamesRoomsShowTheSettingsTheyTakeAndNoOthers()
+    {
+        // Monsters come back stayed shown for the game's rooms, which ignore it (their spawners always come back), and
+        // Loot was hidden though it keeps or doubles their chests; the plan, which they have none of, stayed empty.
+        var p = new DungeonGenPanel();
+        p.Made.SelectedIndex = 1;
+        Assert.False(Shown(p.Respawn));
+        Assert.True(Shown(p.Loot));
+        Assert.True(Shown(p.Monsters));
+        Assert.False(Shown(p.Style));
+        Assert.False(Shown(p.ToWorkshop));
+        // The summary says the rooms placed are laid out again from the entrance.
+        await Settled(p);
+        Assert.EndsWith(Lang.T("dungeon.hint.roomsWhere"), p.Summary.Text);
+
+        p.Made.SelectedIndex = 0;
+        Assert.True(Shown(p.Respawn));
+        Assert.True(Shown(p.Loot));
+        Assert.True(Shown(p.Style));
+        await Settled(p);
+        Assert.DoesNotContain(Lang.T("dungeon.hint.roomsWhere"), p.Summary.Text);
     }
 
     [AvaloniaFact]

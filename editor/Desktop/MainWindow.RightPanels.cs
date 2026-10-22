@@ -72,8 +72,10 @@ public sealed partial class MainWindow
         ToolTip.SetTip(_liveBadge, Lang.T("top.liveBadge"));
         _pendingPill.Child = PendingText;
         var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { TitleText, SubtitleText } };
-        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
-        var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { MapButton, names, AreaNav } };
+        // The names take what the buttons leave and end in "…" when that is too little: the buttons on the right always
+        // fit. Kept to the left, the names' column is only as wide as they are when there is room.
+        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
+        var left = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10, HorizontalAlignment = HorizontalAlignment.Left, Children = { MapButton, Ui.Col(names, 1), Ui.Col(AreaNav, 2) } };
         var right = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -81,9 +83,12 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Center,
             Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, SupportBox, CutBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
         };
-        Grid.SetColumn(right, 2);
+        Grid.SetColumn(right, 1);
         bar.Children.Add(left);
         bar.Children.Add(right);
+        // Too narrow even with the names ended in "…": the buttons drop their words (FitTopBar).
+        bar.LayoutUpdated += (_, _) => FitTopBar(bar.Bounds.Width,
+            right.DesiredSize.Width + MapButton.DesiredSize.Width + AreaNav.DesiredSize.Width + bar.ColumnSpacing + 2 * left.ColumnSpacing);
         var card = Ui.Card(bar);
         card.Height = 50;
         card.Padding = new Thickness(Ui.Pad.Left, 0);

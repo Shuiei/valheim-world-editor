@@ -51,6 +51,8 @@ public class StartPageGameContentTests
     {
         var card = Assert.IsType<StackPanel>(new StartPage(new AppSettings()).GameContent(null, "no-bepinex", ""));
         Assert.Equal(Lang.T("start.game.needs"), LineOf(card.Children[0]));
-        Assert.Equal("", LineOf(card.Children[1]));
+        // No empty note line leaving a gap above the steps.
+        Assert.Equal(Lang.T("start.game.step1"), LineOf(card.Children[1]));
+        Assert.Equal(4, card.Children.Count);
     }
 }

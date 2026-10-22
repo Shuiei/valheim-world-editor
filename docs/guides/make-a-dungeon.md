@@ -38,7 +38,8 @@ open the world in game, walk to the entrance and go through the door: you arrive
 ## Tips
 
 - *Something is already up there*: each zone (64 × 64 m) holds one dungeon. Put the entrance in another zone.
-- The same choices and seed always make the same dungeon: note the **Seed** to make it again.
+- The same choices and seed always make the same dungeon of building pieces: note the **Seed** to make it again. One
+  of the game's own rooms is laid out from its entrance, so it also needs the same spot and facing.
 - **Made of: The game's own rooms** builds it from the game's rooms instead, to edit room by room.
 
 ## Related

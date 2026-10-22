@@ -50,7 +50,7 @@ The app reads one command per line on its input and answers each with one line, 
 | `world <folder>` / `area <zx> <zz> <size>` / `map` | Open a world (its map), an area in the 3D editor, back to the map. |
 | `camera <x> <z> <yaw°> <pitch°> <distance>` | The 3D camera on world x, z. |
 | `mouse <down\|move\|up> <x> <z> [button] [mods]`, `wheel`, `key <name> [mods]` | Real pointer and key events at world positions. |
-| `click <text>` / `choose <text>` | The visible button or switch with that label / the entry so named in a visible list (also in dialogs). |
+| `click <text>` / `choose <text>` | The visible button or switch with that label / the entry so named in a visible drop-down or list box (also in dialogs). |
 | `stroke`, `mapview`, `search`, `hit`, `zones`, `look` | A brush stroke, the map's place, its search (and a result picked) and zone filter, the View look switches. |
 | `set <label>\|<value>`, `type <hint>\|<text>`, `panel`, `message [text]` | A slider, box or list beside a label; a text box by its placeholder; the right-hand panel shown; the status bar's message (none: cleared). |
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |

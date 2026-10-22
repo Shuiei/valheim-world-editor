@@ -79,8 +79,8 @@ the editor's tools. The editor holds it to this:
 - **No scripts without your leave.** Claude's scripts are refused until you turn on **Claude may run scripts** in
   Settings (off by default), a choice you make once, as for a document's macros. Its other tools run the editor's own
   code and need no leave.
-- **Easy to take back.** **Take back Claude's changes** in History removes every step Claude made and keeps yours (see
-  [History](saving-and-history.md#history)).
+- **Easy to take back.** **Take back Claude's changes** in History removes every step Claude made in the open area
+  and keeps yours (see [History](saving-and-history.md#history)).
 
 ## Mods' extensions and add-ons
 

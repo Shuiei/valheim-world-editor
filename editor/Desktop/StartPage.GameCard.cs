@@ -42,19 +42,30 @@ public sealed partial class StartPage
         }
         else
         {
-            return new StackPanel
-            {
-                Spacing = 6,
-                Children =
-                {
-                    new TextBlock { Text = Lang.T("start.game.needs"), FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
-                    Hint(state == "no-plugin" ? Lang.T("start.game.bepInExThere") : ""),
-                    new TextBlock { Text = Lang.T("start.game.step1"), TextWrapping = TextWrapping.Wrap },
-                    new TextBlock { Text = Lang.T("start.game.step2"), TextWrapping = TextWrapping.Wrap },
-                    new TextBlock { Text = Lang.T("start.game.step3"), TextWrapping = TextWrapping.Wrap },
-                },
-            };
+            return StepsContent(state == "no-plugin");
         }
+    }
+
+    /// <summary>
+    /// The steps to install BepInEx and the plugin, with the note that BepInEx is there already only when it is (no
+    /// empty line left above the steps otherwise).
+    /// </summary>
+    /// <param name="bepInExThere">Whether BepInEx was found (only the plugin is missing).</param>
+    private static StackPanel StepsContent(bool bepInExThere)
+    {
+        var steps = new StackPanel
+        {
+            Spacing = 6,
+            Children = { new TextBlock { Text = Lang.T("start.game.needs"), FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap } },
+        };
+        if (bepInExThere)
+        {
+            steps.Children.Add(Hint(Lang.T("start.game.bepInExThere")));
+        }
+        steps.Children.Add(new TextBlock { Text = Lang.T("start.game.step1"), TextWrapping = TextWrapping.Wrap });
+        steps.Children.Add(new TextBlock { Text = Lang.T("start.game.step2"), TextWrapping = TextWrapping.Wrap });
+        steps.Children.Add(new TextBlock { Text = Lang.T("start.game.step3"), TextWrapping = TextWrapping.Wrap });
+        return steps;
     }
 
     /// <summary>The Edit live button for the game running with the plugin: opens its world live through the bridge.</summary>

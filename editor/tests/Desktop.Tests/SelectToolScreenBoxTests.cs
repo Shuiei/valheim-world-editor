@@ -37,7 +37,7 @@ public class SelectToolScreenBoxTests
         var said = MessageReader(v.Tool);
         Box(v, (36, 36), (46, 46));
         Assert.Equal([1, 2], v.Selected);
-        Assert.Equal("Selected 2 object(s) inside the zone.", said());
+        Assert.Equal("Selected 2 object(s).", said());
         Assert.Null(v.Tool.ScreenBox);
         // Dragged the other way round (up and left on the screen): the same.
         v.W.View.Select([]);
@@ -62,7 +62,7 @@ public class SelectToolScreenBoxTests
         v.W.View.Select([1]);
         Box(v, (38, 38), (46, 46), KeyModifiers.Shift);
         Assert.Empty(v.Selected);
-        Assert.Equal("Took 1 object(s) inside the zone out of the selection (0 left).", said());
+        Assert.Equal("Took 1 object(s) out of the selection (0 left).", said());
     }
 
     [AvaloniaFact]

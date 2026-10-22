@@ -164,4 +164,21 @@ public sealed class SelectPanelTests : SavedSelectionsFolder
         await p.Keep();
         Assert.Equal("Could not keep the selection: selections.json in the editor's data folder cannot be read or written.", Assert.Single(messages));
     }
+
+    // "A drag draws": each choice shown whole in the panel (beside its label, the longer one was cut off).
+    [AvaloniaFact]
+    public void TheDragChoicesAreShownWhole()
+    {
+        var p = new SelectPanel(new GlView().SelectTool);
+        double[] natural = [.. Enumerable.Range(0, 2).Select(i => LaidOut.NaturalWidth(new ComboBox { ItemsSource = p.ZoneBox.ItemsSource, SelectedIndex = i, FontSize = 12 }))];
+        LaidOut.In(p.Card, 1000, () =>
+        {
+            for (int i = 0; i < natural.Length; i++)
+            {
+                p.ZoneBox.SelectedIndex = i;
+                p.Card.UpdateLayout();
+                Assert.True(p.ZoneBox.Bounds.Width >= natural[i], $"{p.ZoneBox.Bounds.Width} < {natural[i]}");
+            }
+        });
+    }
 }

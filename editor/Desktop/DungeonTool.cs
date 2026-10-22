@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text.RegularExpressions;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -201,31 +200,10 @@ public sealed partial class DungeonTool
 
     // ---- Names shown for the kinds of dungeon.
     /// <summary>
-    /// The name shown for a kind of dungeon, in the language in use and in English (Claude's): the game's own for the
-    /// known ones, else its prefab name without DG_ and split into words (the same in both).
+    /// The name shown for a kind of dungeon, in the language in use and in English (Claude's): see
+    /// <see cref="DungeonGen.Describe"/>, which the generator's notes use too.
     /// </summary>
-    public static Said KindName(Dungeons.Kind k) => k.Name switch
-    {
-        "DG_Cave" => Said.Of("dungeon.kind.frostCave"),
-        "DG_SunkenCrypt" => Said.Of("dungeon.kind.sunkenCrypt"),
-        "DG_ForestCrypt" => Said.Of("dungeon.kind.burialChambers"),
-        "DG_HalfBurried_ForestCrypt" => Said.Of("dungeon.kind.burialChambersHalf"),
-        "DG_DvergrTown" => Said.Of("dungeon.kind.infestedMine"),
-        "DG_DvergrBoss" => Said.Of("dungeon.kind.infestedCitadel"),
-        "DG_Hildir_Cave" => Said.Of("dungeon.kind.howlingCavern"),
-        "DG_Hildir_ForestCrypt" => Said.Of("dungeon.kind.smoulderingTomb"),
-        "DG_Hildir_PlainsFortress" => Said.Of("dungeon.kind.sealedTower"),
-        "DG_GoblinCamp" => Said.Of("dungeon.kind.fulingVillage"),
-        "DG_MeadowsVillage" => Said.Of("dungeon.kind.meadowsVillage"),
-        "DG_MeadowsFarm" => Said.Of("dungeon.kind.meadowsFarm"),
-        _ => Said.Raw(Words().Replace(k.Name.Replace("DG_", "", StringComparison.Ordinal).Replace('_', ' '), " $1").Trim()),
-    };
-
-    /// <summary>
-    /// A capital letter after a small one: where KindName puts a space.
-    /// </summary>
-    [GeneratedRegex("(?<=[a-z])([A-Z])")]
-    private static partial Regex Words();
+    public static Said KindName(Dungeons.Kind k) => DungeonGen.Describe(k);
 
     /// <summary>
     /// One line for a dungeon in a list: its kind, how many rooms, and where it is (x, z in metres).

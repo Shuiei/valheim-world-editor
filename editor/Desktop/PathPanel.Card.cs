@@ -61,7 +61,7 @@ public sealed partial class PathPanel
                     R(Lang.T("path.label.start"), StartBox, PathTool.Action.Ramp),
                     R(Lang.T("path.label.end"), EndBox, PathTool.Action.Ramp),
                     R(Lang.T("path.label.depth"), DepthBox, PathTool.Action.River),
-                    Only(Ui.Row(Lang.T("common.preset"), CavePresetBox, CaveRandomButton), PathTool.Action.Cave),
+                    Only(Ui.Row(Lang.T("common.preset"), CavePresetBox, CaveRandomButton, "70,*,Auto"), PathTool.Action.Cave),
                     Only(CaveHelp, PathTool.Action.Cave),
                     R(Lang.T("path.label.depth"), CaveDepthBox, PathTool.Action.Cave),
                     R(Lang.T("cave.label.headroom"), HeadroomBox, PathTool.Action.Cave),

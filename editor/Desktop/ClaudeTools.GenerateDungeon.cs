@@ -72,7 +72,7 @@ public sealed partial class ClaudeTools
                 }
                 _w.PlaceGenerated(settings, result, label);
             }
-            return $"{Said.Join(" ", result.Notes).English} {_w.LastMessageEn} Now pending: {Pending()}";
+            return $"{result.Summary.English}. {_w.LastMessageEn} Now pending: {Pending()}";
         });
     }
 }

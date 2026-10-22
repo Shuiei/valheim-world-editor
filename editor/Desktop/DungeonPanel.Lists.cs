@@ -22,7 +22,7 @@ public sealed partial class DungeonPanel
         }
         DungeonBox.SelectedIndex = i;
         _filling = false;
-        _empty.IsVisible = _shown.Count == 0;
+        Empty.IsVisible = _shown.Count == 0;
         _body.IsVisible = _shown.Count > 0;
         _generate.IsExpanded = _shown.Count == 0;
         // Made before the game's data was read (nothing to place): made again now.

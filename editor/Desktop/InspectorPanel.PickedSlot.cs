@@ -7,6 +7,9 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class InspectorPanel
 {
+    /// <summary>The picked slot's item box, as last drawn (null before a slot is picked).</summary>
+    private AutoCompleteBox? _slotPick;
+
     /// <summary>
     /// The picked slot's controls under the grid: its item's name, how many and how good, Empty, and Move.
     /// </summary>
@@ -25,6 +28,7 @@ public sealed partial class InspectorPanel
             MinimumPrefixLength = 1,
             PlaceholderText = Lang.T("inspect.hint.findItem"),
         }.Tip("inspect.slotItem");
+        _slotPick = pick;
         pick.SelectionChanged += (_, _) => ChooseSlotItem(items, pick, sx, sy);
         pick.LostFocus += (_, _) => ChooseSlotItem(items, pick, sx, sy);
         var count = new NumericUpDown { Value = item?.Stack ?? 1, Minimum = 1, Maximum = MaxStack, Increment = 1, FormatString = "0", FontSize = 11, Width = 90, IsEnabled = item != null }.Tip("inspect.count");

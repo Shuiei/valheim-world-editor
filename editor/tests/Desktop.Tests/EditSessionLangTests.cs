@@ -63,7 +63,7 @@ public sealed class EditSessionLangTests
         int copy = Assert.Single(s.Move([(0, new Vector3(4, 30, 4), Vector3.Zero)]));
         Assert.Equal(PseudoLang.Wrap("1 new") + " · " + PseudoLang.Wrap("1 removed"), s.UndoList[^1].Describe());
         s.MarkResets([(1, 1)], true, false, "reset");
-        Assert.Equal(PseudoLang.Wrap("1 zone reset"), s.UndoList[^1].Describe());
+        Assert.Equal(PseudoLang.Wrap("1 zone reset(s)"), s.UndoList[^1].Describe());
         Assert.True(PseudoLang.Translated(s.PendingText, []), s.PendingText);
         Assert.Contains(PseudoLang.Wrap("2 zones"), s.PendingText);
         Assert.Contains(PseudoLang.Wrap("1 reset"), s.PendingText);
