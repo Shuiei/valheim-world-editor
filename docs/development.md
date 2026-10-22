@@ -170,9 +170,12 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
      `<file>.sigstore.json` a minute later.
    - **publish-thunderstore**, **publish-hexium** and **publish-nexus** then publish side by side
      (`tools/release/publish.cs`, with the sites' settings in `tools/release/sites.json`): the
-     plugin on Thunderstore and Hexium (team `Tie`), and a new version of each of the three files of
-     the Nexus Mods page (the plugin, the Windows and the Linux editor, repacked as a zip: Nexus
-     takes no `.tar.gz`), with the notes as the mod's changelog.
+     plugin, and only the plugin, on Thunderstore and Hexium (team `Tie`); on the Nexus Mods page, a
+     new version of each of its three files (the plugin, the Windows and the Linux editor, repacked as
+     a zip: Nexus takes no `.tar.gz`), with the notes as the mod's changelog, and every add-on's zip as
+     a file of its own (`Valheim World Editor add-on: <Name>`, made at the add-on's first release, a
+     new version when the add-on's own version changed, not downloadable by mod managers: it goes in
+     the editor's addons folder, not the game's).
 
 A version already on a site fails its job: no site takes a version twice. A failed job can be rerun
 from CircleCI (Rerun from failed); the others are done. Still by hand: **unhide** the new version on
