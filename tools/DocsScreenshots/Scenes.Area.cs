@@ -287,7 +287,8 @@ public sealed partial class Scenes
     /// <param name="Bottom">The window's row where the halves end (higher for a message on two lines).</param>
     /// <param name="Keep">Parts of the after picture drawn over the halves.</param>
     /// <param name="KeepBefore">Parts of the before picture drawn where they are in the window (a list open in the panel).</param>
-    private readonly record struct HalvesCut(int Subject, int Left = GroundPairLeft, int Bottom = GroundPairBottom, SKRectI[]? Keep = null, SKRectI[]? KeepBefore = null);
+    /// <param name="From">The window's column each half is cut from, instead of round the subject.</param>
+    private readonly record struct HalvesCut(int Subject, int Left = GroundPairLeft, int Bottom = GroundPairBottom, SKRectI[]? Keep = null, SKRectI[]? KeepBefore = null, int? From = null);
 
     /// <summary>The Mask card beside the Area panel, kept once over a pair of halves.</summary>
     private static readonly SKRectI MaskCard = new(438, 68, 744, 120);
@@ -302,21 +303,24 @@ public sealed partial class Scenes
     /// <param name="before">The picture before the change.</param>
     /// <param name="after">The picture after it.</param>
     /// <param name="at">Where the halves are cut.</param>
-    private static void Halves(string file, (string Before, string After) labels, string before, string after, HalvesCut at)
+    /// <param name="afterHalf">The picture the after half is cut from, when not <paramref name="after"/> (one without the
+    /// brush's ring); deleted too.</param>
+    private static void Halves(string file, (string Before, string After) labels, string before, string after, HalvesCut at, string? afterHalf = null)
     {
         try
         {
             using var a = LoadPicture(before);
             using var b = LoadPicture(after);
+            using var h = afterHalf == null ? null : LoadPicture(afterHalf);
             using var result = new SKBitmap(b.Width, b.Height);
             using (var canvas = new SKCanvas(result))
             {
                 canvas.DrawImage(b, 0, 0, Exact);
                 int half = (b.Width - at.Left) / 2;
-                int from = Math.Clamp(at.Subject - half / 2, 0, b.Width - half);
+                int from = at.From ?? Math.Clamp(at.Subject - half / 2, 0, b.Width - half);
                 var cut = new SKRect(from, GroundPairTop, from + half, at.Bottom);
                 canvas.DrawImage(a, cut, new SKRect(at.Left, GroundPairTop, at.Left + half, at.Bottom), Exact);
-                canvas.DrawImage(b, cut, new SKRect(at.Left + half, GroundPairTop, at.Left + 2 * half, at.Bottom), Exact);
+                canvas.DrawImage(h ?? b, cut, new SKRect(at.Left + half, GroundPairTop, at.Left + 2 * half, at.Bottom), Exact);
                 foreach (var r in at.Keep ?? [])
                 {
                     canvas.DrawImage(b, r, r, Exact);
@@ -336,6 +340,10 @@ public sealed partial class Scenes
         {
             File.Delete(before);
             File.Delete(after);
+            if (afterHalf != null)
+            {
+                File.Delete(afterHalf);
+            }
         }
     }
 }

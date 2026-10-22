@@ -480,36 +480,7 @@ public sealed partial class Scenes
             e.Send("key H");
             e.Shot(view);
         }
-        try
-        {
-            using var a = LoadPicture(before);
-            using var b = LoadPicture(after);
-            using var v = ring ? null : LoadPicture(view);
-            using var result = new SKBitmap(b.Width, b.Height);
-            using (var canvas = new SKCanvas(result))
-            {
-                canvas.DrawImage(b, 0, 0, Exact);
-                int half = (b.Width - GroundPairLeft) / 2;
-                var cut = new SKRect(GroundPairCut, GroundPairTop, GroundPairCut + half, GroundPairBottom);
-                canvas.DrawImage(a, cut, new SKRect(GroundPairLeft, GroundPairTop, GroundPairLeft + half, GroundPairBottom), Exact);
-                canvas.DrawImage(v ?? b, cut, new SKRect(GroundPairLeft + half, GroundPairTop, b.Width, GroundPairBottom), Exact);
-                using var line = new SKPaint { Color = new SKColor(20, 24, 30), StrokeWidth = 3 };
-                canvas.DrawLine(GroundPairLeft + half, GroundPairTop, GroundPairLeft + half, GroundPairBottom, line);
-                foreach (var r in keep ?? [])
-                {
-                    canvas.DrawImage(b, r, r, Exact);
-                }
-                GroundLabel(canvas, labels.Before, GroundPairLeft + half / 2f);
-                GroundLabel(canvas, labels.After, GroundPairLeft + half * 1.5f);
-            }
-            SavePicture(result, Out(file));
-        }
-        finally
-        {
-            File.Delete(before);
-            File.Delete(after);
-            File.Delete(view);
-        }
+        Halves(Out(file), labels, before, after, new HalvesCut(0, Keep: keep?.ToArray(), From: GroundPairCut), ring ? null : view);
     }
 
     /// <summary>
