@@ -15,9 +15,9 @@ namespace TerrainEditor.Desktop.Tests;
 /// The Workshop's rarer ways in the window: blueprints and files dragged over and dropped onto the view (in a world
 /// only imported), added where the view's middle points, outside the Workshop not at all, or from a file that cannot
 /// be read; a building not saved kept when another is opened and the answer is Stay; Save blueprint with nothing on
-/// the plot, with pieces that would fall, cancelled, and with no plot; a file of another mod opened; the Library's
-/// Import file…; scaled pieces in the support check, a kind with no recipe in the cost, and a support check queued as
-/// the Workshop closes.
+/// the plot, with pieces that would fall (the Support check on or off), cancelled, and with no plot; a file of another
+/// mod opened; the Library's Import file…; scaled pieces in the support check, a kind with no recipe in the cost, and a
+/// support check queued as the Workshop closes.
 /// </summary>
 public class MainWindowWorkshopBranchesTests
 {
@@ -118,6 +118,12 @@ public class MainWindowWorkshopBranchesTests
         await w.SaveWorkshop();
         Assert.Equal("Save blueprint", Assert.Single(asked));
         Assert.Single(r.Listed);
+        // The Support check switched off only hides the colours: asked all the same.
+        w.SupportBox.IsChecked = false;
+        await w.SaveWorkshop();
+        Assert.Equal(2, asked.Count);
+        Assert.Single(r.Listed);
+        w.SupportBox.IsChecked = true;
         // Saved anyway, but the details are cancelled: still nothing written.
         answer = true;
         r.B.AskDetails = (_, _) => Task.FromResult<Homestead.Details?>(null);

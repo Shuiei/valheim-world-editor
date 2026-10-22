@@ -21,8 +21,11 @@ public sealed partial class DungeonPanel
             Spacing = 6,
             Children =
             {
+                // Said only with a dungeon to edit: it would contradict the line that says there is none.
+                new TextBlock { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, Text = Lang.T("dungeon.hint.editing") },
                 DungeonBox,
-                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { GoInside, GoOutside, BuildHere } },
+                // Wrapped: the three do not fit the panel's width on one line.
+                new WrapPanel { ItemSpacing = 6, LineSpacing = 6, Children = { GoInside, GoOutside, BuildHere } },
                 new StackPanel { Spacing = 2, Children = { _cutText, CutSlider } },
                 new TextBlock { Text = Lang.T("dungeon.head.rooms"), FontSize = 11, Foreground = Ui.Muted, FontWeight = FontWeight.SemiBold },
                 Filter, Rooms, Contents, Doors,
@@ -54,10 +57,7 @@ public sealed partial class DungeonPanel
                     Children =
                     {
                         Ui.Title(Lang.T("rail.label.dungeon"), HelpTopics.Tool(ToolMode.Dungeon)),
-                        generate, go,
-                        new TextBlock { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-                            Text = Lang.T("dungeon.hint.editing") },
-                        _empty, body,
+                        generate, go, Empty, body,
                     },
                 },
             },

@@ -25,7 +25,7 @@ public sealed partial class StartPage
         foreach (var r in _settings.Recent.Where(r => Directory.Exists(r.Path)).Take(8))
         {
             string path = r.Path;
-            dated.Add((r.Opened, Tile(null, "folder", Color.FromRgb(42, 58, 44), r.Name, Lang.T("start.tile.savedWorld", Ago(r.Opened)), Ui.Tilde(path), () => OpenFolder(path))));
+            dated.Add((r.Opened, Tile(null, "folder", Color.FromRgb(42, 58, 44), r.Name, Lang.T("start.tile.savedWorld", Ago(r.Opened)), Ui.Tilde(path), () => OpenFolder(path, _homeError))));
         }
         foreach (var (b, picture) in blueprints)
         {

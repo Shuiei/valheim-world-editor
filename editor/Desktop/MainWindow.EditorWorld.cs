@@ -70,6 +70,8 @@ public sealed partial class MainWindow
             Padding = new Thickness(10, 6),
             Margin = new Thickness(10, 0, 10, 58),
             MaxWidth = 420,
+            // Its left margin follows the tool column (KeepNoteBesideTools): over it, it covered the rail's last tools
+            // and the bottom of the tool's panel.
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Bottom,
             IsVisible = false,
@@ -81,6 +83,17 @@ public sealed partial class MainWindow
         _gameTimer.Tick += async (_, _) => await FollowGame();
         _labelsTimer.Tick += (_, _) => PlaceLabels();
     }
+
+    /// <summary>
+    /// Keeps the locations note just right of the cards of the tool column that reach down to it (the rail, a tall
+    /// tool panel; not the short Mask card at the top), whatever their width.
+    /// </summary>
+    /// <param name="tools">The tool column.</param>
+    private void KeepNoteBesideTools(Panel tools) => tools.LayoutUpdated += (_, _) =>
+    {
+        double right = tools.Children.Where(c => c.IsVisible && c.Bounds.Bottom > tools.Bounds.Height - 100).Select(c => c.Bounds.Right).DefaultIfEmpty(0).Max();
+        LocationNote.Margin = new Thickness(tools.Bounds.X + right + Ui.Gap, 0, 10, _panelsBottom);
+    };
 
     /// <summary>The View panel's Go to a player (live worlds).</summary>
     private StackPanel PlayersControl()

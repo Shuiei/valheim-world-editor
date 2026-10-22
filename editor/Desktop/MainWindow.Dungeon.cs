@@ -27,7 +27,7 @@ public partial class MainWindow
 
     /// <summary>
     /// Turns Build here on (the Place tool's settings are kept aside, the Workshop's Build starts and the Place
-    /// tool cuts at the view's cut height) or off (the Place tool gets its settings back).
+    /// tool cuts at the view's cut height) or off (the Place tool gets its settings back, its status line goes).
     /// </summary>
     internal void BuildInDungeon(bool on)
     {
@@ -35,7 +35,7 @@ public partial class MainWindow
         if (on && _dungeonKept == null)
         {
             _dungeonKept = KeepPlaceTool();
-            BuildPanel.Start();
+            BuildPanel.Start(library: false);
             t.CutY = View.CutY;
             Tools.ChooseMode(ToolMode.Place);
             Msg("dungeon.msg.building");
@@ -45,6 +45,11 @@ public partial class MainWindow
             _dungeonKept = null;
             RestorePlaceTool(k);
             t.Notify();
+            // Its "Building in the dungeon" line no longer holds (another message since stays).
+            if (LastSaid.Shown == Said.Of("dungeon.msg.building").Shown)
+            {
+                Msg(Said.Empty);
+            }
         }
     }
 
@@ -56,26 +61,57 @@ public partial class MainWindow
     /// <param name="Arrival">Where a player arrives in it, high up.</param>
     /// <param name="Cut">The roof cut that shows its first level.</param>
     /// <param name="Dungeon">Its dungeon object's place when it is one of the game's rooms (the Dungeon panel lists it), else null.</param>
-    internal sealed record PlacedDungeon(Vector3 Entrance, Vector3 Arrival, float Cut, Vector3? Dungeon);
+    /// <param name="Step">The history's step that placed it.</param>
+    /// <param name="Undone">That step is undone (on the redo list): nothing to go to until it is redone.</param>
+    internal sealed record PlacedDungeon(Vector3 Entrance, Vector3 Arrival, float Cut, Vector3? Dungeon, EditSession.Change Step, bool Undone = false);
 
-    /// <summary>The dungeon last placed in this area, or null; the Dungeon panel's Go to buttons follow.</summary>
+    /// <summary>
+    /// The dungeon last placed in this area, or null; the Dungeon panel's Go to buttons follow, and its line for an area
+    /// without a dungeon of rooms (one of pieces is none, yet the area has a dungeon).
+    /// </summary>
     internal PlacedDungeon? LastPlaced
     {
         get;
         private set
         {
             field = value;
-            DungeonPanel.Gen.Placed(value != null);
+            FollowPlaced();
         }
     }
 
     /// <summary>
+    /// The dungeon last placed follows the history (an undo, a redo, an edit after an undo): undone, the Go to buttons
+    /// are off until it is redone; undone and then replaced by another edit, it is forgotten. The Dungeon panel's Go to
+    /// buttons and its line for a dungeon of pieces follow.
+    /// </summary>
+    private void FollowPlaced()
+    {
+        if (LastPlaced is { } p && Session is { } s)
+        {
+            bool undone = s.RedoList.Any(c => ReferenceEquals(c, p.Step));
+            if (p.Undone && !undone && !s.UndoList.Any(c => ReferenceEquals(c, p.Step)))
+            {
+                LastPlaced = null;
+                return;
+            }
+            if (undone != p.Undone)
+            {
+                LastPlaced = p with { Undone = undone };
+                return;
+            }
+        }
+        bool there = LastPlaced is { Undone: false };
+        DungeonPanel.Gen.Placed(there);
+        DungeonPanel.ShowPiecesPlaced(there && LastPlaced!.Dungeon == null);
+    }
+
+    /// <summary>
     /// The view up to the dungeon last placed: looking down into its first level, its roofs cut away (one of the game's
-    /// rooms: the Dungeon panel's Go inside on it).
+    /// rooms: the Dungeon panel's own Go to the dungeon on it).
     /// </summary>
     internal void GoToDungeon()
     {
-        if (LastPlaced is not { } p)
+        if (LastPlaced is not { Undone: false } p)
         {
             return;
         }
@@ -91,7 +127,7 @@ public partial class MainWindow
     /// <summary>The view back down to the entrance of the dungeon last placed, on the ground, nothing cut away.</summary>
     internal void GoToEntrance()
     {
-        if (LastPlaced is not { } p)
+        if (LastPlaced is not { Undone: false } p)
         {
             return;
         }

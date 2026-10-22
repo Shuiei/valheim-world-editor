@@ -32,11 +32,16 @@ public class MainWindowDungeonBuildTests
         // Off when it is not on: nothing.
         w.BuildInDungeon(false);
         Assert.False(w.BuildingInDungeon);
+        // The Library left shown by the Workshop.
+        w.BuildPanel.ShowLibrary(true);
         w.BuildInDungeon(true);
         Assert.True(w.BuildingInDungeon);
         Assert.Equal(ToolMode.Place, w.Tools.Mode);
         Assert.True(w.PlaceTool.Building);
         Assert.StartsWith("Building in the dungeon", w.MessageText.Text);
+        // The pieces only: the Library's blueprints go onto the Workshop's plot, not into a dungeon.
+        Assert.False(w.BuildPanel.LibraryTab.IsVisible);
+        Assert.False(w.BuildPanel.LibraryShown);
         // On again: still on, the settings kept aside once.
         w.BuildInDungeon(true);
         Assert.True(w.BuildingInDungeon);
@@ -58,6 +63,19 @@ public class MainWindowDungeonBuildTests
         w.BuildInDungeon(true);
         w.Edit(s);
         Assert.False(w.BuildingInDungeon);
+    }
+
+    [AvaloniaFact]
+    public void BuildHereEndedTakesItsLineAwayButNotALaterMessage()
+    {
+        var (w, _) = Open();
+        w.BuildInDungeon(true);
+        w.BuildInDungeon(false);
+        Assert.Equal("", w.MessageText.Text);
+        w.BuildInDungeon(true);
+        w.Msg(Said.Raw("Placed 3 object(s)."));
+        w.BuildInDungeon(false);
+        Assert.Equal("Placed 3 object(s).", w.MessageText.Text);
     }
 
     [AvaloniaFact]

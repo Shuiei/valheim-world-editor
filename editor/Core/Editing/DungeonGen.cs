@@ -123,7 +123,11 @@ public static partial class DungeonGen
     /// Arrival and Rooms are then in world metres, not from the dungeon's origin. Null otherwise.
     /// </param>
     public sealed record Result(List<Item> Items, Vector3 Arrival, Dungeons.Kind? Kind, List<Dungeons.Placed>? Rooms, List<Said> Notes, string Name = "",
-        IReadOnlyList<PlanRoom>? Map = null, IReadOnlyList<PlanDoor>? Doors = null, DungeonEntrances.Pose? Dungeon = null);
+        IReadOnlyList<PlanRoom>? Map = null, IReadOnlyList<PlanDoor>? Doors = null, DungeonEntrances.Pose? Dungeon = null)
+    {
+        /// <summary>The notes as one line: what was made first, then each thing that could not be, apart.</summary>
+        public Said Summary => Said.Join("; ", Notes);
+    }
 
     /// <summary>The most levels a dungeon of building pieces can have.</summary>
     public const int MaxLevels = 16;

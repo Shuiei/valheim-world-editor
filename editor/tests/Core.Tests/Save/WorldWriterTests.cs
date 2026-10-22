@@ -145,4 +145,20 @@ public class WorldWriterTests
         Assert.StartsWith("Saving failed", r.Message);
         AssertSame(before, w.Dir);
     }
+
+    // Asked to rewrite with nothing changed (what an earlier save of the session added was undone): a new save as the
+    // world was opened, said so.
+    [Fact]
+    public void ARewriteWithNothingChangedSavesTheWorldAsItWas()
+    {
+        using var w = new TempWorld();
+        var world = w.Load();
+        int objects = world.Objects.Count;
+        var r = WorldWriter.Save(world, [], options: new WorldWriter.Options(KeepBase: true, Rewrite: true));
+        Assert.True(r.Saved, r.Message);
+        Assert.Equal(TerrainEditor.App.Said.Of("save.writer.savedAsOpened", r.Number).Shown, r.Message);
+        var again = WorldSave.Load(w.Dir);
+        Assert.Equal(r.Number, again.SaveNumber);
+        Assert.Equal(objects, again.Objects.Count);
+    }
 }

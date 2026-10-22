@@ -8,8 +8,9 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Save on the map (MainWindow.SaveWorld): what the save left out is said with the rest, and applying live whose
-/// question about the game's own ground fails is said, nothing sent and the changes still pending.
+/// Save on the map (MainWindow.SaveWorld): what the save left out is said with the rest, applying live whose
+/// question about the game's own ground fails is said, nothing sent and the changes still pending, and the map shows
+/// what is pending once saved or applied before the outcome is told.
 /// </summary>
 [Collection("World files")]
 public sealed class MainWindowSaveWorldTests
@@ -52,5 +53,25 @@ public sealed class MainWindowSaveWorldTests
         Assert.Empty(r.Game!.Terrain);
         Assert.Equal(1, world.Pending.Zones);
         Assert.False(r.W.IsBusy);
+    }
+
+    // The outcome's dialog over a map that still said the changes were waiting (it was brought up to date only once the
+    // dialog closed).
+    [AvaloniaFact]
+    public async Task TheMapIsUpToDateWhenTheOutcomeIsTold()
+    {
+        foreach (bool live in new[] { false, true })
+        {
+            using var r = new WorldWindowRun();
+            await (live ? r.OpenLive() : r.Open());
+            r.Raise();
+            r.W.ShowMap();
+            var map = r.W.MapPage!;
+            string? behind = null;
+            r.W.Tell = _ => { behind = map.Pending.Text; return Task.CompletedTask; };
+            await r.W.SaveWorld();
+            Assert.Equal(live ? "Everything is applied." : "Everything is saved.", behind);
+            map.Stop();
+        }
     }
 }

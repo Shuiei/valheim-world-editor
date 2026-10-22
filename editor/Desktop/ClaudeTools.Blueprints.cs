@@ -72,8 +72,8 @@ public sealed partial class ClaudeTools
     [Description("Saves the building on the Workshop's plot as a blueprint of the user's library (Homestead's), as the Workshop's Save blueprint does: its name, a description and tags, with what its objects hold (chest contents, stands' items) and a picture. After it, the Workshop holds nothing unsaved, so another blueprint can be opened (open_workshop). Refused when pieces would fall in game (support_check; evenIfFalling saves anyway) and when another blueprint of that name exists: replacing one (overwrite) is the user's call, ask first.")]
     public Task<string> SaveBlueprint(
         [Description("The blueprint's name (also its file's).")] string name,
-        [Description("A few words about it, shown in the library (optional).")] string description = "",
-        [Description("Words to find it by (optional), e.g. [\"house\", \"log\"].")] string[]? tags = null,
+        [Description("A few words about it, shown in the library (optional: the blueprint's own when one was opened or saved, else none).")] string? description = null,
+        [Description("Words to find it by (optional: the blueprint's own when one was opened or saved, else none; a dungeon blueprint's include \"dungeon\"), e.g. [\"house\", \"log\"].")] string[]? tags = null,
         [Description("Replace a blueprint of that name (only when the user said so; default false).")] bool overwrite = false,
         [Description("Save even if pieces would fall in game (default false).")] bool evenIfFalling = false) => OnUi(() =>
     {
@@ -81,9 +81,22 @@ public sealed partial class ClaudeTools
         {
             return "Give the blueprint a name.";
         }
-        var details = new Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
-        return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.LastMessageEn + " " + ToJson(StateOf(_w));
+        return _w.SaveWorkshopAs(DetailsFor(name, description, tags), overwrite, evenIfFalling) is string problem ? problem : _w.LastMessageEn + " " + ToJson(StateOf(_w));
     });
+
+    /// <summary>
+    /// The details a building is saved under: the name given, and the description and tags given or else those of the
+    /// blueprint opened or last saved (so that saving it again keeps them: a dungeon's tag among them).
+    /// </summary>
+    /// <param name="name">The name.</param>
+    /// <param name="description">The description, or null to keep the blueprint's.</param>
+    /// <param name="tags">The tags, or null to keep the blueprint's.</param>
+    private Homestead.Details DetailsFor(string name, string? description, string[]? tags)
+    {
+        var kept = _w.WorkshopDetails;
+        IEnumerable<string> words = tags ?? (IEnumerable<string>?)kept?.Tags ?? [];
+        return new(name.Trim(), (description ?? kept?.Description ?? "").Trim(), [.. words.Select(t => t.Trim()).Where(t => t.Length > 0)]);
+    }
 
     /// <summary>list_blueprints: Homestead's library, filtered by words of the name, creator, description or tags.</summary>
     [McpServerTool(Name = "list_blueprints", ReadOnly = true, Title = "The blueprint library")]

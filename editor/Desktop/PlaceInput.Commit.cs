@@ -19,8 +19,9 @@ public sealed partial class PlaceInput
             Commit(session, list, Lang.T("place.undo.placed", list.Count, string.Join(", ", names.Take(3))));
             Placed?.Invoke(names);
         }
-        Message?.Invoke(Tool.Building
-            ? list.Count == 0 ? Said.Of("place.msg.nothingPlaced") : Built(string.Join(", ", list.Select(o => PieceCost.PieceName(o.Name)).Distinct()), Tool.Snapped)
+        // Nothing fitted (a forest already full, the mask): no step, so nothing for Ctrl+Z to take back either.
+        Message?.Invoke(list.Count == 0 ? Said.Of("place.msg.nothingPlaced")
+            : Tool.Building ? Built(string.Join(", ", list.Select(o => PieceCost.PieceName(o.Name)).Distinct()), Tool.Snapped)
             : Said.Of("place.msg.placedSave", list.Count));
     }
 

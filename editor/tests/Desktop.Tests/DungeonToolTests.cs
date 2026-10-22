@@ -23,7 +23,7 @@ public class DungeonToolTests
     {
         using var r = new SharedDungeonToolRun();
         Assert.True(r.P.Card.IsVisible);
-        Assert.Equal("Frost Cave, 1 rooms, at 10, 10", Assert.Single((IEnumerable<string>)r.P.DungeonBox.ItemsSource!));
+        Assert.Equal("Frost Cave, 1 room(s), at 10, 10", Assert.Single((IEnumerable<string>)r.P.DungeonBox.ItemsSource!));
         Assert.NotNull(r.T.Dungeon);
         Assert.Equal(3, r.T.FreeEnds.Count);
         var names = r.P.Rooms.Items.Cast<ListBoxItem>().Select(i => (string)i.Tag!).ToList();

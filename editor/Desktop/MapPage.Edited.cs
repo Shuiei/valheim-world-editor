@@ -27,7 +27,8 @@ public sealed partial class MapPage
 
     // ---- The edited zones, most edited first, and the picked zone's edits up close.
     /// <summary>
-    /// Lists the zones with ground or paint edits, most edited first, with their range of change.
+    /// Lists the zones with ground or paint edits, most edited first, with their range of change; those with changes
+    /// pending are marked not saved (live: not applied).
     /// </summary>
     private void FillEdited()
     {
@@ -39,9 +40,8 @@ public sealed partial class MapPage
         EditedList.ItemsSource = _edited.Select(e =>
         {
             var (lo, hi) = Range(e);
-            return e.Changed
-                ? Lang.T("map.edited.unsaved", e.ZoneX, e.ZoneZ, e.HeightCount, e.PaintCount, lo, hi)
-                : Lang.T("map.edited.line", e.ZoneX, e.ZoneZ, e.HeightCount, e.PaintCount, lo, hi);
+            string key = !e.Changed ? "map.edited.line" : s.IsLive ? "map.edited.unapplied" : "map.edited.unsaved";
+            return Lang.T(key, e.ZoneX, e.ZoneZ, e.HeightCount, e.PaintCount, lo, hi);
         }).ToList();
         ((TextBlock)_editedSection.Header!).Text = Lang.T("map.head.editedCount", _edited.Count);
     }

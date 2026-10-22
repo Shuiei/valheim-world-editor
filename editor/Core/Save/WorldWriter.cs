@@ -73,7 +73,12 @@ public static partial class WorldWriter
     /// The newest save number the caller knows of (its own last save, or the one it opened); a newer one in the folder
     /// was made by the game since, and saving would throw it away, so nothing is saved.
     /// </param>
-    public sealed record Options(bool KeepBase = false, IReadOnlyCollection<string>? Drop = null, int? Latest = null);
+    /// <param name="Rewrite">
+    /// An earlier save of the same session holds what is no longer wanted (objects placed then undone, deleted then
+    /// put back): the new save is written even when nothing differs from the save it is made from, so that it takes the
+    /// earlier one's place.
+    /// </param>
+    public sealed record Options(bool KeepBase = false, IReadOnlyCollection<string>? Drop = null, int? Latest = null, bool Rewrite = false);
 
     /// <summary>Writes a new save of the world with these changes, or nothing at all (see the type's steps).</summary>
     /// <param name="world">The world as loaded; its save is the base of the new one.</param>
@@ -120,7 +125,7 @@ public static partial class WorldWriter
             Log.Caught(ex, "making the save's changes (nothing saved)");
             return Refused(Said.Of("save.writer.failed", ex.Message), skipped);
         }
-        if (plan.Written + plan.Created + plan.Removed + plan.AddedCount + resets.Count == 0)
+        if (plan.Written + plan.Created + plan.Removed + plan.AddedCount + resets.Count == 0 && !options.Rewrite)
         {
             return Refused(Said.Of("save.writer.nothingSaved"), skipped);
         }
@@ -129,7 +134,8 @@ public static partial class WorldWriter
             return failed;
         }
         RemoveOld(world, plan, options);
-        var saved = Said.Of("save.writer.saved", Summary(plan, resets), plan.NewNumber);
+        var summary = Summary(plan, resets);
+        var saved = summary.Shown.Length > 0 ? Said.Of("save.writer.saved", summary, plan.NewNumber) : Said.Of("save.writer.savedAsOpened", plan.NewNumber);
         return new Result(true, saved.Shown, null, plan.Written, plan.Created, skipped, plan.Removed, plan.AddedCount, resets.Count) { Files = plan.NewFiles, Number = plan.NewNumber, Read = plan.Read, Report = saved };
     }
 
@@ -140,7 +146,7 @@ public static partial class WorldWriter
         {
             return Refused(Said.Of("save.writer.noDb"), skipped);
         }
-        if (changed.Count == 0 && deleted.Count == 0 && added.Count == 0 && resets.Count == 0)
+        if (changed.Count == 0 && deleted.Count == 0 && added.Count == 0 && resets.Count == 0 && !options.Rewrite)
         {
             return Refused(Said.Of("save.writer.nothing"), skipped);
         }

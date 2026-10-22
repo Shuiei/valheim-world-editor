@@ -173,13 +173,10 @@ public class LiveBridgeTests
     [Fact]
     public async Task ObjectsAnotherModMadeAgainAreToldOf()
     {
-        using var bridge = new FakeBridge { Refound = 1 };
-        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
-        var edits = new EditStore(world);
-        var sync = new LiveSync();
-        using var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token);
-        edits.SetDeleted([world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id], true);
-        string said = (await sync.Apply(world, edits, live)).Shown;
+        using var t = new LiveSyncRig(canMove: false);
+        t.Bridge.Refound = 1;
+        t.Edits.SetDeleted([t.Tree.Id], true);
+        string said = (await t.Apply()).Shown;
         Assert.Contains("1 made again by another mod", said);
     }
 

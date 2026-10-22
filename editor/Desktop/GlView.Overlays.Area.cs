@@ -18,6 +18,7 @@ public sealed partial class GlView
         {
             // Where the paste would go: its outlines and a small post at each object whose model is not
             // drawn as a ghost (DrawGhosts).
+            Paste.MaskAt = PasteMask(s);
             var (objs, outlines) = Paste.Preview(pat, GridHeight);
             var data = new List<float>();
             foreach (var o in outlines)

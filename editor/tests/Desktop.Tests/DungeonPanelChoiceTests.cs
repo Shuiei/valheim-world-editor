@@ -6,6 +6,7 @@ using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.ComboBoxChoices;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -42,15 +43,14 @@ public class DungeonPanelChoiceTests
             w.Tools.ChooseMode(ToolMode.Dungeon);
             Dispatcher.UIThread.RunJobs();
             var p = w.DungeonPanel;
-            var names = ((IEnumerable<string>)p.DungeonBox.ItemsSource!).ToList();
-            Assert.Equal(2, names.Count);
+            Assert.Equal(2, Lines(p.DungeonBox).Count);
             // The one with no rooms.
-            p.DungeonBox.SelectedIndex = names.FindIndex(n => n.Contains("0 rooms", StringComparison.Ordinal));
+            Choose(p.DungeonBox, "0 room(s)");
             Dispatcher.UIThread.RunJobs();
             Assert.Empty(w.View.Dungeon.Dungeon!.Rooms);
             Assert.Contains("The game has not laid this dungeon out yet", p.Info.Text);
             // The laid out one, and a room chosen in its list.
-            p.DungeonBox.SelectedIndex = names.FindIndex(n => n.Contains("1 rooms", StringComparison.Ordinal));
+            Choose(p.DungeonBox, "1 room(s)");
             Dispatcher.UIThread.RunJobs();
             Assert.Single(w.View.Dungeon.Dungeon!.Rooms);
             var room = p.Rooms.Items.Cast<ListBoxItem>().First(i => (string)i.Tag! == "cave_new_corridor03");

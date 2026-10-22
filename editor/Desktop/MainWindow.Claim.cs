@@ -56,7 +56,8 @@ public sealed partial class MainWindow
         }
         if (View.Selected.Count == 1 && Inspector.Open(View.Selected.First()))
         {
-            ViewPanelCard.IsVisible = false;
+            // In the right-hand panels' place, History and Help as much as View (the choice stays, for when it closes).
+            ShowRight(Inspector.Card);
         }
     }
 }

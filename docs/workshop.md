@@ -117,7 +117,8 @@ of the same name.
 | **Yellow**, **orange** | Weaker. |
 | **Red** | About to break: in game it falls as soon as a player comes near. |
 
-The top bar says how many pieces would fall, and **Save blueprint** asks first when some would. Stone stands tall but
+The top bar says how many pieces would fall, and **Save blueprint** asks first when some would (with the switch off
+too: it only hides the colours). Stone stands tall but
 cannot reach out; wood reaches further out but not as high. See [The support check](concepts/objects.md#the-support-check).
 
 ### Cut

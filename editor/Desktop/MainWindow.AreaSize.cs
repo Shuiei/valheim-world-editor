@@ -21,8 +21,7 @@ public sealed partial class MainWindow
             return;
         }
         int mx = s.X0 + s.ZonesX / 2, mz = s.Z0 + s.ZonesZ / 2;
-        Msg("top.msg.opening", size);
-        await OpenBlockKeepingView(mx - size / 2, mz - size / 2, size, size);
+        await OpenBlockKeepingView(mx - size / 2, mz - size / 2, size, size, progress: Said.Of("top.msg.opening", size));
     }
 
     /// <summary>Shows the area's size in the size box without resizing.</summary>

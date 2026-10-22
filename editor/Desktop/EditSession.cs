@@ -100,6 +100,16 @@ public sealed partial class EditSession
         }
     }
 
+    /// <summary>How many of the steps kept aside for other areas (<see cref="Shelved"/>, not undone) are of this kind.</summary>
+    /// <param name="which">The kind of step.</param>
+    internal int ShelvedDone(Func<Change, bool> which)
+    {
+        lock (_lock)
+        {
+            return _shelvedUndo.Count(s => which(s.Change));
+        }
+    }
+
     /// <summary>
     /// How many steps the undo lists keep, from their next change on (Settings,
     /// <see cref="TerrainEditor.App.AppSettings.HistorySteps"/>); 0 or less: no limit.

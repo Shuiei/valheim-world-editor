@@ -76,7 +76,7 @@ Each example is a whole script, ready to run on any open area. Read them to see 
 | Example | What it does |
 |---|---|
 | **Mountain range across the area** | Four Lone peak mountains in a line from the south-west to the north-east, each 35 to 60 m high. `Rnd.Seed = 7`, so it is the same range each run. Saving turns them into ground discs (past the game's 8 m limit). |
-| **Terraced hill** | A hill 30 m high and 60 m in radius, cut into six flat terraces like rice fields. The trees, rocks and bushes it would bury are taken away first (buildings stay); the steep steps are painted dirt. |
+| **Terraced hill** | A hill 30 m high and 60 m in radius, cut into six flat terraces like rice fields. The trees, rocks and bushes it would bury are taken away first (everything else stays); the steep steps are painted dirt. |
 | **Canyon with a river** | A winding canyon 18 m wide from west to east, dug to 3 m below sea level so water fills it, fading out over the last 30 m at the area's edges. |
 | **Scatter boulders** | Big boulders (`rock4_forest`, `rock4_coast`, `rock4_heath`) every 6 m where the noise is high, more on slopes, each turned and sized at random. Prints how many. |
 | **Ring of trees** | A ring of 36 beeches 40 m from the middle; the trees inside the ring are taken away. |
@@ -340,8 +340,8 @@ every point is not needed.
   [Select](select.md) tool.
 - A moved object keeps all its data; live, it moves in the game as the same object when it can (see
   [Moving things](live-mode.md#moving-things)).
-- A script handles each object on its own: it does not take a mod's linked group (a ship and its pieces) whole, as
-  the Select tool does. Move or remove such groups with the Select tool.
+- A part of a mod's linked group (a ship and its pieces) never goes or moves alone: `Objects.Remove` or
+  `Objects.Move` of one part takes away or moves its whole group, in its shape, as the Select tool does.
 - Scripts are C# 12. [Claude](claude.md) runs scripts through the same engine, and can do a dry run that only says
   what a script would change.
 

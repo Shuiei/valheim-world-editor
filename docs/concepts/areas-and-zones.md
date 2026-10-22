@@ -46,10 +46,10 @@ before big work.
 world. Move the area, resize it, or go back to the map and open another place: what you did elsewhere still waits and
 is saved with the rest. The history comes along too (see [History](saving-and-history.md#history)).
 
-The top bar's arrows move the area one zone (64 m) at a time, and the camera stays where it is in the world. They do
-not wait: what you were drawing (a path, an Area box, a Place line, a measure) and the selection are dropped. The
-size list opens the area again at another size around the same middle zone; like Follow (below), it waits while
-something would be lost. Opening another area shows hidden objects again.
+The top bar's arrows move the area one zone (64 m) at a time, and the camera stays where it is in the world. The
+size list opens the area again at another size around the same middle zone. Both, like Follow (below), wait while
+a path is drawn, objects are selected or a stroke is going on; an Area box, a Place line, grid or zone and a measure
+are dropped instead. Opening another area shows hidden objects again.
 
 ## The locked edge
 
@@ -79,7 +79,8 @@ Follow only adds zones, it never drops any, so nothing you are working on leaves
 way (about 1 km) and says so; then move the area with the arrows, or open another place from the map.
 
 Follow waits, and the status bar says why, while growing would lose something: objects are selected, a brush stroke
-is under way, a path is drawn and not applied, or changes are still being sent to a live game.
+is under way, a path is drawn and not applied, or changes are still being sent to a live game. It does not wait for
+an Area box, a Place line, grid or zone or a measure: growing drops them.
 
 ## Resetting zones
 

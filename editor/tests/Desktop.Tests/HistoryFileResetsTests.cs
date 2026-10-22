@@ -23,7 +23,7 @@ public class HistoryFileResetsTests
             var s = scene.Session!;
             var reset = new ZoneReset(0, 0, KeepBuildings: true, Ground: false);
             s.Commit("Reset zone", null, [], [], [(reset, false, true)]);
-            Assert.Equal("1 zone reset", s.UndoList[^1].Describe());
+            Assert.Equal("1 zone reset(s)", s.UndoList[^1].Describe());
             HistoryFile.Write(scene.Owner!, s.Export());
             var step = Assert.Single(HistoryFile.Read(scene.Owner!)!.Kept.Undo);
             Assert.Equal("Reset zone", step.Label);

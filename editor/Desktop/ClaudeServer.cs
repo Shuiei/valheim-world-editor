@@ -116,6 +116,8 @@ public sealed class ClaudeServer
     {
         var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory });
         builder.Logging.ClearProviders();
+        // A tool that throws is answered "An error occurred invoking …" by the MCP library, which logs why: the log has it.
+        builder.Logging.AddProvider(new ErrorsToLog());
         // The host's console lifetime would take Ctrl+C (SIGINT) from the editor started in a terminal
         // and stop only this server, leaving the editor open: the signals are the editor's (Program).
         builder.Services.AddSingleton<IHostLifetime, NoSignals>();
@@ -169,6 +171,37 @@ public sealed class ClaudeServer
     {
         await _app.StopAsync();
         await _app.DisposeAsync();
+    }
+
+    /// <summary>
+    /// The server's own log entries (the MCP library's, the web host's) that carry an exception, errors and worse, into
+    /// the editor's log: a tool that throws is answered with a bare "An error occurred", the reason written here.
+    /// </summary>
+    internal sealed class ErrorsToLog : ILoggerProvider, ILogger
+    {
+        /// <inheritdoc/>
+        public ILogger CreateLogger(string categoryName) => this;
+
+        /// <inheritdoc/>
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        /// <inheritdoc/>
+        public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Error;
+
+        /// <inheritdoc/>
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (IsEnabled(logLevel) && exception != null)
+            {
+                TerrainEditor.App.Log.Caught(exception, "serving Claude: " + formatter(state, exception).TrimEnd('.'));
+            }
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+        }
     }
 
     /// <summary>

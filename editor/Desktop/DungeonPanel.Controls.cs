@@ -12,10 +12,10 @@ public sealed partial class DungeonPanel
 {
     /// <summary>Which of the area's dungeons is edited.</summary>
     internal ComboBox DungeonBox { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
-    /// <summary>The camera into the dungeon (see <see cref="Inside"/>).</summary>
-    internal Button GoInside { get; } = new() { Content = Lang.T("dungeon.label.goInside"), FontSize = 12 };
+    /// <summary>The camera into the dungeon (see <see cref="Inside"/>); worded as the generator's for the dungeon it placed.</summary>
+    internal Button GoInside { get; } = new() { Content = Lang.T("dungeon.label.toDungeon"), FontSize = 12 };
     /// <summary>The camera back down to the dungeon's entrance on the ground (see <see cref="Outside"/>).</summary>
-    internal Button GoOutside { get; } = new() { Content = Lang.T("dungeon.label.goToEntrance"), FontSize = 12 };
+    internal Button GoOutside { get; } = new() { Content = Lang.T("dungeon.label.toEntrance"), FontSize = 12 };
     /// <summary>Build with the hammer's pieces in this dungeon (<see cref="BuildAsked"/>).</summary>
     internal Button BuildHere { get; } = new() { Content = Lang.T("dungeon.label.buildHere"), FontSize = 12 };
     /// <summary>Build here was clicked: the window switches to building in the dungeon.</summary>
@@ -42,8 +42,8 @@ public sealed partial class DungeonPanel
     internal CheckBox Contents { get; } = new() { Content = Lang.T("dungeon.label.contents"), IsChecked = true, FontSize = 12 };
     /// <summary>Rooms added with doors where the game might put them.</summary>
     internal CheckBox Doors { get; } = new() { Content = Lang.T("dungeon.label.doors"), IsChecked = true, FontSize = 12 };
-    /// <summary>Shown when the area has no dungeon.</summary>
-    private readonly TextBlock _empty = new()
+    /// <summary>Shown when the area has no dungeon of rooms (see <see cref="ShowPiecesPlaced"/>).</summary>
+    internal TextBlock Empty { get; } = new()
     {
         FontSize = 12,
         Foreground = Ui.Muted,

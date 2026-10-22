@@ -83,7 +83,7 @@ public interface IExtensionRegistry
     /// <summary>The editor, for what an extension asks of it outside its hooks: the game connected, a redraw.</summary>
     IEditorHost Host { get; }
 
-    /// <summary>Writes a line to the editor's log (Settings → Open log), named after the extension.</summary>
+    /// <summary>Writes a line to the editor's log (Open log, on the start page), named after the extension.</summary>
     void Log(string message);
 
     /// <summary>

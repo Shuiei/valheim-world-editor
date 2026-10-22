@@ -23,11 +23,12 @@ namespace TerrainEditor.Desktop;
 ///    camera reset                   the camera's mode, turn, tilt and distance as the editor starts with them
 ///    click &lt;text&gt;                   the visible button, switch or box labelled so, or whose words
 ///                                   begin so (windows and dialogs)
-///    choose &lt;text&gt;                  the entry so named in whichever visible list has it
+///    choose &lt;text&gt;                  the entry so named in whichever visible list (drop-down or list box) has it
 ///    type &lt;hint&gt;|&lt;text&gt;             the visible text box whose placeholder contains hint gets text
 ///    set &lt;label&gt;|&lt;value&gt;            the slider, text box(es: a,b) or list beside the label so worded
 ///    panel &lt;view|history|help|none&gt; the right-hand panel shown
 ///    message [text]                 the status bar's message (none: cleared)
+///    note close                     the note on the locations near the area closed (as its × does)
 ///    wait &lt;ms&gt;                      a pause (a brush stroke works frame by frame while held)
 ///    bench &lt;seconds&gt;                the 3D camera turns on its own; the frame rates come back
 ///    mouse &lt;down|move|up&gt; &lt;x&gt; &lt;z&gt; [left|right|middle] [shift|ctrl|alt ...]
@@ -101,6 +102,7 @@ public static partial class Driver
         ["set"] = CmdSet,
         ["panel"] = CmdPanel,
         ["message"] = CmdMessage,
+        ["note"] = CmdNote,
         ["wait"] = CmdWait,
         ["inspect"] = CmdInspect,
         ["camera"] = CmdCamera,

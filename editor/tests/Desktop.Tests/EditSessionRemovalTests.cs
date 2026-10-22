@@ -45,7 +45,7 @@ public class EditSessionRemovalTests
         s.MarkResets([(0, 0)], keepBuildings: true, ground: false, "Keep");
         s.MarkResets([(0, 0)], keepBuildings: false, ground: false, "Wipe");
         Assert.Equal(wiped, Assert.Single(s.Resets));
-        Assert.Equal("1 zone reset", s.UndoList[^1].Describe());
+        Assert.Equal("1 zone reset(s)", s.UndoList[^1].Describe());
         Assert.True(s.Undo());
         Assert.Equal(kept, Assert.Single(s.Resets));
         Assert.True(s.Redo());

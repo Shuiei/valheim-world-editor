@@ -69,14 +69,25 @@ public sealed partial class MainWindow
     /// <param name="zonesX">Zones west to east.</param>
     /// <param name="zonesZ">Zones south to north.</param>
     /// <param name="context">Said before the failure, when it cannot be opened (see <see cref="EditBlock"/>).</param>
+    /// <param name="progress">Said in the status bar while it opens ("Opening 5 × 5 zones…"), and taken away once open.</param>
     /// <returns>Whether the block was opened.</returns>
-    private async Task<bool> OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ, Said? context = null)
+    private async Task<bool> OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ, Said? context = null, Said? progress = null)
     {
+        if (progress is { } p)
+        {
+            Msg(p);
+        }
         var cam = View.WorldCamera;
         bool opened = await EditBlock(x0, z0, zonesX, zonesZ, context: context);
         if (View.Scene is { } ns && (ns.X0, ns.Z0, ns.ZonesX, ns.ZonesZ) == (x0, z0, zonesX, zonesZ) && cam != null)
         {
             View.WorldCamera = cam;
+        }
+        // Open: the line said it was still opening. What the area said as it opened (an earlier session's history)
+        // stays.
+        if (opened && progress is { } said && MessageText.Text == said.Shown)
+        {
+            Msg(Said.Empty);
         }
         return opened;
     }

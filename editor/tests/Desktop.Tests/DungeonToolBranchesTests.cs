@@ -106,7 +106,7 @@ public class DungeonToolBranchesTests
     public void AClickOverARoomSelectsItAndRoomsThatCannotJoinShowNothing()
     {
         var r = new Run("DG_Cave", Entrance());
-        Assert.Equal("Frost Cave, 1 rooms, at 10, 10", DungeonTool.Describe(r.T.Dungeon!));
+        Assert.Equal("Frost Cave, 1 room(s), at 10, 10", DungeonTool.Describe(r.T.Dungeon!));
         // Worked out once while nothing changes.
         Assert.Same(r.T.FreeEnds, r.T.FreeEnds);
         Assert.Equal(3, r.T.FreeEnds.Count);
@@ -333,7 +333,7 @@ public class DungeonToolBranchesTests
         var mixed = new Run("DG_DvergrTown", Room("dvergr_divider01", At), Room("dvergr_room01", At + new Vector3(0, 0, 30)));
         Assert.Equal(3, mixed.T.FreeEnds.Count);
         Assert.Equal(2, mixed.T.CloseOpenEnds());
-        Assert.Contains("Closed 2 open end(s) with end caps. 1 have no end cap of their type.", mixed.Said[^1]);
+        Assert.Contains("Closed 2 open end(s) with end caps. 1 of them found no end cap of their type.", mixed.Said[^1]);
         Assert.Single(mixed.T.FreeEnds);
         // All closed: nothing more to do.
         var cave = new Run("DG_Cave", Entrance());

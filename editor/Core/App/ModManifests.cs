@@ -69,6 +69,9 @@ public static partial class ModManifests
 
         /// <summary>The hashes of the prefabs whose objects only hold data, worked out once the notes are complete.</summary>
         public HashSet<int> DataPrefabs => field ??= [.. Prefabs.Where(p => p.Value.Data).Select(p => StableHash.Of(p.Key))];
+
+        /// <summary>The data keys the manifests name, by their hash, worked out once the notes are complete.</summary>
+        public Dictionary<int, string> KeyNames => field ??= Data.Keys.GroupBy(StableHash.Of).ToDictionary(g => g.Key, g => g.First());
     }
 
     /// <summary>
@@ -100,6 +103,13 @@ public static partial class ModManifests
 
     /// <summary>What a manifest says of a data key; null when none says anything.</summary>
     public static DataNote? DataOf(string? key) => key == null ? null : _notes.Data.GetValueOrDefault(key);
+
+    /// <summary>
+    /// The name of a data key a manifest names under "data", by its hash (ZdoKeys.NameOf: a key whose name is not in
+    /// the mod's DLL text, made while the game runs); null when none names it.
+    /// </summary>
+    /// <param name="hash">The key's hash, as the game saves it.</param>
+    public static string? KeyNameOf(int hash) => _notes.KeyNames.GetValueOrDefault(hash);
 
     /// <summary>What a manifest says of a prefab; null when none says anything.</summary>
     public static PrefabNote? PrefabOf(string? prefab) => prefab == null ? null : _notes.Prefabs.GetValueOrDefault(prefab);

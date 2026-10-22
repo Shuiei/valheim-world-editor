@@ -42,6 +42,22 @@ public sealed class ModManifestsTests : ModManifestsTestBase
         Assert.Null(ModManifests.PrefabOf("woodwall"));
     }
 
+    // A data key whose name a mod's DLL does not hold as text (made while the game runs) is named by the manifest that
+    // lists it: the inspector showed it as # and its hash, with the manifest's label lost.
+    [Fact]
+    public void AManifestsDataKeysNameTheirHashes()
+    {
+        Manifest("CornerMod", """{ "version": 1, "data": { "CornerMod_Corner3": { "label": "Third corner" } } }""");
+        int hash = TerrainEditor.Save.StableHash.Of("CornerMod_Corner3");
+        Assert.Null(TerrainEditor.Terrain.ZdoKeys.NameOf(hash));
+
+        Assert.Equal(1, ModManifests.Refresh(Settings));
+
+        Assert.Equal("CornerMod_Corner3", ModManifests.KeyNameOf(hash));
+        Assert.Equal("CornerMod_Corner3", TerrainEditor.Terrain.ZdoKeys.NameOf(hash));
+        Assert.Null(ModManifests.KeyNameOf(hash + 1));
+    }
+
     [Fact]
     public void AManifestTellsItsDataHoldersAndTheGameScriptsAndSettingsFilesItsExtensionReads()
     {

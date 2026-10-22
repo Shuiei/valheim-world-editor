@@ -15,7 +15,7 @@ public sealed partial class EditSession
     /// as they are; the ones given come first, in their order.
     /// </summary>
     /// <param name="moves">The moves (index into the scene's things, new place, turn and scale).</param>
-    private List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> WholeGroupMoves(
+    internal List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> WholeGroupMoves(
         List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> moves)
     {
         var links = ReadLinks();

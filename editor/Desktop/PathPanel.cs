@@ -42,7 +42,7 @@ public sealed partial class PathPanel
     /// <summary>Cave: the preset; choosing one fills width, soft edge, depth and headroom from it.</summary>
     internal ComboBox CavePresetBox { get; }
     /// <summary>Cave: the preset's values each varied by about 15%, and new boulders.</summary>
-    internal Button CaveRandomButton { get; } = new() { Content = Lang.T("common.randomize"), FontSize = 12 };
+    internal Button CaveRandomButton { get; } = new() { Content = Lang.T("common.randomize"), FontSize = 12, Margin = new Thickness(6, 0, 0, 0) };
     /// <summary>Cave: depth below the ground, 2 to 20 m.</summary>
     internal NumericUpDown CaveDepthBox { get; } = Num(7.5m, 0.5m);
     /// <summary>Cave: headroom inside, 2 to 15 m.</summary>

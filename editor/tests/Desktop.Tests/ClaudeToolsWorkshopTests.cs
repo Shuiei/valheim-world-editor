@@ -139,4 +139,22 @@ public class ClaudeToolsWorkshopTests
         Assert.StartsWith("Saved the blueprint “Floating”", await r.T.SaveBlueprint("Floating", evenIfFalling: true));
         Assert.Equal("workshop", ClaudeRun.J(await r.T.OpenWorkshop("Hut")).GetProperty("page").GetString());
     }
+
+    // A blueprint opened and saved again without a description or tags keeps its own (a dungeon stays one); those
+    // given replace them.
+    [AvaloniaFact]
+    public async Task SavingAgainKeepsTheBlueprintsDescriptionAndTags()
+    {
+        using var r = new ClaudeRun();
+        r.Hut("Crypt", "A small crypt", "dungeon", "stone");
+        await r.T.OpenWorkshop("Crypt");
+        Assert.StartsWith("Saved the blueprint “Crypt”", await r.T.SaveBlueprint("Crypt", evenIfFalling: true));
+        var crypt = ClaudeRun.J(await r.T.ListBlueprints("Crypt"))[0];
+        Assert.Equal("A small crypt", crypt.GetProperty("description").GetString());
+        Assert.Equal(["dungeon", "stone"], crypt.GetProperty("tags").EnumerateArray().Select(t => t.GetString()));
+        Assert.StartsWith("Saved the blueprint “Crypt”", await r.T.SaveBlueprint("Crypt", "Bigger", [], evenIfFalling: true));
+        crypt = ClaudeRun.J(await r.T.ListBlueprints("Crypt"))[0];
+        Assert.Equal("Bigger", crypt.GetProperty("description").GetString());
+        Assert.Empty(crypt.GetProperty("tags").EnumerateArray());
+    }
 }

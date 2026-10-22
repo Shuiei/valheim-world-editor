@@ -13,7 +13,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
 {
     // ---- Lines over the map (in screen pixels): the chosen area, edited zones, resets, the grid.
     /// <summary>
-    /// Draws the lines: the zone grid, edited zones (yellow; orange where changed since the world was loaded),
+    /// Draws the lines: the zone grid, edited zones (thin yellow; thick orange where changed since the world was loaded),
     /// resets and the chosen area.
     /// </summary>
     /// <param name="w">The view's width, in device pixels.</param>

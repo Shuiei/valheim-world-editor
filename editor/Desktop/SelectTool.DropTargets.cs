@@ -1,9 +1,14 @@
 
+using TerrainEditor.App;
+
 namespace TerrainEditor.Desktop;
 
 public sealed partial class SelectTool
 {
-    /// <summary>The boxes of every drawn object but the selected ones, for a drop.</summary>
+    /// <summary>
+    /// The boxes of every drawn object but the selected ones, for a drop: only those with a top to land on (see
+    /// <see cref="HasTop"/>).
+    /// </summary>
     /// <param name="s">The scene.</param>
     /// <param name="sel">The selected things' indices.</param>
     private DropBoxes DropIndex(WorldScene s, HashSet<int> sel)
@@ -11,7 +16,7 @@ public sealed partial class SelectTool
         var boxes = new DropBoxes();
         for (int i = 0; i < s.Things.Count; i++)
         {
-            if (sel.Contains(i) || !_view.IsPickable(i))
+            if (sel.Contains(i) || !_view.IsPickable(i) || !HasTop(_view.KindOf(i)))
             {
                 continue;
             }
@@ -20,6 +25,15 @@ public sealed partial class SelectTool
         }
         return boxes;
     }
+
+    /// <summary>
+    /// Whether a moved object may land on things of this kind: a floor, a table, a rock, a ruin... but not a tree, a bush,
+    /// a pickable, a creature, a spawn point or an effect, whose box's top (a canopy, a mist) holds nothing up: a tree
+    /// moved in a wood landed on the other trees' tops.
+    /// </summary>
+    /// <param name="kind">The thing's View kind.</param>
+    internal static bool HasTop(ObjectKind kind) => kind is not (ObjectKind.Trees or ObjectKind.Bushes or ObjectKind.Pickables
+        or ObjectKind.Animals or ObjectKind.Creatures or ObjectKind.SpawnPoints or ObjectKind.Effects);
 
     /// <summary>
     /// The selection's middle (height: its lowest object), the first one's turn (-180..180) and how many there

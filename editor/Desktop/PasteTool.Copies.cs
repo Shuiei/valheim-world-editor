@@ -14,10 +14,20 @@ public sealed partial class PasteTool
             float y0 = c.Objects.Count > 0 ? c.Objects.Min(o => o.Dy) : 0, y1 = c.Objects.Count > 0 ? c.Objects.Max(o => o.Dy) : 0;
             return (Vector2.Zero, (c.Objects.Count > 0 ? MathF.Max(1, y1 - y0 + 1) : 2) + Gap);
         }
-        // A copy without an outline (a blueprint that has none): its grid's size.
+        var (w, h) = Extent(c);
+        return Direction == Along.Width ? (new Vector2(w + Gap, 0), 0) : (new Vector2(0, h + Gap), 0);
+    }
+
+    /// <summary>
+    /// How far a copy reaches east and north, in metres: its outline's size; a copy without one (a blueprint that has
+    /// none), its grid's.
+    /// </summary>
+    /// <param name="c">The copy.</param>
+    internal static (float W, float H) Extent(CopyData c)
+    {
         float x0 = c.Poly.Count > 0 ? c.Poly.Min(p => p.X) : -(c.W - 1) / 2f, x1 = c.Poly.Count > 0 ? c.Poly.Max(p => p.X) : (c.W - 1) / 2f;
         float z0 = c.Poly.Count > 0 ? c.Poly.Min(p => p.Y) : -(c.H - 1) / 2f, z1 = c.Poly.Count > 0 ? c.Poly.Max(p => p.Y) : (c.H - 1) / 2f;
-        return Direction == Along.Width ? (new Vector2(x1 - x0 + Gap, 0), 0) : (new Vector2(0, z1 - z0 + Gap), 0);
+        return (x1 - x0, z1 - z0);
     }
 
     /// <summary>
@@ -54,7 +64,8 @@ public sealed partial class PasteTool
     }
 
     /// <summary>
-    /// Where one object of a copy stands: its grid point and its height (following the ground, or at the anchor).
+    /// Where one object of a copy stands: its grid point and its height (following the ground as the paste leaves it, its
+    /// copied ground included: GroundAfter; or at the anchor).
     /// </summary>
     /// <param name="o">The copied object.</param>
     /// <param name="ca">The copy's anchor point on the grid.</param>
@@ -64,7 +75,8 @@ public sealed partial class PasteTool
     private (Vector2 P, float Y) ObjectSpot(CopyData.Obj o, Vector2 ca, float up, float anchor, Func<Vector2, float> heightAt)
     {
         var p = ca + Xf(new Vector2(o.Dx, o.Dz));
-        float y = o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy;
+        // Stacked upwards, the ground is the first copy's, laid at the anchor without the lift.
+        float y = o.Follow ? GroundAfter(Clip!, ca, anchor - up, p, heightAt(p)) + o.Dy + up : anchor + o.Dy;
         return (p, y);
     }
 }

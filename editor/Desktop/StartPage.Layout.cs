@@ -56,15 +56,15 @@ public sealed partial class StartPage
         Item("new", Lang.T("start.page.new"), "globe");
         if (lastError != null)
         {
-            _lastError.Text = lastError;
-            _lastError.IsVisible = true;
+            LastError.Text = lastError;
+            LastError.IsVisible = true;
         }
 
         // My game.
         GamePanel.Children.Add(Card(GameState));
         GamePanel.Children.Add(_gameError);
         GetHomesteadButton.Tip("blueprints.getHomestead");
-        GetHomesteadButton.Click += async (_, _) => await OpenUrl(new Uri(Homestead.PageUrl));
+        GetHomesteadButton.Click += async (_, _) => await OpenOrSay(new Uri(Homestead.PageUrl));
 
         // A tick during a check skips: asking for one more after it would chain slow checks without a pause.
         _gameTimer.Tick += async (_, _) =>
@@ -177,7 +177,7 @@ public sealed partial class StartPage
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(40, 32, 30, 50),
                 Spacing = 6,
-                Children = { _lastError, LookBanner.View, _pageTitle, _pageText, new Border { Height = 8 }, HomePanel, GamePanel, ServerPanel, OfflinePanel, WorkshopPanel, NewWorldPanel },
+                Children = { LastError, LookBanner.View, _pageTitle, _pageText, new Border { Height = 8 }, HomePanel, GamePanel, ServerPanel, OfflinePanel, WorkshopPanel, NewWorldPanel },
             },
         };
         Grid.SetColumn(main, 1);

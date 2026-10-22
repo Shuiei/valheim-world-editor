@@ -51,12 +51,15 @@ public static partial class ScriptHost
             }
         }
 
-        /// <summary>The trees and rocks the mountain buries go, as with the Mountain tool.</summary>
+        /// <summary>
+        /// The trees and rocks the mountain buries go, as with the Mountain tool: those on the ground (raised already), not
+        /// those high above it, in a dungeon.
+        /// </summary>
         private void RemoveBuried(float x, float z, Func<float, float, float> shape)
         {
             foreach (var t in _snap.Things)
             {
-                if (!t.Piece && t.Kind is "Trees" or "Rocks" or "Ore" or "Bushes" or "Pickables" && shape(t.Position.X - x, t.Position.Z - z) > Uplift.ClearHeight)
+                if (!t.Piece && t.Kind is "Trees" or "Rocks" or "Ore" or "Bushes" or "Pickables" && Buried(t.Position, x, z, shape))
                 {
                     lock (_ch)
                     {
@@ -65,5 +68,12 @@ public static partial class ScriptHost
                 }
             }
         }
+
+        /// <summary>
+        /// Whether the mountain at (x, z) buries a natural object there: where it rises more than Uplift.ClearHeight, the
+        /// object standing on the ground.
+        /// </summary>
+        private bool Buried(System.Numerics.Vector3 at, float x, float z, Func<float, float, float> shape) =>
+            shape(at.X - x, at.Z - z) > Uplift.ClearHeight && Uplift.OnTheGround(at.Y, Sample(_heights, at.X, at.Z));
     }
 }

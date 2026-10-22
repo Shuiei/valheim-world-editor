@@ -18,7 +18,7 @@ public class ClipboardCopyTests
     public void CopyTakesTheGroundUnderTheBuildingsOnly()
     {
         var s = Walled();
-        var c = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], n => n == Beech ? "Beech1" : "woodwall")!;
+        var c = WalledCopy(s);
         Assert.Equal(19, c.W);
         Assert.Equal(2, c.Objects.Count);
         Assert.Equal([0, 1], c.Taken);
@@ -50,8 +50,7 @@ public class ClipboardCopyTests
         // A step of one metre: the second copy's middle on the first copy's ground.
         paste.Gap = 1 - (paste.CopyAt(at, 1).At.X - paste.CopyAt(at, 0).At.X);
         Assert.Equal(1f, paste.CopyAt(at, 1).At.X - paste.CopyAt(at, 0).At.X, 3);
-        var (ox, oz) = GridOrigin(s);
-        var ghosts = paste.Ghosts(at, g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz);
+        var ghosts = GhostsAt(paste, s, at);
         var (_, _, add) = paste.Apply(s.Ground, at);
         Assert.Equal(ghosts.Select(g => g.Position), add.Select(a => a.Item1.Position));
     }

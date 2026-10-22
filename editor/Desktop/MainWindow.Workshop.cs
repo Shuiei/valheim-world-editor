@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop;
 
 // The Workshop in the window (Workshop.cs): a blank plot opened like an area, its building saved as a
 // Homestead blueprint (Save blueprint), back to the start page (Start), and the support check: each
-// building piece outlined in the colour the game gives its support, pieces that would fall in pink.
+// building piece tinted the colour the game gives its support, pieces that would fall in red.
 public partial class MainWindow
 {
     /// <summary>
@@ -39,9 +39,9 @@ public partial class MainWindow
     /// </summary>
     private string? _workshopName;
     /// <summary>
-    /// The blueprint's details (name, description, tags); null for a blank plot.
+    /// The details of the blueprint opened or last saved (name, description, tags); null for a blank plot.
     /// </summary>
-    private Homestead.Details? _workshopDetails;
+    internal Homestead.Details? WorkshopDetails { get; private set; }
     /// <summary>
     /// How far the blueprint opened was lifted to put its lowest point on the ground (taken off again when it is
     /// saved).

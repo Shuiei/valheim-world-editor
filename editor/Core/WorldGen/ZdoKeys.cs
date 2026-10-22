@@ -31,9 +31,10 @@ public static class ZdoKeys
         _byHash = JsonSerializer.Deserialize<Dictionary<string, string>>(json)!.ToDictionary(kv => int.Parse(kv.Key, System.Globalization.CultureInfo.InvariantCulture), kv => kv.Value);
 
     /// <summary>
-    /// The name a key hash stands for: the game's code's, else a mod's; null when neither has a key with that hash.
+    /// The name a key hash stands for: the game's code's, else a mod's (its DLL's text, else its manifest's "data"
+    /// keys); null when none has a key with that hash.
     /// </summary>
-    public static string? NameOf(int key) => _byHash.TryGetValue(key, out string? n) ? n : _mods.GetValueOrDefault(key);
+    public static string? NameOf(int key) => _byHash.TryGetValue(key, out string? n) ? n : _mods.GetValueOrDefault(key) ?? App.ModManifests.KeyNameOf(key);
 
     /// <summary>
     /// A key given by name or as a number ("text", "-1234"): a number is taken as the hash itself, a name is hashed.

@@ -88,6 +88,9 @@ formula, Select's options, which Place categories are open, the right-hand panel
 | **View** | What is shown and how (`V`). See [View panel](#view-panel). |
 | **?** | The **Controls** help card (`?` or `F3`). See [The help card](#the-help-card). Each panel has its own small **?** at the top: the Help window at that tool's page (`F1` does the same for the tool in use). |
 
+In a narrow window the name and area line end in "…" (hover it to read it whole), and when even that is not enough,
+**Map**, **Reload**, **History** and **View** show only their icons.
+
 In the view, every new object not saved or applied yet carries a **green dot**, except while it is selected (its
 outline marks it then). **View → Unsaved marks** hides the dots; the objects stay.
 
@@ -145,13 +148,14 @@ works this way: see [Areas and zones](concepts/areas-and-zones.md).
 
 | Control | What it does |
 |---|---|
-| **◀ ▲ ▼ ▶** (after "Area") | Moves the area one zone (64 m) west, north, south or east. The camera stays where it is in the world, and pending changes and History come along. An Area box or polygon, a Place line or zone and a measure are dropped. |
+| **◀ ▲ ▼ ▶** (after "Area") | Moves the area one zone (64 m) west, north, south or east. The camera stays where it is in the world, and pending changes and History come along. |
 | Size list | Opens the area again around the same middle zone at **3 × 3**, **5 × 5**, **7 × 7**, **9 × 9**, **13 × 13** or **17 × 17** zones. The view, the changes and History stay. An area Follow grew (like 4 × 3) shows its own size. Large areas (up to 1088 m across) are slow to open and to draw. |
 | **Follow** | When the point you look at comes within 12 m of the area's edge, the area grows a row of zones on that side, and keeps the zones it has, up to 17 zones each way. Click to switch it on or off; remembered. See [Follow](concepts/areas-and-zones.md#follow). |
 
-The arrows, Follow and the size list wait while something would be lost, and the status bar says why: objects are selected (`Esc`
-clears them), a brush stroke is going on, a path is drawn (apply or clear it), or changes are still being sent to the
-game. The area controls are not in the Workshop.
+The arrows, Follow and the size list wait while something would be lost, and the status bar says why: objects are
+selected (`Alt+A` in Select clears them), a brush stroke is going on, a path is drawn (apply or clear it), or changes
+are still being sent to the game. They do not wait for an Area box or polygon, a Place line, grid or zone, or a
+measure: those are dropped when the area moves, grows or changes size. The area controls are not in the Workshop.
 
 ## Save, apply and discard
 
@@ -192,8 +196,9 @@ the undo. When players changed the ground of a zone you also changed, it asks fi
 ### Discard
 
 **Discard** undoes everything not saved or applied yet, after asking ("The last N step(s) in History are undone").
-It undoes the unsaved steps at the end of History, newest first, and drops the redo list. Saved and applied changes
-stay, and so do the rest of History, the camera and the tool.
+It undoes the unsaved steps at the end of History, newest first, redoes saved or applied steps you undid since, and
+drops the rest of the redo list. Saved and applied changes stay, and so do the rest of History, the camera and the
+tool.
 
 Some pending changes may have no step in this area's History (made in another area, or before the world was read
 again). Discard then asks a second time: **Read it again** reads the world from its files (or from the game, live)
@@ -211,7 +216,7 @@ and drops every pending change of the whole world.
 
 **History** (`L`) lists every change of the session, newest first. Each row shows the step's name (the tool or
 action, e.g. "Raise", "Paste ×3", "Removed: Raise"), the time (with the day for older ones) and what it touched, e.g.
-"3 zones · 12 new · 2 removed · 1 zone reset". The current step, the one `Ctrl+Z` undoes next, is outlined. The
+"3 zones · 12 new · 2 removed · 1 zone reset(s)". The current step, the one `Ctrl+Z` undoes next, is outlined. The
 heading counts the steps you can undo. The panel shows the newest 200 rows; **Show older (N)** at the bottom adds 200
 more.
 
@@ -220,7 +225,7 @@ more.
 | **Back to here** | Undoes every change made after this one. The later changes stay in the list, greyed out. |
 | **Redo to here** | On a greyed-out change: redoes every change up to and including it. |
 | **Remove** | Takes out only this change and keeps everything done after it. The removal is a new step ("Removed: …"), so `Ctrl+Z` brings the change back. The removed change is struck through. |
-| **Take back Claude's changes** | Shown when Claude made changes. Removes each change Claude made, as **Remove** does, and keeps yours, even those made after them. |
+| **Take back Claude's changes** | Shown when Claude made changes in this area's history. Removes each of them, as **Remove** does, and keeps yours, even those made after them. Claude's changes made in other areas are taken back from those areas. |
 
 Tags on a row: **applied** (sent to the game, or saved), **Claude** (made through the
 [Claude connection](claude.md)), **earlier session** (kept from an earlier run of the editor). A new change made after
@@ -275,8 +280,8 @@ at all, pieces get **Unknown player** (id 1): wards and private chests then answ
 when you can. The choice is remembered per world. Why the builder matters: see
 [Player-built pieces](concepts/objects.md#player-built-pieces).
 
-When an area holds locations (or has some within 40 m), a note at the bottom left says how many, and that the ground
-already includes the flattening the game does around them. Close it with its ×. See
+When an area holds locations (or has some within 40 m), a note at the bottom of the view, beside the tool panel, says
+how many, and that the ground already includes the flattening the game does around them. Close it with its ×. See
 [Locations level the ground](concepts/ground-limits.md#locations-level-the-ground).
 
 ## The help card
@@ -307,7 +312,7 @@ In the [Workshop](workshop.md) the window shows a blank plot instead of a world,
 |---|---|
 | **Start** | Back to the start page, after asking when the building is not saved as a blueprint. |
 | Name and cost | The building's name, and under it "Cost: …" (hover it for every material and the crafting stations it needs), or "A blank plot: only the building is kept in the blueprint". |
-| **Support check** | On at first: each building piece is tinted the colour the game gives its support in build mode, and pieces that would fall in game are outlined pink. Off: build freely. See [The support check](concepts/objects.md#the-support-check). |
+| **Support check** | On at first: each building piece is tinted the colour the game gives its support in build mode, and pieces that would fall in game are red. Off: build freely. See [The support check](concepts/objects.md#the-support-check). |
 | Cut slider | Hides everything higher than the chosen height above the plot, to see and build inside. It moves 1 m a step from the ground (left end) up to 39 m; the right end (40) is off. It reads "Cut at N m" or "Cut: off". |
 | Pending | "N piece(s)", how many would fall, and "not saved as a blueprint" or "saved"; "No pieces yet" on an empty plot. |
 | **Save blueprint** | Saves the building pieces on the plot as a Homestead blueprint (`Ctrl+S`). Nothing else is kept. |

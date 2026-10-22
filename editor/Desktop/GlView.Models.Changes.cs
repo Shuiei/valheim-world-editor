@@ -23,9 +23,15 @@ public sealed partial class GlView
                 }
             }
         }
+        int dropped;
         lock (_selection)
         {
-            _selection.RemoveWhere(i => s.Things[i].Gone);
+            dropped = _selection.RemoveWhere(i => s.Things[i].Gone);
+        }
+        // Selected things gone (an undo, a delete): the Select panel and the status bar follow the smaller selection.
+        if (dropped > 0)
+        {
+            SelectionDone();
         }
         _selectionDirty = true;
         _overlaysDirty = true;

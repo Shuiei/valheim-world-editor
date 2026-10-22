@@ -34,11 +34,10 @@ public sealed partial class MainWindow
             return null;
         }
         var (x0, z0, zonesX, zonesZ) = grown;
-        Msg("top.msg.growing");
         _followBusy = true;
         try
         {
-            await OpenBlockKeepingView(x0, z0, zonesX, zonesZ);
+            await OpenBlockKeepingView(x0, z0, zonesX, zonesZ, progress: Said.Of("top.msg.growing"));
         }
         finally
         {

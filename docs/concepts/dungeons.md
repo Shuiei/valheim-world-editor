@@ -77,7 +77,9 @@ Meadows and the Black Forest, a sunken crypt in the Swamp, a Frost Cave in the M
 mine in the Mistlands), starts with one of its entrance rooms, and adds rooms at open openings, weighted as the game
 weighs them, where they fit, until it has about 8, 14, 20 or 26 rooms by size. It caps every open end, fills each room
 as the game would, and puts doors where rooms meet by the game's chance. The result is one dungeon object with its list
-of rooms, exactly like the game's own.
+of rooms, exactly like the game's own. Placed in the world, the rooms are laid out from the dungeon object where the
+entrance puts it and kept inside that zone's space, as the game does: where in its zone the entrance stands and the way
+it faces change which rooms fit.
 
 **With building pieces**, it plans the dungeon on a grid of 2 m tiles, one level at a time, then builds and furnishes
 it. The same choices and seed always make the same dungeon. Each level is laid out in this order:

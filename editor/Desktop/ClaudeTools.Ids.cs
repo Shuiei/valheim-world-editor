@@ -30,6 +30,15 @@ public sealed partial class ClaudeTools
     }
 
     /// <summary>
+    /// The answer when nothing could be done: how it begins, then why for each one given, or that none was given (an
+    /// empty list).
+    /// </summary>
+    /// <param name="nothing">How the answer begins ("Nothing moved").</param>
+    /// <param name="problems">Why each one given could not be done.</param>
+    internal static string NothingDone(string nothing, IReadOnlyCollection<string> problems) =>
+        $"{nothing}: " + (problems.Count > 0 ? string.Join("; ", problems) : "none was given.");
+
+    /// <summary>
     /// The scene whose things the ids last given were indices into, and its read count then (list_objects,
     /// get_selection, place_pieces, each change's new ids...). Null until ids were given.
     /// </summary>

@@ -63,7 +63,9 @@ public sealed partial class PastePanel
             Info.Text = Lang.T("paste.info.none");
             return;
         }
-        string clip = Lang.T("paste.info.clip", c.W, c.H, c.Objects.Count, _paste.Count > 1 ? Lang.T("paste.info.copies", _paste.Count) : "",
+        // A copy without ground (a blueprint of pieces) has a grid of one point: its size is its outline's.
+        var (w, h) = c.W > 1 || c.H > 1 ? (c.W, c.H) : PasteTool.Extent(c);
+        string clip = Lang.T("paste.info.clip", MathF.Round(w), MathF.Round(h), c.Objects.Count, _paste.Count > 1 ? Lang.T("paste.info.copies", _paste.Count) : "",
             _paste.Turn, _paste.Mirror ? Lang.T("paste.info.mirrored") : "");
         Info.Text = c.Name != null ? Lang.T("paste.info.named", c.Name, clip) : clip;
     }

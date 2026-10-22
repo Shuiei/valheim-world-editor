@@ -89,4 +89,7 @@ public sealed partial class StartPage
         _gameTimer.Stop();
         _worldsTimer.Stop();
     }
+
+    /// <summary>Whether the page polls the game or the worlds (tests).</summary>
+    internal bool Polling => _gameTimer.IsEnabled || _worldsTimer.IsEnabled;
 }

@@ -75,6 +75,19 @@ public static partial class Driver
         return Task.FromResult(State(w));
     }
 
+    /// <summary>The 'note' command (see the class summary).</summary>
+    /// <param name="call">The command as given.</param>
+    private static Task<string> CmdNote(Call call)
+    {
+        MainWindow w = call.W;
+        if (call.Args is not ["close"])
+        {
+            throw new InvalidOperationException("usage: note close");
+        }
+        w.LocationNote.IsVisible = false;
+        return Task.FromResult(State(w));
+    }
+
     /// <summary>The 'message' command (see the class summary).</summary>
     /// <param name="call">The command as given.</param>
     private static Task<string> CmdMessage(Call call)

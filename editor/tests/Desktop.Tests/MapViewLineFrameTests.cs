@@ -36,4 +36,20 @@ public sealed class MapViewLineFrameTests
 
         Assert.Equal(new Vector2(0.5f, 0f), frame.C(400f, 0f));
     }
+
+    /// <summary>A thick box is that many boxes, each a pixel inside the last; one pixel thick is the box itself.</summary>
+    [Fact]
+    public void AThickBoxIsBoxesAPixelApart()
+    {
+        var frame = new MapView.LineFrame(new Vector2(0f, 0f), 100, 100, 2f);
+        List<float> thick = [], one = [], box = [];
+        frame.ThickBox(thick, -20, -20, 20, 20, 2);
+        frame.ThickBox(one, -20, -20, 20, 20, 1);
+        frame.Box(box, -20, -20, 20, 20);
+        Assert.Equal(box, one);
+        Assert.Equal(48, thick.Count);
+        Assert.Equal(box, thick[..24]);
+        // The second box starts a pixel (2 m) inside the first's corner.
+        Assert.Equal(frame.C(-18, -18), new Vector2(thick[24], thick[25]));
+    }
 }

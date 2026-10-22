@@ -4,6 +4,42 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.108.1 — 2026-10-22
+
+### Fixed
+- **Saving after an undo.** Undoing something you had saved (a placement, a deletion) and saving again now really
+  takes it out of the world or puts it back: it said "Nothing to save" and left the world as last saved.
+- **Saving and undo.** After a save, undoing a placement is counted as what the next save does (deleted, not added),
+  offline and live; Discard puts back saved steps you had undone instead of losing them; the object count under the
+  world's name follows your edits and undos; the map shows the new save number after saving.
+- **Nothing lost in dungeons above.** The Mountain tool, scripts' `Ground.Mountain` and saving raised ground no longer
+  remove trees and other things inside a dungeon 5000 m above them.
+- **Copies land right.** Trees and rocks copied with the Area tool stand on the ground where you paste them; a moved
+  tree in a wood stands on the ground, not on the other trees.
+- **Keys stay where you type.** Typing an item name in a chest slot no longer sends the rest of the name to the editor's
+  shortcuts.
+- **Dungeons.** The Dungeon panel no longer says there is no dungeon right after you place one built of pieces; Go to
+  the dungeon follows undo; the go-to buttons have the same names everywhere; the generator shows exactly the settings
+  that apply to the game's own rooms, Loot included, and its summary names dungeons as the game does; building in a
+  dungeon shows only the pieces, and its status line goes when you stop.
+- **Workshop.** Save blueprint warns about falling pieces even with Support check off; a long cost line no longer
+  pushes the top bar's buttons off the window.
+- **Scripts.** Scripts move or remove a ship and its pieces as one, like the Select tool; the Terraced hill example only
+  clears the nature it buries; an empty script says plainly that it has nothing to run.
+- **Claude.** Opening a world closes the Workshop or the previous world properly; saving a blueprint again keeps its
+  description and tags; flatten, road and paint stay within the game's ±8 m; unknown dungeon choices are refused
+  with the valid ones listed; its errors go into the log.
+- **The window.** The top bar fits narrower windows, live mode included; the right-hand panels no longer overlap; the
+  locations note no longer covers the tools, and panels stop above a two-line status bar; cut-off labels in the Select,
+  Path, Settings, map and new-world panels are shown whole; unsaved zones on the map stand out from saved ones.
+- **Smaller things.** The new-world map can be dragged from anywhere; Measure's height difference follows the ground;
+  the Select panel clears when undo removes what was selected; path and Place marks near the area's edge no longer
+  spike; old messages ("Opening…", the Workshop's, a discarded world's) no longer linger; a Recent world that can't be
+  opened says why; a link or the log your system can't open is named so you can open it yourself; a live world opened by
+  its address no longer says "live" twice; a paste without its ground says its site was dug out instead of "with the ground"; zone resets now warn that tamed animals go too.
+- **Texts.** About twenty tooltips and messages that said something untrue are corrected (the support colours, what
+  Esc does, the ±8 m limit, presets, Follow, backups) and plurals and grammar fixed.
+
 ## v1.108.0 — 2026-10-22
 
 ### Added

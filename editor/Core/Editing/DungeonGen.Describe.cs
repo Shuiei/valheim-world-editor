@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.RegularExpressions;
 using TerrainEditor.App;
 using static TerrainEditor.Editing.DungeonKit;
 
@@ -6,8 +7,30 @@ namespace TerrainEditor.Editing;
 
 public static partial class DungeonGen
 {
-    /// <summary>A dungeon kind's name as shown, without the DG_ prefix.</summary>
-    public static string Describe(Dungeons.Kind k) => k.Name.Replace("DG_", "", StringComparison.Ordinal);
+    /// <summary>
+    /// The name shown for a kind of dungeon, in the language in use and in English (Claude's): the game's own for the
+    /// known ones, else its prefab name without DG_ and split into words (the same in both).
+    /// </summary>
+    public static Said Describe(Dungeons.Kind k) => k.Name switch
+    {
+        "DG_Cave" => Said.Of("dungeon.kind.frostCave"),
+        "DG_SunkenCrypt" => Said.Of("dungeon.kind.sunkenCrypt"),
+        "DG_ForestCrypt" => Said.Of("dungeon.kind.burialChambers"),
+        "DG_HalfBurried_ForestCrypt" => Said.Of("dungeon.kind.burialChambersHalf"),
+        "DG_DvergrTown" => Said.Of("dungeon.kind.infestedMine"),
+        "DG_DvergrBoss" => Said.Of("dungeon.kind.infestedCitadel"),
+        "DG_Hildir_Cave" => Said.Of("dungeon.kind.howlingCavern"),
+        "DG_Hildir_ForestCrypt" => Said.Of("dungeon.kind.smoulderingTomb"),
+        "DG_Hildir_PlainsFortress" => Said.Of("dungeon.kind.sealedTower"),
+        "DG_GoblinCamp" => Said.Of("dungeon.kind.fulingVillage"),
+        "DG_MeadowsVillage" => Said.Of("dungeon.kind.meadowsVillage"),
+        "DG_MeadowsFarm" => Said.Of("dungeon.kind.meadowsFarm"),
+        _ => Said.Raw(Words().Replace(k.Name.Replace("DG_", "", StringComparison.Ordinal).Replace('_', ' '), " $1").Trim()),
+    };
+
+    /// <summary>A capital letter after a small one: where <see cref="Describe"/> puts a space.</summary>
+    [GeneratedRegex("(?<=[a-z])([A-Z])")]
+    private static partial Regex Words();
 
     // ---- From building pieces.
     /// <summary>Plans the dungeon, builds its shell and dresses it, and draws its map.</summary>

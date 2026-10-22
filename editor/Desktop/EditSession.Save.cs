@@ -63,12 +63,18 @@ public sealed partial class EditSession
     /// <param name="sent">After a partial Apply live, whether the game has all a step did (null: every step).</param>
     private void MarkApplied(IEnumerable<Change> steps, Func<Change, bool>? sent = null)
     {
-        var all = steps.Concat(_shelvedUndo.Select(s => s.Change));
+        var all = steps.Concat(_shelvedUndo.Select(s => s.Change)).ToList();
         if (sent == null)
         {
             foreach (var c in all)
             {
                 c.Applied = true;
+            }
+            // What was undone is not in what was just written (unless undone while it was written): redone, it waits
+            // again, and Discard leaves it undone.
+            foreach (var c in _redo.Concat(_shelvedRedo.Select(s => s.Change)).Except(all))
+            {
+                c.Applied = false;
             }
             return;
         }

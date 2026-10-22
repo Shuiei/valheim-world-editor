@@ -164,4 +164,18 @@ public sealed class SelectPanelTests : SavedSelectionsFolder
         await p.Keep();
         Assert.Equal("Could not keep the selection: selections.json in the editor's data folder cannot be read or written.", Assert.Single(messages));
     }
+
+    // "A drag draws": its list takes the panel's whole width under its label (beside the label, the longer choice was
+    // cut off). The headless platform's text is not the app's, so the width is checked against the row, not the text.
+    [AvaloniaFact]
+    public void TheDragChoicesTakeThePanelsWholeWidth()
+    {
+        var p = new SelectPanel(new GlView().SelectTool);
+        LaidOut.In(p.Card, 1000, () =>
+        {
+            var row = Assert.IsAssignableFrom<Control>(p.ZoneBox.Parent);
+            Assert.Equal(row.Bounds.Width, p.ZoneBox.Bounds.Width, 1);
+            Assert.True(p.ZoneBox.Bounds.Width > 200, $"{p.ZoneBox.Bounds.Width}");
+        });
+    }
 }

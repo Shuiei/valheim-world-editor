@@ -38,6 +38,25 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
                 to.AddRange([p.X, p.Y, 0, q.X, q.Y, 0]);
             }
         }
+
+        /// <summary>
+        /// Adds a box drawn some screen pixels thick: one box a pixel inside another (lines are one pixel wide), the
+        /// outer one on the box's edge.
+        /// </summary>
+        /// <param name="to">Where the segments go.</param>
+        /// <param name="x0">The box's first world X, in metres.</param>
+        /// <param name="z0">The box's first world Z, in metres.</param>
+        /// <param name="x1">The box's last world X, in metres.</param>
+        /// <param name="z1">The box's last world Z, in metres.</param>
+        /// <param name="pixels">How thick, in device pixels.</param>
+        public void ThickBox(List<float> to, float x0, float z0, float x1, float z1, int pixels)
+        {
+            for (int i = 0; i < pixels; i++)
+            {
+                float inset = i * Mpp;
+                Box(to, x0 + inset, z0 + inset, x1 - inset, z1 - inset);
+            }
+        }
     }
 
     /// <summary>Adds the zone grid, when shown and zoomed in enough.</summary>
@@ -64,7 +83,10 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
         }
     }
 
-    /// <summary>Adds the edited zones: yellow, and orange where changed since the world was loaded.</summary>
+    /// <summary>
+    /// Adds the edited zones: thin yellow where saved, thick orange where changed since the world was loaded (not saved
+    /// or applied yet), so the two tell apart at a glance.
+    /// </summary>
     /// <param name="groups">The line groups to add to.</param>
     /// <param name="s">The world shown.</param>
     /// <param name="f">The view's frame.</param>
@@ -74,7 +96,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
         var changed = new List<float>();
         foreach (var (zx, zz, isChanged) in s.Edits.EditedZones())
         {
-            f.Box(isChanged ? changed : edited, zx * 64 - 32, zz * 64 - 32, zx * 64 + 32, zz * 64 + 32);
+            f.ThickBox(isChanged ? changed : edited, zx * 64 - 32, zz * 64 - 32, zx * 64 + 32, zz * 64 + 32, isChanged ? 2 : 1);
         }
         groups.Add((edited.ToArray(), new Vector4(0.9f, 0.85f, 0.4f, 0.7f)));
         groups.Add((changed.ToArray(), new Vector4(1, 0.6f, 0.2f, 1)));

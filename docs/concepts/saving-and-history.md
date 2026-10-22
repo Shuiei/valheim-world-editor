@@ -31,7 +31,8 @@ and are all saved together (see [The area](areas-and-zones.md#the-area)). They a
 saving (the editor asks first), throw them away, or **Reload** a live world (it asks first too).
 
 **Discard** throws away what is not saved or applied: it undoes the unsaved steps at the end of the history, newest
-first, and drops the redo list. Saved and applied steps stay. Some pending changes have no step in the open area's
+first, redoes saved or applied steps you undid since, and drops the rest of the redo list. Saved and applied steps
+stay. Some pending changes have no step in the open area's
 history (made in another area, or before the world was read again); those can only go by reading the whole world
 again from its files or from the game, which drops every pending change, and Discard asks a second time before it
 does that.
@@ -113,7 +114,8 @@ There are two ways back:
 | **Back to here** | Undoes every step after this one, like `Ctrl+Z` many times. The later steps stay greyed out, to redo. A new change drops them. | You tried three things and want the world as it was before them. |
 | **Remove** | Takes out this step only and keeps everything done after it: its height change comes off the points it touched, its paint goes where nothing repainted since, its objects go and the ones it deleted come back, its resets are cancelled. The removal is a new step, so `Ctrl+Z` brings it back. | Remove a tree line planted an hour ago without losing the ground work done since. |
 
-**Take back Claude's changes** does a **Remove** for every step Claude made, and keeps yours.
+**Take back Claude's changes** does a **Remove** for every step Claude made in the open area's history, and keeps
+yours. Claude's steps made in other areas are kept aside (below): open those areas to take them back too.
 
 ### The history belongs to the world
 

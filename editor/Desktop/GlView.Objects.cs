@@ -27,6 +27,7 @@ public sealed partial class GlView
         }
         else if (Mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
         {
+            Paste.MaskAt = PasteMask(s);
             shown = Paste.Ghosts(pat, GridHeight, s.OriginX, s.OriginZ);
         }
         else
@@ -128,5 +129,20 @@ public sealed partial class GlView
     {
         bool piece = Terrain.PieceCatalog.Get(prefab)?.Tool != null;
         return (piece, KindGroup(prefab, piece));
+    }
+
+    /// <summary>
+    /// The Mask's weight at a grid point of a scene's ground, as a paste applies it (1 off the ground); null without a
+    /// session or with the Mask off.
+    /// </summary>
+    /// <param name="s">The scene shown.</param>
+    private static Func<int, int, float>? PasteMask(WorldScene s)
+    {
+        if (s.Session is not { } session || session.MaskNow() is not { } mask)
+        {
+            return null;
+        }
+        var g = session.Ground;
+        return (x, z) => x < 0 || z < 0 || x >= g.W || z >= g.H ? 1 : mask(z * g.W + x);
     }
 }

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using TerrainEditor.Save;
 using TerrainEditor.Terrain;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectToolRun;
@@ -15,13 +16,13 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class SelectToolLandTests
 {
+    private static readonly int Rock = StableHash.Of("rock4_coast");
+
     [AvaloniaFact]
     public void ATreeMovedOntoAFloorLandsOnItsTop()
     {
         var v = Open(T(1, Beech, 40, 30, 40, false), T(2, Floor, 50, 31, 50));
-        v.Tool.OnGround = true;
-        v.Click(40, 40);
-        v.Drag(KeyModifiers.None, (40, 40), (45, 45), (50, 50));
+        v.MoveOnGroundTo50();
         Assert.Equal(50, v.Last.Position.X, 1);
         Assert.Equal(50, v.Last.Position.Z, 1);
         Assert.Equal(31 + PieceCatalog.Get(Floor)!.MaxY, v.Last.Position.Y, 2);
@@ -36,9 +37,7 @@ public class SelectToolLandTests
         var c = v.S.Scene;
         // The second tree drawn as a 2 × 8 × 2 m tower, its top above the first tree's 5 m box.
         v.W.View.SetBoxes([(1, new Vector3(59 - c.Cx, 30, -(61 - c.Cz)), new Vector3(61 - c.Cx, 38, -(59 - c.Cz)))]);
-        v.Tool.OnGround = true;
-        v.Click(40, 40);
-        v.Drag(KeyModifiers.None, (40, 40), (45, 45), (50, 50));
+        v.MoveOnGroundTo50();
         Assert.Equal(30, v.Last.Position.Y, 2);
         // The copy is drawn (given its box) so it can be dragged on.
         v.W.View.SetBoxes([Box(c, c.Things.Count - 1)]);
@@ -53,15 +52,15 @@ public class SelectToolLandTests
     [AvaloniaFact]
     public void ABuildingMovedOntoAPlatformGoesUpAsOneBlock()
     {
-        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 42, 30, 40), T(3, Floor, 41, 29.5f, 41.2f), T(4, Beech, 62, 30, 62, false));
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 42, 30, 40), T(3, Floor, 41, 29.5f, 41.2f), T(4, Rock, 62, 30, 62, false));
         var c = v.S.Scene;
-        // The tree drawn as a wide, low platform around (62, 62), its top at 30.3 m.
+        // The rock drawn as a wide, low platform around (62, 62), its top at 30.3 m.
         v.W.View.SetBoxes([(3, new Vector3(55 - c.Cx, 29.9f, -(70 - c.Cz)), new Vector3(70 - c.Cx, 30.3f, -(55 - c.Cz)))]);
         v.Tool.OnGround = true;
         v.Tool.SnapToPieces = false;
         v.W.View.Select([0, 1, 2]);
         v.Drag(KeyModifiers.None, (40, 40), (50, 50), (60, 60));
-        var moved = v.S.Scene.Things.Where(t => !t.Gone && t.Prefab != Beech).OrderBy(t => t.Position.X).ToList();
+        var moved = v.S.Scene.Things.Where(t => !t.Gone && t.Prefab != Rock).OrderBy(t => t.Position.X).ToList();
         Assert.Equal(3, moved.Count);
         Assert.Equal([30.8f, 30.3f, 30.8f], moved.Select(t => MathF.Round(t.Position.Y, 2)));
         Assert.Equal([60f, 61f, 62f], moved.Select(t => MathF.Round(t.Position.X, 2)));
@@ -69,7 +68,7 @@ public class SelectToolLandTests
         // ray to meet it where it stands raised.
         v.W.View.SetBoxes(v.Selected.Select(i => Box(c, i)));
         v.Drag(KeyModifiers.None, (61, 61.2f), (51, 51.2f), (41, 31.2f));
-        moved = [.. v.S.Scene.Things.Where(t => !t.Gone && t.Prefab != Beech).OrderBy(t => t.Position.X)];
+        moved = [.. v.S.Scene.Things.Where(t => !t.Gone && t.Prefab != Rock).OrderBy(t => t.Position.X)];
         Assert.Equal([30.5f, 30f, 30.5f], moved.Select(t => MathF.Round(t.Position.Y, 2)));
     }
 

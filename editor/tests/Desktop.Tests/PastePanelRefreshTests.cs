@@ -32,4 +32,17 @@ public sealed class PastePanelRefreshTests
         Assert.Contains("My hut", w.PastePanel.Info.Text, StringComparison.Ordinal);
         Assert.NotEqual(Lang.T("paste.info.none"), w.PastePanel.Info.Text);
     }
+
+    // A blueprint of pieces has no ground, so a grid of one point: its size is its outline's (the pieces 10 m apart and
+    // a metre round them), not 1 × 1 m.
+    [AvaloniaFact]
+    public void ABlueprintWithoutGroundGivesItsOutlinesSize()
+    {
+        var w = TestWindows.Editing(TestScenes.Flat(2));
+        var bp = new BlueprintFormats.Parsed("Hut", null, null,
+            [new("woodwall", new Vector3(0, 0, 0), Vector3.Zero, 1), new("woodwall", new Vector3(10, 0, 4), Vector3.Zero, 1)], [], 0);
+        w.View.Paste.Clip = CopyFormat.FromJson(BlueprintFormats.ToClip(bp, _ => true, out _), "Hut");
+        w.PastePanel.Refresh();
+        Assert.StartsWith("Hut: 12 × 6 m, 2 object(s)", w.PastePanel.Info.Text, StringComparison.Ordinal);
+    }
 }
