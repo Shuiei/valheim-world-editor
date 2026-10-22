@@ -30,7 +30,7 @@ public sealed class AddOnsInTheEditorTests : IDisposable
     public void AnAddOnsDllCarriesItsOwnVersion(string name)
     {
         // Released on its own zip, named after its VERSION (tools/addons.sh): the DLL says the same version.
-        string version = File.ReadAllText(Path.Combine(RepositoryAddOns.Folder, name, "VERSION")).Trim();
+        string version = File.ReadAllText(Path.Combine(RepositoryAddOns.Folder, Path.GetFileName(name), "VERSION")).Trim();
         if (RepositoryAddOns.Dll(name) is { } dll)
         {
             Assert.Equal(version, System.Reflection.AssemblyName.GetAssemblyName(dll).Version?.ToString(3));
