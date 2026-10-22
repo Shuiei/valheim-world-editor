@@ -51,9 +51,10 @@ jobs:
             echo "::warning::UPDATE_PRS_TOKEN is not set: the branches are updated with the workflow's token, and their workflows (CodeQL) do not run on the update"
             UPDATE_TOKEN=$GH_TOKEN
           fi
-          # Green: every check run done and passed (success, neutral or skipped), every status a success, and at
-          # least one of them (a pull request whose checks have not started yet is not green).
-          prs=$(gh pr list --base main --state open --limit 100 \
+          # Every open pull request on main (gh pages through them, up to --limit). Green: every check run done and
+          # passed (success, neutral or skipped), every status a success, and at least one of them (a pull request
+          # whose checks have not started yet is not green).
+          prs=$(gh pr list --base main --state open --limit 1000 \
             --json number,headRefOid,isDraft,reviewDecision,autoMergeRequest,statusCheckRollup \
             --jq '.[] | select(.autoMergeRequest != null and (.isDraft | not))
               | select((.statusCheckRollup | length) > 0 and all(.statusCheckRollup[];
