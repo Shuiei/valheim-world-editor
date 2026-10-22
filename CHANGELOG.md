@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.104.0 — 2026-10-21
+
+### Added
+- **Clearer cards for worlds of world generation mods that cannot open.** A world made with such a mod stays in the
+  world list, greyed out, and now says what is missing: the add-on for it turned off, the add-on waiting for its mod,
+  the add-on not running, or the mod's own extension not turned on; and with the Riverheim add-on, a Riverheim too old
+  for the world. See [World generators](docs/modding.md#world-generators).
+
 ## v1.103.3 — 2026-10-21
 
 ### Fixed

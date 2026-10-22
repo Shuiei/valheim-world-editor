@@ -2,5 +2,9 @@
   "$schema": "https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/worldeditor.schema.json",
   "version": 1,
   "serves": "Riverheim.dll",
-  "extension": "Riverheim.WorldEditor.dll"
+  "extension": "Riverheim.WorldEditor.dll",
+  "worldGenerators": {
+    "dev.gurebu.riverheim.stable": "Riverheim",
+    "dev.gurebu.riverheim.unstable": "Riverheim's beta"
+  }
 }

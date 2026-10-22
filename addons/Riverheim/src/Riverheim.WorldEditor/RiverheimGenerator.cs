@@ -29,8 +29,25 @@ internal sealed class RiverheimGenerator(IEditorHost host, string id, Action<str
     /// <inheritdoc/>
     public void WriteHeader(IWorldFileWriter file, int fileVersion, GeneratorSettings settings) => RiverheimMod.WriteHeader(file, fileVersion, (RiverheimMod.Tag)settings.Value);
 
+    /// <summary>
+    /// Why a world with this preset cannot be drawn: Riverheim not found or not loaded, or a Riverheim that does not know
+    /// the world's preset (an older one than made it); null when it can. The player's Riverheim is loaded once, then
+    /// asked for each world the start page lists.
+    /// </summary>
     /// <inheritdoc/>
-    public string? Problem(GeneratorSettings settings) => host.FindPlugin(RiverheimMod.DllName) == null ? Texts.Missing : null;
+    public string? Problem(GeneratorSettings settings)
+    {
+        var tag = (RiverheimMod.Tag)settings.Value;
+        try
+        {
+            var (library, _) = Library();
+            return library.Problem(tag) is string problem ? Texts.Unsupported(tag.Preset, tag.PresetVersion, library.Version, problem) : null;
+        }
+        catch (InvalidOperationException e)
+        {
+            return e.Message;
+        }
+    }
 
     /// <summary>
     /// The player's Riverheim, loaded, ready to lay out worlds with the world's preset. Throws
