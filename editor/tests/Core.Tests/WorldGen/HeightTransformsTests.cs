@@ -4,10 +4,11 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// Expand World Data's height transform: the defaults leave an altitude alone; the multiplier, delta and depth
-/// multiplier move it; what lies past the maximum or minimum is softened by the excess factor, in its sign's direction.
+/// A biome's height transform as the generator applies it (HeightTransforms.Apply): the defaults leave an altitude
+/// alone; the multiplier, delta and depth multiplier move it; what lies past the maximum or minimum is softened by the
+/// excess factor, in its sign's direction, to the bit as the game computes it.
 /// </summary>
-public class HeightTransformTests
+public class HeightTransformsTests
 {
     [Fact]
     public void TheDefaultsLeaveAnAltitudeAlone()
@@ -38,5 +39,20 @@ public class HeightTransformTests
         // A negative factor takes the excess the other way.
         var inward = new HeightTransform { Maximum = 100f, ExcessFactor = -0.5f };
         Assert.Equal(90f, inward.Apply(200f));
+    }
+
+    [Fact]
+    public void TheExcessIsSoftenedToTheBitAsTheGameComputesIt()
+    {
+        var t = new HeightTransform { Multiplier = 1.3f, Delta = 0.25f, Maximum = 100f, ExcessFactor = 0.7f };
+        // Each step stored as a float, the power as Unity's Mathf.Pow takes it (in double, rounded to a float).
+        float h = (float)((double)(float)((double)150f * 1.3f) + 0.25f);
+        float expected = (float)(100.0 + (float)Math.Pow((float)((double)h - 100f), 0.7f));
+        Assert.Equal(BitConverter.SingleToInt32Bits(expected), BitConverter.SingleToInt32Bits(t.Apply(150f)));
+        // Below the minimum, the same the other way, with the depth multiplier first.
+        var deep = new HeightTransform { DepthMultiplier = 2f, Minimum = -40f, ExcessFactor = 0.7f };
+        float d = -60f;
+        float below = (float)(-40.0 - (float)Math.Pow((float)(-40.0 - d), 0.7f));
+        Assert.Equal(BitConverter.SingleToInt32Bits(below), BitConverter.SingleToInt32Bits(deep.Apply(-30f)));
     }
 }
