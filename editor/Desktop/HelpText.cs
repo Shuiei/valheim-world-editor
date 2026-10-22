@@ -49,6 +49,9 @@ public static class HelpText
                     Append(sb, child);
                 }
                 break;
+            default:
+                // Any other block has no text of its own.
+                break;
         }
     }
 
@@ -73,6 +76,9 @@ public static class HelpText
                 {
                     Append(sb, child);
                 }
+                break;
+            default:
+                // HTML and the like: not text.
                 break;
         }
     }

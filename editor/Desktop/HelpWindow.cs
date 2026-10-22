@@ -83,10 +83,12 @@ public sealed partial class HelpWindow : Window
         HomeButton.Click += (_, _) => Go(HelpTarget.Home);
         BrowserButton.Click += async (_, _) => await (OpenUrl ?? Launcher.LaunchUriAsync)(HelpDocs.OnGitHub(Shown));
         SearchBox.Tip("docs.search");
-        SearchBox.TextChanged += (_, _) => ShowSide();
+        // On the text itself (TextChanged comes a moment later): what was typed is searched at once.
+        SearchBox.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { ShowSide(); } };
         SearchBox.KeyDown += (_, e) => { if (e.Key == Key.Enter) { OpenFirstHit(); } };
         Enlarged.PointerReleased += (_, _) => Enlarged.IsVisible = false;
-        KeyDown += OnKey;
+        // Before the page's scroller, which takes the arrows for itself.
+        AddHandler(KeyDownEvent, OnKey, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         Content = Layout();
         Closed += (_, _) => Current = null;
         Go(HelpTarget.Home);
@@ -217,6 +219,9 @@ public sealed partial class HelpWindow : Window
                 break;
             case { Web: { } uri }:
                 _ = (OpenUrl ?? Launcher.LaunchUriAsync)(uri);
+                break;
+            default:
+                // An empty link leads nowhere.
                 break;
         }
     }

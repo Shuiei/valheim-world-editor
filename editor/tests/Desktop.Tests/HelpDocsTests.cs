@@ -111,6 +111,9 @@ public class HelpDocsTests
                             broken.Add($"{page}: {link.Url} (no such file in the repository)");
                         }
                         break;
+                    default:
+                        // A heading that exists, or a web address.
+                        break;
                 }
             }
         }

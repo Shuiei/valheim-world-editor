@@ -154,26 +154,20 @@ public sealed partial class HelpView
         }
         var bitmap = new Bitmap(stream);
         var image = new Image { Source = bitmap, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, MaxWidth = bitmap.Size.Width };
-        var frame = new Border
+        var frame = new Border { Child = image, CornerRadius = new CornerRadius(6), ClipToBounds = true, BorderBrush = Ui.Line, BorderThickness = new Thickness(1) };
+        // A button: a click, or Enter and Space from the keyboard, shows it full size.
+        var button = new Button
         {
-            Child = image,
-            CornerRadius = new CornerRadius(6),
-            ClipToBounds = true,
-            BorderBrush = Ui.Line,
-            BorderThickness = new Thickness(1),
+            Content = frame,
+            Padding = default,
+            Background = Brushes.Transparent,
             HorizontalAlignment = HorizontalAlignment.Left,
             Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
         };
-        ToolTip.SetTip(frame, alt);
-        Avalonia.Automation.AutomationProperties.SetName(image, alt);
-        frame.PointerReleased += (_, e) =>
-        {
-            if (e.InitialPressMouseButton == Avalonia.Input.MouseButton.Left)
-            {
-                _enlarge(path);
-            }
-        };
-        return frame;
+        ToolTip.SetTip(button, alt);
+        Avalonia.Automation.AutomationProperties.SetName(button, alt);
+        button.Click += (_, _) => _enlarge(path);
+        return button;
     }
 
     /// <summary>A list: each item's mark (a bullet, or its number) beside its blocks.</summary>

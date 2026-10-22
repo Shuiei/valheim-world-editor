@@ -80,6 +80,9 @@ public sealed partial class HelpView
             case ContainerInline container:
                 Children(into, container, links, ref at);
                 break;
+            default:
+                // HTML within text: not shown.
+                break;
         }
     }
 
@@ -89,7 +92,7 @@ public sealed partial class HelpView
         var span = new Span
         {
             FontWeight = e.DelimiterCount >= 2 ? FontWeight.Bold : FontWeight.Normal,
-            FontStyle = e.DelimiterCount % 2 == 1 ? FontStyle.Italic : FontStyle.Normal,
+            FontStyle = e.DelimiterCount % 2 != 0 ? FontStyle.Italic : FontStyle.Normal,
         };
         Children(span.Inlines, e, links, ref at);
         into.Add(span);
@@ -132,13 +135,17 @@ public sealed partial class HelpView
         at += run.Text?.Length ?? 0;
     }
 
+    /// <summary>Each text block's links, where they are in its text.</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TextBlock, List<LinkSpan>> LinksOf = [];
+
     /// <summary>Makes a text block's links work: the hand over them, a left click follows one.</summary>
     private void Clickable(TextBlock t, List<LinkSpan> links)
     {
-        t.PointerMoved += (_, e) => t.Cursor = LinkAt(t, links, e.GetPosition(t)) != null ? Hand : null;
+        LinksOf.AddOrUpdate(t, links);
+        t.PointerMoved += (_, e) => t.Cursor = LinkAt(t, e.GetPosition(t)) != null ? Hand : null;
         t.PointerReleased += (_, e) =>
         {
-            if (e.InitialPressMouseButton == MouseButton.Left && LinkAt(t, links, e.GetPosition(t)) is { } href)
+            if (e.InitialPressMouseButton == MouseButton.Left && LinkAt(t, e.GetPosition(t)) is { } href)
             {
                 e.Handled = true;
                 _follow(href);
@@ -146,11 +153,13 @@ public sealed partial class HelpView
         };
     }
 
-    /// <summary>The link under a point of a text block; null where there is none.</summary>
-    private static string? LinkAt(TextBlock t, List<LinkSpan> links, Avalonia.Point p)
+    /// <summary>The link (as written) under a point of a drawn text block; null where there is none.</summary>
+    /// <param name="t">The text block.</param>
+    /// <param name="p">The point, in the text block's own coordinates.</param>
+    internal static string? LinkAt(TextBlock t, Avalonia.Point p)
     {
         var hit = t.TextLayout.HitTestPoint(p);
-        if (!hit.IsInside)
+        if (!hit.IsInside || !LinksOf.TryGetValue(t, out var links))
         {
             return null;
         }

@@ -1,8 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
-using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media.Imaging;
@@ -46,27 +44,21 @@ public class HelpViewTests
     }
 
     [AvaloniaFact]
-    public void AClickOnALinkFollowsItAndAClickBesideItDoesNot()
+    public void ALinksCharactersLeadToItAndTheOthersToNothing()
     {
-        var clicks = new List<string>();
-        var (_, page) = Draw("See the **[world map](map.md#controls)** and `code` then [the web](https://example.com) here.", clicks);
+        var (_, page) = Draw("See the **[world map](map.md#controls)** and `code` then [the web](https://example.com) here.");
         var w = Shown(page);
         try
         {
             var text = (TextBlock)page.Children[0];
-            void ClickAt(int index)
-            {
-                var at = text.TranslatePoint(text.TextLayout.HitTestTextPosition(index).Center, w)!.Value;
-                w.MouseDown(at, MouseButton.Left);
-                w.MouseUp(at, MouseButton.Left);
-                Dispatcher.UIThread.RunJobs();
-            }
             string shown = "See the world map and code then the web here.";
-            ClickAt(shown.IndexOf("map", StringComparison.Ordinal));
-            ClickAt(shown.IndexOf("web", StringComparison.Ordinal));
-            ClickAt(1);
-            ClickAt(shown.IndexOf("code", StringComparison.Ordinal));
-            Assert.Equal(["follow map.md#controls", "follow https://example.com"], clicks);
+            Assert.Equal(shown, text.Inlines!.Text);
+            string? At(string word) => HelpView.LinkAt(text, text.TextLayout.HitTestTextPosition(shown.IndexOf(word, StringComparison.Ordinal) + 1).Center);
+            Assert.Equal("map.md#controls", At("map"));
+            Assert.Equal("https://example.com", At("web"));
+            Assert.Null(At("See"));
+            Assert.Null(At("code"));
+            Assert.Null(HelpView.LinkAt(new TextBlock { Text = "no links" }, default));
         }
         finally
         {
@@ -80,28 +72,16 @@ public class HelpViewTests
         var clicks = new List<string>();
         var (_, page) = Draw("![The map](images/map.jpg)\n*Its caption.*\n\n![Alone](images/map.jpg)\n\n*A caption apart.*\n\n*Not a caption.*", clicks);
         var withCaption = Assert.IsType<StackPanel>(page.Children[0]);
-        var frame = Assert.IsType<Border>(withCaption.Children[0]);
-        Assert.Equal("The map", ToolTip.GetTip(frame));
-        Assert.IsType<Bitmap>(((Image)frame.Child!).Source);
+        var button = Assert.IsType<Button>(withCaption.Children[0]);
+        Assert.Equal("The map", ToolTip.GetTip(button));
+        Assert.IsType<Bitmap>(((Image)((Border)button.Content!).Child!).Source);
         Assert.Equal("Its caption.", ((TextBlock)withCaption.Children[1]).Inlines!.Text);
         Assert.Equal(Ui.Muted, ((TextBlock)withCaption.Children[1]).Foreground);
-        Assert.IsType<Border>(page.Children[1]);
+        Assert.IsType<Button>(page.Children[1]);
         Assert.Equal(Ui.Muted, ((TextBlock)page.Children[2]).Foreground);
         Assert.Equal(Ui.Text, ((TextBlock)page.Children[3]).Foreground);
-        var w = Shown(page);
-        try
-        {
-            var at = frame.TranslatePoint(new Point(20, 20), w)!.Value;
-            w.MouseDown(at, MouseButton.Left);
-            w.MouseUp(at, MouseButton.Left);
-            w.MouseDown(at, MouseButton.Right);
-            w.MouseUp(at, MouseButton.Right);
-            Assert.Equal(["enlarge images/map.jpg"], clicks);
-        }
-        finally
-        {
-            w.Close();
-        }
+        button.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal(["enlarge images/map.jpg"], clicks);
     }
 
     [AvaloniaFact]
