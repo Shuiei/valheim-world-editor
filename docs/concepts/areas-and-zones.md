@@ -3,9 +3,9 @@
 Valheim cuts its world into square **zones** of 64 m, and the editor opens a block of them at a time, the **area**.
 This explains why some places cannot be saved yet, why the edge of the area never moves, and why a big area is slow.
 
-<!-- picture: concept-area-zones.jpg: a diagram over a top-down 3D view of a 5 × 5 area: Zone borders on, the
-outermost ring of ground points tinted to show the locked edge, one zone labelled "zone 64 m", the whole block labelled
-"the area (5 × 5 zones, 320 m)", and the 12 m Follow band inside each side drawn as a dashed line -->
+![A 5 × 5 area seen from above with its zone borders, labelled: one 64 m zone, the 320 m area, its locked edge and the Follow line 12 m inside](../images/concept-area-zones.jpg)
+*The area is a block of zones. Its outermost line of ground points (yellow) never changes; with **Follow** on, zones
+are added when the point you look at passes the dashed line, 12 m inside.*
 
 ## Zones
 

@@ -7,9 +7,10 @@ blueprint to build in game or paste into any world.
 → **New in Workshop** · **Key:** none · **Works in:** the Workshop's own plot (the
 **Blueprints** panel works in saved worlds and live)
 
-![A tall stone house on the plot with Support check on](images/workshop.jpg)
-*A tall stone and wood house seen from a distance with **Support check** on: the base light blue and green, the upper
-walls yellow then orange, one overhang red. The top bar shows the piece count and how many would fall.*
+![A tall stone and wood house on the plot, tinted from light blue at the base to orange at the top, its overhang red](images/workshop.jpg)
+*A tall house with **Support check** on: the stone base light blue, the wooden walls above green, then yellow, then
+orange near the top, and the overhang reaching out from the top row orange, then red. The top bar reads
+`111 piece(s) · 1 would fall · saved`.*
 
 A blueprint is a file of [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/), the in-game building
 mod: the same file shows in Homestead's hammer tab, ready to build in game, and can be pasted into a world from the
@@ -33,7 +34,7 @@ beside it in a world's Blueprints panel.
 
 ![The Workshop on the start page](images/start-workshop.jpg)
 *The start page's **The Workshop**: **Open the Workshop**, **Get Homestead** (it is not installed here), and three
-blueprints under **Your blueprints**, newest first.*
+blueprints under **Your blueprints**, each with its picture, newest first.*
 
 ## The plot
 
@@ -51,7 +52,9 @@ level, is the blueprint's **anchor**, the point Homestead measures every piece f
 There is no **Discard**: undo, or open the blueprint again. Leaving with a building not saved as a blueprint
 (**Start**, opening another, quitting) asks first.
 
-<!-- picture: workshop-overview.jpg: the Workshop with a small wood hut in the middle of the plot, Build panel on the Pieces tab with the Building tab open, Support check on, Cut off; the whole window visible so the rail (Build, Select, View), the top bar (Start, Support check, Cut, piece count, Save blueprint) and the cost under the title are all readable -->
+![The Workshop with a small wooden hut on the plot and the Build panel on its wooden pieces](images/workshop-overview.jpg)
+*The Workshop with a small hut on the plot: the rail with only **Build**, **Select** and **View**; the top bar with
+**Start**, **Support check**, **Cut**, the piece count and **Save blueprint**; the cost under the title.*
 
 ## Settings
 
@@ -84,8 +87,8 @@ Each click puts down one piece; dragging does not paint more. With no piece pick
 ### Library tab
 
 ![The Library tab with two blueprints and a search](images/workshop-library.jpg)
-*The **Library** tab searching "hut": **Import file…** and **Generate dungeon…** at the top, then two blueprints, each
-with its own picture, pieces, cost, **Open** and **Add**.*
+*The **Library** tab searching "hut": **Import file…** and **Generate dungeon…** at the top, then the two huts (the
+tall house is left out), each with its own picture, pieces, cost, **Open** and **Add**.*
 
 | Setting | What it does |
 |---|---|
@@ -120,7 +123,8 @@ cannot reach out; wood reaches further out but not as high. See [The support che
 ### Cut
 
 ![The same house with Cut, seen from above](images/workshop-cut.jpg)
-*The same house with **Cut at 3 m**, seen from above: everything above 3 m is hidden, so you see into the house.*
+*The same house with **Cut at 3 m**, seen from above: everything above 3 m is hidden, so you see into its ground
+floor, with the fire pit, the bed, the table and the chest.*
 
 The **Cut** slider hides everything above a height, 0 to 39 m above the plot, and the cursor goes through what is
 hidden, so you can build inside. Its right end is off (`Cut: off`).
@@ -142,7 +146,9 @@ above at an angle, on a transparent background), which Homestead uses as its ico
 when the editor can read them, else each piece's shape in its material's colour. A blueprint made elsewhere without a
 picture gets one drawn in the library, in memory only.
 
-<!-- picture: workshop-save-dialog.jpg: the Save blueprint dialog over the Workshop with a small wood hut on the plot, Name "Small hut", Description "A hut with a fire pit", Tags "house, wood", A dungeon off, the Cost in game line visible -->
+![The Save blueprint dialog over a small hut: name, description, tags, the dungeon switch and the cost](images/workshop-save-dialog.jpg)
+*Saving the hut: **Name** "Small hut", **Description** "A hut with a fire pit", **Tags** "house, wood", **A dungeon**
+off, and the **Cost in game** line above **Save**.*
 
 What is kept:
 

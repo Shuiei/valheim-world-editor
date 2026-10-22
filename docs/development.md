@@ -72,6 +72,15 @@ WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     # a second world for
 dotnet run --project tools/DocsScreenshots -- <dir> [scene ...]  # all scenes, or only those named
 ```
 
+Run it on a display of its own, never your desktop: `Xvfb :91 -screen 0 1920x1080x24 &`, then
+`DISPLAY=:91 VGL_EGLLIB=/usr/lib64/libEGL.so.1 VGL_GLLIB=/usr/lib64/libGL.so.1 vglrun -d egl dotnet run --project
+tools/DocsScreenshots -- <dir> …` (VirtualGL draws on the graphics card; Xvfb alone is very slow). Some scenes need
+more: `xdotool` (clicks the driver cannot make), ImageMagick's `import` (an open list, which the window shot leaves
+out), `area-heightmap` a `DBUS_SESSION_BUS_ADDRESS` naming no bus (so the file picker opens on that display), and
+`settings` and `claude-history` port 5731 free (no other editor allowing Claude; or run them under `unshare -rn` with
+the loopback up). Pages say where a picture is still to be taken with a `<!-- picture: … -->` comment
+([writing the documentation](dev/writing-docs.md#pictures)).
+
 The pictures go to `docs/images` (or `$DOCS_OUT`). `$DOCS_APP` names a released `ValheimWorldEditor`
 to drive instead of the Debug build (the pictures of a release are taken with the release; put it in a
 neutral folder such as `/tmp/ValheimWorldEditor`, since Settings shows its path). The red on ground

@@ -6,9 +6,10 @@ in the world or Workshop you have open, from a prompt, while you watch in the 3D
 **Where:** start page, **Settings** → **Claude** · **Key:** none · **Works in:** saved worlds, live (with **Auto** off),
 the Workshop
 
-![Settings, Claude section: Allow Claude to connect on, Claude may run scripts, the port, New token, the Claude Code command with the token hidden, and Save](images/settings-claude.jpg)
-*Settings → Claude, switched on: copy the command into a terminal (Claude Code) or the lines into Claude Desktop's
-configuration, then **Save**.*
+![Settings, Claude on: both switches, Port 5731, New token, the Claude Code command, Claude Desktop's lines, Listening on; right, Save at the end](images/settings-claude.jpg)
+*Left: the **Claude** section switched on and listening; copy the command into a terminal (Claude Code) or the lines
+into Claude Desktop's configuration. Right: the end of Settings, with **Save**. Your command holds your own token where
+this picture says `<token>`, and the lines your own program's path.*
 
 Whatever Claude changes stays **pending**, like your own changes: one step of History each (`Ctrl+Z` takes it back),
 counted in the top bar. Claude never saves a world and never applies anything to a live game: you do, when you like
@@ -116,7 +117,8 @@ Open the world or the Workshop yourself, or ask Claude to. Then, for example:
 Ground work, forests and dungeons are the easiest to ask for. Detailed buildings placed piece by piece may take a few
 rounds ("the roof overhangs on the east side, fix it"), or start from one of your blueprints.
 
-<!-- picture: claude-history.jpg: a 3 × 3 Meadows area after Claude flattened and paved a square, History panel open showing two rows named "Claude: …" with the Claude tag, one of your own rows between them, and the Take back Claude's changes button at the top -->
+![History after Claude flattened, paved and planted, with a Raise of your own between: rows tagged Claude and Take back Claude's changes](images/claude-history.jpg)
+*Claude's steps are named "Claude: …" and tagged **Claude**; your own **Raise** sits between them. **Take back Claude's changes** at the top removes Claude's steps and keeps yours.*
 
 ## Taking back Claude's changes
 

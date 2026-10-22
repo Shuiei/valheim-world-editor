@@ -82,4 +82,34 @@ public sealed partial class Scenes
         e.Send($"choose {action}");
         e.Send(apply ? "key Return" : "state");
     }
+
+    /// <summary>
+    /// A left click on a point of the editor's window (pixels from its top left) with xdotool, for what the driver
+    /// cannot click by its name (a row of a list that is not a drop-down); the pointer is then moved off the window.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">xdotool is missing or fails, or the window is not found.</exception>
+    private static void ClickWindow(Editor e, int x, int y)
+    {
+        string window = RunXdotool("search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault()
+            ?? throw new InvalidOperationException("the editor's window was not found");
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        RunXdotool("mousemove", "--window", window, x.ToString(inv), y.ToString(inv), "click", "1");
+        RunXdotool("mousemove", "1915", "1075");
+        e.Send("wait 300");
+    }
+
+    /// <summary>Runs xdotool with these arguments and returns its output.</summary>
+    /// <exception cref="InvalidOperationException">It fails.</exception>
+    private static string RunXdotool(params string[] args)
+    {
+        var start = new System.Diagnostics.ProcessStartInfo("xdotool") { RedirectStandardOutput = true, UseShellExecute = false };
+        foreach (string a in args)
+        {
+            start.ArgumentList.Add(a);
+        }
+        using var p = System.Diagnostics.Process.Start(start) ?? throw new InvalidOperationException("xdotool did not start");
+        string output = p.StandardOutput.ReadToEnd();
+        p.WaitForExit();
+        return p.ExitCode == 0 ? output.Trim() : throw new InvalidOperationException($"xdotool {string.Join(' ', args)}: exit code {p.ExitCode}");
+    }
 }

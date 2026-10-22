@@ -306,7 +306,8 @@ The output box says what happened; the status bar says it in short. In every cas
 - "**The area changed while the script ran: nothing changed. Run it again.**" You edited, undid or saved while it
   ran (or another area opened). Run it again and wait for it.
 
-<!-- picture: script-error.jpg: Script tool on a 3 × 3 Meadows area, code box holding a short script with "Groud.Raise" on line 2, Output box showing "The script has mistakes" and the line "line 2: The name 'Groud' does not exist in the current context", status bar with the short message -->
+![The Script tool after Run: Groud misspelt on line 2, the output listing the mistake, the status bar saying nothing changed](images/script-error.jpg)
+*A misspelt name: the output names the line and the mistake; the status bar says nothing changed.*
 
 ### Stopping a script
 

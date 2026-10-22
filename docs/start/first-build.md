@@ -11,7 +11,8 @@ as in [Your first edit](first-edit.md).
 1. On the start page, click **The Workshop**, then **Open the Workshop**.
 
 ![The Workshop on the start page](../images/start-workshop.jpg)
-*The start page's **The Workshop**: **Open the Workshop**, whether Homestead is installed, and your blueprints.*
+*The start page's **The Workshop**: **Open the Workshop**, whether Homestead is installed, and your blueprints (three
+here; yours is empty the first time).*
 
 **What you should see:** a flat, empty plot of meadow, the **Build** panel open on the left with its **Pieces** tab,
 and the top bar saying "No pieces yet". The rail holds only **Build**, **Select** and **View**.
@@ -37,10 +38,11 @@ support. The top bar counts "4 piece(s) · not saved as a blueprint", and under 
 5. Put a second row of walls on top of the first.
 
 ![A house in the Workshop, tinted by the support check](../images/workshop.jpg)
-*The support check on a finished house: low walls green, the higher ones yellow as their support runs out.*
+*The support check on a tall house: the stone base light blue, the walls above green, then yellow and orange as their
+support runs out, and an overhang red: it would fall.*
 
 **What you should see:** the walls on the floor are green (strong); the second row is lighter green or yellow, with
-less support. A piece that would fall in game is outlined pink, and the top bar says how many would fall. Why: see
+less support. A piece that would fall in game turns red, and the top bar says how many would fall. Why: see
 [The support check](../concepts/objects.md#the-support-check).
 
 A piece in the wrong place? Press `Ctrl+Z` to undo it, or press `E` (**Select**), click the piece, press `Del`, and

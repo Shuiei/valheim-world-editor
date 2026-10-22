@@ -34,7 +34,8 @@ The Mask works with the sculpt and paint brushes, Stamp once, [Shape](shape.md),
 An orange warning shows under the settings when they let nothing through: a maximum slope of 0°, or a minimum above
 the maximum.
 
-<!-- picture: mask-warning.jpg: the Mask card alone, cropped to it, Mask ticked, Slope min 30 and max 10, the orange "Slope min is above max: nothing matches." line visible under the settings -->
+![The Mask card with Slope min 30 and max 10, and its orange warning that nothing matches](images/mask-warning.jpg)
+*Slope min 30° is above max 10°, so the card warns in orange: "Slope min is above max: nothing matches."*
 
 ## Shortcuts
 

@@ -22,7 +22,9 @@ Put a building from your blueprint library (made in the Workshop, saved from a w
 The pasted pieces hold what the blueprint holds: chest contents, sign texts, creatures. Pieces from mods this world
 does not have are left out, and the message lists them.
 
-<!-- picture: guide-paste-blueprint.jpg: a test world, Blueprints panel open with one hut blueprint, the hut following the cursor see-through over flat meadow, turned 45°, Paste panel visible with Clear the site off -->
+![A see-through hut following the cursor, turned 45°, with the Paste panel and Clear the site off](../images/guide-paste-blueprint.jpg)
+*After **Paste**: the hut follows the cursor see-through, its footprint outlined, turned 45° (`turned 45°` in the
+**Paste** panel), **Clear the site** off. Behind it, the hut it was saved from.*
 
 A blueprint marked **A dungeon** is not put on the ground: its entrance goes where you click and the building 5000 m
 above it. See [Dungeon](../dungeons.md).

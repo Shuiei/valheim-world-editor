@@ -73,7 +73,8 @@ and the Workshop open once it says **The game's look is ready.**
 The editor looks in every Steam library by itself (Flatpak Steam too). If it does not find the game, the card says
 **Get the game's look** and "Valheim was not found on this computer."
 
-<!-- picture: start-valheim-missing.jpg: the start page's Home on a computer without Valheim found: the "Get the game's look" card with its four numbered steps, the folder box, Browse… and Use, the side menu visible on the left -->
+![Home with Valheim not found: the Get the game's look card with its four steps, the folder box, Browse… and Use](../images/start-valheim-missing.jpg)
+*The card's steps say where to find the folder; paste it into the box (or **Browse…**), then **Use**.*
 
 1. In Steam, right-click Valheim in your Library, then **Manage › Browse local files**. The folder that opens is the
    one to choose: it holds `valheim_Data` (`valheim.app` on a Mac).
@@ -120,7 +121,8 @@ For your own game:
 
 Until the game runs, **My game** says what is missing, step by step.
 
-<!-- picture: start-game-setup.jpg: the start page on My game, Valheim not running and no plugin installed: the card "Your game needs BepInEx and the WorldEditorBridge plugin (once, about 5 minutes)" with its three numbered steps fully readable; side menu visible -->
+![My game before setup: the card "Your game needs BepInEx and the WorldEditorBridge plugin" with its three steps](../images/start-game-setup.jpg)
+***My game** before BepInEx is installed: the three steps, done once. The page notices the game by itself once it runs.*
 
 Then follow
 [Edit the world you are playing](../guides/edit-your-game-live.md).

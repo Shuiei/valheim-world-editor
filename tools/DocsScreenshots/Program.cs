@@ -38,9 +38,15 @@ foreach (string name in names)
     }
     // Each scene in a fresh editor: nothing carries over, nothing is saved.
     bool start = name == "start";
-    using (var e = new Editor(app, gameWorld: start ? "Docs" : null, worlds: start ? [$"{dir}/Docs", $"{dir}/Fjordheim"] : null,
+    // Settings: the worlds in Valheim's folder, and the app run from the stand-in home (the folders it names: "~").
+    bool settings = name == "settings";
+    // Worlds opened from Valheim's own folder, as a player has them (their folder shown: "~/…").
+    bool linked = start || settings || name == "save-confirm";
+    // The overview: tall enough for the whole tool rail; a new world: for the whole world under the map's switches.
+    using (var e = new Editor(app, height: name switch { "overview" => 1240, "new-world" => 1100, _ => 900 }, gameWorld: start ? "Docs" : null, worlds: linked ? [$"{dir}/Docs", $"{dir}/Fjordheim"] : null,
         homestead: homestead, recent: start ? [$"{dir}/Fjordheim", $"{dir}/Docs"] : null,
-        extra: name == "live" ? ["--live", live![0], "--token", live[1]] : null))
+        extra: name == "live" ? ["--live", live![0], "--token", live[1]] : null,
+        valheim: name != "start-missing", appInHome: settings))
     {
         try
         {

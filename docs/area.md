@@ -6,8 +6,8 @@ objects, copy and paste it, or put it back as it was in a backup.
 **Where:** tool rail, **EDIT** section · **Key:** `B` · **Works in:** saved worlds, live
 
 ![A box dragged round a dense clump of trees, Remove objects chosen, the kind chips counting what is inside](images/area.jpg)
-*A box dragged round a clump of trees with **Remove objects** chosen: the kind chips count the trees, rocks and
-bushes inside. Nothing has changed yet: the button at the bottom does it.*
+*A box dragged round a clump of trees with **Remove objects** chosen: the kind chips count the trees, rocks,
+bushes and pickables inside. Nothing has changed yet: the button at the bottom does it.*
 
 ## Use it
 
@@ -63,7 +63,9 @@ Under **Flatten**, **Raise** and **Lower**:
 | **No limit: past the game's ±8 m** | The ground may go up to 400 m past the generated ground. The same switch as in the brush settings: it stays on for every tool until you switch it off. See [No limit](terrain.md#no-limit). |
 | Cut and fill line | How much ground the action would move ("Flatten to 35 m: dig 120 m³, fill 340 m³"), and what is out of reach ("(40 m³ out of reach: ±8 m limit)"). The second line, "Ground inside: … raised, … dug since generated", compares with the world as generated. Both follow every change. |
 
-<!-- picture: area-cut-fill.jpg: a box over a hillside, Flatten chosen, Height 35, No limit off; panel cropped in frame showing the cut and fill line with "out of reach: ±8 m limit" and the "Ground inside" line; the box outline visible on the slope behind -->
+![Flatten on a box over a hill: the cut and fill line, with ground out of reach of the ±8 m limit](images/area-cut-fill.jpg)
+*A box over a hill with **Flatten** at 46 m and **No limit** off: "Flatten to 46 m: dig 0 m³, fill 1.5k m³ (2.2k
+m³ out of reach: ±8 m limit)", and under it the ground already raised inside since the world was generated.*
 
 ## Object actions
 
@@ -84,9 +86,9 @@ and the action leaves them alone, except **Restore from a backup**.
 
 ### Regrow nature
 
-![A bare zone and the same zone after Regrow nature, same camera](images/area-regrow.jpg)
-*Left: a zone stripped bare. Right: the same zone after **Regrow nature**: the game's own trees, bushes and rocks for
-the biome are back, and the status bar says what grew.*
+![A bare box and the same box after Regrow nature, same camera](images/area-regrow.jpg)
+*Left: a box on bare ground. Right: the same box after **Regrow nature**: the game's own trees and rocks for the
+biome, and the status bar says what grew.*
 
 Regrow nature puts back the trees, rocks, bushes, pickables and ore that the game grows here, for the chosen kinds,
 inside the selection and where the Mask allows. Use it to undo the clearing of a wood, or to dress ground you
@@ -105,8 +107,8 @@ The rules in full: [Growing rules](concepts/objects.md#growing-rules).
 ## Copy and paste
 
 ![Pasting a copied wood: the see-through copy follows the cursor, turned, with the Paste panel](images/paste.jpg)
-*A copied wood of a few dozen trees and rocks following the cursor, see-through and turned, with the Paste panel. A
-click puts it down.*
+*A copied wood of a few dozen trees and rocks following the cursor, see-through and turned 30°; the line at the top
+of the Paste panel says what is on the clipboard. A click puts it down.*
 
 The **Copy and paste** action shows these buttons. `Ctrl+C` and `Ctrl+X` work with any action of the Area tool (and in
 the Select tool); `Ctrl+V` works in any tool.
@@ -130,9 +132,9 @@ building's shape.
 
 ### Pasting
 
-![A hut pasted three times upwards: the see-through preview beside the original shows three floors](images/paste-stack.jpg)
-*A hut with **Copies** 3 and **Along** upwards, seen from the ground: the see-through preview beside the original is
-three floors high, before the click.*
+![A hut pasted three times upwards: a three-floor stack beside the original](images/paste-stack.jpg)
+*One click with **Copies** 3 and **Along** upwards, seen from the ground: beside the original hut, three copies
+stacked into three floors (the outline is the next paste, following the cursor).*
 
 The paste must fit in the open area: its outline turns red when it does not, and a click there says so. Open a bigger
 area first (the area size list in the top bar, or the [map](map.md)).
@@ -160,7 +162,9 @@ line at the top of the panel says what is on the clipboard: name, size, objects,
 bar says what the paste did: "Pasted with the ground, 54 object(s), 7 tree(s), rock(s) and the like cleared from the
 site."
 
-<!-- picture: paste-clear-site.jpg: a stone hut copy pasted into the side of a grassy mound, Clear the site on; left half before the click (see-through preview sunk into the mound), right half after (the ground dug away round the hut's walls), same camera, Paste panel visible -->
+![A stone hut pasted into the side of a mound with Clear the site, before and after the click](images/paste-clear-site.jpg)
+*With **Clear the site** on (**Ground shape and paint** off, **Height** -1.5 m): left, the see-through copy sunk
+into the side of a mound; right, after the click, the ground dug away round its walls.*
 
 ## Blueprints
 
@@ -193,7 +197,10 @@ Machine…), and bring it back.
 
 Use 16 bits when you can: an 8-bit picture has only 256 steps between Lowest and Highest (20 cm steps over 50 m).
 
-<!-- picture: area-heightmap.jpg: Heightmap action after Import… of an exported 16-bit PNG: panel shows Export the area / Import…, the picture line "Picture 321 × 321 fitted to …", Lowest and Highest boxes, Put it into the ground and Cancel; 3D view behind showing the area from above -->
+![The Heightmap action after importing the exported picture: picture line, Lowest, Highest, Put it into the ground](images/area-heightmap.jpg)
+*After **Export the area**, then **Import…** of the same picture: "Picture 65 × 65 fitted to 65 × 65 m (the whole
+area), with the heights it was exported with", **Lowest** and **Highest** read from it. Nothing changes until **Put
+it into the ground**.*
 
 ## Restore from a backup
 
@@ -212,7 +219,10 @@ inside is removed, even when hidden in View, and every unmatched object of the b
 never touched. When nothing differs, the status bar says "Nothing to restore: the selection is as it was in the
 backup."
 
-<!-- picture: area-backup.jpg: a polygon round a griefed hut (walls missing), Restore from a backup chosen, Backup list open showing "Game · date" rows, Your buildings chip on, the backup info line visible; second half: the same view after Restore the selection with the walls back -->
+![A griefed hut restored from the game's backup, before and after](images/area-backup.jpg)
+*Left: a polygon round a hut with part of its near wall gone, **Restore from a backup** chosen, the **Backup**
+list open on the game's backup and **Your buildings** on. Right: after **Restore the selection**, the wall is
+whole again; the line above the button names the backup's save, the status bar counts what came back.*
 
 ## Reset zones
 
@@ -235,7 +245,9 @@ selection stays outside of is not reset. The reset happens when you save (offlin
 > item in the zones goes; players' tombstones stay. Tamed animals have no builder, so they go too: move them out
 > first.
 
-<!-- picture: area-reset.jpg: a box over two zones away from buildings, Reset zones chosen, Keep my buildings and Reset ground edits too ticked, after Reset zones… : the two zones outlined red, Zone borders on -->
+![Two zones under a box marked for reset, outlined red](images/area-reset.jpg)
+*A box over two zones, **Reset zones** with **Keep my buildings** and **Reset ground edits too** on, after **Reset
+zones… (Enter)**: both zones outlined red, the status bar counting them. Nothing is reset until you save.*
 
 ## Shortcuts
 

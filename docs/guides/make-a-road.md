@@ -19,7 +19,8 @@ Draw a level road with an even ramp up the hill, paved along its middle.
 10. **Save** (or **Apply live**).
 
 ![A level road cut through two mounds and paved along its middle](../images/path-road.jpg)
-*A road made with Flatten to height, then Paint paved on the same line.*
+*A road made with Flatten to height through two mounds, then Paint paved (Width 4 m, Soft edge 1 m) on the same
+line.*
 
 ## Check it worked
 

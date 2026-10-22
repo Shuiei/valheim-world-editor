@@ -30,9 +30,10 @@ To generate a dungeon and put it in the world:
 The whole placement is one undo step: `Ctrl+Z` takes it all back. The same choices and seed always make the same
 dungeon. For the full walk-through, see [Generate a dungeon and put it in the world](guides/make-a-dungeon.md).
 
-![The generator's plan under its heading](images/dungeon-generate.jpg)
-*The Dungeon panel with **Generate a dungeon** at the top and its plan large enough to read: the red arena, the gold
-treasury, the green key room, the **Level 1** / **Level 2** buttons and the summary below.*
+![The generator's choices in the Dungeon panel, and its plan of both levels drawn larger beside it](images/dungeon-generate.jpg)
+***Generate a dungeon** for a Black Forest dungeon, Medium, 2 levels, boss behind a gate. Beside the panel, its plan
+drawn larger, one level each: the green key room on level 1, the red arena with its magenta gate dot and the gold
+treasury on level 2, and the summary under them.*
 
 ## Settings
 
@@ -93,7 +94,7 @@ left out`).
 | **Go to the dungeon** / **Go to the entrance** | Shown once the dungeon is placed: take the view up into the first level with the roofs cut away, and back down. |
 
 ![The entrance of a generated dungeon on the ground](images/dungeon-entrance.jpg)
-*A burial chamber's mound placed by **Place in the world**, its door facing the camera. Under the generator, **Go to
+*A burial chamber's mound placed by **Place in the world**, its door facing the camera. Under the summary, **Go to
 the dungeon** and **Go to the entrance** are now shown.*
 
 ### Rooms of a dungeon
@@ -130,7 +131,9 @@ the [View panel](editor-basics.md) shows or hides them.
 A dungeon nobody has been near has no rooms yet: the panel says *The game has not laid this dungeon out yet (nobody
 has been near it).* Visit it in game, then open the area again.
 
-<!-- picture: dungeon-inside.jpg: a Frost Cave opened with Dungeon, Go inside, cut 4 m above the floor; camera above looking down into several rooms with the green open-end frames and the orange and blue door squares visible; Dungeon panel showing the dungeon list line and "Cut 4 m above the floor" -->
+![A Frost Cave seen from above after Go inside, cut 4 m above the floor, with green open ends and orange door squares](images/dungeon-inside.jpg)
+*A Frost Cave after **Go inside**, its roofs cut 4 m above the floor: the panel lists it (`Frost Cave, 17 rooms, at
+-640, -350`). Green frames mark open ends (a room was deleted), orange squares where rooms meet without a door.*
 
 ## Add rooms
 
@@ -145,7 +148,9 @@ Every room has **openings**, the doorways where it meets the next room. The game
 A room that would overlap another, or go past the dungeon's space (64 × 64 m around its zone's middle for most kinds),
 turns red and the line warns. The game builds the list anyway: it is only a warning.
 
-<!-- picture: dungeon-add-room.jpg: a Frost Cave opened with Go inside, cut 4 m; one green open-end frame with a see-through room shown joined to it under the cursor; the ROOMS list with that room highlighted and the bottom line "N rooms, N open end(s)." readable -->
+![An ice corridor shown see-through at a green open end, picked in the ROOMS list](images/dungeon-add-room.jpg)
+*`cave_new_icecorridor01` picked under **ROOMS** (narrowed with "icecorridor") and pointed at an open end: it shows
+there see-through, joined the game's way. The line at the bottom reads `17 rooms, 4 open end(s).`*
 
 ## Doors
 
@@ -182,9 +187,9 @@ follow them: see [Edit a world made with Expand World, Riverheim or Tunnelheim](
 
 ## Open it in the Workshop
 
-![A generated dungeon on the Workshop's plot, cut open](images/workshop-dungeon.jpg)
-*A generated dungeon on the Workshop's plot, cut at 3 m, the top bar fully readable and the Build panel on its Pieces
-tab; the entrance hall with its portal is in the middle of the view.*
+![A generated dungeon of building pieces on the Workshop's plot, cut open, its entrance hall with the portal](images/workshop-dungeon.jpg)
+*A generated dungeon (one level) opened on the Workshop's plot and cut at 3 m, the Build panel back on its **Pieces**
+tab: at the top, the entrance hall with its portal where players arrive; below it, the boss's arena.*
 
 **Open in the Workshop** writes the dungeon as a blueprint in Homestead's folder and opens it, to change it: open a
 chest, move the furniture, add your own touches, then **Save blueprint**. The blueprint:

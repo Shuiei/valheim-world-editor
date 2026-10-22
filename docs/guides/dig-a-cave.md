@@ -20,8 +20,8 @@ The game's ground cannot overhang, so a cave is a dug trench with boulders laid 
    and rocks were taken away.
 8. Press **Clear (Esc)**, then **Save** (or **Apply live**).
 
-![A cave dug through a big mound and roofed with boulders, seen at its mouth](../images/path-cave.jpg)
-*A cave seen from its entrance: the slope leads down under the boulder roof.*
+![A cave dug through a big mound and roofed with boulders, seen from its entrance slope](../images/path-cave.jpg)
+*A cave seen from its entrance: the slope leads down under the boulder roof, with daylight at the far end.*
 
 ## Check it worked
 

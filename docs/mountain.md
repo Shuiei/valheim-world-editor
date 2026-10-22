@@ -5,16 +5,20 @@ rolling hills.
 
 **Where:** tool rail, **CREATE** section · **Key:** none · **Works in:** saved worlds, live
 
-<!-- picture: mountain-preview.jpg: 5 × 5 area in the Meadows, Mountain tool, Lone peak, Mountain panel fully visible on the left; the orange preview mesh and its ring under the pointer in the middle of the area; inset or second half of the shot: the pointer near the area's edge with the ring red -->
+![The Mountain panel and a lone peak's orange preview mesh with its ring; inset, the ring red near the area's edge](images/mountain-preview.jpg)
+*Lone peak, 80 m high, radius 120 m, before the click: the orange mesh shows it as high as it will rise and the white
+ring how far it reaches. Inset, top right: with the pointer near the area's edge the ring turns red and no mesh
+shows, because it would not fit.*
 
 | Lone peak | Ridge |
 |---|---|
-| ![A lone peak with the biome's trees on its slopes](images/mountain-peak.jpg) | ![A long ridge](images/mountain-ridge.jpg) |
+| ![A lone peak with the biome's trees grown on its slopes, seen from low down](images/mountain-peak.jpg) | ![A long bare ridge running across the picture](images/mountain-ridge.jpg) |
 | **Volcano** | **Rolling hills** |
-| ![A volcano with its crater](images/mountain-volcano.jpg) | ![Rolling hills](images/mountain-hills.jpg) |
+| ![A bare volcano with its crater at the top](images/mountain-volcano.jpg) | ![Three bare rolling hills side by side](images/mountain-hills.jpg) |
 
-*Four presets on a 5 × 5 area. The lone peak has the biome's trees grown on it; the others are left bare so their
-shape shows: a long crest, a cone with its crater, a few gentle hills.*
+*Four presets in the middle of a 5 × 5 area cleared and levelled first, so each stands out. The lone peak has the
+biome's trees grown on it; the others are left bare so their shape shows: a crest much longer than it is wide, a
+cone with its crater, a few gentle hills with saddles between them.*
 
 ## Use it
 

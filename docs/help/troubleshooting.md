@@ -40,7 +40,8 @@ The folder can be changed later in **Settings** → **Valheim game folder** (**A
 again). If the card says **The game's look could not be read**, press **Try again** or check the folder in Settings;
 if it fails again, report it with the log ([below](#the-log-and-bug-reports)).
 
-<!-- picture: start-valheim-missing.jpg: start page on Home with no Valheim folder set: the "Get the game's look" card with "Valheim was not found on this computer.", its four numbered steps, the folder box, Browse… and Use all visible -->
+![Home with Valheim not found: the Get the game's look card with its four steps, the folder box, Browse… and Use](../images/start-valheim-missing.jpg)
+*"Valheim was not found on this computer.": choose the folder with `valheim_Data`, then **Use**.*
 
 ## My game shows steps to do
 
@@ -141,7 +142,8 @@ A running game keeps the world in memory and writes over the files. If it saved 
 3. Look the result over: your changes are now pending on the game's save. Nothing is written yet.
 4. Close Valheim (or stop the server), then press **Save to world** again.
 
-<!-- picture: game-saved-replay.jpg: a saved world open offline with 3 pending changes, after the game saved the same world: the "The game saved this world" question with its full text and the Bring my changes over and Not now buttons -->
+![The question The game saved this world: what happened, what Bring my changes over does, and the Bring my changes over and Not now buttons](../images/game-saved-replay.jpg)
+*Save refused because the game saved the world after the editor read it: **Bring my changes over** makes your changes again on the game's save.*
 
 **Not now** leaves everything as it was. Bringing your changes over may drop some History steps (the message says how many). To avoid it,
 close the game before you save, or edit live. More in [Saving a world](../concepts/saving-and-history.md#saving-a-world).

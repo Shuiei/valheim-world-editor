@@ -5,9 +5,10 @@ causeways, ditches, rivers and caves.
 
 **Where:** tool rail, **EDIT** section (and **Cave** in **CREATE**) · **Key:** `P` · **Works in:** saved worlds, live
 
-![The Path tool's points across two mounds, before Apply](images/path.jpg)
-*A line of points drawn across two mounds, with **Flatten to height** chosen. Nothing has changed yet: the band shows
-the path's width and soft edges until you press **Apply (Enter)**.*
+![The Path tool's five points across two mounds, Flatten to height chosen, before Apply](images/path.jpg)
+*A line of five points drawn over two mounds, with **Flatten to height** chosen and its **Height** taken from the flat
+ground with `Alt`+click. Nothing has changed yet: the band shows the path's width and soft edges until you press
+**Apply (Enter)**; the circle at the last point is the pointer's.*
 
 ## Use it
 
@@ -23,9 +24,9 @@ the path's width and soft edges until you press **Apply (Enter)**.*
 
 The panel shows how many points the line has and how long it is.
 
-![The same line applied: a level road through the mounds, paved along its middle](images/path-road.jpg)
-*The line from the first picture, same camera: Flatten to height cut a level road through the mounds, then Paint
-paved with a smaller Width paved its middle.*
+![The same line applied: a level road cut through both mounds, paved along its middle, the line still drawn](images/path-road.jpg)
+*The line from the first picture, same camera: **Flatten to height** cut a level road through both mounds, then
+**Paint paved** with **Width** 4 m and **Soft edge** 1 m paved its middle. The line stays for the next action.*
 
 ## Settings
 
@@ -42,7 +43,9 @@ paved with a smaller Width paved its middle.*
 | **Smooth curve through the points** | On (default): a smooth curve through your points. Off: straight lines between them. |
 | **Natural look (ragged edges, bumps)** | A width that varies along the way (up to 45% either way), ragged edges and small bumps on the surface, so the path looks worn rather than tool-made. Its **Bumps** and **Bump size** show below it, shared with the [Naturalize](terrain.md#naturalize) brush. |
 
-<!-- picture: path-soft-edge.jpg: the same straight line across a slope applied twice side by side with Lower by 3 m: left Soft edge 0 (straight steep trench walls), right Soft edge 4 m (blended banks); Path panel visible with Soft edge highlighted; camera 30° above, looking along the trenches -->
+![Two trenches dug with Lower by 3 m side by side: left with steep walls, right with wide sloping banks](images/path-soft-edge.jpg)
+*Two straight lines on flat ground, each **Lower by** 3 m with **Width** 6 m, seen along them. Left: **Soft edge** 0,
+a trench with steep, straight walls. Right: **Soft edge** 8 m, the banks slope gently into the ground.*
 
 ## Actions
 
@@ -61,8 +64,8 @@ paved with a smaller Width paved its middle.*
 ### Ramp
 
 ![A ramp seen from the side, rising evenly from the ground onto a raised pad, the Path panel with Start and End](images/path-ramp.jpg)
-*A ramp of two points seen from the side, from the ground at its foot (35 m) to the top of a raised pad (43 m). It
-rises evenly the whole way.*
+*A ramp of two points seen from the side, from the ground at its foot (**Start** 35.2 m) to the top of a pad
+raised 8 m (**End** 43 m). It rises evenly the whole way.*
 
 Until you type a height or pick one, **Start** and **End** follow the ground under the first and last points, so
 moving the ends updates them. `Alt`+click the ground picks the start height, `Alt`+`Shift`+click the end height.
@@ -83,9 +86,10 @@ Bring the ground down near the sea first, follow low ground, or turn on [No limi
 
 ## Cave
 
-![A cave mouth seen from inside the entrance slope, the boulder roof above and the Cave panel](images/path-cave.jpg)
-*A cave dug through a big mound with **Cave (dig and roof)**, seen from its entrance at head height: the slope leads
-down under the boulder roof.*
+![A cave mouth seen from its entrance slope, the boulder roof above and the Cave panel](images/path-cave.jpg)
+*A cave dug through an 18 m mound with the **Cave** preset and No limit on, seen from above its entrance: the grassy
+slope leads down under the boulder roof, with daylight at the far end. The status bar gives its length and boulders,
+and no wall warning.*
 
 **Cave** in the rail's **CREATE** section opens the Path tool with **Cave (dig and roof)** chosen. Draw the cave's
 line and press **Apply (Enter)**: it digs a trench with a slope up to the ground at each end as an entrance, and roofs
