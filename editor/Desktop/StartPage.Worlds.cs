@@ -43,7 +43,7 @@ public sealed partial class StartPage
 
     /// <summary>What a list of worlds shows (every detail on a card), to compare one look with the last.</summary>
     private static string WorldsKey(List<Worlds.Info> worlds) =>
-        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.Name}|{w.Where}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}|{w.ExpandWorld}|{w.Generator}"));
+        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.Name}|{w.Where}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}|{w.MadeBy}|{w.Generator}"));
 
     /// <summary>
     /// Where a world was found (<see cref="Worlds.Info.Where"/>: "recent", "yours", "local") as the user reads it; another
@@ -66,11 +66,11 @@ public sealed partial class StartPage
     internal static string MadeWith(Worlds.Info w)
     {
         string text = WhereName(w.Where);
-        if (w.Generator is { } generator)
+        foreach (string mod in new[] { w.Generator, w.MadeBy }.OfType<string>())
         {
-            text = Lang.T("start.world.generator", text, generator);
+            text = Lang.T("start.world.generator", text, mod);
         }
-        return w.ExpandWorld ? Lang.T("start.world.expandWorld", text) : text;
+        return text;
     }
 
     /// <summary>A card per world given.</summary>

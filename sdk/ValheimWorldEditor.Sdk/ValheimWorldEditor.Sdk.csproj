@@ -31,5 +31,6 @@
     <InternalsVisibleTo Include="AddOns.Tests" />
     <InternalsVisibleTo Include="Fuzz" />
     <InternalsVisibleTo Include="WorldCheck" />
+    <InternalsVisibleTo Include="ExpandWorld.WorldEditor.Tests" />
   </ItemGroup>
 </Project>

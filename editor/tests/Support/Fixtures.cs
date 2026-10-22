@@ -15,10 +15,13 @@ public static class Fixtures
         {
             for (string? d = AppContext.BaseDirectory; d != null; d = Path.GetDirectoryName(d))
             {
-                string f = Path.Combine(d, "tests", "fixtures");
-                if (Directory.Exists(f))
+                // Up from the editor's tests (editor/tests), or from an add-on's (the repository's editor/tests).
+                foreach (string f in new[] { Path.Combine(d, "tests", "fixtures"), Path.Combine(d, "editor", "tests", "fixtures") })
                 {
-                    return f;
+                    if (Directory.Exists(f))
+                    {
+                        return f;
+                    }
                 }
             }
             throw new DirectoryNotFoundException("editor/tests/fixtures not found above " + AppContext.BaseDirectory);

@@ -24,7 +24,7 @@ carries none of the mod; this repository holds none of its code.
 - The worlds list tags it **Riverheim** on its card.
 - Opening it needs the add-on on (Settings → Add-ons) and Riverheim installed in a BepInEx folder the editor knows
   (the Valheim folder, the editor's own profile, the folders added in Settings, r2modman's and Thunderstore Mod
-  Manager's profiles, or the Expand World folder). The editor draws the world with your own copy of Riverheim: it
+  Manager's profiles). The editor draws the world with your own copy of Riverheim: it
   carries none of the mod. It also needs the Valheim folder (Settings), as for any world: Riverheim's file names a
   few of the game's Unity files, which are read from there.
 - The ground of the zones the game has not made yet, the biomes, the ground's paint, the forests, the map and the
@@ -54,7 +54,7 @@ at a time.
 
 ## With Expand World
 
-Riverheim's world can be played with the Expand World mods. With the Expand World switch on too, the editor
+Riverheim's world can be played with the Expand World mods. With the [Expand World add-on](../ExpandWorld/README.md) too, the editor
 does what the game does with both, setting by setting (checked on a server running both):
 
 | Expand World setting | On a Riverheim world |

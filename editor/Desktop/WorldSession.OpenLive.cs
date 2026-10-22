@@ -22,7 +22,7 @@ public sealed partial class WorldSession
             // The world file's keys as the game's disk has them (a mod takes some out of the loaded list), then the
             // world rules providers' rules, from the mods' files as the game has them, through its bridge.
             await world.TakeLiveKeys(live);
-            world.Rules = await WorldRulesSource.ForWorld(world, game, AppSettings.Load());
+            world.Rules = await WorldRulesSource.ForWorld(world, game);
             await ModSettings.RefreshLive(live, ModExtensions.RequestedSettingsFiles);
             // The game's world file, read through the bridge with the rules, says whether a world generation mod made the
             // world; its generator is told the mod's version the game runs.

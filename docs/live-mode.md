@@ -317,14 +317,14 @@ names the mods registered when a game is opened; a mod that fails on what was ap
 
 ### The Expand World mods
 
-With **Generate worlds as the Expand World mods make them** on in Settings, a live world follows the mods the
+With the Expand World add-on installed and on (Settings → Add-ons), a live world follows the mods the
 game itself runs: the editor reads their settings and data files from the game's own `BepInEx` folder through
 the plugin (WorldEditorBridge 1.54.0 or newer), and the world's own settings from its file on the game's disk,
 so a server's world is drawn and predicted as that server makes it, whatever is installed on this computer.
-Only the YamlDotNet library the data files need is still taken from a local BepInEx folder (the Expand World
-folder in Settings first). The log says what was read; the files are copied under `live-bepinex` in the
+Only the YamlDotNet library the data files need is still taken from a local BepInEx folder (the first the editor
+knows that has it). The log says what was read; the files are copied under `live-bepinex` in the
 editor's data folder. With an older plugin, the local folders answer, as for a world opened from its files. See
-[Expand World](expand-world.md).
+the [Expand World add-on](../addons/ExpandWorld/README.md).
 
 ### Riverheim
 

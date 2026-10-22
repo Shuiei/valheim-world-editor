@@ -38,4 +38,24 @@ public static partial class ModExtensions
         }
         return null;
     }
+
+    /// <summary>
+    /// The mod a world's file says made it (IWorldRulesProvider.MadeBy), for its card: the first the running extensions'
+    /// providers name; null when none does. A provider that throws turns its extension off.
+    /// </summary>
+    /// <param name="startingGlobalKeys">The starting global keys the world file keeps.</param>
+    internal static string? MadeBy(IReadOnlyList<string> startingGlobalKeys)
+    {
+        foreach (var l in _state.Hooks)
+        {
+            foreach (var provider in l.WorldRules.ToList())
+            {
+                if (Guard(l, () => provider.MadeBy(startingGlobalKeys), null) is { Length: > 0 } mod)
+                {
+                    return mod;
+                }
+            }
+        }
+        return null;
+    }
 }

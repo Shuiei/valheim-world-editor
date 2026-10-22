@@ -24,8 +24,7 @@ internal static class VegetationCheck
         {
             return 1;
         }
-        var found = ExpandWorld.Look(args[2], "check");
-        var rules = ExpandWorld.Rules(new Dictionary<string, string>(), found, ExpandWorld.ReadData(found), world.StartingGlobalKeys);
+        var rules = ExpandWorldFiles.Rules(args[2], world.StartingGlobalKeys);
         world.Rules = rules with { Vegetation = [.. rules.Vegetation!.Take(int.Parse(args[4], CultureInfo.InvariantCulture))] };
         var terrain = new ValheimGen.TerrainService(world, null);
         var edits = new EditStore(world);

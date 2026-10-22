@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Expand World add-on's tests, on the .NET the editor runs on: the mods' files read into rules (the real mods
+       downloaded for the tests, editor/tests/TestMods.targets, and a copy of YamlDotNet standing in for the player's),
+       a live game's files through the SDK's ILiveGame, and the rules followed by the editor's own generator, placer and
+       dungeons (the editor's Core and its tests' helpers and fixtures). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>ExpandWorld.WorldEditor.Tests</RootNamespace>
+    <!-- Test methods need no doc comment: their names say what they check. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- The editor's tests' settings (a stuck test dumped and stopped after 5 minutes), for dotnet test. -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --config-file $(MSBuildThisFileDirectory)../../../../editor/tests/testconfig.json</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- As the editor's tests: xUnit on Microsoft.Testing.Platform, the JUnit results CI shows (with the test
+         platform's object model the logger needs), the coverage on main and a stuck test's dump. -->
+    <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
+    <PackageReference Include="JunitXml.TestLogger" Version="8.0.0" />
+    <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="18.11.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+    <!-- A copy of YamlDotNet to stand in for the one a BepInEx folder has: the add-on ships none and loads the player's. -->
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/ExpandWorld.WorldEditor/ExpandWorld.WorldEditor.csproj" />
+    <ProjectReference Include="../../../../sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" />
+    <ProjectReference Include="../../../../editor/Core/ValheimWorldEditor.Core.csproj" />
+    <!-- The editor's tests' shared helpers (the test world, the fixtures, a stand-in game, the real mods' installer),
+         and the few of Core's tests these use. -->
+    <Compile Include="../../../../editor/tests/Support/**/*.cs" LinkBase="Support/Editor" />
+    <Compile Include="../../../../editor/tests/Core.Tests/Support/AppSettingsTestBase.cs" Link="Support/Editor/AppSettingsTestBase.cs" />
+    <Compile Include="../../../../editor/tests/Core.Tests/Support/GeneratorPoints.cs" Link="Support/Editor/GeneratorPoints.cs" />
+    <Compile Include="../../../../editor/tests/Core.Tests/Support/PrivateCall.cs" Link="Support/Editor/PrivateCall.cs" />
+  </ItemGroup>
+  <Import Project="../../../../editor/tests/TestMods.targets" />
+</Project>

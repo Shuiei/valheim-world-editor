@@ -10,8 +10,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Desktop with Expand World's rules: a biome of the biome file named and coloured as the file says, the seed map
-/// covering a wider world, the New world page saying what its worlds follow, and the start page's tag on worlds made
-/// with Expand World Size.
+/// covering a wider world, the New world page saying what its worlds follow, and the start page's tag on worlds a world
+/// rules provider says a mod made.
 /// </summary>
 [Collection("DataDir")]
 public class ExpandWorldDesktopTests
@@ -83,7 +83,7 @@ public class ExpandWorldDesktopTests
         {
             r.P.FindWorlds = _ =>
             [
-                new Worlds.Info("Tagged", dir, DateTime.Now, 2, "local", true, null, ExpandWorld: true),
+                new Worlds.Info("Tagged", dir, DateTime.Now, 2, "local", true, null, MadeBy: "Expand World"),
                 new Worlds.Info("Plain", dir, DateTime.Now, 2, "local", true, null),
             ];
             r.P.FillWorlds();

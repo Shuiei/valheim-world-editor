@@ -1,0 +1,8 @@
+<!-- The add-on's own version (its VERSION file), over the repository's settings (the analyzers, every warning an
+     error): an add-on is released on its own zip, with its own version, beside the editor's packages. -->
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <PropertyGroup>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
+  </PropertyGroup>
+</Project>

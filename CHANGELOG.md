@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.106.0 — 2026-10-21
+
+### Changed
+- **Expand World is now an add-on.** Worlds made with the Expand World mods follow them with the Expand World add-on,
+  its own download beside the editor's (unpack it into the addons folder); its switch under Add-ons in Settings
+  replaces the Expand World switch. The Expand World folder setting is gone: add the BepInEx folder with the mods in
+  Settings instead. Everything else works as before.
+
 ## v1.105.0 — 2026-10-21
 
 ### Added
@@ -594,7 +602,7 @@ the plugin is unchanged in versions without that part.
   the editor reads the mods' settings and data files from the game's own BepInEx folder through WorldEditorBridge,
   along with the world's own settings from its file on the game's disk, instead of the BepInEx folders on this
   computer. The YamlDotNet library the data files need is still taken from a local BepInEx folder. An older plugin
-  leaves the local folders in use, said in the log. See [Expand World](docs/expand-world.md#live-mode).
+  leaves the local folders in use, said in the log. See [Expand World](addons/ExpandWorld/README.md#live-mode).
 
 ### WorldEditorBridge
 - Three read-only routes for the editor: `GET /plugins` lists the plugins BepInEx loaded (id, name, version),
@@ -610,7 +618,7 @@ the plugin is unchanged in versions without that part.
   made with the mods' settings and data (the page says so above Create), biomes the mods add are named and coloured
   as their files say, and a world made with Expand World Size shows "Expand World" on its card on the start page.
   Settings gets a folder for the mods' files, for a server world opened from its files. See
-  [Expand World](docs/expand-world.md).
+  [Expand World](addons/ExpandWorld/README.md).
 
 ## v1.52.0 — 2026-10-19
 

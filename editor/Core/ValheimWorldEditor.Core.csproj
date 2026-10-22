@@ -17,6 +17,8 @@
     <InternalsVisibleTo Include="Fuzz" />
     <InternalsVisibleTo Include="AddOns.Tests" />
     <InternalsVisibleTo Include="WorldCheck" />
+    <!-- The Expand World add-on's tests: its rules followed by the editor's generator, placer and dungeons. -->
+    <InternalsVisibleTo Include="ExpandWorld.WorldEditor.Tests" />
   </ItemGroup>
   <ItemGroup>
     <!-- The app's texts, a catalogue per language (App/Lang.cs). -->
