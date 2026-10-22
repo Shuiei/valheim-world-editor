@@ -240,7 +240,7 @@ public sealed partial class HelpWindow : Window
     }
 
     /// <summary>
-    /// The window's keys: Alt + Left and Right go back and forward, Ctrl + F searches, Esc closes the enlarged picture
+    /// The window's keys: Alt + Left and Right go back and forward, Ctrl + F (Cmd + F on a Mac) searches, Esc closes the enlarged picture
     /// or else empties the search.
     /// </summary>
     private void OnKey(object? sender, KeyEventArgs e)
@@ -254,7 +254,7 @@ public sealed partial class HelpWindow : Window
             case Key.Right when alt:
                 Move(1);
                 break;
-            case Key.F when e.KeyModifiers == KeyModifiers.Control:
+            case Key.F when e.KeyModifiers is KeyModifiers.Control or KeyModifiers.Meta:
                 SearchBox.Focus();
                 SearchBox.SelectAll();
                 break;

@@ -191,6 +191,9 @@ public class HelpWindowTests
             Assert.Equal(new HelpTarget("map.md"), w.Shown);
             w.KeyPressQwerty(PhysicalKey.F, RawInputModifiers.Control);
             Assert.True(w.SearchBox.IsFocused);
+            w.BackButton.Focus();
+            w.KeyPressQwerty(PhysicalKey.F, RawInputModifiers.Meta);
+            Assert.True(w.SearchBox.IsFocused);
         });
     }
 }
