@@ -115,7 +115,7 @@ public sealed partial class BuildPanel
                 {
                     ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
                     ColumnSpacing = 4,
-                    Children = { new TextBlock { Text = Lang.T("rail.label.build"), FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
+                    Children = { Ui.Title(Lang.T("rail.label.build"), HelpTopics.Workshop), Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
                 },
                 _pieces,
                 _library,

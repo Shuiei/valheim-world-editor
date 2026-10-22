@@ -53,7 +53,7 @@ public sealed partial class DungeonPanel
                     Spacing = 6,
                     Children =
                     {
-                        new TextBlock { Text = Lang.T("rail.label.dungeon"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                        Ui.Title(Lang.T("rail.label.dungeon"), HelpTopics.Tool(ToolMode.Dungeon)),
                         generate, go,
                         new TextBlock { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                             Text = Lang.T("dungeon.hint.editing") },

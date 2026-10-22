@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Media;
 using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
@@ -40,7 +39,7 @@ public sealed partial class BlueprintsPanel
                 Spacing = 6,
                 Children =
                 {
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = Lang.T("rail.label.blueprints"), FontSize = 14, FontWeight = FontWeight.SemiBold }, Ui.Col(close, 1) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { Ui.Title(Lang.T("rail.label.blueprints"), HelpTopics.Blueprints), Ui.Col(close, 1) } },
                     _bannerBox,
                     new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { Search, Ui.Col(ImportButton, 1) } },
                     NewButton,

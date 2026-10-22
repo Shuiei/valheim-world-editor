@@ -28,7 +28,7 @@ public sealed partial class PastePanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("paste.label.paste"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("paste.label.paste"), HelpTopics.Tool(ToolMode.Paste)),
                     Info, GroundBox, ObjectsBox, ClearSiteBox,
                     Row(Lang.T("common.height"), OffsetBox, metres: true),
                     new TextBlock { Text = Lang.T("paste.head.repeat"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 4, 0, 0) },

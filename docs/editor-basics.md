@@ -86,7 +86,7 @@ formula, Select's options, which Place categories are open, the right-hand panel
 | **Apply live** (live) | Sends the changes to the running game (`Ctrl+S`): everyone there sees them at once. See [Apply live](#apply-live). |
 | **History** | Every change of the session (`L`). See [History](#history). |
 | **View** | What is shown and how (`V`). See [View panel](#view-panel). |
-| **?** | The **Controls** help card (`?` or `F3`). See [The help card](#the-help-card). |
+| **?** | The **Controls** help card (`?` or `F3`). See [The help card](#the-help-card). Each panel has its own small **?** at the top: the Help window at that tool's page (`F1` does the same for the tool in use). |
 
 In the view, every new object not saved or applied yet carries a **green dot**, except while it is selected (its
 outline marks it then). **View → Unsaved marks** hides the dots; the objects stay.
@@ -346,6 +346,7 @@ on Windows.*
 | `Ctrl+Z` / `Ctrl+Y` or `Ctrl+Shift+Z` | Undo / redo |
 | `Ctrl+S` | Save to world, Apply live, or Save blueprint |
 | `V` / `L` / `?` or `F3` | View panel / History / help card |
+| `F1` | The Help window at the tool in use |
 | `F` | Walk, Fly, back to the usual view |
 | `W` `A` `S` `D` | Move around |
 | `Esc` | Cancel what the tool is doing, else the View tool |

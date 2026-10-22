@@ -94,7 +94,7 @@ public sealed partial class ToolPanel
     ];
 
     /// <summary>A paint brush (the rail's Paint section), not a sculpt one.</summary>
-    private static bool IsPaint(BrushTool t) => t is BrushTool.PaintDirt or BrushTool.PaintCultivated or BrushTool.PaintPaved or BrushTool.PaintClear;
+    internal static bool IsPaint(BrushTool t) => t is BrushTool.PaintDirt or BrushTool.PaintCultivated or BrushTool.PaintPaved or BrushTool.PaintClear;
 
     /// <summary>The rail's short names (the web editor's).</summary>
     private static string RailLabel(BrushTool t) => t switch

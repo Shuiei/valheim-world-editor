@@ -99,7 +99,7 @@ public sealed partial class ScriptPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("rail.label.script"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("rail.label.script"), HelpTopics.Tool(ToolMode.Script)),
                     ScriptBox,
                     CodeBox,
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { RunButton, StopButton, NameBox, SaveButton } },

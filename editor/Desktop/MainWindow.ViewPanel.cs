@@ -125,7 +125,9 @@ public sealed partial class MainWindow
     private Border BuildViewPanel()
     {
         var list = new StackPanel { Spacing = 2 };
-        list.Children.Add(Ui.Heading(Lang.T("rail.label.view"), 0));
+        var viewHead = Ui.Heading(Lang.T("rail.label.view"), 0);
+        viewHead.VerticalAlignment = VerticalAlignment.Center;
+        list.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { viewHead, Ui.Col(Ui.HelpButton(() => HelpTopics.ViewPanel), 1) } });
         list.Children.Add(Heading(Lang.T("view.head.look")));
         GameLookBox.Tip("view.gameLook");
         WaterBox.Tip("view.water");

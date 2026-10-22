@@ -52,7 +52,7 @@ public sealed partial class PathPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("rail.label.path"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("rail.label.path"), HelpTopics.Tool(ToolMode.Path)),
                     Ui.Row(Lang.T("path.label.action"), ActionBox),
                     Ui.Row(Lang.T("path.label.width"), WidthSlider, _widthShown),
                     Ui.Row(Lang.T("path.label.soft"), SoftSlider, _softShown),

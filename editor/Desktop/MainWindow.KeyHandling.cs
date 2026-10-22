@@ -7,14 +7,14 @@ public partial class MainWindow
 {
     /// <summary>
     /// The 3D editor's keys (shortcuts for the tools, the panels, undo, save and the like, see <see cref="KeyRules"/>);
-    /// none while typing in a box or away from the editor.
+    /// none while typing in a box or away from the editor; F1 (the help) everywhere.
     /// </summary>
     private void OnKey(object? sender, KeyEventArgs e)
     {
         // Typing in a box: its keys are its own. The keys below are the 3D editor's: on the start page or
         // the map they would act on the area left open behind it (an undo pushed live, unseen); under the busy veil
         // (saving, reading the world again) they would wait on it or do it twice.
-        if (e.Source is TextBox || _pages.Content != _editorPage || IsBusy)
+        if (HelpKey(e) || e.Source is TextBox || _pages.Content != _editorPage || IsBusy)
         {
             return;
         }
