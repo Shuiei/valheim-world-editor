@@ -12,6 +12,29 @@ the plugin is unchanged in versions without that part.
   the add-on not running, or the mod's own extension not turned on; and with the Riverheim add-on, a Riverheim too old
   for the world. See [World generators](docs/modding.md#world-generators).
 
+## v1.103.3 — 2026-10-21
+
+### Fixed
+- **A mod's object changed twice before applying is updated in place in the game.** When a mod's tool changed the
+  same object twice before the changes were applied live (two digs in one tunnel column, say), the game's object was
+  removed and a new one made instead of being updated; with Tunnelheim, which keeps its records, the column then held
+  two records.
+
+## v1.103.2 — 2026-10-21
+
+### Fixed
+- **The New world page says when players need a mod.** With a world generation mod's generator chosen (Riverheim),
+  the page still said the world was a normal one players need no mod for; it now says every player needs the mod,
+  so console players on crossplay cannot join. The start page says so too, and the seed search no longer claims to use
+  the game's own generator.
+
+## v1.103.1 — 2026-10-21
+
+### Fixed
+- **Settings' add-on and extension switches take effect at once.** Turning an add-on or a mod's extension on or off
+  in Settings changed nothing in the worlds listed until a world or the Workshop was opened: the list now follows the
+  switches as soon as Settings is saved.
+
 ## v1.103.0 — 2026-10-21
 
 ### Changed
