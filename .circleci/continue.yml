@@ -42,7 +42,7 @@
 #   publish-*      the plugin on Thunderstore and Hexium, and the plugin and the editor on Nexus Mods
 #                  (tools/release/publish.cs, tools/release/sites.json), side by side
 # How to release: docs/development.md#releasing.
-# Security and bug patterns (CodeQL) are checked by GitHub's code scanning, set up on GitHub itself.
+# Security and bug patterns (CodeQL) are checked by GitHub Actions (.github/workflows/codeql.yml), forks' pull requests too.
 # What CI cannot cover: the plugin build (outside a release) and reading the game's data (both need
 # Valheim's files), the game's look in the visual tests (copied from Valheim: CI's editor draws plain
 # colours) and live mode against a real game.
