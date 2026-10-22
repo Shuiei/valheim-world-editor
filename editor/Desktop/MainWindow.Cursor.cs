@@ -76,7 +76,7 @@ public sealed partial class MainWindow
         }
         var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5) }.Classed("ghost").Tip("card.close");
         close.Click += (_, _) => ShowRight(null);
-        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = Lang.T("help.head.controls"), FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
+        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { Ui.Title(Lang.T("help.head.controls"), HelpTopics.Controls) } };
         Grid.SetColumn(close, 1);
         head.Children.Add(close);
         record.Classes.Add("switch");

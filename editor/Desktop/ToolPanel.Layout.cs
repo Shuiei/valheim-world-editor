@@ -177,7 +177,7 @@ public sealed partial class ToolPanel
             Spacing = 6,
             Children =
             {
-                _title, _help,
+                Ui.Titled(_title, () => HelpTopics.Tool(ToolMode.Brush, Tool)), _help,
                 Ui.Row(Lang.T("brush.label.size"), SizeSlider, sizeV),
                 Ui.Row(Lang.T("brush.label.strength"), StrengthSlider, strengthV),
                 Ui.Row(Lang.T("brush.label.shape"), ShapeBox),

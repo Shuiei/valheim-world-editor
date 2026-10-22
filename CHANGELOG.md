@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.108.0 — 2026-10-22
+
+### Added
+- **Help for the tool you are using.** `F1`, on any page, opens the help at what you are doing: the tool in use, the
+  Inspector, the map, a new world or the start page; each panel also has a small **?** at the top that opens its page.
+  The documentation itself is rewritten: getting started, guides for common tasks, a page per tool, how things work,
+  troubleshooting, every shortcut and a glossary, with new pictures.
+
 ## v1.107.0 — 2026-10-21
 
 ### Added

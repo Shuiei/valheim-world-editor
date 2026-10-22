@@ -60,7 +60,7 @@ public sealed class MeasurePanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("rail.label.measure"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("rail.label.measure"), HelpTopics.Tool(ToolMode.Measure)),
                     _hint, _rows, ClearButton,
                     new TextBlock { Text = Lang.T("measure.hint.look"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                 },

@@ -56,7 +56,7 @@ public sealed partial class ShapePanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("rail.label.shape"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("rail.label.shape"), HelpTopics.Tool(ToolMode.Shape)),
                     Row(Lang.T("rail.label.shape"), PresetBox),
                     Row(Lang.T("shape.label.radius"), RadiusSlider, radiusV),
                     Row(Lang.T("common.height"), HeightBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center }),

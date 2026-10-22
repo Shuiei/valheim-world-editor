@@ -31,6 +31,7 @@ While walking or flying the wheel does not zoom and drags do not slide the view.
 | `V` | Open or close the **View** panel. |
 | `L` | Open or close **History**. |
 | `?` (`Shift+/`) or `F3` | Open or close the **Controls** help card. |
+| `F1` | The Help window at the page of the tool in use (see [The Help window](#the-help-window)). |
 | `Ctrl+S` | **Save to world** (a saved world), **Apply live** (live), **Save blueprint** (the Workshop). |
 
 ## Choose a tool
@@ -202,6 +203,7 @@ These work in the **Select** tool (`E`). A click in the **View** tool picks obje
 
 | Key | Action |
 |---|---|
+| `F1` | Open the help at what you are using: the tool, the Inspector, the map, the start page… (any page). |
 | `Ctrl+F` | Search the help. |
 | `Alt+Left` / `Alt+Right` | Back / forward. |
 | `Esc` | Close an enlarged picture, else empty the search. |

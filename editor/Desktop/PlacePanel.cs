@@ -139,7 +139,7 @@ public sealed partial class PlacePanel
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = Lang.T("rail.label.place"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                Ui.Title(Lang.T("rail.label.place"), HelpTopics.Tool(ToolMode.Place)),
                 modes,
                 _lineShapeBox,
                 Section(Lang.T("place.head.preset"), PresetBox, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SavePresetButton, DeletePresetButton } }),

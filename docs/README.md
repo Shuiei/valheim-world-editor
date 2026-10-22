@@ -5,7 +5,7 @@ move anything, then save it back or watch it change in game as you work.
 
 **New here?** [Install the editor](start/install.md), then follow [your first edit](start/first-edit.md): ten minutes
 on a copy of a world, nothing to lose. Looking for something? Search the help (`Ctrl+F` in the Help window), or start
-from a task below.
+from a task below. In the editor, `F1` or the small **?** at the top of a panel opens the help at that tool.
 
 > [!IMPORTANT]
 > Keep a copy of a world before you change it: see [Back up a world before editing](guides/back-up-a-world.md). The

@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Media;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -55,7 +54,7 @@ public sealed partial class HistoryPanel
                     new Grid
                     {
                         ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
-                        Children = { new TextBlock { Text = Lang.T("history.title"), FontSize = 14, FontWeight = FontWeight.SemiBold }, Col(Count, 1, new Thickness(8, 3, 0, 0)), Col(close, 2) },
+                        Children = { Ui.Title(Lang.T("history.title"), HelpTopics.History), Col(Count, 1, new Thickness(8, 3, 0, 0)), Col(close, 2) },
                     },
                     TakeBackClaude,
                     new ScrollViewer { MaxHeight = 520, Content = Rows },
