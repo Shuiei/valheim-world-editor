@@ -164,9 +164,9 @@ public sealed partial class Scenes
         TypeKeys(e, item);
         if (choose)
         {
-            RunTool("xdotool", "key", "Down", "Return");
+            RunOnDisplay("xdotool", "key", "Down", "Return");
         }
-        RunTool("xdotool", "mousemove", "1915", "1075");
+        RunOnDisplay("xdotool", "mousemove", "1915", "1075");
         e.Send("wait 300");
         e.Send($"set How many|{count}");
     }
@@ -178,14 +178,14 @@ public sealed partial class Scenes
     /// <param name="leave">Move the pointer off the window afterwards (where it shows no tip).</param>
     private static void ClickPixel(Editor e, int x, int y, bool leave = true)
     {
-        string window = RunTool("xdotool", "search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries)[^1];
-        RunTool("xdotool", "mousemove", "--window", window, x.ToString(CultureInfo.InvariantCulture), y.ToString(CultureInfo.InvariantCulture));
+        string window = RunOnDisplay("xdotool", "search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries)[^1];
+        RunOnDisplay("xdotool", "mousemove", "--window", window, x.ToString(CultureInfo.InvariantCulture), y.ToString(CultureInfo.InvariantCulture));
         e.Send("wait 200");
-        RunTool("xdotool", "click", "1");
+        RunOnDisplay("xdotool", "click", "1");
         e.Send("wait 200");
         if (leave)
         {
-            RunTool("xdotool", "mousemove", "1915", "1075");
+            RunOnDisplay("xdotool", "mousemove", "1915", "1075");
         }
         e.Send("wait 300");
     }
@@ -193,7 +193,7 @@ public sealed partial class Scenes
     /// <summary>Keys typed on the display, into the window under the pointer.</summary>
     private static void TypeKeys(Editor e, string text)
     {
-        RunTool("xdotool", "type", "--delay", "40", text);
+        RunOnDisplay("xdotool", "type", "--delay", "40", text);
         e.Send("wait 300");
     }
 }

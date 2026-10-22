@@ -233,14 +233,14 @@ public sealed partial class Scenes
         e.Send("click Import…");
         // The picker: its path box (Ctrl+L) gets the picture's path, typed with the pointer over it (no window manager:
         // keys go to the window under the pointer).
-        string picker = RunTool("timeout", "20", "xdotool", "search", "--sync", "--onlyvisible", "--name", "Import a heightmap");
-        RunTool("xdotool", "mousemove", "--window", picker.Split('\n', StringSplitOptions.RemoveEmptyEntries)[^1], "300", "200");
+        string picker = RunOnDisplay("timeout", "20", "xdotool", "search", "--sync", "--onlyvisible", "--name", "Import a heightmap");
+        RunOnDisplay("xdotool", "mousemove", "--window", picker.Split('\n', StringSplitOptions.RemoveEmptyEntries)[^1], "300", "200");
         e.Send("wait 500");
-        RunTool("xdotool", "key", "ctrl+l");
+        RunOnDisplay("xdotool", "key", "ctrl+l");
         e.Send("wait 300");
         TypeKeys(e, png);
-        RunTool("xdotool", "key", "Return");
-        RunTool("xdotool", "mousemove", "1915", "1075");
+        RunOnDisplay("xdotool", "key", "Return");
+        RunOnDisplay("xdotool", "mousemove", "1915", "1075");
         e.Send("wait 1500");
         Camera(e, 10, 0, 200, 60, 90);
         e.Send("wait 500");

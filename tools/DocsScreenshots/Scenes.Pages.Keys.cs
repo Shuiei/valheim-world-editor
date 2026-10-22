@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace TerrainEditor.DocsScreenshots;
 
 /// <summary>
@@ -19,25 +17,25 @@ public sealed partial class Scenes
     /// <param name="text">The text to type.</param>
     private static void TypeAt(Editor e, int x, int y, string text)
     {
-        string window = XdotoolRun("search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries)[0];
+        string window = RunXdotool("search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries)[0];
         var inv = System.Globalization.CultureInfo.InvariantCulture;
-        XdotoolRun("mousemove", "--window", window, x.ToString(inv), y.ToString(inv), "click", "1");
+        RunXdotool("mousemove", "--window", window, x.ToString(inv), y.ToString(inv), "click", "1");
         // Real key presses (not sent to the window: the app ignores those), to the window under the pointer; each new
         // line as Return (xdotool types it as Linefeed, which a text box does not take).
-        XdotoolRun("key", "ctrl+a");
+        RunXdotool("key", "ctrl+a");
         string[] lines = text.Split('\n');
         for (int i = 0; i < lines.Length; i++)
         {
             if (i > 0)
             {
-                XdotoolRun("key", "Return");
+                RunXdotool("key", "Return");
             }
             if (lines[i].Length > 0)
             {
-                XdotoolRun("type", "--delay", "8", lines[i]);
+                RunXdotool("type", "--delay", "8", lines[i]);
             }
         }
-        XdotoolRun("mousemove", "1915", "1075");
+        RunXdotool("mousemove", "1915", "1075");
         e.Send("wait 500");
     }
 
@@ -49,7 +47,7 @@ public sealed partial class Scenes
     /// <param name="notches">Each point and its notch.</param>
     private static void WheelAt(Editor e, params (int X, int Y, int Notch)[] notches)
     {
-        string window = XdotoolRun("search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries)[0];
+        string window = RunXdotool("search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries)[0];
         var inv = System.Globalization.CultureInfo.InvariantCulture;
         var args = new List<string>();
         foreach (var (x, y, notch) in notches)
@@ -57,7 +55,7 @@ public sealed partial class Scenes
             args.AddRange(["mousemove", "--window", window, x.ToString(inv), y.ToString(inv), "sleep", "0.3", "click", notch > 0 ? "4" : "5", "sleep", "0.5"]);
         }
         args.AddRange(["mousemove", "1915", "1075"]);
-        XdotoolRun([.. args]);
+        RunXdotool([.. args]);
         e.Send("wait 500");
     }
 
@@ -66,23 +64,9 @@ public sealed partial class Scenes
     /// <param name="at">The point.</param>
     private static void ClickAt(Editor e, (int X, int Y) at)
     {
-        string window = XdotoolRun("search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries)[0];
+        string window = RunXdotool("search", "--onlyvisible", "--name", "Valheim World Editor").Split('\n', StringSplitOptions.RemoveEmptyEntries)[0];
         var inv = System.Globalization.CultureInfo.InvariantCulture;
-        XdotoolRun("mousemove", "--window", window, at.X.ToString(inv), at.Y.ToString(inv), "sleep", "0.3", "click", "1", "sleep", "0.2", "mousemove", "1915", "1075");
+        RunXdotool("mousemove", "--window", window, at.X.ToString(inv), at.Y.ToString(inv), "sleep", "0.3", "click", "1", "sleep", "0.2", "mousemove", "1915", "1075");
         e.Send("wait 500");
-    }
-
-    /// <summary>Runs xdotool with these arguments; its output. Throws when it cannot run or fails.</summary>
-    private static string XdotoolRun(params string[] args)
-    {
-        var start = new ProcessStartInfo("xdotool") { RedirectStandardOutput = true, UseShellExecute = false };
-        foreach (string a in args)
-        {
-            start.ArgumentList.Add(a);
-        }
-        using var p = Process.Start(start) ?? throw new InvalidOperationException("xdotool did not start");
-        string output = p.StandardOutput.ReadToEnd();
-        p.WaitForExit();
-        return p.ExitCode == 0 ? output.Trim() : throw new InvalidOperationException($"xdotool {string.Join(' ', args)}: exit {p.ExitCode}");
     }
 }
