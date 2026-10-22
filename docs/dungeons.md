@@ -228,8 +228,9 @@ All the editor's keys are in [Shortcuts](help/shortcuts.md).
 
 - **Recover:** each placement, room or door is one undo step (`Ctrl+Z`). Lost a layout you liked? The same choices
   and seed make the same dungeon again. Nothing is written until **Save to world** or **Apply live**.
-- **One dungeon per zone** (64 × 64 m): when something is already up there, the editor says so and places nothing.
-  Put the entrance in another zone.
+- **One dungeon per zone** (64 × 64 m): behind the game's own entrance, when something is already up there, the
+  editor says so and places nothing; put the entrance in another zone. In the Plains (portal way in) it goes higher
+  instead, below.
 - A dungeon of building pieces is ordinary objects, not a dungeon of rooms: [Select](select.md) moves and deletes its
   pieces, and the dungeon list does not show it (the panel may say *No dungeon in this area*). Use **Go to the
   dungeon**.

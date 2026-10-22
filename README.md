@@ -71,9 +71,10 @@ What changed and when: [CHANGELOG.md](CHANGELOG.md).
 
 ## Safety
 
-Nothing is written until you press **Save to world** or **Apply live**, and every offline save is read back and
-checked before the old one goes. The plugin only listens on the computer it runs on and needs a secret token;
-everything happens on your computer, and nothing is sent anywhere else. Keep your own copy of a world you care about
+Nothing is written until you press **Save to world** or **Apply live** (or, live with **Auto** on, as you make each
+change), and every offline save is read back and checked before the old one goes. The plugin only listens on the
+computer it runs on and needs a secret token; everything happens on your computer, and nothing is sent anywhere else,
+except what you let Claude see when you connect it (the area's data and pictures of the view go to your Claude app). Keep your own copy of a world you care about
 anyway: see [Back up a world before editing](docs/guides/back-up-a-world.md). The details:
 [Safety](docs/concepts/safety.md). Found a security problem? Report it privately, see [SECURITY.md](SECURITY.md).
 

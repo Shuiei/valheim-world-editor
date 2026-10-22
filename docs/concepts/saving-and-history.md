@@ -126,7 +126,7 @@ here, nor can the steps before it. Saving or applying from any area marks the st
 
 After each **Save to world** or **Apply live**, the history is written to the editor's data folder (`history/`, one
 file per world folder; live, one per connection and world). Open the world again, even days later, and the steps are
-back, tagged **earlier session**: undo puts the ground back, a deleted object back with its contents, a placed one
+back (unless a save started the history over, [below](#when-the-history-starts-over)), tagged **earlier session**: undo puts the ground back, a deleted object back with its contents, a placed one
 away. Changes you neither saved nor applied are not kept.
 
 The world may have changed since (players built and dug, or the game saved it again), so the editor asks once before
