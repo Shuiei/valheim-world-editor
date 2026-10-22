@@ -46,14 +46,8 @@ public sealed partial class PasteTool
     /// <param name="touched">The points changed; added to.</param>
     internal void ShapeCell(Ground g, CopyData c, Vector2 ca, float anchor, int gx, int gz, Func<int, float>? mask, HashSet<int> shaped, List<int> touched)
     {
-        var src = Inv(new Vector2(gx - ca.X, gz - ca.Y));
-        int ix = (int)MathF.Round(src.X + (c.W - 1) / 2f), iz = (int)MathF.Round(src.Y + (c.H - 1) / 2f);
-        if (ix < 0 || iz < 0 || ix >= c.W || iz >= c.H)
-        {
-            return;
-        }
-        int i = iz * c.W + ix;
-        if (float.IsNaN(c.Rel[i]) || g.Locked(gx, gz))
+        int i = CopyPoint(c, ca, gx, gz);
+        if (i < 0 || g.Locked(gx, gz))
         {
             return;
         }
@@ -78,5 +72,43 @@ public sealed partial class PasteTool
             }
         }
         touched.Add(p);
+    }
+
+    /// <summary>
+    /// The copy's ground point that lands on a grid point (an index into its arrays), or -1 when the copy has no ground
+    /// there (outside it, or not copied).
+    /// </summary>
+    /// <param name="c">The copy.</param>
+    /// <param name="ca">The copy's anchor point on the grid.</param>
+    /// <param name="gx">The grid point's x.</param>
+    /// <param name="gz">The grid point's z.</param>
+    private int CopyPoint(CopyData c, Vector2 ca, int gx, int gz)
+    {
+        var src = Inv(new Vector2(gx - ca.X, gz - ca.Y));
+        int ix = (int)MathF.Round(src.X + (c.W - 1) / 2f), iz = (int)MathF.Round(src.Y + (c.H - 1) / 2f);
+        return ix < 0 || iz < 0 || ix >= c.W || iz >= c.H || float.IsNaN(c.Rel[iz * c.W + ix]) ? -1 : iz * c.W + ix;
+    }
+
+    /// <summary>
+    /// The Mask's weight at a grid point (x, z) as the paste applies it (null: no Mask), so that what is shown before
+    /// the click stands where the paste puts it; the 3D view sets it from the session it shows.
+    /// </summary>
+    internal Func<int, int, float>? MaskAt { get; set; }
+
+    /// <summary>
+    /// The ground's height at a point once the copy's ground is pasted there (Ground on), as ShapeCell lays it on the
+    /// nearest grid point, the Mask included (MaskAt): where an object that follows the ground stands after the paste.
+    /// </summary>
+    /// <param name="c">The copy.</param>
+    /// <param name="ca">The copy's anchor point on the grid.</param>
+    /// <param name="anchor">The height the copy's ground is laid at.</param>
+    /// <param name="p">The point, on the grid.</param>
+    /// <param name="h">The ground's height there before the paste.</param>
+    internal float GroundAfter(CopyData c, Vector2 ca, float anchor, Vector2 p, float h)
+    {
+        int gx = (int)MathF.Round(p.X), gz = (int)MathF.Round(p.Y);
+        int i = Ground ? CopyPoint(c, ca, gx, gz) : -1;
+        float w = i < 0 ? 0 : c.Wt[i] * (MaskAt?.Invoke(gx, gz) ?? 1);
+        return w <= 0 ? h : h + (anchor + c.Rel[i] - h) * w;
     }
 }

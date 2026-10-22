@@ -10,7 +10,7 @@ public sealed partial class PasteTool
 {
     /// <summary>
     /// Adds the objects of one copy as new objects (with the ground's origin), each placed where the copy has it: those
-    /// copied with the Select tool keep their height above the ground where they land.
+    /// that follow the ground (trees and the like) keep their height above the ground where they land.
     /// </summary>
     /// <param name="g">The ground the objects are placed on.</param>
     /// <param name="c">The copy.</param>
@@ -24,7 +24,7 @@ public sealed partial class PasteTool
         foreach (var o in c.Objects)
         {
             var p = ca + Xf(new Vector2(o.Dx, o.Dz));
-            // Objects copied with the Select tool keep their height above the ground where they land.
+            // Trees and the like keep their height above the ground where they land (read after this copy shaped it).
             float y = o.Follow ? g.HeightOf(Index(g, p)) + o.Dy + lift : anchor + o.Dy;
             add.Add((new NewObject(0, o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), Rotated(o.Rotation), o.Scale, o.SourceId, true, Data: o.Data), PieceCatalog.Get(o.Prefab)?.Tool != null));
         }

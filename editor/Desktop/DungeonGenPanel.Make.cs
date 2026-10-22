@@ -43,11 +43,18 @@ public sealed partial class DungeonGenPanel
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    /// <summary>
+    /// What a dungeon made holds (its notes); for the game's rooms, also that placing lays them out again from the
+    /// entrance (DungeonGen.Make with its pose), so the rooms placed may differ from these.
+    /// </summary>
+    private static Said SummaryOf(DungeonGen.Result r) =>
+        r.Kind != null ? Said.Join(". ", [r.Summary, Said.Of("dungeon.hint.roomsWhere")]) : r.Summary;
+
     /// <summary>Shows a dungeon made (or why not): its summary, the level buttons and the plan.</summary>
     private void Show(DungeonGen.Result? result, string? error)
     {
         _result = result;
-        Summary.Text = result != null ? Said.Join(" ", result.Notes).Shown : Lang.T("dungeon.hint.notMade", error);
+        Summary.Text = result != null ? SummaryOf(result).Shown : Lang.T("dungeon.hint.notMade", error);
         Place.IsEnabled = OpenOnPlot.IsEnabled = AddToPlot.IsEnabled = _result != null;
         var levels = _result?.Map?.Select(r => r.Level).Distinct().Order().ToList() ?? [];
         _level = Math.Clamp(_level, 0, Math.Max(0, levels.Count - 1));

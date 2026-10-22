@@ -45,6 +45,14 @@ public sealed partial class WorldSession
         if (Area == null && History != null)
         {
             EditSession.MarkSent(History.Undo, sent ?? (static _ => true));
+            // The undone steps are not in the world now (see EditSession.MarkApplied).
+            if (sent == null)
+            {
+                foreach (var c in History.Redo)
+                {
+                    c.Applied = false;
+                }
+            }
         }
     }
 
@@ -65,13 +73,15 @@ public sealed partial class WorldSession
             {
                 return (Edits.ChangedZoneCount, Edits.DeletedCount, Edits.AddedCount, Edits.ResetCount);
             }
-            // Saved already: what differs from that save (an undo after it is pending too).
+            // Saved already: what differs from that save (an undo after it is pending too), counted by what the next
+            // save does to the world: an object placed and saved, then undone, is taken out (deleted); one deleted
+            // and saved, then undone, is put back (added).
             // Counted against the saved sets only (no set of the current ones): after a save with millions of
             // new objects this runs at every change. Both lists hold each object once.
             var (del, add) = Edits.WithObjects((deleted, added) =>
             {
                 int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Values.Count(_savedAdded.Contains);
-                return (deleted.Count - keptDel + _savedDeleted.Count - keptDel, added.Count - keptAdd + _savedAdded.Count - keptAdd);
+                return (deleted.Count - keptDel + _savedAdded.Count - keptAdd, added.Count - keptAdd + _savedDeleted.Count - keptDel);
             });
             return (Edits.ChangedZoneCount, del, add, Edits.ResetCount);
         }

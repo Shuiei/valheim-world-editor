@@ -99,7 +99,7 @@ public class MapPageZonesTests
     [InlineData(0, 0, 0, 0, false, "Everything is saved.")]
     [InlineData(0, 0, 0, 0, true, "Everything is applied.")]
     [InlineData(1, 0, 0, 0, false, "Not saved yet: 1 zone of ground.")]
-    [InlineData(3, 2, 1, 1, true, "Not applied yet: 3 zones of ground, 2 deleted, 1 added, 1 zone reset.")]
+    [InlineData(3, 2, 1, 1, true, "Not applied yet: 3 zones of ground, 2 deleted, 1 added, 1 zone reset(s).")]
     [InlineData(0, 0, 4, 0, false, "Not saved yet: 4 added.")]
     public void ThePendingLineSaysWhatWaits(int zones, int deleted, int added, int resets, bool live, string said) =>
         Assert.Equal(said, MapPage.PendingText((zones, deleted, added, resets), live));

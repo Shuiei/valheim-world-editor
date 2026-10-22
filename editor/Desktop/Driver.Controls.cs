@@ -53,7 +53,9 @@ public static partial class Driver
     {
         MainWindow w = call.W;
         string[] a = call.A;
-        var box = Find<Avalonia.Controls.ComboBox>(w, b => IndexOf(b, a[1]) >= 0) ?? throw new InvalidOperationException($"no list with \"{a[1]}\"");
+        // A drop-down or a list box (the Dungeon panel's rooms).
+        var box = Find<Avalonia.Controls.Primitives.SelectingItemsControl>(w, b => b is Avalonia.Controls.ComboBox or Avalonia.Controls.ListBox && IndexOf(b, a[1]) >= 0)
+            ?? throw new InvalidOperationException($"no list with \"{a[1]}\"");
         box.SelectedIndex = IndexOf(box, a[1]);
         return Task.FromResult(State(w));
     }

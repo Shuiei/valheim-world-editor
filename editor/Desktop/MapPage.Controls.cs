@@ -70,7 +70,7 @@ public sealed partial class MapPage
     /// </summary>
     internal Button EditButton { get; } = new Button { Content = Lang.T("map.label.edit"), FontSize = 12.5 }.Classed("primary");
     /// <summary>
-    /// The area to open: 3, 5 or 7 zones a side.
+    /// The area to open: 3 to 17 zones a side (<see cref="MainWindow.AreaSizes"/>).
     /// </summary>
     internal ComboBox SizeBox { get; } = new() { ItemsSource = MainWindow.AreaSizes.Select(n => Lang.T("map.label.size", n, n * 64)).ToArray(), SelectedIndex = 1, FontSize = 12 };
     /// <summary>

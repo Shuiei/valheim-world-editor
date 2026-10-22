@@ -22,8 +22,8 @@ public class MeasureToolTests
         Assert.False(m.Fixed);
         m.Down(new Vector3(30, 40, 40));
         Assert.True(m.Fixed);
-        // A hill 50 m high halfway.
-        var r = m.Measure((x, z) => x == 15 ? 80 : 30, water: 30)!;
+        // A hill 50 m high halfway; the ground 40 m high at B.
+        var r = m.Measure((x, _) => x == 15 ? 80 : x == 30 ? 40 : 30, water: 30)!;
         Assert.Equal(50, r.Distance, 3);
         Assert.Equal(MathF.Sqrt(2600), r.AlongSlope, 3);
         Assert.Equal(10, r.Rise, 3);
@@ -38,14 +38,17 @@ public class MeasureToolTests
     }
 
     [Fact]
-    public void TheClickedHeightsCountForLowestAndHighest()
+    public void TheEndsHeightsAreTheGroundsAsItIsNow()
     {
         var m = new MeasureTool();
         m.Down(new Vector3(0, 40, 0));
         m.Down(new Vector3(10, 20, 0));
+        // The ground changed under both ends since they were clicked: the heights, the rise, the lowest and the highest
+        // are the ground's now.
         var r = m.Measure((_, _) => 30, water: 0)!;
-        Assert.Equal(20, r.Lowest, 3);
-        Assert.Equal(40, r.Highest, 3);
+        Assert.Equal((30f, 30f, 0f), (r.HeightA, r.HeightB, r.Rise));
+        Assert.Equal(30, r.Lowest, 3);
+        Assert.Equal(30, r.Highest, 3);
     }
 
     [Fact]
@@ -53,10 +56,14 @@ public class MeasureToolTests
     {
         var m = new MeasureTool();
         m.Down(new Vector3(0, 25, 0));
-        m.Down(new Vector3(0, 26, 0));
-        var (_, rows) = m.Describe((_, _) => 25, 30);
+        m.Down(new Vector3(10, 26, 0));
+        var (_, rows) = m.Describe((x, _) => x < 5 ? 25 : 26, 30);
         Assert.Contains(("Water depth", "5.0 m"), rows);
-        Assert.Contains(("Slope", "– · 90.0°"), rows);
+        // Both points on one spot: no slope to give.
+        m.Down(new Vector3(3, 25, 3));
+        m.Down(new Vector3(3, 25, 3));
+        (_, rows) = m.Describe((_, _) => 25, 30);
+        Assert.Contains(("Slope", "– · 0.0°"), rows);
     }
 
     [AvaloniaFact]
@@ -85,6 +92,10 @@ public class MeasureToolTests
         s.Shape(64, 64, Formula.Compile("d < 3 ? 6 : 0", ["d"]), 3, 0, "step");
         Dispatcher.UIThread.RunJobs();
         Assert.Equal("30.0 / 36.0 m", w.MeasurePanel.Shown["Lowest / highest"]);
+        // An edit under B: its height follows too.
+        s.Shape(74, 64, Formula.Compile("d < 3 ? 6 : 0", ["d"]), 3, 0, "step");
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("30.0 → 36.0 m (+6.0)", w.MeasurePanel.Shown["Height A → B"]);
         // Shown again (the tape changes at the mouse's pace): the same rows, their text set again.
         // The window puts the card's content in a scroll viewer.
         var content = ((Border)w.MeasurePanel.Card).Child;

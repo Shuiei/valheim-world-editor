@@ -50,9 +50,9 @@ public class AreaToolWorldTests
             Assert.True(s.CanUndo);
             Assert.Equal(0, s.UnappliedSteps);
             Assert.Empty(Directory.GetDirectories(Path.GetDirectoryName(dir)!, "*_backup_*"));
-            // The tree back (undo): pending, then saved.
+            // The tree back (undo): pending (the next save puts it back), then saved.
             s.Undo();
-            Assert.Equal((0, 1, 0, 0), s.Pending);
+            Assert.Equal((0, 0, 1, 0), s.Pending);
             Assert.True(s.Save().Saved);
             Assert.Equal((0, 0, 0, 0), s.Pending);
             var saved = WorldSave.Load(dir);

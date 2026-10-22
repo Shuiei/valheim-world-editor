@@ -15,7 +15,7 @@ public class ClipboardPasteTests
     public void PastingPutsTheBuildingWithItsGroundElsewhereInOneStep()
     {
         var s = Walled();
-        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], n => n == Beech ? "Beech1" : "woodwall") };
+        var paste = new PasteTool { Clip = WalledCopy(s) };
         var add = new List<(Editing.NewObject, bool)>();
         var added = s.Commit("Paste", g => { var (t, r, a) = paste.Apply(g, new Vector2(90, 90)); add.AddRange(a); return (t, r); }, [], add);
         // The ground under the wall is kept; further off, the flat ground stays.
@@ -54,8 +54,7 @@ public class ClipboardPasteTests
     {
         var s = Area();
         var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1"), Turn = 90, Offset = -2 };
-        var (ox, oz) = GridOrigin(s);
-        var (prefab, position, rotation, scale) = Assert.Single(paste.Ghosts(new Vector2(90, 90), g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz));
+        var (prefab, position, rotation, scale) = Assert.Single(GhostsAt(paste, s, new Vector2(90, 90)));
         var (_, _, add) = paste.Apply(s.Ground, new Vector2(90, 90));
         var placed = Assert.Single(add).Item1;
         Assert.Equal(placed.Position, position);

@@ -32,6 +32,10 @@
     <AvaloniaResource Include="Assets/icon.png" />
     <!-- The Script tool's API, compiled with each script. -->
     <EmbeddedResource Include="ScriptApi.csx" LogicalName="TerrainEditor.ScriptApi.csx" />
+    <!-- The documentation, shown in the Help window (HelpDocs): its pages and pictures go inside the program, so help
+         works offline and always matches the version. Not the pages for the editor's own developers. -->
+    <EmbeddedResource Include="../../docs/**/*.md" Exclude="../../docs/releases/**;../../docs/dev/**;../../docs/architecture.md;../../docs/development.md" LogicalName="Docs/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
+    <EmbeddedResource Include="../../docs/images/**/*" LogicalName="Docs/images/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Core/ValheimWorldEditor.Core.csproj" />
@@ -41,6 +45,8 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <!-- The Help window reads the documentation's Markdown (HelpDocs, HelpView). -->
+    <PackageReference Include="Markdig" Version="1.4.0" />
     <!-- The Script tool: C# scripts compiled in the app (Roslyn), against .NET's reference assemblies
          carried inside (a single-file app has no assembly files to point the compiler at). -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />

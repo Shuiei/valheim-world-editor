@@ -33,7 +33,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>run_script: runs a C# script as the Script tool does, as one pending step (or only says what it would change).</summary>
     [McpServerTool(Name = "run_script", Title = "Run a script on the area")]
-    [Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground stays within the game's ±8 m of the original unless Ground.NoLimit = true. Needs the user's leave, given once in Settings → Claude → Claude may run scripts (off by default: a script has the user's rights on their computer); refused otherwise, dry runs too.")]
+    [Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground goes past the game's ±8 m from the original, as with the Script tool (Ground.NoLimit is true; saving turns that into ground discs, up to ±400 m): set Ground.NoLimit = false to keep within it. Needs the user's leave, given once in Settings → Claude → Claude may run scripts (off by default: a script has the user's rights on their computer); refused otherwise, dry runs too.")]
     public Task<string> RunScript(
         [Description("The script: C# statements, e.g. \"Ground.Mountain(Area.CenterX, Area.CenterZ, height: 30, radius: 50);\"")] string code,
         [Description("A few words for the history (\"Claude: river valley\").")] string label = "Claude: script",
@@ -70,7 +70,8 @@ public sealed partial class ClaudeTools
         {
             return why;
         }
-        var r = await _w.RunScriptCode(code, ClaudesStep(label));
+        // The game's ±8 m holds, as these tools say (a script of Claude's own goes past it unless it says otherwise).
+        var r = await _w.RunScriptCode("Ground.NoLimit = false;\n" + code, ClaudesStep(label));
         _w.Msg(r.Message);
         return r.Output.English;
     });

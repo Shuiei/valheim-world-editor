@@ -111,7 +111,7 @@ public class AreaFollowTests
         Assert.True(i >= 0);
         r.W.View.Select([i]);
         Assert.Null(await r.W.CheckFollow());
-        Assert.Equal("Follow waits: objects are selected (Esc clears).", r.W.MessageText.Text);
+        Assert.Equal("Follow waits: objects are selected (Alt + A in Select clears them).", r.W.MessageText.Text);
         // Said once while the reason stays.
         r.W.MessageText.Text = "other";
         Assert.Null(await r.W.CheckFollow());

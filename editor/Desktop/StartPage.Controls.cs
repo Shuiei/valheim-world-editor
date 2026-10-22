@@ -22,10 +22,10 @@ public sealed partial class StartPage
     internal Func<AppSettings, List<Worlds.Info>> FindWorlds { get; set; } = Worlds.Find;
     /// <summary>The Settings button was clicked.</summary>
     public event Action? SettingsRequested;
-    /// <summary>The project's page, which Documentation opens.</summary>
-    public const string DocsUrl = "https://github.com/Shuiei/valheim-world-editor#readme";
-    /// <summary>Documentation: the project's page, in the web browser.</summary>
+    /// <summary>Documentation: the Help window, on its first page.</summary>
     internal Button DocsLink { get; } = new Button { Content = Icons.With("help", Lang.T("start.label.docs")), FontSize = 11, Padding = new Thickness(6, 2) }.Classed("ghost");
+    /// <summary>Opens the Help window on its first page (tests: a stand-in).</summary>
+    internal Action OpenHelp { get; set; } = () => HelpWindow.Open();
     /// <summary>Opens a web page or file with the system (the window's launcher); does nothing until set.</summary>
     internal Func<Uri, Task<bool>> OpenUrl { get; set; } = _ => Task.FromResult(false);
     /// <summary>Open log: ValheimWorldEditor.log in the system's text viewer, to attach to a bug report.</summary>

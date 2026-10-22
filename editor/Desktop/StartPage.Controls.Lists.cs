@@ -28,8 +28,8 @@ public sealed partial class StartPage
     internal TextBox PathBox { get; } = new() { PlaceholderText = Lang.T("start.hint.folder"), FontSize = 13 };
     /// <summary>Why that folder cannot be opened.</summary>
     internal TextBlock PathError { get; } = Err();
-    /// <summary>The error that brought the window back here (a world that could not open), above every page.</summary>
-    private readonly TextBlock _lastError = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, IsVisible = false };
+    /// <summary>The error that brought the window back here (a world that could not open), or a link nothing opened, above every page.</summary>
+    internal TextBlock LastError { get; } = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, IsVisible = false };
     /// <summary>Polls whether the game runs (on Home and My game): every 2.5 s, 5 s while it runs.</summary>
     private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
     /// <summary>Looks for the worlds again every 3 s while A saved world shows, so added or removed worlds show by themselves.</summary>

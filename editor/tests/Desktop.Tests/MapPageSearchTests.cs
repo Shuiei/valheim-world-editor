@@ -195,7 +195,7 @@ public class MapPageSearchTests
             Assert.Equal("Everything is applied.", m.Pending.Text);
             w.World!.Edits.SetReset(new ZoneReset(3, 4, true, false), true);
             m.UpdatePending();
-            Assert.Equal("Not applied yet: 1 zone reset.", m.Pending.Text);
+            Assert.Equal("Not applied yet: 1 zone reset(s).", m.Pending.Text);
             // Marking: the question says the game makes them again at once where players are, once applied.
             m.NoBuildBox.IsChecked = false;
             m.NoEditBox.IsChecked = false;

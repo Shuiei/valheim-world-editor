@@ -69,6 +69,6 @@ public sealed partial class ClaudeTools
     private string AfterDungeon(DungeonTool tool, Said said)
     {
         _w.AfterClaudeEdit(said);
-        return tool.Dungeon is { } d ? $"{said.English} The dungeon's id is now {d.Index} ({d.Rooms.Count} rooms). Now pending: {Pending()}" : said.English;
+        return tool.Dungeon is { } d ? $"{said.English} The dungeon's id is now {d.Index} ({d.Rooms.Count} room(s)). Now pending: {Pending()}" : said.English;
     }
 }

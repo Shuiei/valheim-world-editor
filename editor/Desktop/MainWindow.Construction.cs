@@ -59,7 +59,7 @@ public sealed partial class MainWindow
         PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
         View.PasteClicked += PasteAt;
         Title = $"Valheim World Editor {BuildInfo.Version}";
-        Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
+        Icon = AppIcon();
         Width = Options.WindowWidth > 0 ? Options.WindowWidth : 1500;
         Height = Options.WindowHeight > 0 ? Options.WindowHeight : 950;
         Background = Ui.Bg;
@@ -80,6 +80,7 @@ public sealed partial class MainWindow
         Surface = surface;
         SetUpDrops(surface);
         SetUpEditorWorld();
+        KeepNoteBesideTools(tools);
         ViewPanelCard = ViewPanel();
         LayOutRightPanels();
         _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, TopBar(), StatusBar() } };
@@ -93,11 +94,14 @@ public sealed partial class MainWindow
         View.Perf = _perf;
         WireViewReports();
         // Once really closed (Closing also comes when "Keep editing" keeps the window open).
-        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); PlacePanel.Memory.Flush(); };
+        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); PlacePanel.Memory.Flush(); HelpWindow.Current?.Close(); };
         RememberPrefs();
         LoadedInfo.Text = Lang.T("world.msg.loading");
         Opened += async (_, _) => await OnOpenedAsync(load);
     }
+
+    /// <summary>The app's icon, for its windows (the main one, Help).</summary>
+    internal static WindowIcon AppIcon() => new(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
 
     /// <summary>
     /// Wires the Blueprints panel to the window: its messages, pasting a blueprint, its dialogs and file picker.
@@ -135,6 +139,8 @@ public sealed partial class MainWindow
         Inspector.Message += said => { Msg(said); UpdateSaveBar(); };
         Inspector.Replaced += i => View.Select([i]);
         Inspector.Confirm = (title, text, yes) => Dialogs.Ask(this, title, text, yes);
-        Inspector.Closed += () => ViewPanelCard.IsVisible = true;
+        // The panel chosen comes back: the View panel shown always, it lay under History or Help, or showed though none
+        // was chosen (every area opened closes the Inspector).
+        Inspector.Closed += () => ShowRight(ChosenRight());
     }
 }

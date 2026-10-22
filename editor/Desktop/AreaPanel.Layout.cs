@@ -38,7 +38,7 @@ public sealed partial class AreaPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("rail.label.area"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("rail.label.area"), HelpTopics.Tool(ToolMode.Area)),
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { BoxButton, PolyButton, ClearButton } },
                     Info,
                     Row(Lang.T("path.label.soft"), SoftSlider, softV),

@@ -258,6 +258,27 @@ public class PlacePanelTests
         Assert.Equal(0, r.P.PresetBox.SelectedIndex);
     }
 
+    // A preset none of whose kinds the world can make loads nothing and the list says None again: it stayed on the
+    // preset, so choosing None next unticked the kinds chosen before it, which were not the preset's.
+    [AvaloniaFact]
+    public async Task APresetThatLoadsNothingLeavesTheKindsChosen()
+    {
+        using var r = new Run();
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
+        r.P.AskName = () => Task.FromResult<string?>("Odd");
+        Click(r.P.SavePresetButton);
+        await TestWindows.Until(() => r.P.Memory.Presets.Count == 1);
+        var kinds = r.P.Memory.Presets[0].Kinds;
+        kinds.Clear();
+        kinds["NotAThing_xyz"] = 1;
+        SharedPlaceWindow.ChoosePanelKinds(r, "Oak1");
+        r.P.PresetBox.SelectedItem = "Yours: Odd";
+        Assert.Equal("None of the kinds of Odd can be placed in this world.", r.Said);
+        Assert.Equal(0, r.P.PresetBox.SelectedIndex);
+        r.P.PresetBox.SelectedIndex = 0;
+        Assert.Equal(["Oak1"], r.T.Chosen);
+    }
+
     [AvaloniaFact]
     public void PickFromWorldTakesAKindTheWorldCanMake()
     {

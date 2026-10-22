@@ -24,9 +24,12 @@ public sealed partial class HistoryPanel
         // A step refused (RemoveChange: a later step of yours moved or deleted what it added) is not marked Removed.
         int kept = steps.Count(c => !c.Removed), taken = steps.Count - kept;
         // Each removal is a step of its own: one Ctrl+Z brings one back, not all.
+        // Claude's steps made in other areas are kept aside here: they can only be taken out where they were made.
+        int elsewhere = s.ShelvedDone(c => ByClaude(c) && !c.Removed && c.RevertOf == null);
         Message?.Invoke(Said.Of("history.msg.tookBack", taken)
             + (taken > 1 ? Said.Of("history.msg.oneAtATime") : Said.Empty)
-            + (kept > 0 ? Said.Of("history.msg.notTakenBack", kept) : Said.Empty));
+            + (kept > 0 ? Said.Of("history.msg.notTakenBack", kept) : Said.Empty)
+            + (elsewhere > 0 ? Said.Of("history.msg.claudeElsewhere", elsewhere) : Said.Empty));
         Refresh();
     }
 

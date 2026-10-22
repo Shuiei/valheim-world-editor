@@ -43,6 +43,16 @@ public class DungeonGenRoomsTests
     }
 
     [Fact]
+    public void TheGamesRoomsAreSummedUpFirstUnderTheGamesNames()
+    {
+        // The summary read "GoblinCamp has no rooms to join: a cave instead Cave: 20 rooms, …": the kinds by their prefab
+        // names, what was made last, and the notes run together.
+        var r = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Kind: "DG_GoblinCamp", Size: 2, Seed: 3));
+        Assert.StartsWith($"Frost Cave: {r.Rooms!.Count} rooms, {r.Items.Count} objects; ", r.Summary.English);
+        Assert.Contains("; Fuling village has no rooms to join: a cave instead", r.Summary.English);
+    }
+
+    [Fact]
     public void TheGamesRoomsLootAndFoesFollowTheSettings()
     {
         static DungeonGen.Result Cave(Func<DungeonGen.Settings, DungeonGen.Settings> change) =>

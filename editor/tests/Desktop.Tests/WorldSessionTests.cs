@@ -77,8 +77,7 @@ public sealed class WorldSessionTests : WorldsFolder
     {
         WorldCreator.Create(Folder("Discard"), "Discard", Seed, radius: 1);
         using var world = WorldSession.Open(Folder("Discard"));
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
-        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        var s = RaisedZone(world, 10, 10);
         Assert.True(world.Save().Done);
         // The folder gone for a moment: Discard fails, and the session's own save is still its own.
         Directory.Move(Folder("Discard"), Folder("Away"));
@@ -89,6 +88,21 @@ public sealed class WorldSessionTests : WorldsFolder
         Assert.True(o.Done, o.Message);
     }
 
+    // The session's save number is the one it opened until it saves, then each of its own saves' (the map's header).
+    [Fact]
+    public void TheSaveNumberFollowsTheSessionsSaves()
+    {
+        WorldCreator.Create(Folder("Number"), "Number", Seed, radius: 1);
+        using var world = WorldSession.Open(Folder("Number"));
+        int opened = world.World.SaveNumber;
+        Assert.Equal(opened, world.SaveNumber);
+        RaisedZone(world, 10, 10);
+        var o = world.Save();
+        Assert.True(o.Done, o.Message);
+        Assert.Equal(o.Saved!.Number, world.SaveNumber);
+        Assert.True(world.SaveNumber > opened);
+    }
+
     // Leaving a world after saving it, with its latest save unreadable by then (another program writing it): the save
     // it was opened from is left, said in the log only.
     [Fact]
@@ -97,8 +111,7 @@ public sealed class WorldSessionTests : WorldsFolder
         WorldCreator.Create(Folder("Leave"), "Leave", Seed, radius: 1);
         using var world = WorldSession.Open(Folder("Leave"));
         int opened = world.World.SaveNumber;
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
-        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        RaisedZone(world, 10, 10);
         Assert.True(world.Save().Done);
         int latest = WorldWriter.LatestNumber(Folder("Leave"));
         Assert.Equal(opened + 1, latest);

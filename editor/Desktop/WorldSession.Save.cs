@@ -16,7 +16,7 @@ public sealed partial class WorldSession
     /// </summary>
     public Outcome Save()
     {
-        int known = _lastNumber ?? World.SaveNumber;
+        int known = SaveNumber;
         if (WorldWriter.Newer(World.Directory, known) is Said newer)
         {
             return new Outcome(false, newer, false, new WorldWriter.Result(false, newer.Shown, null, 0, 0, []) { Report = newer });
@@ -30,7 +30,11 @@ public sealed partial class WorldSession
         WorldWriter.Result result;
         try
         {
-            result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known));
+            // Saved already and objects differ from that save (placed then undone, deleted then put back): written even
+            // when nothing differs from the save opened, which the last one then no longer matches.
+            var (_, del, add, _) = Pending;
+            bool rewrite = _lastSave != null && del + add > 0;
+            result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known, Rewrite: rewrite));
         }
         catch
         {

@@ -34,7 +34,7 @@ public sealed partial class ClaudeTools
         var (ok, problems) = Usable(scene, ids);
         if (ok.Count == 0)
         {
-            return "Nothing replaced: " + string.Join("; ", problems);
+            return NothingDone("Nothing replaced", problems);
         }
         // Each keeps its size; a linked group's root takes its parts away with it (ObjectLinks: a ship), as the Area
         // tool's Replace does: they would have nothing to hang on. A part goes alone.

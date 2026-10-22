@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -39,6 +40,12 @@ public static partial class ScriptHost
         // With an encoding: the debug information (an error's line) needs one.
         SyntaxTree Tree(string text, string path) => CSharpSyntaxTree.ParseText(Microsoft.CodeAnalysis.Text.SourceText.From(text, Encoding.UTF8), parse, path);
         var user = Tree(code, "script");
+        // A script without a statement (empty, or only comments) has nothing to run: said so, not as the compiler's
+        // missing entry point, a mistake in words the person never wrote.
+        if (!((Microsoft.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax)user.GetRoot()).Members.OfType<Microsoft.CodeAnalysis.CSharp.Syntax.GlobalStatementSyntax>().Any())
+        {
+            return (null, null, [Lang.T("script.error.nothingToRun")]);
+        }
         // Every loop of the script's own stops when asked (Stop, the 2-minute limit). A script with syntax mistakes is
         // left as it is: it does not compile anyway, and its mistakes are reported as written.
         if (!user.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))

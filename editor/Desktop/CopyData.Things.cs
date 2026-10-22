@@ -43,7 +43,7 @@ public sealed partial class CopyData
         var objs = shown.Select(i =>
         {
             var t = s.Things[i];
-            bool piece = t.Piece || PieceCatalog.Get(t.Prefab) != null || parts.Contains(i);
+            bool piece = KeepsShape(t, parts.Contains(i));
             var (source, data) = CopySourceOf(s, t);
             return new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(), t.Position.X - cx, t.Position.Z - cz,
                 t.Position.Y - (piece ? mid : groundAt(t.Position.X, t.Position.Z)), t.Rotation, t.Scale, source, Follow: !piece, Data: data);
@@ -63,4 +63,12 @@ public sealed partial class CopyData
             Middle = new Vector3(cx, mid, cz),
         };
     }
+
+    /// <summary>
+    /// Whether a copied object keeps the copy's shape (a building piece, or a part of a linked group) rather than its
+    /// height above the ground where it lands (trees, rocks and the like).
+    /// </summary>
+    /// <param name="t">The object.</param>
+    /// <param name="part">It is a part of a linked group (ObjectLinks).</param>
+    internal static bool KeepsShape(WorldScene.Thing t, bool part) => part || t.Piece || PieceCatalog.Get(t.Prefab) != null;
 }

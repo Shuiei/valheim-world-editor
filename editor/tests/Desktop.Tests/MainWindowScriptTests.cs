@@ -7,7 +7,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Scripts run from the window (RunScriptCode, as the Script tool and Claude run them): with no area, a dry run that
-/// says all it would change, a second script while one runs, and a run whose area changed or was left meanwhile.
+/// says all it would change, a second script while one runs, a run whose area changed or was left meanwhile, and the
+/// limit that stopped points.
 /// </summary>
 [Collection("World files")]
 public class MainWindowScriptTests
@@ -115,5 +116,14 @@ public class MainWindowScriptTests
         Assert.Equal("Another area was opened while the script ran: nothing changed.", done.Message.English);
         Assert.Empty(s.UndoList);
         Assert.Empty(other.UndoList);
+    }
+
+    // The points a limit stopped are said with the limit that stopped them: the game's ±8 m, or No limit's ±400 m.
+    [Fact]
+    public void TheLimitThatStoppedPointsIsTheOneSaid()
+    {
+        Assert.Equal("", MainWindow.Clamped(0, true).English);
+        Assert.Equal("3 point(s) stopped at the game's ±8 m (Ground.NoLimit = true lets them go further).", MainWindow.Clamped(3, false).English);
+        Assert.Equal("3 point(s) stopped at No limit's ±400 m.", MainWindow.Clamped(3, true).English);
     }
 }

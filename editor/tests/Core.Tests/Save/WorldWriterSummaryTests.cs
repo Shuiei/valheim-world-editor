@@ -30,6 +30,6 @@ public class WorldWriterSummaryTests
     {
         var plan = new WorldWriter.Planned([], [], []) { DeletedCount = 2, Removed = 5 };
 
-        Assert.Contains("(3 objects cleared)", WorldWriter.Summary(plan, [new ZoneReset(0, 0, false, false)]).English);
+        Assert.Contains("(3 object(s) cleared)", WorldWriter.Summary(plan, [new ZoneReset(0, 0, false, false)]).English);
     }
 }

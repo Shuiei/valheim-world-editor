@@ -54,10 +54,9 @@ public static partial class ScriptHost
     {
         int clamped = 0;
         var adds = ch.Add.Select(a => (new NewObject(0, a.Prefab, a.Position, a.Rotation, a.Scale), PieceCatalog.Get(a.Prefab)?.Tool != null)).ToList();
-        // Moved things: replaced by copies where they go (those also taken away are only taken away).
-        var moved = ch.Moves.Where(m => !ch.Remove.Contains(m.Key) && m.Key >= 0 && m.Key < s.Scene.Things.Count && !s.Scene.Things[m.Key].Gone).ToList();
-        adds.AddRange(moved.Select(m => s.MovedCopy(m.Key, m.Value.Position, m.Value.Rotation, m.Value.Scale)));
-        int stood = CreatureStand.Apply(s.Scene, adds, null, [.. ch.Remove, .. moved.Select(m => m.Key)]);
+        var (removed, moved) = WholeGroups(s, ch);
+        adds.AddRange(moved.Select(m => s.MovedCopy(m.Index, m.Position, m.Rotation, m.Scale)));
+        int stood = CreatureStand.Apply(s.Scene, adds, null, [.. removed, .. moved.Select(m => m.Index)]);
         s.Commit(label, g =>
         {
             var touched = new List<int>();
@@ -85,7 +84,24 @@ public static partial class ScriptHost
                 touched.Add(p);
             }
             return (touched, touched.Count == 0 ? (0, 0, 0, 0) : (touched.Min(p => p % g.W) - 1, touched.Min(p => p / g.W) - 1, touched.Max(p => p % g.W) + 1, touched.Max(p => p / g.W) + 1));
-        }, [.. ch.Remove, .. moved.Select(m => m.Key)], adds);
+        }, [.. removed, .. moved.Select(m => m.Index)], adds);
         return (clamped, stood);
+    }
+
+    /// <summary>
+    /// What the script took away and moved, a part of a linked group bringing its whole group (ObjectLinks: a ship), as
+    /// the Select tool and Claude's tools take them: a part never goes or moves alone. Moved things are replaced by
+    /// copies where they go; those also taken away are only taken away.
+    /// </summary>
+    /// <param name="s">The edit session the changes go into.</param>
+    /// <param name="ch">The script's changes.</param>
+    private static (List<int> Removed, List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> Moved) WholeGroups(EditSession s, Changes ch)
+    {
+        var things = s.Scene.Things;
+        bool Here(int i) => i >= 0 && i < things.Count && !things[i].Gone;
+        var removed = s.WithLinked(ch.Remove.Where(Here)).Indices;
+        var gone = removed.ToHashSet();
+        var moved = s.WholeGroupMoves([.. ch.Moves.Where(m => !gone.Contains(m.Key) && Here(m.Key)).Select(m => (m.Key, m.Value.Position, m.Value.Rotation, m.Value.Scale))]);
+        return (removed, [.. moved.Where(m => !gone.Contains(m.Index))]);
     }
 }

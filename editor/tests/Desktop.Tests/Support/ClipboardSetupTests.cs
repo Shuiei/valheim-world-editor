@@ -33,6 +33,22 @@ public sealed class ClipboardSetupTests
         Assert.Null(c.Name);
     }
 
+    // A tree kept at the copy's height (not following the ground) pasted on the mound's side: its ghost stands at the
+    // grid point's world place, on the ground there.
+    [Fact]
+    public void GhostsAtGivesWorldPlacesOnTheGroundAsItIs()
+    {
+        var s = Area();
+        var tree = new CopyData.Obj(Beech, "Beech1", 0, 0, 0, Vector3.Zero, 1, null);
+        var paste = new PasteTool { Clip = SingleObjectClip(tree, [new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)]) };
+        var (ox, oz) = GridOrigin(s);
+        var (prefab, position, _, _) = Assert.Single(GhostsAt(paste, s, new Vector2(42, 37)));
+        Assert.Equal(Beech, prefab);
+        Assert.Equal(new Vector2(ox + 42, oz + 37), new Vector2(position.X, position.Z));
+        Assert.Equal(H(s, 42, 37), position.Y, 3);
+        Assert.True(position.Y > 30);
+    }
+
     [Fact]
     public void RoundKeepsThreeDecimalsAndMakesNegativeZeroZero()
     {

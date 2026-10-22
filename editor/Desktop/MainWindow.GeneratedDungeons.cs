@@ -118,6 +118,6 @@ public partial class MainWindow
             });
         }
         return Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
-            $"A generated dungeon (seed {settings.Seed}): {Said.Join(" ", r.Notes).English.TrimEnd('.')}. The portal marks where players arrive: the entrance's door out opens there.", DungeonTags);
+            $"A generated dungeon (seed {settings.Seed}): {r.Summary.English.TrimEnd('.')}. The portal marks where players arrive: the entrance's door out opens there.", DungeonTags);
     }
 }

@@ -12,7 +12,7 @@ public sealed partial class AreaPanel
     private string? SelectedBackupPath() => BackupBox.SelectedIndex >= 0 && BackupBox.SelectedIndex < _backupPaths.Count ? _backupPaths[BackupBox.SelectedIndex] : null;
 
     /// <summary>
-    /// Lists the world's backups (the editor's and the game's), then the folders chosen by hand, then
+    /// Lists the world's backups (the game's, and the other copies beside it), then the folders chosen by hand, then
     /// "Another folder…".
     /// </summary>
     /// <param name="select">The folder to select; null keeps the one selected.</param>

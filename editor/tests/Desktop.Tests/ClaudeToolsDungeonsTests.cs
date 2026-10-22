@@ -31,7 +31,7 @@ public class ClaudeToolsDungeonsTests
     /// <summary>The id of the area's one dungeon.</summary>
     internal static async Task<int> Id(ClaudeRun r) => ClaudeRun.J(await r.T.ListDungeons())[0].GetProperty("id").GetInt32();
 
-    /// <summary>The new id at the end of an answer ("… The dungeon's id is now 12 (2 rooms). …").</summary>
+    /// <summary>The new id at the end of an answer ("… The dungeon's id is now 12 (2 room(s)). …").</summary>
     internal static int NewId(string said)
     {
         const string Mark = "The dungeon's id is now ";
@@ -86,14 +86,14 @@ public class ClaudeToolsDungeonsTests
         int things = r.W.Session!.Scene.Things.Count;
         string added = await r.T.AddDungeonRoom(id, 0, "cave_new_corridor03", contents: false, doors: false);
         Assert.StartsWith("Added cave_new_corridor03.", added);
-        Assert.Contains("(2 rooms)", added);
+        Assert.Contains("(2 room(s))", added);
         Assert.Equal("Claude: added cave_new_corridor03", r.W.Session.UndoLabel);
         // The dungeon object again, nothing else.
         Assert.Equal(things + 1, r.W.Session.Scene.Things.Count);
         id = NewId(added);
         Assert.Equal("The dungeon has 2 room(s): room is 0 to 1.", await r.T.RemoveDungeonRoom(id, 2));
         string removed = await r.T.RemoveDungeonRoom(id, 1);
-        Assert.Contains("(1 rooms)", removed);
+        Assert.Contains("(1 room(s))", removed);
         Assert.Equal("Claude: removed cave_new_corridor03", r.W.Session.UndoLabel);
     }
 

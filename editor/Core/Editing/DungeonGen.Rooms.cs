@@ -47,7 +47,8 @@ public static partial class DungeonGen
         AdjustChests(items, s, rnd);
         // Arriving in the entrance room, near its middle (the floor is found where it is placed).
         var arrival = rooms[0].Position;
-        notes.Add(Said.Of("dungeon.msg.madeRooms", Describe(kind), rooms.Count, items.Count));
+        // What was made first, as for a dungeon of pieces; then what could not be.
+        notes.Insert(0, Said.Of("dungeon.msg.madeRooms", Describe(kind), rooms.Count, items.Count));
         string name = string.IsNullOrWhiteSpace(s.Name) ? NameFor(s.Seed, null, s.Biome) : s.Name!;
         return new Result(items, arrival, kind, rooms, notes, name, Dungeon: dungeon);
     }

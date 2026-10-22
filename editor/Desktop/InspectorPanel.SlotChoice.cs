@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.VisualTree;
 using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
@@ -24,6 +25,9 @@ public sealed partial class InspectorPanel
         {
             return;
         }
+        // Typed (not picked from the list, nor the box left): the grid drawn again takes the box away, so the new one
+        // takes the keys next typed, which would otherwise go to the window's shortcuts (P: Path, S: the camera…).
+        bool typing = pick.IsKeyboardFocusWithin;
         if (now == null)
         {
             items.Add(new ItemRow { Name = known, X = sx, Y = sy });
@@ -34,5 +38,28 @@ public sealed partial class InspectorPanel
         }
         Dirty();
         RenderItems();
+        if (typing)
+        {
+            KeepTyping();
+        }
+    }
+
+    /// <summary>
+    /// The picked slot's box, drawn again, takes the keyboard back with the caret after its text, so typing goes on in it.
+    /// </summary>
+    private void KeepTyping()
+    {
+        if (_slotPick is not { } box)
+        {
+            return;
+        }
+        box.ApplyTemplate();
+        box.Focus();
+        // The box selects all its text as it takes the focus, which the next key would replace.
+        if (box.GetVisualDescendants().OfType<TextBox>().FirstOrDefault() is { } text)
+        {
+            text.ClearSelection();
+            text.CaretIndex = text.Text?.Length ?? 0;
+        }
     }
 }

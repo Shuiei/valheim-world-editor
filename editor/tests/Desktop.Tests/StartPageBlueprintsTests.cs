@@ -79,10 +79,10 @@ public sealed class StartPageBlueprintsTests : IDisposable
         await p.FillBlueprints();
         var tiles = p.BlueprintTiles.Children.ToList();
         Assert.Equal(["Hut", "Shed", "Barn", "Hall"], tiles.Select(t => Words(t).Name));
-        Assert.Equal("2 pieces · today", Words(tiles[0]).Line);
-        Assert.Equal("2 pieces · yesterday", Words(tiles[1]).Line);
-        Assert.Equal("2 pieces · 5 days ago", Words(tiles[2]).Line);
-        Assert.Equal("2 pieces · " + DateTime.Now.AddDays(-40).ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture), Words(tiles[3]).Line);
+        Assert.Equal("2 piece(s) · today", Words(tiles[0]).Line);
+        Assert.Equal("2 piece(s) · yesterday", Words(tiles[1]).Line);
+        Assert.Equal("2 piece(s) · 5 days ago", Words(tiles[2]).Line);
+        Assert.Equal("2 piece(s) · " + DateTime.Now.AddDays(-40).ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture), Words(tiles[3]).Line);
         // Its picture; none shows the icon (headless windows decode no picture, so a damaged one is not told apart).
         Assert.IsType<Image>(Top(tiles[0]));
         Assert.IsType<Border>(Top(tiles[2]));
@@ -131,7 +131,7 @@ public sealed class StartPageBlueprintsTests : IDisposable
             await p.FillHome();
             var tiles = p.RecentTiles.Children.ToList();
             Assert.Equal(["Hut", "CITest", "Hall"], tiles.Select(t => Words(t).Name));
-            Assert.Equal("Blueprint · 2 pieces", Words(tiles[0]).Line);
+            Assert.Equal("Blueprint · 2 piece(s)", Words(tiles[0]).Line);
             Assert.Equal("Saved world · 2 days ago", Words(tiles[1]).Line);
             tiles[0].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(hut, asked);

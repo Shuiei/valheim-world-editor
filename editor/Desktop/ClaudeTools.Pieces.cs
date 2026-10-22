@@ -99,7 +99,7 @@ public sealed partial class ClaudeTools
         }
         if (adds.Count == 0)
         {
-            return "Nothing put down: " + string.Join("; ", problems);
+            return NothingDone("Nothing put down", problems);
         }
         int stood = CreatureStand.Apply(scene, adds);
         var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), null, [], adds);

@@ -56,12 +56,11 @@ public sealed partial class ShapePanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("rail.label.shape"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("rail.label.shape"), HelpTopics.Tool(ToolMode.Shape)),
                     Row(Lang.T("rail.label.shape"), PresetBox),
                     Row(Lang.T("shape.label.radius"), RadiusSlider, radiusV),
                     Row(Lang.T("common.height"), HeightBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center }),
-                    new TextBlock { Text = Lang.T("shape.label.formula"), FontSize = 12, Foreground = Ui.Muted },
-                    FormulaBox,
+                    Labelled(Lang.T("shape.label.formula"), FormulaBox),
                     ErrorText,
                     new TextBlock
                     {
@@ -72,5 +71,17 @@ public sealed partial class ShapePanel
             },
         });
         Sync();
+    }
+
+    /// <summary>
+    /// A box with its label above it, together (the driver's set finds the box beside its label) and the box named by
+    /// it (screen readers).
+    /// </summary>
+    /// <param name="label">The label's words.</param>
+    /// <param name="box">The box.</param>
+    private static StackPanel Labelled(string label, Control box)
+    {
+        Avalonia.Automation.AutomationProperties.SetName(box, label);
+        return new StackPanel { Spacing = 6, Children = { new TextBlock { Text = label, FontSize = 12, Foreground = Ui.Muted }, box } };
     }
 }

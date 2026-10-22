@@ -40,7 +40,27 @@ public sealed partial class MainWindow
         var card = Ui.Card(bar);
         card.Margin = new Thickness(10, 0, 10, 10);
         card.VerticalAlignment = VerticalAlignment.Bottom;
+        // A message on two lines makes the bar taller: the panels stop above it still.
+        card.SizeChanged += (_, e) => KeepAboveStatusBar(e.NewSize.Height);
         return card;
+    }
+
+    /// <summary>
+    /// Where the panels over the view stop at the bottom: above the status bar (58 px with its usual one line).
+    /// </summary>
+    private double _panelsBottom = 58;
+
+    /// <summary>
+    /// The tool column, the right-hand panels and the locations note end above the status bar, as tall as it is now.
+    /// </summary>
+    /// <param name="barHeight">The status bar's height.</param>
+    private void KeepAboveStatusBar(double barHeight)
+    {
+        _panelsBottom = Math.Max(58, barHeight + 18);
+        foreach (var c in new[] { Tools.Rail.Parent as Control, ViewPanelCard, History.Card, Inspector.Card, HelpCard, LocationNote }.OfType<Control>())
+        {
+            c.Margin = new Thickness(c.Margin.Left, c.Margin.Top, c.Margin.Right, _panelsBottom);
+        }
     }
 
     /// <summary>
@@ -76,7 +96,7 @@ public sealed partial class MainWindow
         }
         var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5) }.Classed("ghost").Tip("card.close");
         close.Click += (_, _) => ShowRight(null);
-        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = Lang.T("help.head.controls"), FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
+        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { Ui.Title(Lang.T("help.head.controls"), HelpTopics.Controls) } };
         Grid.SetColumn(close, 1);
         head.Children.Add(close);
         record.Classes.Add("switch");

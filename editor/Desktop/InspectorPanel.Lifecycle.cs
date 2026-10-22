@@ -64,7 +64,7 @@ public sealed partial class InspectorPanel
                     Spacing = 6,
                     Children =
                     {
-                        new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _title, Ui.Col(close, 1) } },
+                        new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { Ui.Titled(_title, () => HelpTopics.Inspector), Ui.Col(close, 1) } },
                         _where,
                         ItemsBox,
                         new TextBlock { Text = Lang.T("inspect.head.data"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },

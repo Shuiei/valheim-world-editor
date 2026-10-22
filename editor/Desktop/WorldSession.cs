@@ -172,6 +172,11 @@ public sealed partial class WorldSession : IDisposable
     private IReadOnlyList<string>? _lastSave;
     /// <summary>The last save's number, the one a newer game save is checked against.</summary>
     private int? _lastNumber;
+
+    /// <summary>
+    /// The world's save number as it is now in its folder: the session's last save, else the save it was opened from.
+    /// </summary>
+    public int SaveNumber => _lastNumber ?? World.SaveNumber;
     /// <summary>The zones the last save wrote changes for (written again by the next).</summary>
     private HashSet<(int, int)> _savedZones = [];
     /// <summary>The deletions as of the last save.</summary>

@@ -41,12 +41,16 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Opens a world (offline or live), then shows its map; back to the start page, with why, when it cannot be opened.
+    /// Opens a world (offline or live), then shows its map, the status bar emptied; back to the start page, with why,
+    /// when it cannot be opened.
     /// </summary>
     /// <param name="open">Opens it (off the UI thread).</param>
     /// <param name="what">What the busy veil says meanwhile.</param>
     internal async Task OpenWorld(Func<Task<WorldSession>> open, string what)
     {
+        // What is open is let go first (Claude opens a world from another one, or from the Workshop): nothing of it
+        // stays behind the new world's map.
+        LeaveWhatIsOpen();
         Busy(what);
         try
         {
@@ -65,6 +69,8 @@ public sealed partial class MainWindow
             Busy(null);
         }
         StartPage?.Stop();
+        // What the status bar said was about the world or the Workshop left (an area opened next would show it).
+        Msg(Said.Empty);
         ShowMap();
     }
 

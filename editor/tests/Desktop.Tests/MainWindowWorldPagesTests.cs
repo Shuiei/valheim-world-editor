@@ -228,7 +228,7 @@ public class MainWindowWorldPagesTests
         await r.W.LeaveWorld();
         Assert.Equal("Not applied: 1 zone(s) of ground. Leave the world without applying them?", Assert.Single(r.Asked));
         await r.W.DiscardWorld();
-        Assert.Equal("Discard the unsaved changes (1 zone(s) of ground)? The world is read again from the game.", r.Asked[^1]);
+        Assert.Equal("Discard the changes not applied yet (1 zone(s) of ground)? The world is read again from the game.", r.Asked[^1]);
         // Quitting with changes not applied.
         r.W.Close();
         Dispatcher.UIThread.RunJobs();

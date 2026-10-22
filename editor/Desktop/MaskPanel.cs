@@ -142,7 +142,7 @@ public sealed class MaskPanel
         Card = Ui.AsCard(new Border
         {
             VerticalAlignment = VerticalAlignment.Top,
-            Child = new StackPanel { Width = 280, Spacing = 6, Children = { OnBox, _body } },
+            Child = new StackPanel { Width = 280, Spacing = 6, Children = { new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { OnBox, Ui.Col(Ui.HelpButton(() => HelpTopics.Mask), 1) } }, _body } },
         });
         mask.Changed += Fill;
         Fill();

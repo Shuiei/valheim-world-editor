@@ -165,7 +165,7 @@ public sealed class MountainPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("rail.label.mountain"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("rail.label.mountain"), HelpTopics.Tool(ToolMode.Mountain)),
                     Ui.Row(Lang.T("common.preset"), PresetBox),
                     HelpText,
                     Ui.Row(Lang.T("common.height"), HeightSlider, heightV),

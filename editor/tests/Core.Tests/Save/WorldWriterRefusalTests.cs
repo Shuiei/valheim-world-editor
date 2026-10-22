@@ -37,6 +37,14 @@ public class WorldWriterRefusalTests
         Assert.Equal(Said.Of("save.writer.nothing").Shown, refused!.Message);
     }
 
+    // Nothing differs from the save opened, but an earlier save of this session still holds objects since undone: the
+    // save goes on, to take that one's place (it said "Nothing to save" and left them in the world).
+    [Fact]
+    public void NothingToDoGoesOnWhenAnEarlierSaveMustBeReplaced()
+    {
+        Assert.Null(WorldWriter.Refusal(NoDatabase(), [], [], [], [], new WorldWriter.Options(Rewrite: true), []));
+    }
+
     [Fact]
     public void AnEditWithNoDatabaseNeedGoesOn()
     {

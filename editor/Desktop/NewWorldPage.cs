@@ -113,6 +113,8 @@ public sealed partial class NewWorldPage : IDisposable
         WireTips();
         WireSwitches();
         Map.ViewChanged += MoveMarks;
+        // A drag that begins on a landmark moves the map too.
+        Map.TakePointerOver(Marks);
         Map.Hovered += (x, z) => Readout.Text = $"{x:0}, {z:0}";
         Find.Tip("newWorld.find");
         WireButtons();

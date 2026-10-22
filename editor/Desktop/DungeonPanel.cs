@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -51,6 +52,12 @@ public sealed partial class DungeonPanel
         }
         return true;
     }
+
+    /// <summary>
+    /// Whether the dungeon last placed in the area is built of pieces (no dungeon of rooms to list): the panel then says
+    /// so, where it would say the area has no dungeon.
+    /// </summary>
+    internal void ShowPiecesPlaced(bool yes) => Empty.Text = yes ? Lang.T("dungeon.hint.piecesPlaced") : Lang.T("dungeon.hint.none");
 
     /// <summary>Leaving the tool: the cut off.</summary>
     public void Leave() => _view.CutY = null;

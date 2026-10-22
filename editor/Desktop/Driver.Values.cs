@@ -43,7 +43,6 @@ public static partial class Driver
         throw new InvalidOperationException($"nothing to set beside \"{label}\"");
     }
 
-    /// <summary>The first visible, enabled control of that type in the window or its open dialogs (the newest first).</summary>
     /// <summary>Sets the visible boxes of one row of a type in order from a comma separated list of values.</summary>
     /// <typeparam name="T">The box type.</typeparam>
     /// <param name="row">The row holding the boxes.</param>

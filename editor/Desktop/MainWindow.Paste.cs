@@ -68,11 +68,23 @@ public sealed partial class MainWindow
             }
             return (t, rect);
         }, cleared, add, null, removeHidden, addHidden);
-        Msg(Said.Of("paste.msg.pasted", paste.Count > 1 ? Said.Of("paste.msg.pastedCopies", paste.Count) : Said.Empty,
-                touched > 0 ? Said.Of("paste.msg.pastedGround") : Said.Empty,
-                add.Count > 0 ? Said.Of("paste.msg.pastedObjects", add.Count) : Said.Empty,
-                cleared.Count > 0 ? Said.Of("paste.msg.pastedCleared", cleared.Count) : Said.Empty)
-            + CreatureStand.Note(stood) + Said.Of("paste.msg.pasteMore"));
+        Msg(PastedSaid(paste.Count, paste.Ground, touched, add.Count, cleared.Count) + CreatureStand.Note(stood) + Said.Of("paste.msg.pasteMore"));
         UpdateSaveBar();
     }
+
+    /// <summary>
+    /// What a paste did, for the status bar: the copies, the ground (the copy's own, or with its ground left out only
+    /// its site dug out), the objects placed and the nature cleared from the site.
+    /// </summary>
+    /// <param name="copies">How many copies were pasted.</param>
+    /// <param name="ground">Whether the copy's ground was pasted (Ground shape and paint).</param>
+    /// <param name="touched">How many ground points changed.</param>
+    /// <param name="added">How many objects were placed.</param>
+    /// <param name="cleared">How many trees, rocks and the like were cleared from the site.</param>
+    internal static Said PastedSaid(int copies, bool ground, int touched, int added, int cleared) =>
+        Said.Of("paste.msg.pasted",
+            copies > 1 ? Said.Of("paste.msg.pastedCopies", copies) : Said.Empty,
+            touched == 0 ? Said.Empty : ground ? Said.Of("paste.msg.pastedGround") : Said.Of("paste.msg.pastedSiteDug"),
+            added > 0 ? Said.Of("paste.msg.pastedObjects", added) : Said.Empty,
+            cleared > 0 ? Said.Of("paste.msg.pastedCleared", cleared) : Said.Empty);
 }

@@ -38,7 +38,7 @@ public class MainWindowClosingTests
         await w.OpenWorkshop(null);
         Assert.True(w.InWorkshop);
         await w.Save();
-        Assert.Equal("There is no building piece on the plot yet: place some first (Place tool).", Assert.Single(told));
+        Assert.Equal("There is no building piece on the plot yet: place some first (Build, T).", Assert.Single(told));
         // Start (the Map button in the Workshop): nothing waits, so back to the start page at once.
         Click(w.MapButton);
         Dispatcher.UIThread.RunJobs();

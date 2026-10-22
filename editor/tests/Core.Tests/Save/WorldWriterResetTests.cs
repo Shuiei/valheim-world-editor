@@ -27,7 +27,7 @@ public class WorldWriterResetTests
 
         Assert.True(r.Saved, r.Message);
         Assert.Contains("1 deleted object(s)", r.Message);
-        Assert.Contains($"({inZone.Length - 1} objects cleared)", r.Message);
+        Assert.Contains($"({inZone.Length - 1} object(s) cleared)", r.Message);
     }
 
     /// <summary>

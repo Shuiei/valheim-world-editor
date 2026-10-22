@@ -99,6 +99,25 @@ public class DriverControlsTests
         }
     }
 
+    // choose also picks from a list box (the Dungeon panel's rooms), by an item's words.
+    [AvaloniaFact]
+    public async Task ChooseTakesAListBoxEntry()
+    {
+        var w = Window();
+        try
+        {
+            var rooms = new ListBox { ItemsSource = new[] { new ListBoxItem { Content = "Hall" }, new ListBoxItem { Content = "Stairs" } } };
+            var d = Dialog(w, rooms);
+            await Send(w, "choose stairs");
+            Assert.Equal(1, rooms.SelectedIndex);
+            d.Close();
+        }
+        finally
+        {
+            w.CloseWithoutAsking();
+        }
+    }
+
     [AvaloniaFact]
     public async Task ALabelWithNothingToSetBesideItSaysSo()
     {

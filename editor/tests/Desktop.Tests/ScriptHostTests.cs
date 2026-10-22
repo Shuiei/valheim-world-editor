@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
@@ -27,6 +28,17 @@ public class ScriptHostTests
             Assert.False(ch.Empty, $"{e.Name} changed nothing");
             ScriptHost.Apply(s, ch, e.Name);
         }
+    }
+
+    // A script with no statement (empty, or only comments) is said to have nothing to run, not a mistake about a Main.
+    [Theory]
+    [InlineData("")]
+    [InlineData("// nothing yet")]
+    public void AScriptWithoutAStatementSaysItHasNothingToRun(string code)
+    {
+        var (image, _, errors) = ScriptHost.Compile(code);
+        Assert.Null(image);
+        Assert.Equal([Lang.T("script.error.nothingToRun")], errors);
     }
 
     [Fact]
@@ -70,7 +82,7 @@ public class ScriptHostTests
         string api = new StreamReader(stream).ReadToEnd();
         int at = api.IndexOf("// Kinds: ", StringComparison.Ordinal);
         string kinds = api[at..api.IndexOf("public static IEnumerable<Obj> OfKind", at, StringComparison.Ordinal)];
-        Assert.All(Enum.GetNames<TerrainEditor.App.ObjectKind>(), k => Assert.Contains($" {k}", kinds));
+        Assert.All(Enum.GetNames<ObjectKind>(), k => Assert.Contains($" {k}", kinds));
     }
 
     [Fact]

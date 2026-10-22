@@ -89,7 +89,7 @@ public sealed partial class SelectPanel
         GroundBox.IsCheckedChanged += (_, _) => tool.OnGround = GroundBox.IsChecked == true;
         SnapBox = new CheckBox { Content = Lang.T("select.label.snap"), IsChecked = tool.SnapToPieces, FontSize = 12 }.Tip("select.snap");
         SnapBox.IsCheckedChanged += (_, _) => tool.SnapToPieces = SnapBox.IsChecked == true;
-        ZoneBox = new ComboBox { ItemsSource = new[] { Lang.T("select.zone.screen"), Lang.T("select.zone.ground") }, SelectedIndex = tool.ZoneOnGround ? 1 : 0, FontSize = 12 }.Tip("select.zone");
+        ZoneBox = new ComboBox { ItemsSource = new[] { Lang.T("select.zone.screen"), Lang.T("select.zone.ground") }, SelectedIndex = tool.ZoneOnGround ? 1 : 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch }.Tip("select.zone");
         ZoneBox.SelectionChanged += (_, _) => tool.ZoneOnGround = ZoneBox.SelectedIndex == 1;
         ThroughBox = new CheckBox { Content = Lang.T("select.label.through"), IsChecked = tool.SelectThrough, FontSize = 12 }.Tip("select.through");
         ThroughBox.IsCheckedChanged += (_, _) => tool.SelectThrough = ThroughBox.IsChecked == true;
@@ -146,12 +146,14 @@ public sealed partial class SelectPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = Lang.T("rail.label.select"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Title(Lang.T("rail.label.select"), HelpTopics.Tool(ToolMode.Select)),
                     new TextBlock { Text = Lang.T("select.hint.click"), FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                     new WrapPanel { Children = { DeleteButton, AllButton, BuildingButton, SameButton, InvertButton, HideButton, UnhideButton, InspectButton, ClaimButton }, ItemSpacing = 4, LineSpacing = 4 },
                     new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 6, Children = { new TextBlock { Text = Lang.T("select.label.replaceWith"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(ReplaceBox, 1), Ui.Col(ReplacePickButton, 2) } },
                     ReplaceButton,
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6, Children = { new TextBlock { Text = Lang.T("select.label.zone"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(ZoneBox, 1) } },
+                    // The label above its list: beside it, the list's longer choice was cut off.
+                    new TextBlock { Text = Lang.T("select.label.zone"), FontSize = 12 },
+                    ZoneBox,
                     ThroughBox,
                     new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6, Children = { new TextBlock { Text = Lang.T("select.label.picks"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PickBox, 1) } },
                     GroundBox,

@@ -37,18 +37,14 @@ public class EditSessionThingsStepTests
     [Fact]
     public void ObjectsToClearFindsNaturalThingsWhereTheMountainRisesHigh()
     {
-        var probe = TestScenes.Flat(1);
-        float ox = probe.Scene.OriginX, oz = probe.Scene.OriginZ;
-        var s = TestScenes.Flat(1, TestScenes.Beech(1, new Vector3(ox + 32, 30, oz + 32)), TestScenes.Beech(2, new Vector3(ox + 50, 30, oz + 32)));
+        var s = TestScenes.Flat(1, TestScenes.BeechInFlat(1, 32, 32), TestScenes.BeechInFlat(2, 50, 32));
         Assert.Equal(Expected4, s.ObjectsToClear(32, 32, 3, (_, _) => 1000f, null));
     }
 
     [Fact]
     public void ObjectsToClearKeepsThingsTheGroundDoesNotRiseOver()
     {
-        var probe = TestScenes.Flat(1);
-        float ox = probe.Scene.OriginX, oz = probe.Scene.OriginZ;
-        var s = TestScenes.Flat(1, TestScenes.Beech(1, new Vector3(ox + 32, 30, oz + 32)));
+        var s = TestScenes.Flat(1, TestScenes.BeechInFlat(1, 32, 32));
         Assert.Empty(s.ObjectsToClear(32, 32, 3, (_, _) => 0f, null));
     }
 
@@ -76,11 +72,9 @@ public class EditSessionThingsStepTests
     [Fact]
     public void TakeThingChangesAddsANewThingInsideTheAreaOnly()
     {
-        var probe = TestScenes.Flat(1);
-        float ox = probe.Scene.OriginX, oz = probe.Scene.OriginZ;
         var s = TestScenes.Flat(1, Rock());
-        var inside = TestScenes.Beech(9, new Vector3(ox + 32, 30, oz + 32));
-        var outside = TestScenes.Beech(10, new Vector3(ox + 500, 30, oz + 32));
+        var inside = TestScenes.BeechInFlat(9, 32, 32);
+        var outside = TestScenes.BeechInFlat(10, 500, 32);
         var changed = new List<int>();
         s.TakeThingChanges([], new Dictionary<int, WorldScene.Thing> { [9] = inside, [10] = outside }, changed);
         Assert.Equal(2, s.Scene.Things.Count);

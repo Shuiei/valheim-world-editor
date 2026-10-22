@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -28,7 +29,7 @@ public class MainWindowEditorWorldTests
         File.SetLastWriteTimeUtc(latest, DateTime.UtcNow.AddMinutes(5));
         await r.Open();
         Assert.StartsWith("History from an earlier session (", r.Said);
-        Assert.Contains("1 step(s) you can undo, in History.", r.Said);
+        Assert.Contains("1 step(s) you can undo or redo, in History.", r.Said);
         Assert.Contains("The world was saved again since: you are asked before undoing them.", r.Said);
         var s = r.W.Session!;
         Assert.Single(s.UndoList);
@@ -238,5 +239,28 @@ public class MainWindowEditorWorldTests
         Assert.True(r.W.MapShown);
         Assert.Null(r.W.Session);
         Assert.Null(world.Area);
+    }
+
+    // The locations note sits beside the tool rail and a tall tool panel, not over them (it covered both).
+    [AvaloniaFact]
+    public void TheLocationsNoteLeavesTheToolColumnClear()
+    {
+        var w = ClipboardSetup.WindowOn(TestScenes.Flat(2), 1440, 900);
+        w.Tools.ChooseMode(ToolMode.Place);
+        w.LocationText.Text = "3 location(s) here.";
+        w.LocationNote.IsVisible = true;
+        // The note's place follows the column after a layout pass.
+        for (int pass = 0; pass < 3; pass++)
+        {
+            w.UpdateLayout();
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+        var note = new Rect(w.LocationNote.TranslatePoint(default, w)!.Value, w.LocationNote.Bounds.Size);
+        var column = Avalonia.VisualTree.VisualExtensions.GetVisualParent(w.Tools.Rail)!;
+        foreach (var card in Avalonia.VisualTree.VisualExtensions.GetVisualChildren(column).OfType<Avalonia.Controls.Control>().Where(c => c.IsVisible))
+        {
+            var r = new Rect(card.TranslatePoint(default, w)!.Value, card.Bounds.Size);
+            Assert.False(note.Intersects(r), $"note {note} covers {r}");
+        }
     }
 }

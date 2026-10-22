@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Layout;
 using Avalonia.Media;
 using TerrainEditor.App;
 
@@ -22,7 +23,7 @@ public sealed partial class MapPage
     /// <summary>
     /// How many zones around a match must have no buildings, 0..50.
     /// </summary>
-    internal NumericUpDown DistBox { get; } = new() { Value = 2, Minimum = 0, Maximum = 50, Increment = 1, FormatString = "0", FontSize = 12, MinWidth = 70 };
+    internal NumericUpDown DistBox { get; } = new() { Value = 2, Minimum = 0, Maximum = 50, Increment = 1, FormatString = "0", FontSize = 12, MinWidth = 70, VerticalAlignment = VerticalAlignment.Center };
     /// <summary>
     /// Only zones without ground edits.
     /// </summary>

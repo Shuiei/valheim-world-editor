@@ -113,8 +113,8 @@ public static class ClaudeGuide
 
     /// <summary>The guide to shaping ground and placing objects, in building_guide and the shape_area prompt.</summary>
     public const string Shaping = """
-		Shaping an area. The game lets ground move at most 8 m from its original height (scripts:
-		Ground.NoLimit = true goes further, through locations the game understands). Water is at y = 30;
+		Shaping an area. The game lets ground move at most 8 m from its original height (scripts go further
+		by default, through locations the game understands: Ground.NoLimit = false keeps within). Water is at y = 30;
 		ground below it is under water. Paint kinds: dirt, cultivated, paved, clear (the biome's own). Kinds
 		of objects (list_objects, Objects.OfKind): Trees, Rocks, Ore, Bushes, Pickables, Buildings, Ruins,
 		Furniture, Remains, Creatures, SpawnPoints, Nests, Effects...

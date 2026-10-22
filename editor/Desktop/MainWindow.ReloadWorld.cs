@@ -5,7 +5,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Map: Discard, after asking: the unsaved changes dropped and the world read again.
+    /// Map: Discard, after asking: the unsaved changes dropped, the world read again and the status bar emptied.
     /// </summary>
     internal async Task DiscardWorld()
     {
@@ -18,6 +18,9 @@ public sealed partial class MainWindow
         try
         {
             await Task.Run(w.Discard);
+            // What the status bar said was about the changes dropped (live, the history kept from earlier too): not
+            // shown again in the next area.
+            Msg(Said.Empty);
         }
         catch (Exception ex)
         {

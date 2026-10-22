@@ -76,7 +76,7 @@ public sealed partial class ClaudeTools
         }
         if (moves.Count == 0)
         {
-            return "Nothing changed: " + string.Join("; ", problems);
+            return NothingDone("Nothing changed", problems);
         }
         int stood = CreatureStand.Apply(scene, null, moves);
         var copies = s.Transform(moves, ClaudesLabel(label));

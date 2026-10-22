@@ -54,7 +54,7 @@ public sealed partial class PlacePanel
     {
         var shapes = new UniformGrid { Rows = 1, ColumnSpacing = 4 };
         foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, Lang.T("place.shape.points"), Lang.T("place.tip.points")),
-            (PlaceTool.LineShapes.Circle, Lang.T("brush.shape.circle"), Lang.T("place.tip.circle")), (PlaceTool.LineShapes.Rect, Lang.T("place.shape.rect"), Lang.T("place.tip.rect")) })
+            (PlaceTool.LineShapes.Circle, Lang.T("place.shape.circle"), Lang.T("place.tip.circle")), (PlaceTool.LineShapes.Rect, Lang.T("place.shape.rect"), Lang.T("place.tip.rect")) })
         {
             var b = new Button { Content = label, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
             ToolTip.SetTip(b, tip);

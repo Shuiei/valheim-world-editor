@@ -66,7 +66,7 @@ public static partial class SettingsDialog
                         Hint(Lang.T("settings.bepInExHint")),
                         H2(Lang.T("settings.worldFolders")),
                         _worlds,
-                        Hint(Lang.T("settings.worldsHint", string.Join(", ", Places.WorldRoots().Where(Directory.Exists).Select(Ui.Tilde)))),
+                        Hint(WorldsHint([.. Places.WorldRoots().Where(Directory.Exists).Select(Ui.Tilde)])),
                         H2(Lang.T("settings.claude")),
                         _claude,
                         Hint(Lang.T("settings.claudeHint")),
@@ -85,5 +85,13 @@ public static partial class SettingsDialog
                 },
             };
         }
+
+        /// <summary>
+        /// The world folders' hint: Valheim's usual folders found on this computer, or that none is there yet (not a
+        /// sentence ending on nothing).
+        /// </summary>
+        /// <param name="found">The usual folders that exist, as shown.</param>
+        internal static string WorldsHint(IReadOnlyList<string> found) =>
+            found.Count > 0 ? Lang.T("settings.worldsHint", string.Join(", ", found)) : Lang.T("settings.worldsHintNone");
     }
 }
