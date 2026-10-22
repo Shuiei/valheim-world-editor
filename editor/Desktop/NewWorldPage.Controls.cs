@@ -43,6 +43,9 @@ public sealed partial class NewWorldPage : IDisposable
     /// What the worlds follow when it is not the game itself: Expand World's rules, in a few words; hidden otherwise.
     /// </summary>
     internal TextBlock Generation { get; } = new() { Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, FontSize = 12, IsVisible = false };
+
+    /// <summary>What kind of world is made (<see cref="KindText"/>): a normal one, or one players need the generator's mod for.</summary>
+    internal TextBlock WorldKind { get; } = Ui.Hint("");
     /// <summary>
     /// The seed's map, the landmarks over it, and which kinds show (switches over the map's corner, as the editor's
     /// View panel).
