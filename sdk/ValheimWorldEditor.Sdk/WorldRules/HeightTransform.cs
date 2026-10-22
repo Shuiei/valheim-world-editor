@@ -38,29 +38,4 @@ public sealed record HeightTransform
     /// <summary>Whether this transform changes nothing (the mod's defaults).</summary>
     [JsonIgnore]
     public bool IsIdentity => Multiplier == 1f && Delta == 0f && DepthMultiplier == 1f && Minimum == -1000f && Maximum == 10000f;
-
-    /// <summary>
-    /// An altitude (metres from the water level) transformed, as the mod's ApplyHeight computes it (floats, each step
-    /// rounded as its store rounds it).
-    /// </summary>
-    /// <param name="altitude">The altitude, metres from the water level.</param>
-    public float Apply(float altitude)
-    {
-        float factor = Mathf.Abs(ExcessFactor), sign = Mathf.Sign(ExcessFactor);
-        float h = (float)((double)altitude * Multiplier);
-        h = (float)((double)h + Delta);
-        if (h < 0f)
-        {
-            h = (float)((double)h * DepthMultiplier);
-        }
-        if (h > Maximum)
-        {
-            h = (float)((double)Maximum + (double)sign * Mathf.Pow((float)((double)h - Maximum), factor));
-        }
-        if (h < Minimum)
-        {
-            h = (float)((double)Minimum - (double)sign * Mathf.Pow((float)((double)Minimum - h), factor));
-        }
-        return h;
-    }
 }

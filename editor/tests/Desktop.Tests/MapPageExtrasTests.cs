@@ -20,7 +20,7 @@ public class MapPageExtrasTests
     [Fact]
     public void ThePointsTerritoryAltBiomesAndEffectsFollowOneAnother()
     {
-        var alts = new List<SeedLocations.AltBiomeRule> { new() { Name = "Dark Meadows" }, new() { Name = "Glade" } };
+        var alts = new List<AltBiomeRule> { new() { Name = "Dark Meadows" }, new() { Name = "Glade" } };
         StatusEffect[] effects = [new("Freezing", false, true), new("Rested", true, false), new("Wet", true, true)];
         Assert.Equal(" · territory cold · alt biome Dark Meadows, Glade · effects Freezing (night), Rested (day), Wet",
             MapPage.Extras(new Territory { Name = "cold" }, alts, effects));

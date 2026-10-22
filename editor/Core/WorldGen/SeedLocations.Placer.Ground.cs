@@ -8,7 +8,7 @@ public static partial class SeedLocations
         /// <summary>
         /// From the middle of the world: the kind's ring.
         /// </summary>
-        internal static bool AtRightDistance(Rule rule, Vector3 spot)
+        internal static bool AtRightDistance(LocationRule rule, Vector3 spot)
         {
             float fromMiddle = spot.Magnitude;
             return !(rule.MinDistance != 0f && fromMiddle < rule.MinDistance) && !(rule.MaxDistance != 0f && fromMiddle > rule.MaxDistance);
@@ -18,7 +18,7 @@ public static partial class SeedLocations
         /// The biome, the height above the sea, the forest and the distance from the middle on the ground
         /// (spot.y set to the ground; vegetation: how green the ground is there).
         /// </summary>
-        internal bool OnRightGround(Rule rule, Heightmap.Biome biomes, ref Vector3 spot, out float vegetation)
+        internal bool OnRightGround(LocationRule rule, Heightmap.Biome biomes, ref Vector3 spot, out float vegetation)
         {
             vegetation = 0;
             var biome = _gen.GetBiome(spot);
@@ -70,7 +70,7 @@ public static partial class SeedLocations
         /// <summary>
         /// The ground's rise across the kind's size (the generator samples it at random points).
         /// </summary>
-        internal bool FlatEnough(Rule rule, Vector3 spot)
+        internal bool FlatEnough(LocationRule rule, Vector3 spot)
         {
             _gen.GetTerrainDelta(spot, rule.ExteriorRadius, out float rise, out _);
             return rise >= rule.MinTerrainDelta && rise <= rule.MaxTerrainDelta;

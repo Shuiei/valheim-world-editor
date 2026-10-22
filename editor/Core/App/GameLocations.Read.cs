@@ -8,7 +8,7 @@ public static partial class GameLocations
     /// Finds ZoneSystem's locations, the LocationLists named by the order and the alt biomes in these bundles and makes
     /// the rule set; null (and a log line) when one is missing.
     /// </summary>
-    private static SeedLocations.RuleSet? Read(GameBundles bundles, List<string> scanned, Manifest manifest, (int Locations, int Vegetation)[] order)
+    private static LocationRuleSet? Read(GameBundles bundles, List<string> scanned, Manifest manifest, (int Locations, int Vegetation)[] order)
     {
         var scene = FindScene(bundles, scanned, order);
         // Each pair the order names as many times as the scene has lists of it, at least.
@@ -28,9 +28,9 @@ public static partial class GameLocations
     /// <param name="scene">The scene's parts, all found.</param>
     /// <param name="manifest">The manifest, for the prefabs' names.</param>
     /// <param name="order">The lists' order.</param>
-    internal static SeedLocations.RuleSet RuleSetOf(SceneFields scene, Manifest manifest, (int Locations, int Vegetation)[] order)
+    internal static LocationRuleSet RuleSetOf(SceneFields scene, Manifest manifest, (int Locations, int Vegetation)[] order)
     {
-        var rules = new SeedLocations.RuleSet();
+        var rules = new LocationRuleSet();
         rules.Locations.AddRange(Items(scene.Zone!).Select(l => Location(l, manifest, null)));
         // A pair named twice takes its lists one after the other.
         var taken = new Dictionary<(int, int), int>();

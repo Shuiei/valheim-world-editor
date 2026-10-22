@@ -206,7 +206,7 @@ editor ([modding.md](modding.md#add-ons)). The ones made here live in `addons/<N
 
 | Path | What it holds |
 |---|---|
-| `addons/<Name>/src/<Project>/` | The extension: one netstandard2.0 project referencing `sdk/ValheimWorldEditor.Sdk` (never the editor), and its `worldeditor.json` (with `serves`, the mod's DLL). One DLL: the editor loads nothing else from the add-on's folder. |
+| `addons/<Name>/src/<Project>/` | The extension: one netstandard2.0 project (net10.0 when it needs what only the editor's .NET has, as the Riverheim add-on loading the player's Riverheim) referencing `sdk/ValheimWorldEditor.Sdk` (never the editor), and its `worldeditor.json` (with `serves`, the mod's DLL). One DLL: the editor loads nothing else from the add-on's folder. |
 | `addons/<Name>/tests/<Project>.Tests/` | Its own tests, against the SDK only, run by CI's `addon-tests` job with every other add-on's. |
 | `addons/<Name>/VERSION`, `CHANGELOG.md` | Its own version and changes: the zip's name and the DLL's version. `Directory.Build.props` there reads it over the repository's settings. |
 | `addons/<Name>/README.md`, `package-readme.txt` | What it does, for this repository; what the player reads in the zip (`README.txt`). |

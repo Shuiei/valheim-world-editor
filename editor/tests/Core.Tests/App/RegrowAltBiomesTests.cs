@@ -31,7 +31,7 @@ public class RegrowAltBiomesTests
     };
 
     /// <summary>An alt biome given to every area of the world, keeping these rules out.</summary>
-    private static SeedLocations.AltBiomeRule Everywhere(string name, params string[] blocks)
+    private static AltBiomeRule Everywhere(string name, params string[] blocks)
     {
         var alt = AltBiomeRules.Everywhere(name);
         alt.BlockVegetationNames = [.. blocks];
@@ -39,10 +39,10 @@ public class RegrowAltBiomesTests
     }
 
     /// <summary>The spots Regrow places in the middle zones under these rules and alt biomes.</summary>
-    private static List<Regrow.Spot> Spots(TempWorld w, VegetationRule rule, params SeedLocations.AltBiomeRule[] alts)
+    private static List<Regrow.Spot> Spots(TempWorld w, VegetationRule rule, params AltBiomeRule[] alts)
     {
         var world = w.Load();
-        world.Rules = new WorldRules { Vegetation = [rule], Locations = new SeedLocations.RuleSet { AltBiomes = [.. alts] } };
+        world.Rules = new WorldRules { Vegetation = [rule], Locations = new LocationRuleSet { AltBiomes = [.. alts] } };
         var terrain = new TerrainService(world, null);
         return Regrow.Zones(terrain, new EditStore(world), world.Seed, 0, 0, 1, 1);
     }

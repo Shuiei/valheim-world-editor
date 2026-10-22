@@ -19,7 +19,7 @@ public class SeedLocationsPlacerGenerateTests
     {
         var placer = Placer(Seed());
 
-        placer.Generate(new SeedLocations.Rule { Prefab = "Temple", CenterFirst = 1, Quantity = 0 });
+        placer.Generate(new LocationRule { Prefab = "Temple", CenterFirst = 1, Quantity = 0 });
 
         Assert.Empty(placer.Instances);
     }
@@ -28,7 +28,7 @@ public class SeedLocationsPlacerGenerateTests
     public void AUniqueKindAlreadyThereIsNotLaidOutAgain()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { Prefab = "Temple", CenterFirst = 1, Quantity = 1, Unique = 1 };
+        var rule = new LocationRule { Prefab = "Temple", CenterFirst = 1, Quantity = 1, Unique = 1 };
         placer.Register(rule, new Vector3(10, 0, 0));
 
         placer.Generate(rule);
@@ -40,7 +40,7 @@ public class SeedLocationsPlacerGenerateTests
     public void AKindLaidOutHasNoMoreThanWantedAndOnlyItsOwnPrefab()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule
+        var rule = new LocationRule
         {
             Prefab = "Temple",
             CenterFirst = 1,

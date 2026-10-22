@@ -20,9 +20,9 @@ public static class LocationIcons
     /// <summary>The icons of these location instances, by their kinds' rules (the world's own).</summary>
     /// <param name="instances">The world's location instances: the kind's hash, where, whether its zone is made.</param>
     /// <param name="kinds">The world's location kinds.</param>
-    public static List<Icon> Of(IEnumerable<(int Hash, NVector3 Position, bool Placed)> instances, IReadOnlyList<SeedLocations.Rule> kinds)
+    public static List<Icon> Of(IEnumerable<(int Hash, NVector3 Position, bool Placed)> instances, IReadOnlyList<LocationRule> kinds)
     {
-        var byHash = new Dictionary<int, SeedLocations.Rule>();
+        var byHash = new Dictionary<int, LocationRule>();
         foreach (var k in kinds)
         {
             byHash.TryAdd(TerrainEditor.Save.StableHash.Of(k.Prefab), k);
@@ -42,7 +42,7 @@ public static class LocationIcons
     /// The icon text of one instance: with Expand World Data's names, the placed one once its zone is made (when it
     /// has one), else the always one; without them, the kind's name when it always shows, or shows once placed.
     /// </summary>
-    private static string? NameOf(SeedLocations.Rule kind, bool placed)
+    private static string? NameOf(LocationRule kind, bool placed)
     {
         if (kind.IconAlwaysName == null && kind.IconPlacedName == null)
         {

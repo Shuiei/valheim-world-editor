@@ -1,5 +1,5 @@
+using System;
 using System.Text.Json.Serialization;
-using TerrainEditor.App;
 using ValheimWorldEditor.Sdk;
 
 namespace ValheimGen;
@@ -26,7 +26,10 @@ public sealed record GeneratorRules(string Id, string Name, string Version, stri
     [JsonIgnore]
     public bool Slow { get; init; }
 
-    /// <summary>What a new world made with these rules has its file start with (WorldCreator writes it).</summary>
+    /// <summary>
+    /// What a new world made with these rules has its file start with (the editor's TerrainEditor.App.GeneratorHeader:
+    /// the generator and the world's settings; WorldCreator writes it).
+    /// </summary>
     [JsonIgnore]
-    public GeneratorHeader? Header { get; init; }
+    internal object? Header { get; init; }
 }

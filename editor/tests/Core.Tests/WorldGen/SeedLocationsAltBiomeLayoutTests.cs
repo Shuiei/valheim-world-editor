@@ -1,7 +1,7 @@
 using ValheimGen;
 using Xunit;
 using static WorldEditor.Tests.AltBiomeRules;
-using Alt = ValheimGen.SeedLocations.AltBiomeRule;
+using Alt = ValheimGen.AltBiomeRule;
 using Layout = ValheimGen.SeedLocations.AltBiomeLayout;
 
 namespace WorldEditor.Tests;
@@ -110,10 +110,10 @@ public class SeedLocationsAltBiomeLayoutTests(AltBiomeSeed seed) : IClassFixture
         Assert.False(layout.LetsVegetation("Other", "fireflies", inside.X, inside.Z));
         Assert.False(layout.LetsVegetation(null, "beech1_meadows", inside.X, inside.Z));
         Assert.True(layout.LetsVegetation(null, "beech1_meadows", outside.X, outside.Z));
-        Assert.False(layout.LetsLocation(new SeedLocations.Rule { Name = "WoodFarm1" }, inside.X, inside.Z));
-        Assert.True(layout.LetsLocation(new SeedLocations.Rule { Name = "WoodFarm1" }, outside.X, outside.Z));
-        Assert.True(layout.LetsLocation(new SeedLocations.Rule { Name = "Crypt", AltBiome = "Dark" }, inside.X, inside.Z));
-        Assert.False(layout.LetsLocation(new SeedLocations.Rule { Name = "Crypt", AltBiome = "Dark" }, outside.X, outside.Z));
+        Assert.False(layout.LetsLocation(new LocationRule { Name = "WoodFarm1" }, inside.X, inside.Z));
+        Assert.True(layout.LetsLocation(new LocationRule { Name = "WoodFarm1" }, outside.X, outside.Z));
+        Assert.True(layout.LetsLocation(new LocationRule { Name = "Crypt", AltBiome = "Dark" }, inside.X, inside.Z));
+        Assert.False(layout.LetsLocation(new LocationRule { Name = "Crypt", AltBiome = "Dark" }, outside.X, outside.Z));
         // Past the map's edge, the nearest point's area.
         Assert.Equal(layout.At(1e6f, 1e6f), layout.At(seed.Map.MapToWorld(seed.Map.Size - 1), seed.Map.MapToWorld(seed.Map.Size - 1)));
     }

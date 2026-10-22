@@ -80,7 +80,7 @@ public static partial class SeedLocations
         /// <param name="rule">The kind.</param>
         /// <param name="x">The spot's x.</param>
         /// <param name="z">The spot's z.</param>
-        public bool LetsLocation(Rule rule, float x, float z)
+        public bool LetsLocation(LocationRule rule, float x, float z)
         {
             var alts = At(x, z);
             return Has(alts, rule.AltBiome) && !alts.Any(a => a.BlockLocationNames.Contains(rule.Name));

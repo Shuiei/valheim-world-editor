@@ -18,7 +18,7 @@ public class SeedLocationsPlacerSpacingTests
     public void ASpotTooCloseToAnotherOfItsKindIsRefused()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { Prefab = "Temple", MinDistanceFromSimilar = 50 };
+        var rule = new LocationRule { Prefab = "Temple", MinDistanceFromSimilar = 50 };
         placer.Register(rule, new Vector3(0, 0, 0));
 
         Assert.False(placer.RightNeighbours(rule, new Vector3(10, 0, 0)));
@@ -28,7 +28,7 @@ public class SeedLocationsPlacerSpacingTests
     public void ASpotFarEnoughFromItsKindIsKept()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { Prefab = "Temple", MinDistanceFromSimilar = 50 };
+        var rule = new LocationRule { Prefab = "Temple", MinDistanceFromSimilar = 50 };
         placer.Register(rule, new Vector3(0, 0, 0));
 
         Assert.True(placer.RightNeighbours(rule, new Vector3(200, 0, 0)));
@@ -38,7 +38,7 @@ public class SeedLocationsPlacerSpacingTests
     public void ASpotNeedsAnotherOfItsKindWithinTheMaximumWhenOneIsSet()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { Prefab = "Temple", MaxDistanceFromSimilar = 50 };
+        var rule = new LocationRule { Prefab = "Temple", MaxDistanceFromSimilar = 50 };
 
         Assert.False(placer.RightNeighbours(rule, new Vector3(200, 0, 0)));
         placer.Register(rule, new Vector3(190, 0, 0));
@@ -48,7 +48,7 @@ public class SeedLocationsPlacerSpacingTests
     [Fact]
     public void VegetationMustBeAboveTheMinimumAndBelowTheMaximum()
     {
-        var rule = new SeedLocations.Rule { MinimumVegetation = 0.3f, MaximumVegetation = 0.8f };
+        var rule = new LocationRule { MinimumVegetation = 0.3f, MaximumVegetation = 0.8f };
 
         Assert.False(SeedLocations.Placer.RightVegetation(rule, 0.2f));
         Assert.True(SeedLocations.Placer.RightVegetation(rule, 0.5f));
@@ -59,7 +59,7 @@ public class SeedLocationsPlacerSpacingTests
     public void AKindWithNoGreenestCheckAlwaysStandsOut()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { SurroundCheckVegetation = 0 };
+        var rule = new LocationRule { SurroundCheckVegetation = 0 };
 
         Assert.True(placer.StandsOut(rule, new Vector3(100, 0, 100)));
     }
@@ -68,7 +68,7 @@ public class SeedLocationsPlacerSpacingTests
     public void TheFirstNineSpotsOnlySetTheBarForTheGreenestCheck()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { SurroundCheckVegetation = 1, SurroundCheckLayers = 1, SurroundCheckDistance = 10, SurroundBetterThanAverage = 0 };
+        var rule = new LocationRule { SurroundCheckVegetation = 1, SurroundCheckLayers = 1, SurroundCheckDistance = 10, SurroundBetterThanAverage = 0 };
 
         for (int i = 0; i < 9; i++)
         {

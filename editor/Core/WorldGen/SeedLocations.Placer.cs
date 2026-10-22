@@ -49,7 +49,7 @@ public static partial class SeedLocations
         /// Whether the alt biomes let a kind stand at a spot (its own alt biome's areas only, none of the area's alt
         /// biomes blocking it); the alt biomes are laid out the first time a kind that depends on them asks.
         /// </summary>
-        private bool AltBiomesLet(Rule rule, Vector3 spot) =>
+        private bool AltBiomesLet(LocationRule rule, Vector3 spot) =>
             (rule.AltBiome == null && !_blocked.Contains(rule.Name))
             || (_alts.Count > 0 && AltBiomeLayout.Of(_gen, _alts, _map).LetsLocation(rule, spot.X, spot.Z));
 
@@ -93,7 +93,7 @@ public static partial class SeedLocations
         /// <summary>
         /// Lays out one kind, starting Unity's Random from the seed and the kind's prefab name.
         /// </summary>
-        public void Generate(Rule rule)
+        public void Generate(LocationRule rule)
         {
             Rnd.InitState(_gen.GetSeed() + StableHash.Of(rule.Prefab));
             int have = Instances.Values.Count(p => p.Rule.Prefab == rule.Prefab);

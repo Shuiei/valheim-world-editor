@@ -11,7 +11,7 @@ public static partial class WorldCreator
     /// random multiple of 22.5° from the zone's seed when its kind asks (the zone's first draw), else none. Rolled on
     /// the shared Unity random, which the caller puts back.
     /// </summary>
-    private static float Yaw(ValheimGen.SeedLocations.Rule rule, ValheimGen.TerrainService terrain, Vector3 at, int zoneSeed)
+    private static float Yaw(ValheimGen.LocationRule rule, ValheimGen.TerrainService terrain, Vector3 at, int zoneSeed)
     {
         if (rule.SlopeRotation != 0)
         {
