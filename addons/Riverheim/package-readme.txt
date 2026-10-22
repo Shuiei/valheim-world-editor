@@ -6,7 +6,7 @@ with it.
 
 Install: put this Riverheim folder in the "addons" folder next to the editor (on macOS, next to
 ValheimWorldEditor.app), so that it holds addons/Riverheim/worldeditor.json. Needs the Valheim World Editor
-1.103.0 or later. The add-on is used while Riverheim (Riverheim.dll) is in one of the BepInEx plugins folders the
+1.104.0 or later. The add-on is used while Riverheim (Riverheim.dll) is in one of the BepInEx plugins folders the
 editor knows; Settings lists it under Add-ons, with its switch.
 
 Riverheim itself stays where it is, in BepInEx/plugins: this add-on only teaches the editor about it.

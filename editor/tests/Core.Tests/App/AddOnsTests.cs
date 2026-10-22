@@ -131,6 +131,41 @@ public sealed class AddOnsTests : IDisposable
     }
 
     [Fact]
+    public void AWorldOfAGeneratorNotInUseSaysWhatIsMissing()
+    {
+        const string Generators = """, "worldGenerators": { "test.flat": "Flatland", "": "No id", "test.blank": " ", "test.number": 3 }""";
+        string flat = AddOn("Flat", """, "serves": "Flatland.dll", "extension": "Flat.WorldEditor.dll" """ + Generators);
+        File.WriteAllBytes(Path.Combine(flat, "Flat.WorldEditor.dll"), [0]);
+        Settings.AddOnsOff = ["Flat"];
+        ModManifests.Refresh(Settings);
+        // Only well-formed entries: an id and a name.
+        Assert.Equal(new Dictionary<string, string> { ["test.flat"] = "Flatland" }, Assert.Single(ModManifests.InstalledAddOns).WorldGenerators);
+        Assert.Equal(Lang.T("worldgen.addOnOff", "Flatland", "Flat"), WorldGenerators.WhyNone("test.flat"));
+
+        Settings.AddOnsOff = [];
+        ModManifests.Refresh(Settings);
+        Assert.Equal(Lang.T("worldgen.addOnWaiting", "Flatland", "Flat", "Flatland.dll"), WorldGenerators.WhyNone("test.flat"));
+
+        // Its mod installed, but its extension does not run (not a .NET assembly here).
+        Plugin("Someone-Flatland", "Flatland.dll");
+        ModManifests.Refresh(Settings);
+        Assert.Equal(Lang.T("worldgen.addOnNotRunning", "Flatland", "Flat"), WorldGenerators.WhyNone("test.flat"));
+
+        // A mod's own extension, not turned on in Settings.
+        string mod = Plugin("RoundWorld", "Round.WorldEditor.dll");
+        File.WriteAllText(Path.Combine(mod, ModManifests.FileName), """{ "version": 1, "extension": "Round.WorldEditor.dll", "worldGenerators": { "test.round": "Round World" } }""");
+        ModManifests.Refresh(Settings);
+        Assert.Equal("Round World", Assert.Single(ModManifests.Extensions, o => !o.AddOn).WorldGenerators?["test.round"]);
+        Assert.Equal(Lang.T("worldgen.extensionOff", "Round World", "RoundWorld"), WorldGenerators.WhyNone("test.round"));
+        // Turned on, but it does not run (not a .NET assembly here).
+        ModExtensions.Refresh(Settings);
+        ModExtensions.Allow(Settings, Assert.Single(ModExtensions.Offered, x => !x.AddOn), true);
+        ModExtensions.Refresh(Settings);
+        Assert.Equal(Lang.T("worldgen.extensionNotRunning", "Round World", "RoundWorld"), WorldGenerators.WhyNone("test.round"));
+        Assert.Equal(Lang.T("worldgen.unknown", "made.up"), WorldGenerators.WhyNone("made.up"));
+    }
+
+    [Fact]
     public void AModsOwnManifestHasTheLastWord()
     {
         AddOn("Digging", """, "serves": "DigMod.dll", "prefabs": { "dig_tool": { "group": "Add-on" }, "dig_shovel": { "group": "Add-on" } }""");

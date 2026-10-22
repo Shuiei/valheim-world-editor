@@ -11,7 +11,7 @@ carries none of the mod; this repository holds none of its code.
 
 ## Install
 
-1. The Valheim World Editor 1.103.0 or later.
+1. The Valheim World Editor 1.104.0 or later.
 2. From the editor's [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page,
    `ValheimWorldEditor-addon-Riverheim-<version>.zip`: unpack it into the `addons` folder next to the editor (on
    macOS, next to `ValheimWorldEditor.app`), so that you have `addons/Riverheim/worldeditor.json`.
@@ -31,10 +31,11 @@ carries none of the mod; this repository holds none of its code.
   predictions (locations, regrowth) are Riverheim's, as the game makes them with the mod: checked point by point
   against a server running Riverheim 1.2.1.
 - Opening takes a few seconds more: Riverheim lays the whole world out first, as the game does when it loads it.
-- When it cannot be opened, the card or the message says why: the add-on is off or missing, Riverheim is not installed
-  anywhere the editor looks, the world was made with Riverheim's deprecated beta (no Riverheim release opens those), the world
+- When it cannot be opened, its card stays in the list, greyed out, and says why: the add-on is turned off (Settings →
+  Add-ons) or missing, Riverheim is not installed anywhere the editor looks, the world was made with Riverheim's deprecated beta (no Riverheim release opens those), the world
   file has a Riverheim setting this editor does not know, your Riverheim does not know the world's preset (an older
-  Riverheim than the one that made it: update it), or your Riverheim could not lay the world out (the log says why).
+  Riverheim than the one that made it: update it), or your Riverheim could not be loaded (the log says why). That your
+  Riverheim could not lay the world out, or is of another release than a live game's, is said as the world opens.
 
 Worlds made without Riverheim never use it, even with the add-on on and the mod installed.
 

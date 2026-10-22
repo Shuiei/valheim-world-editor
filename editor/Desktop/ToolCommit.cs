@@ -8,8 +8,8 @@ namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// A mod's tool's edit (ToolEdit) made one step of an area's history: its added objects made with the data the tool
-/// sets, its changed ones replaced by a copy with the tool's changes (same prefab, place and turn, its source the old
-/// one), its removed ones taken away; things for objects the scene shows, hidden objects for mods' data holders.
+/// sets, its changed ones replaced by a copy with the tool's changes (same prefab, place and turn, its source the object
+/// the game has: <see cref="SourceOf"/>), its removed ones taken away; things for objects the scene shows, hidden objects for mods' data holders.
 /// </summary>
 internal static class ToolCommit
 {
@@ -52,7 +52,7 @@ internal static class ToolCommit
             }
             var z = ZdoData.Parse(view.Data.Serialize());
             change(new DataCopy(view.Prefab, view.Position, view.Rotation, z, view.Scale));
-            AddNew(plan, new NewObject(0, z.Prefab, view.Position, view.Rotation, view.Scale, view.Id, Fresh: false, Raw: z.Serialize()));
+            AddNew(plan, new NewObject(0, z.Prefab, view.Position, view.Rotation, view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize()));
         }
         foreach (var obj in edit.Removed)
         {
@@ -60,6 +60,17 @@ internal static class ToolCommit
         }
         return plan;
     }
+
+    /// <summary>
+    /// What a changed object's copy comes from, so that applied live it changes the game's object in place: the object
+    /// itself when it is the world's own or one of the editor's the game already has; for one the editor added that the
+    /// game does not have yet (the copy an earlier change made, not applied), what that came from, as a moved copy's
+    /// source is (the copy itself when it came from nothing: one the tool made).
+    /// </summary>
+    /// <param name="s">The area's session.</param>
+    /// <param name="id">The changed object's id.</param>
+    internal static int SourceOf(EditSession s, int id) =>
+        id >= 0 || s.Scene.Owner?.LiveSync.IsLive(id) == true || s.Edits.FindAdded(id)?.SourceId is not int source ? id : source;
 
     /// <summary>The persistent flag of an object's save (the game keeps such objects, and saves them).</summary>
     private const ushort Persistent = 0x100;
