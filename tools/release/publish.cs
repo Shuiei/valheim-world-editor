@@ -5,9 +5,11 @@
 //       The release notes: notes.md (docs/releases/v<version>.md) when it is there, else the CHANGELOG's
 //       sections newer than the last released tag, up to version.
 //   thunderstore|hexium|nexus <dist> [--notes <notes.md>] [--dry-run]
-//       Publishes the packages in dist to one site: WorldEditorBridge-<version>.zip (made by
-//       tools/thunderstore.sh; the version is its manifest's) and, for Nexus Mods, the editor's
-//       ValheimWorldEditor-v<version>-linux-x64.tar.gz and -win-x64.zip. --dry-run checks all it can
+//       Publishes the packages in dist to one site: Thunderstore and Hexium take the plugin only,
+//       WorldEditorBridge-<version>.zip (made by tools/thunderstore.sh; the version is its manifest's);
+//       Nexus Mods takes it, the editor's ValheimWorldEditor-v<version>-linux-x64.tar.gz and -win-x64.zip,
+//       and every add-on's ValheimWorldEditor-addon-<Name>-<its version>.zip (tools/addons.sh), each as a
+//       file of its own on the mod page, made at its first release. --dry-run checks all it can
 //       without publishing: the token, that the version is not on the site yet, the categories, the
 //       files. A version already on the site fails: no site takes a version twice. --notes (Nexus
 //       Mods): the release notes, added to the mod's changelog.
@@ -104,7 +106,8 @@ static string Notes(string changelog, string version, string lastTag, string? no
     return string.Join("\n\n", kept) + $"\n\nFull list: [CHANGELOG.md]({Repo}/blob/main/CHANGELOG.md).\n";
 }
 
-// The release's packages in dist. The editor's are needed only for Nexus Mods (the other sites take the plugin only).
+// The release's packages in dist. The editor's and the add-ons' are needed only for Nexus Mods (the other sites take
+// the plugin only).
 static Release FindRelease(string dist, bool editorToo)
 {
     string[] bridges = Directory.GetFiles(dist, "WorldEditorBridge-*.zip");
@@ -124,7 +127,8 @@ static Release FindRelease(string dist, bool editorToo)
 
     string version = (string)manifest["version_number"]!;
     var release = new Release(version, (string)manifest["name"]!, bridges[0], manifestBytes, icon,
-        Path.Combine(dist, $"ValheimWorldEditor-v{version}-linux-x64.tar.gz"), Path.Combine(dist, $"ValheimWorldEditor-v{version}-win-x64.zip"));
+        Path.Combine(dist, $"ValheimWorldEditor-v{version}-linux-x64.tar.gz"), Path.Combine(dist, $"ValheimWorldEditor-v{version}-win-x64.zip"),
+        editorToo ? AddOnsIn(dist) : []);
     if (editorToo)
     {
         foreach (string file in new[] { release.Linux, release.Windows }.Where(f => !File.Exists(f)))
@@ -135,6 +139,26 @@ static Release FindRelease(string dist, bool editorToo)
 
     Console.WriteLine($"{release.Name} {version}: {bridges[0]}");
     return release;
+}
+
+// The add-ons' zips in dist (ValheimWorldEditor-addon-<Name>-<version>.zip; the name is the add-on's folder's, dashes
+// included), by name.
+static List<AddOn> AddOnsIn(string dist)
+{
+    var addOns = new List<AddOn>();
+    foreach (string zip in Directory.GetFiles(dist, "ValheimWorldEditor-addon-*.zip").Order(StringComparer.Ordinal))
+    {
+        var m = Regex.Match(Path.GetFileName(zip), @"^ValheimWorldEditor-addon-([A-Za-z0-9_.-]+)-([0-9]+\.[0-9]+\.[0-9]+)\.zip$");
+        if (!m.Success)
+        {
+            throw new InvalidDataException($"{zip} is not named ValheimWorldEditor-addon-<Name>-<Major.Minor.Patch>.zip.");
+        }
+
+        addOns.Add(new AddOn(m.Groups[1].Value, m.Groups[2].Value, zip));
+        Console.WriteLine($"add-on {m.Groups[1].Value} {m.Groups[2].Value}: {zip}");
+    }
+
+    return addOns;
 }
 
 static byte[] ReadEntry(ZipArchive zip, string name)
@@ -344,12 +368,11 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
     string modUid = (string)(await V3(http, Get($"{url}/v3/games/{game}/mods/{modId}", auth)))!["id"]!;
 
     string work = Directory.CreateTempSubdirectory("nexus-").FullName;
-    var uploads = new List<(JsonNode File, string Archive)>();
+    var uploads = new List<NexusFile>();
     foreach (var file in site["files"]!.AsArray().OfType<JsonNode>())
     {
         string modFile = Text(file, "modFileId");
-        var versions = (await V3(http, Get($"{url}/v3/mod-files/{modFile}/versions", auth)))!["versions"]!.AsArray();
-        if (versions.Any(v => (string?)v!["version"] == release.Version && (string?)v["category"] is not ("removed" or "archived")))
+        if (await HasVersion(http, url, auth, modFile, release.Version))
         {
             // An earlier run that stopped part way published this one: the rerun does the rest.
             Console.WriteLine($"{Name}: file {modFile} has version {release.Version} already (an earlier run): skipped.");
@@ -364,37 +387,56 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
             "windows" => release.Windows,
             var other => throw new InvalidDataException($"tools/release/sites.json: unknown Nexus package {other}."),
         };
-        uploads.Add((file, archive));
-        Console.WriteLine($"{Name}: {Path.GetFileName(archive)} ({new FileInfo(archive).Length / 1024} KiB) → file {modFile}, \"{Template(file, "name", release)}\".");
+        uploads.Add(new NexusFile(modFile, Template(file, "name", release.Version), Template(file, "description", release.Version), release.Version,
+            (bool)file["updateModVersion"]!, (bool)file["allowModManagerDownload"]!, archive));
     }
 
+    // The add-ons after the rest: a rerun after a run that stopped part way still publishes them.
+    uploads.AddRange(await NexusAddOns(http, url, auth, modUid, site["addOns"]!, release.AddOns));
     if (uploads.Count == 0)
     {
-        throw new InvalidOperationException($"{Name}: every file has a version {release.Version} already. Raise VERSION: no site takes a version twice.");
+        throw new InvalidOperationException($"{Name}: every file has a version {release.Version} already, and every add-on its own. Raise VERSION: no site takes a version twice.");
+    }
+
+    foreach (var upload in uploads)
+    {
+        Console.WriteLine($"{Name}: {Path.GetFileName(upload.Archive)} ({new FileInfo(upload.Archive).Length / 1024} KiB) → {(upload.ModFileId is { } id ? "file " + id : "a new file")}, \"{upload.Name}\".");
     }
 
     if (dryRun)
     {
-        Console.WriteLine($"{Name}: mod {modId} can take version {release.Version} of its {uploads.Count} files.");
+        Console.WriteLine($"{Name}: mod {modId} can take these {uploads.Count} files.");
         return;
     }
 
-    foreach (var (file, archive) in uploads)
+    foreach (var upload in uploads)
     {
-        string upload = await NexusUpload(http, url, auth, archive);
         var body = new JsonObject
         {
-            ["upload_id"] = upload,
-            ["name"] = Template(file, "name", release),
-            ["description"] = Template(file, "description", release),
-            ["version"] = release.Version,
+            ["upload_id"] = await NexusUpload(http, url, auth, upload.Archive),
+            ["name"] = upload.Name,
+            ["description"] = upload.Description,
+            ["version"] = upload.Version,
             ["file_category"] = "main",
-            ["archive_existing_file"] = true,
-            ["update_mod_version"] = (bool)file["updateModVersion"]!,
-            ["allow_mod_manager_download"] = (bool)file["allowModManagerDownload"]!,
+            ["update_mod_version"] = upload.UpdateModVersion,
+            ["allow_mod_manager_download"] = upload.AllowModManagerDownload,
         };
-        await V3(http, Post($"{url}/v3/mod-files/{Text(file, "modFileId")}/versions", body, auth));
-        Console.WriteLine($"{Name}: published {body["name"]}.");
+        if (upload.ModFileId is { } id)
+        {
+            body["archive_existing_file"] = true;
+            await V3(http, Post($"{url}/v3/mod-files/{id}/versions", body, auth));
+        }
+        else
+        {
+            body["mod_id"] = modUid;
+            var made = await V3(http, Post($"{url}/v3/mod-files", body, auth));
+            // The new file's own name, without the version its first version's name has: later releases find it by it.
+            string madeId = (string?)made?["id"] ?? (string?)made?["file"]?["id"]
+                ?? throw new InvalidOperationException($"Nexus Mods: {upload.Name} was published, but Nexus did not say the new file's id: rename it \"{upload.FileName}\" on the site.");
+            await V3(http, Request(HttpMethod.Put, $"{url}/v3/mod-files/{madeId}", new JsonObject { ["name"] = upload.FileName }, auth));
+        }
+
+        Console.WriteLine($"{Name}: published {upload.Name}.");
     }
 
     if (notes is not null)
@@ -404,6 +446,44 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
     }
 
     Console.WriteLine($"{Name}: https://www.nexusmods.com/{game}/mods/{modId}?tab=files");
+}
+
+// Whether a Nexus file has this version already (not removed or archived).
+static async Task<bool> HasVersion(HttpClient http, string url, (string, string)[] auth, string modFile, string version)
+{
+    var versions = (await V3(http, Get($"{url}/v3/mod-files/{modFile}/versions", auth)))!["versions"]!.AsArray();
+    return versions.Any(v => (string?)v!["version"] == version && (string?)v["category"] is not ("removed" or "archived"));
+}
+
+// The add-ons' uploads: each add-on is a file of its own on the mod page, found by the file's name ("Valheim World
+// Editor add-on: Riverheim", its versions named with their version); a new version of it unless it has the add-on's
+// version already (an add-on unchanged since its last release), or a new file at its first release.
+static async Task<List<NexusFile>> NexusAddOns(HttpClient http, string url, (string, string)[] auth, string modUid, JsonNode settings, IReadOnlyList<AddOn> addOns)
+{
+    var files = (await V3(http, Get($"{url}/v3/mods/{modUid}/files", auth)))!["mod_files"]!.AsArray().OfType<JsonNode>()
+        .Where(f => f["is_active"]?.GetValue<bool>() != false).ToList();
+    var uploads = new List<NexusFile>();
+    foreach (var addOn in addOns)
+    {
+        string name = Template(settings, "name", addOn.Version).Replace("{addon}", addOn.Name, StringComparison.Ordinal);
+        string fileName = Text(settings, "fileName").Replace("{addon}", addOn.Name, StringComparison.Ordinal);
+        var found = files.Where(f => (string?)f["name"] is { } n && (n == fileName || n.StartsWith(fileName + " ", StringComparison.Ordinal))).Select(f => (string)f["id"]!).ToList();
+        if (found.Count > 1)
+        {
+            throw new InvalidOperationException($"Nexus Mods: {found.Count} files are named \"{fileName}\": keep one, archive the others.");
+        }
+
+        if (found.Count == 1 && await HasVersion(http, url, auth, found[0], addOn.Version))
+        {
+            Console.WriteLine($"Nexus Mods: the {addOn.Name} add-on has version {addOn.Version} already (unchanged since): skipped.");
+            continue;
+        }
+
+        uploads.Add(new NexusFile(found.SingleOrDefault(), name, Template(settings, "description", addOn.Version).Replace("{addon}", addOn.Name, StringComparison.Ordinal),
+            addOn.Version, UpdateModVersion: false, (bool)settings["allowModManagerDownload"]!, addOn.Zip, fileName));
+    }
+
+    return uploads;
 }
 
 // Uploads a file and waits until Nexus has processed it; returns the upload's id. Up to 100 MiB in one part: its
@@ -565,7 +645,7 @@ static string PlainText(string markdown)
     return text.Replace("**", "", StringComparison.Ordinal).Replace("`", "", StringComparison.Ordinal).Trim();
 }
 
-static string Template(JsonNode file, string key, Release release) => Text(file, key).Replace("{version}", release.Version, StringComparison.Ordinal);
+static string Template(JsonNode file, string key, string version) => Text(file, key).Replace("{version}", version, StringComparison.Ordinal);
 
 // ---- Requests.
 
@@ -625,8 +705,15 @@ static string Text(JsonNode node, string key) => (string?)node[key] ?? throw new
 
 static string[] Texts(JsonNode node, string key) => [.. node[key]!.AsArray().Select(v => (string)v!)];
 
-// One release's packages: the plugin's zip (with its manifest and icon, for the sites' checks) and the editor's.
-internal sealed record Release(string Version, string Name, string Bridge, byte[] Manifest, byte[] Icon, string Linux, string Windows);
+// One release's packages: the plugin's zip (with its manifest and icon, for the sites' checks), the editor's and the
+// add-ons' (for Nexus Mods only; none for the other sites).
+internal sealed record Release(string Version, string Name, string Bridge, byte[] Manifest, byte[] Icon, string Linux, string Windows, IReadOnlyList<AddOn> AddOns);
+
+// An add-on's zip: its name (its folder's), its own version, the file.
+internal sealed record AddOn(string Name, string Version, string Zip);
+
+// A Nexus Mods upload: a new version of an existing file (ModFileId), or a new file (null), named FileName.
+internal sealed record NexusFile(string? ModFileId, string Name, string Description, string Version, bool UpdateModVersion, bool AllowModManagerDownload, string Archive, string? FileName = null);
 
 // A site's error answer, with its HTTP status.
 internal sealed class SiteException(string message, int status) : InvalidOperationException(message)
