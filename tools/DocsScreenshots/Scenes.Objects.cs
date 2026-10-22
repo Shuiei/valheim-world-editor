@@ -163,22 +163,18 @@ public sealed partial class Scenes
     private void PlaceBrushBeforeAfter(Editor e)
     {
         BrushOverGrass(e);
-        // The Place panel is wider than the ground tools' panels: its right edge is kept over the before half.
-        // The circle at the window's middle, where the pair's halves are cut.
+        // Both halves with the Place tool: the View tool shows no preview, and its click places nothing.
+        // The halves are cut right of the Mask card, which sits further right beside the wider Place panel; the panel's
+        // right edge is kept over the before half. The circle in the middle of the before half.
         var at = P(-8, 0);
-        Camera(e, 5, 0, 200, 20, 70);
+        Camera(e, 29, 0, 200, 25, 100);
         Move(e, P(-8, 1));
         e.Send("wait 300");
         Move(e, at);
         e.Send("wait 500");
-        GroundPair(e, "place-brush-before-after.jpg", ("Before the click", "After one click"), () =>
-        {
-            e.Send($"mouse down {at.X} {at.Z}");
-            e.Send($"mouse up {at.X} {at.Z}");
-            // The pointer away, so that the brush's next preview does not cover what was placed.
-            Move(e, P(-8, 90));
-            e.Send("wait 500");
-        }, keep: [new SKRectI(GroundPairLeft, GroundPairTop, 452, 842)]);
+        var (before, after) = ClickBetweenShots(e, at, "place-brush-before-after.jpg", keepMessage: false);
+        Halves(Out("place-brush-before-after.jpg"), ("Before the click", "After one click"), before, after,
+            new HalvesCut(0, Keep: [new SKRectI(GroundPairLeft, GroundPairTop, 452, 842)], From: 770));
     }
 
     /// <summary>

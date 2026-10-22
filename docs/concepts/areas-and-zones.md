@@ -47,9 +47,8 @@ world. Move the area, resize it, or go back to the map and open another place: w
 is saved with the rest. The history comes along too (see [History](saving-and-history.md#history)).
 
 The top bar's arrows move the area one zone (64 m) at a time, and the camera stays where it is in the world. The
-size list opens the area again at another size around the same middle zone. Both, like Follow (below), wait while
-a path is drawn, objects are selected or a stroke is going on; an Area box, a Place line, grid or zone and a measure
-are dropped instead. Opening another area shows hidden objects again.
+size list opens the area again at another size around the same middle zone. Both wait for what Follow waits for,
+and drop what it drops (see [Follow](#follow)). Opening another area shows hidden objects again.
 
 ## The locked edge
 
@@ -78,9 +77,9 @@ becomes 4 × 3, then 4 × 4, and so on.
 Follow only adds zones, it never drops any, so nothing you are working on leaves the area. It stops at 17 zones each
 way (about 1 km) and says so; then move the area with the arrows, or open another place from the map.
 
-Follow waits, and the status bar says why, while growing would lose something: objects are selected, a brush stroke
-is under way, a path is drawn and not applied, or changes are still being sent to a live game. It does not wait for
-an Area box, a Place line, grid or zone or a measure: growing drops them.
+Follow waits, and the status bar says why, while growing would lose something: the world is being saved or read,
+objects are selected, a brush stroke is under way, a path is drawn and not applied, or changes are still being sent to
+a live game. It does not wait for an Area box, a Place line, grid or zone or a measure: growing drops them.
 
 ## Resetting zones
 
@@ -99,6 +98,8 @@ When the reset is written:
   place, with fresh loot and creatures. Live, a zone with a player near it is made again at once.
 
 A zone counts as selected when the selection's outline takes in at least one of its ground points, whatever the soft
-edge, so a selection that crosses into a zone at all resets it. A reset cannot be undone once it is saved or applied; until then, cancel or undo
-the marking. After a reset is written the editor reads the world again, so the history starts over (see
-[History](saving-and-history.md#history)).
+edge, so a selection that crosses into a zone at all resets it.
+
+A reset cannot be undone once it is saved or applied; until then, cancel or undo the marking. After a reset is
+written the editor reads the world again, so the history starts over (see
+[When the history starts over](saving-and-history.md#when-the-history-starts-over)).

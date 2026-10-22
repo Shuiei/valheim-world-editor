@@ -16,7 +16,7 @@ Draw a level road with an even ramp up the hill, paved along its middle.
 8. Press **Apply (Enter)**. The line stays.
 9. To pave it, choose **Paint paved**, make **Width** and **Soft edge** smaller (4 m and 1 m), and press **Apply
    (Enter)** again on the same line.
-10. **Save** (or **Apply live**).
+10. Click **Save to world** (or **Apply live**).
 
 ![A level road cut through two mounds and paved along its middle](../images/path-road.jpg)
 *A road made with Flatten to height through two mounds, then Paint paved (Width 4 m, Soft edge 1 m) on the same
@@ -31,7 +31,8 @@ line.*
 ## Undo it
 
 Each **Apply** is one undo step: `Ctrl+Z` takes back the last one. **Clear (Esc)** removes only the line, not what
-you applied.
+you applied. After saving, undo and save again (see
+[Undo a step, take back one change, or discard everything](undo-changes.md)).
 
 ## Related
 

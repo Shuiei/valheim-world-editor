@@ -32,10 +32,11 @@ saving (the editor asks first), throw them away, or **Reload** a live world (it 
 
 **Discard** throws away what is not saved or applied: it undoes the unsaved steps at the end of the history, newest
 first, redoes saved or applied steps you undid since, and drops the rest of the redo list. Saved and applied steps
-stay. Some pending changes have no step in the open area's
-history (made in another area, or before the world was read again); those can only go by reading the whole world
-again from its files or from the game, which drops every pending change, and Discard asks a second time before it
-does that.
+stay.
+
+Some pending changes have no step in the open area's history (made in another area, or before the world was read
+again). Those can only go by reading the whole world again from its files or from the game, which drops every pending
+change, so Discard asks a second time before it does that.
 
 ## Saving a world
 
@@ -128,8 +129,9 @@ here, nor can the steps before it. Saving or applying from any area marks the st
 
 After each **Save to world** or **Apply live**, the history is written to the editor's data folder (`history/`, one
 file per world folder; live, one per connection and world). Open the world again, even days later, and the steps are
-back (unless a save started the history over, [below](#when-the-history-starts-over)), tagged **earlier session**: undo puts the ground back, a deleted object back with its contents, a placed one
-away. Changes you neither saved nor applied are not kept.
+back, tagged **earlier session** (unless a save started the history over, [below](#when-the-history-starts-over)).
+Undo puts the ground back, a deleted object back with its contents, a placed one away. Changes you neither saved nor
+applied are not kept.
 
 The world may have changed since (players built and dug, or the game saved it again), so the editor asks once before
 the first step from an earlier session is undone or redone: doing it puts things back as they were, over what changed

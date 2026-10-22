@@ -15,8 +15,8 @@ no mod.
 5. Optional: shape the result with **Smooth** (`4`) or **Naturalize** (`0`), which keep working past the limit
    while No limit is on.
 6. Look at the shape from several sides. `Ctrl+Z` takes back a stroke; **Restore** (`5`) takes back part of one.
-7. **Save** (or **Apply live**). The save message says how many ground discs were made and how many trees and rocks
-   were taken away, for example "No limit ground: 312 ground disc(s), 40 tree(s)/rock(s) taken away".
+7. Click **Save to world** (or **Apply live**). The save message says how many ground discs were made and how many
+   trees and rocks were taken away, for example "No limit ground: 312 ground disc(s), 40 tree(s)/rock(s) taken away".
 
 For a whole mountain in one click, use [Mountain](../mountain.md) instead: it always goes past the limit.
 

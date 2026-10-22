@@ -3,8 +3,8 @@
 In about fifteen minutes you build a small wooden hut in the Workshop, watch the support check colour it, keep it
 as a blueprint, and paste it into a world. You need no world for the first part: the Workshop is a blank plot.
 
-**You need:** the editor installed ([Install the editor](install.md)). For the last part, a world you copied first,
-as in [Your first edit](first-edit.md).
+**You need:** the editor installed ([Install the editor](install.md)). For the last part, a world with a backup copy
+beside it, as in [Your first edit](first-edit.md).
 
 ## 1. Open the Workshop
 
@@ -52,7 +52,8 @@ press `T` to go back to building.
 
 1. Click **Save blueprint** in the top bar (or press `Ctrl+S`).
 2. Type `My first hut` as the **Name**, a few words as the **Description**, and `hut, wood` as the **Tags**.
-3. Click **Save**.
+3. Click **Save**. If some pieces would fall in game, the editor asks first: **Keep building** to fix them (they are
+   red), or **Save anyway**.
 
 **What you should see:** the message "Saved the blueprint “My first hut” (… piece(s)) for Homestead.", and the top
 bar says "saved". The blueprint is now in your library, with a picture of the hut. With the
@@ -62,9 +63,10 @@ hammer tab, ready to build in game.
 ## 5. Paste it into a world
 
 1. Click **Start** at the top left to go back to the start page.
-2. Click **A saved world**, then your copied world. On its map, click a spot of open ground you have visited, and
-   click **Edit in 3D**.
-3. On the rail, under **CREATE**, click **Blueprints**.
+2. Click **A saved world**, then your world (not its backup copy). On its map, click a spot of open ground you have
+   visited, and click **Edit in 3D**.
+3. On the rail, under **CREATE**, click **Blueprints**. On a short window, scroll the rail with the mouse wheel to
+   reach it.
 4. Find **My first hut** in the list and click its **Paste** button.
 5. Move the mouse over open ground: the hut follows it, see-through. Press `R` to turn it a quarter.
 6. Click to put it down, then press `Esc` to stop pasting.
@@ -72,9 +74,11 @@ hammer tab, ready to build in game.
 ![The Blueprints panel in a world, with a saved hut](../images/blueprints.jpg)
 *The **Blueprints** panel next to the rail: a saved hut with its picture, cost and its **Paste** button.*
 
-**What you should see:** the hut standing on the ground; the ground in its way is dug out, and the trees and rocks on
-its site are gone. The top bar says "Unsaved: … added". A red outline before the click means the hut does not fit in
-the open area: open a bigger one from the map.
+**What you should see:** the hut standing on the ground. With **Clear the site** on in the Paste panel (it is on at
+first), the ground in its way is dug out and the trees and rocks on its site are gone. The top bar says "Unsaved: …
+added".
+
+A red outline before the click means the hut does not fit in the open area: open a bigger one from the map.
 
 ## 6. Save the world
 
@@ -92,8 +96,8 @@ as your base (see [Player-built pieces](../concepts/objects.md#player-built-piec
 - **The Workshop says Homestead is not installed**: that is fine. Blueprints are saved where Homestead looks for
   them, and pasting into a world works without it.
 - **The paste outline is red**: the hut is too close to the area's edge. Move the mouse inward, or open a bigger area.
-- **You do not like the result**: `Ctrl+Z` takes the paste back before you save. After saving, see
-  [Undo a step, take back one change, or discard everything](../guides/undo-changes.md).
+- **You do not like the result**: `Ctrl+Z` takes the paste back before you save. After saving, undo it and **Save to
+  world** again: see [Undo a step, take back one change, or discard everything](../guides/undo-changes.md).
 
 ## Next
 

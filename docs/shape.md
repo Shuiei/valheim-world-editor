@@ -71,8 +71,9 @@ Two more to start from: `h * smooth(1 - d / r) * (1 + 0.3 * n(x / 8, z / 8))` is
 
 ## Tips and limits
 
-- **The game's ±8 m limit applies**: a shape stops 8 m from the generated ground, and the status bar says so. Turn
-  on **No limit** in the [brush settings](terrain.md#no-limit) for taller shapes.
+- **The game's ±8 m limit applies**: a shape stops 8 m from the generated ground, and the status bar says so. For
+  taller shapes, choose any sculpt brush, tick **No limit** at the bottom of its panel, then come back to Shape: the
+  switch stays on. See [No limit](terrain.md#no-limit).
 - **The [Mask](masks.md) applies**: where it leaves ground out, the shape stops in a step.
 - **A formula that gives 0 everywhere** changes nothing, and the status bar says so. Points where it gives no number
   (a division by zero) are left as they were.

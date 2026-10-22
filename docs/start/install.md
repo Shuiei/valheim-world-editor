@@ -124,8 +124,7 @@ Until the game runs, **My game** says what is missing, step by step.
 ![My game before setup: the card "Your game needs BepInEx and the WorldEditorBridge plugin" with its three steps](../images/start-game-setup.jpg)
 ***My game** before BepInEx is installed: the three steps, done once. The page notices the game by itself once it runs.*
 
-Then follow
-[Edit the world you are playing](../guides/edit-your-game-live.md).
+Then follow [Edit the world you are playing](../guides/edit-your-game-live.md).
 
 For a **dedicated server**, install BepInEx (following BepInExPack's instructions for dedicated servers) and copy
 `WorldEditorBridge.dll` into the server's `BepInEx/plugins` (or install the plugin in a mod manager's server

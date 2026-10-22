@@ -93,7 +93,9 @@ not answer: is the server running, and started with BepInEx (not the plain start
 With **I made my own tunnel**, "Nothing answers on 127.0.0.1:…" or "No answer from 127.0.0.1:… within … s" means your
 tunnel is not open, or the server is not running with the plugin.
 
-<!-- picture: start-server-error.jpg: start page, A dedicated server form filled in with a test address, user and token, Server's Valheim folder empty, the orange message "The tunnel is open, but the plugin does not answer on the server: …" under the Connect button -->
+![The A dedicated server form filled in for 127.0.0.1, SSH port 2222, after Connect: the message "No answer from 127.0.0.1:2222" under the button](../images/start-server-error.jpg)
+*Connect pressed with nothing answering at the address: "No answer from 127.0.0.1:2222. Check the address and that SSH
+is enabled on the server." Check **Server address** and **SSH port**.*
 
 ## A world will not open or is greyed out
 
@@ -145,8 +147,11 @@ A running game keeps the world in memory and writes over the files. If it saved 
 ![The question The game saved this world: what happened, what Bring my changes over does, and the Bring my changes over and Not now buttons](../images/game-saved-replay.jpg)
 *Save refused because the game saved the world after the editor read it: **Bring my changes over** makes your changes again on the game's save.*
 
-**Not now** leaves everything as it was. Bringing your changes over may drop some History steps (the message says how many). To avoid it,
-close the game before you save, or edit live. More in [Saving a world](../concepts/saving-and-history.md#saving-a-world).
+**Not now** leaves everything as it was. Bringing your changes over may drop some History steps (the message says
+how many).
+
+To avoid it, close the game before you save, or edit live. More in
+[Saving a world](../concepts/saving-and-history.md#saving-a-world).
 
 ## A live change does not show
 
@@ -207,7 +212,8 @@ Auto off. Scripts need **Claude may run scripts**. See [Claude](../claude.md).
 The output box under the script says what happened, and nothing changed in every case:
 
 - "The script has mistakes": a typing or C# mistake, listed with its line (`line 4: The name 'Groud' does not exist
-  in the current context`). Fix that line.
+  in the current context`). Fix that line. "The script has no statement to run" below it means the box is empty or
+  holds only comments: write at least one line of code, or load an example.
 - "The script stopped with an error": it failed while running, at the line given (an object name the editor cannot
   make, a paint or mountain preset it does not know, a size of 0 or less, a division by zero).
 - "The script ran and changed nothing.": use `Print` to check that your loop finds what you expect.

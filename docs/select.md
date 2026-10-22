@@ -3,7 +3,7 @@
 Pick objects to move, turn, lift, copy, replace or delete them, or open one in the Inspector to see and change what
 it holds.
 
-**Where:** tool rail, TOOLS section · **Key:** `E` · **Works in:** saved worlds, live, the Workshop
+**Where:** tool rail, **TOOLS** section · **Key:** `E` · **Works in:** saved worlds, live, the Workshop
 
 ![A rock selected, with its arrows and ring](images/select-arrows.jpg)
 *Close on a selected rock: its orange outline, the red X, green Y and blue Z arrows that move it along one axis, and
@@ -208,8 +208,8 @@ All the editor's keys are in [Shortcuts](help/shortcuts.md).
 > its location whenever the zone loads, so deleting one removes that location for good (with the small levelling of
 > the ground around it). Save to world makes it permanent; until then `Ctrl+Z` brings it back.
 
-- **Recover:** deleted or moved by mistake: `Ctrl+Z`. Hid something: `Alt+H`. Saved already: see
-  [Undo changes](guides/undo-changes.md).
+- **Recover:** deleted or moved by mistake: `Ctrl+Z`, after saving too (then save again). Hid something: `Alt+H`.
+  See [Undo changes](guides/undo-changes.md).
 - Boxes, zones, **All**, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the
   ground (objects a mod hides there, such as crafting stations under a house).
 - A click picks an object by its drawn shape, not its box: a stone under a tree's branches can be clicked between the

@@ -96,6 +96,8 @@ A few rules worth knowing:
 
 - `open_world` is refused while the open world or the Workshop has changes not saved.
 - `save_blueprint` saves the Workshop's building only when asked, and never replaces a blueprint unless told to.
+  Saving a blueprint again keeps its description and tags.
+- `generate_dungeon` refuses a biome, style or wall material it does not know, and lists the ones it does.
 - `move_objects` keeps a building's shape, and a part of a mod's linked group (a ship and its pieces) brings its whole
   group, also for copies and removals.
 - A dungeon Claude generates on the Workshop's plot is part of the plot's building, pending like the rest; it is not

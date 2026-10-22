@@ -45,7 +45,7 @@ bar saying "All saved". If the view is far away, scroll the wheel to come closer
 *Raise: the brush's outline on the ground, a mound raised beside it, and the panel with **Size** and **Strength**.*
 
 **What you should see:** the ground rises under the brush, and the top bar says "Unsaved: 1 zone" in amber. Nothing
-is written to the world yet: the change is **pending**.
+is written to the world yet: the change is [pending](../concepts/saving-and-history.md#pending-changes).
 
 ## 4. Plant trees
 
@@ -66,9 +66,10 @@ saved yet), and the top bar adds "… added".
 2. Press `Ctrl+Y`. They come back.
 3. Press `L` to open **History**.
 
-**What you should see:** History lists your steps, newest first: "Placed …", then Raise. **Back to here** on a row goes
-back to it, **Remove** takes out that one change only. Press `L` again to close it. More:
-[Undo a step, take back one change, or discard everything](../guides/undo-changes.md).
+**What you should see:** History lists your steps, newest first: "Placed …", then Raise. **Back to here** on a row
+goes back to it; **Remove** takes out that one change only. Press `L` again to close it.
+
+More: [Undo a step, take back one change, or discard everything](../guides/undo-changes.md).
 
 ## 6. Save
 
@@ -81,6 +82,8 @@ back to it, **Remove** takes out that one change only. Press `L` again to close 
 
 **What you should see:** the status bar says "Saved 1 zone(s), … new object(s) to save #…", the top bar says "All
 saved", and the green dots are gone. The editor wrote a new save next to the old one and read it back to check it.
+
+The world stays open with its History: you can still undo a step and save again to take it back.
 
 ## 7. See it in game
 
@@ -98,11 +101,13 @@ saved", and the green dots are gone. The editor wrote a new save next to the old
   game, use the hoe or the pickaxe once anywhere, save, quit, and save again in the editor.
 - **"Valheim saved this world … after the editor read it"**: the game was running, or saved the world, while you
   edited. See [Save to world](../editor-basics.md#save-to-world).
-- **You do not like the result**: open the world again and undo (or **Remove** the steps in History), then save. Or
-  put the copy back: see [Back up a world before editing](../guides/back-up-a-world.md#undo-it).
+- **You do not like the result**: open the world again, undo (or **Remove** the steps in History), then **Save to
+  world**. Or put the copy back: see [Back up a world before editing](../guides/back-up-a-world.md#undo-it).
 
 ## Next
 
 - [Your first build](first-build.md): build a hut in the Workshop and paste it into this world.
 - [The editor window](../editor-basics.md): every part of the window.
 - [Shortcuts](../help/shortcuts.md): every key and mouse action.
+
+In the editor, `F1` (or the small **?** at the top of a panel) opens this help at the tool you are using.

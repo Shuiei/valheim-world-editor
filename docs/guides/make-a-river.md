@@ -18,7 +18,7 @@ its bed is below 30 m.
 6. For a pond, press `B` ([Area](../area.md)), choose **Polygon** and click round the pond.
 7. Choose **Flatten**, type a **Height** below 30 m (28 m makes water 2 m deep), set **Soft edge** to about 5 m for
    gentle banks, and press **Flatten (Enter)**.
-8. **Save** (or **Apply live**).
+8. Click **Save to world** (or **Apply live**).
 
 ![A river dug across the zone, the water shown](../images/path-river.jpg)
 *A river dug with River / canal (water): the sea fills it.*
@@ -33,7 +33,8 @@ its bed is below 30 m.
 ## Undo it
 
 `Ctrl+Z` takes back the last **Apply** or **Flatten**. The **Restore** brush (`5`) gives back the generated ground
-in one place.
+in one place. After saving, undo and save again (see
+[Undo a step, take back one change, or discard everything](undo-changes.md)).
 
 ## Related
 

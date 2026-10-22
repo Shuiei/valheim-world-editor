@@ -65,7 +65,8 @@ on the cliff cut into it. The View panel shows **Slope colours** ticked under **
 ## Tips and limits
 
 - **The measure changes nothing** in the world and is not saved.
-- **A and B are read when you click.** After you change the ground, measure again.
+- **The readouts follow the ground.** Change the ground with another tool and come back to Measure, or undo: the
+  heights, slope and lowest and highest points are read again at the same A and B.
 - **Plan a ramp:** measure from its foot to its top. **Slope** is the slope the [Path](path.md) tool's **Ramp** gives
   along a straight line between the same points.
 - **Limit marks**, in the same View panel, tints red the ground that reached the game's ±8 m. See

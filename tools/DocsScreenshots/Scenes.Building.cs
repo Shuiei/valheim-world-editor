@@ -306,8 +306,8 @@ public sealed partial class Scenes
     private static void PlanPicture(string top, IReadOnlyList<string> levels, string to)
     {
         // The plan box and the Level buttons under it; the summary under those (window pixels).
-        var plan = new SKRectI(108, 376, 390, 600);
-        var summary = new SKRectI(108, 600, 390, 652);
+        var plan = new SKRectI(108, 464, 390, 688);
+        var summary = new SKRectI(108, 688, 390, 742);
         const float Scale = 1.6f, Left = 456, Top = 120, Gap = 24;
         using var window = LoadBitmap(top);
         using (var canvas = new SKCanvas(window))
@@ -377,8 +377,8 @@ public sealed partial class Scenes
         e.Send("wait 4000");
         // No spawn point markers or birds in front of the entrance.
         ToggleSpawnsAndCreatures(e);
-        // The summary and the Go to buttons in the panel, the line under them below its edge.
-        e.Scroll(250, 500, -2);
+        // The summary and the Go to buttons in the panel, the note under them.
+        e.Scroll(250, 500, 2);
         Camera(e, 3, 1, 200, 10, 17);
         e.Send("wait 1000");
         e.Shot(Out("dungeon-entrance.jpg"));
@@ -406,7 +406,7 @@ public sealed partial class Scenes
         e.Send("wait 1500");
         e.Send("set Cut 4 m above the floor|2");
         // Closer, with the wheel over the rooms in the middle of the view (Go to the dungeon frames them from afar).
-        e.Scroll(730, 470, -4);
+        e.Scroll(730, 470, -2);
         // Off the rooms (onto the sky), so none is marked as hovered.
         e.Point(1300, 150);
         e.Send("wait 1500");
@@ -464,7 +464,9 @@ public sealed partial class Scenes
         e.Send("camera -650 -350 30 85 75 5035");
         e.Send("type Find a room|icecorridor");
         e.Send("wait 500");
-        ClickWindow(e, 182, 487);
+        ClickWindow(e, 182, 527);
+        // The panel's last line (rooms and open ends) up into view, the wheel over its text above the list.
+        e.Scroll(250, 230, 1);
         e.Point(765, 335);
         e.Send("wait 800");
         e.Shot(Out("dungeon-add-room.jpg"));

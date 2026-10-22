@@ -4,7 +4,7 @@ Find your way around the editor: the start page, the 3D window with its top bar,
 saving, History and the View panel.
 
 **Where:** the start page opens first; a world opens on its [map](map.md), then **Edit in 3D** · **Key:** `?` or
-`F3` for the help card · **Works in:** saved worlds, live, the Workshop
+`F3` for the help card, `F1` for this help at the tool in use · **Works in:** saved worlds, live, the Workshop
 
 ![The 3D editor with Raise chosen: tool rail, Raise's panel, top bar, View panel and status bar](images/overview.jpg)
 *A small base in a 3 × 3 area, the Raise brush chosen (its ring on the grass). Left: the tool rail and the tool's
@@ -20,8 +20,7 @@ panel. Top: the top bar. Right: the View panel. Bottom: the status bar, reading 
 5. Look over what is waiting in the top bar's pending line, then **Save to world** (or **Apply live**).
 6. To take a change back, press `Ctrl+Z`, or open **History** (`L`).
 
-Every change waits as **pending** until you save or apply it: see
-[Pending changes](concepts/saving-and-history.md#pending-changes).
+Every change waits as [pending](concepts/saving-and-history.md#pending-changes) until you save or apply it.
 
 ## The start page
 
@@ -177,7 +176,8 @@ what could not be, with the reason:
   Edit the ground once anywhere in game first.
 
 After a save the area and History stay as they were. To take a saved change back, undo it (or **Remove** it in
-History) and save again. How a save is written and checked: see
+History) and save again: the save takes it out of the world. When nothing is left of what you saved, the message says
+the world is as you opened it again. How a save is written and checked: see
 [Saving a world](concepts/saving-and-history.md#saving-a-world).
 
 **When the game saved since.** If the game saved the world after the editor read it, nothing is saved: saving would
@@ -206,8 +206,9 @@ and drops every pending change of the whole world.
 
 ### Leaving and closing
 
-**Map**, the arrows and the size list keep everything pending. Closing the window with changes pending asks first
-(**Quit anyway** / **Keep editing**): changes you neither saved nor applied are lost when you quit.
+**Map**, the arrows and the size list keep everything pending. Leaving the world for the start page (**Worlds** on
+the map) and closing the window lose what is pending, so both ask first: **Leave anyway** / **Stay**, and **Quit
+anyway** / **Keep editing**.
 
 ## History
 

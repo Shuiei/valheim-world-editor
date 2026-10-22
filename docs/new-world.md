@@ -136,7 +136,7 @@ you choose it. Wishes for traders or bosses make the search a few times slower.
 |---|---|
 | `Enter` (in the seed box) | Show the seed's world |
 | Mouse wheel | Zoom where the pointer is |
-| Drag | Move the map |
+| Drag | Move the map (from anywhere, a mark included) |
 | Double click | Show the whole world again |
 | **+**, **−**, **⤢** (bottom right) | Closer, farther, all of the world |
 

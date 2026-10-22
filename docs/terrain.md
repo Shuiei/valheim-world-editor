@@ -20,7 +20,7 @@ no mod. Each stroke is one undo step (`Ctrl+Z`).
 3. Hold the left mouse button on the ground and move. The brush keeps working while the button is down, so holding
    still works the same spot more and more.
 4. Let go. The whole stroke is one undo step, named after the brush ("Raise").
-5. To keep the change, **Save** (or **Apply live** in [live mode](live-mode.md)). Until then it is
+5. To keep the change, **Save to world** (or **Apply live** in [live mode](live-mode.md)). Until then it is
    [pending](concepts/saving-and-history.md#pending-changes).
 
 The ring on the ground follows the hills under it and shows the brush's shape: a square or a stamp shows its turned
@@ -202,8 +202,8 @@ message and the cursor readout ends "at the ±8 m limit".*
 
 **No limit: past the game's ±8 m**, at the bottom of the brush settings, lets the ground tools go up to 400 m from the
 generated ground: cliffs, canyons, spires, deep caves. It works with every sculpt brush, Stamp once,
-[Shape](shape.md), [Path](path.md) and [Area](area.md) (the same switch shows there). It is off each time the editor
-starts. [Mountain](mountain.md) and pasting a copied place always go past the limit.
+[Shape](shape.md), [Path](path.md) and [Area](area.md) (the Area panel shows the same switch). It stays on for every
+tool until you switch it off, and is off each time the editor starts. [Mountain](mountain.md) and pasting a copied place always go past the limit.
 
 > [!IMPORTANT]
 > Saving No limit ground reads the area again from the world and **clears its History**: you cannot undo past that

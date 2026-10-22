@@ -104,15 +104,15 @@ commands:
       - checkout
       - run:
           name: OpenSSH server (the tunnel's tests) and fonts (Avalonia headless)
-          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
+          command: tools/ci-apt.sh openssh-server libfontconfig1 && mkdir -p /run/sshd
       - when:
           condition: << parameters.display >>
           steps:
             - run:
                 name: Xvfb and Mesa's software OpenGL (the visual tests' virtual screen)
                 command: |
-                  apt-get install -y -qq --no-install-recommends xvfb xauth libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 \
-                    libgles2 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 > /dev/null
+                  tools/ci-apt.sh --no-install-recommends xvfb xauth libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 \
+                    libgles2 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6
             # For the rest of the job (the tests' step finds it at :99). The image's keyboard layouts name
             # keys newer than its X libraries know: the keymap compiler's warnings about them (harmless,
             # not fatal) are left out, anything else Xvfb says is kept.
@@ -160,13 +160,26 @@ commands:
             # in /tmp/test-runs, out of the artifacts; its output in /tmp/test-runs/output.log, for the
             # next step.
             mkdir -p /tmp/test-runs
+            classes=/tmp/test-runs/classes.txt
             dotnet test --project << parameters.project >> -c Release --no-build --no-ansi --no-progress --list-tests \
-              | sed -n 's/^  \([A-Za-z_]\)/\1/p' | sed 's/(.*//; s/\.[^.]*$//' | sort -u \
-              | circleci tests run --split-by=timings --timings-type=classname --verbose --command="sed 's/^/--filter-class=/' \
-                  | xargs dotnet test --project << parameters.project >> -c Release --no-build --no-ansi --no-progress --output Detailed \
-                      --results-directory /tmp/test-runs $coverage \
-                      --report-spekt-junit --report-spekt-junit-filename /tmp/test-results/<< parameters.results >>/results.xml" \
+              | sed -n 's/^  \([A-Za-z_]\)/\1/p' | sed 's/(.*//; s/\.[^.]*$//' | sort -u > "$classes"
+            run="sed 's/^/--filter-class=/' \
+              | xargs dotnet test --project << parameters.project >> -c Release --no-build --no-ansi --no-progress --output Detailed \
+                  --results-directory /tmp/test-runs $coverage \
+                  --report-spekt-junit --report-spekt-junit-filename /tmp/test-results/<< parameters.results >>/results.xml"
+            set +e
+            circleci tests run --split-by=timings --timings-type=classname --verbose --command="$run" < "$classes" \
               2>&1 | tee /tmp/test-runs/output.log
+            status=${PIPESTATUS[0]}
+            # "Rerun failed tests" after a failure that was no test's (a step before the tests stuck, its
+            # container killed): there is no failed test to run again, and circleci tests run gives up. This
+            # container's share runs whole instead.
+            if [ "$status" -ne 0 ] && grep -q "no failed tests could be found" /tmp/test-runs/output.log; then
+              circleci tests split --split-by=timings --timings-type=classname < "$classes" | bash -c "$run" \
+                2>&1 | tee /tmp/test-runs/output.log
+              status=${PIPESTATUS[1]}
+            fi
+            exit "$status"
       # A test process that crashed, or was stopped stuck, writes no results: one failed test in their
       # place, so CircleCI shows it and "Rerun failed tests" runs its class again. Its class is the stuck
       # test's (the hang dump's log: "[00:05:00] WorldEditor.Tests.SomeTests.AMethod"), else the test
@@ -248,7 +261,7 @@ jobs:
       - run:
           name: XML files are well formed (projects, coverage settings)
           command: |
-            apt-get update -qq && apt-get install -y -qq libxml2-utils > /dev/null
+            tools/ci-apt.sh libxml2-utils
             git ls-files -z '*.csproj' '*.props' '*.targets' '*.runsettings' '*.xml' | xargs -0 xmllint --noout
       - run:
           name: Analyzers (every warning is an error)
@@ -342,7 +355,7 @@ jobs:
       - run:
           name: The add-ons' zips
           command: |
-            apt-get update -qq && apt-get install -y -qq zip > /dev/null
+            tools/ci-apt.sh zip
             tools/addons.sh /tmp/addons
       - store_test_results:
           path: /tmp/test-results
@@ -365,7 +378,7 @@ jobs:
       - checkout
       - run:
           name: gpg (Codecov's CLI is checked against its signature)
-          command: apt-get update -qq && apt-get install -y -qq gnupg > /dev/null
+          command: tools/ci-apt.sh gnupg
       - attach_workspace:
           at: /tmp/coverage
       - run:
@@ -399,7 +412,7 @@ jobs:
       - run:
           name: Tools for packaging
           command: |
-            apt-get update -qq && apt-get install -y -qq zip > /dev/null
+            tools/ci-apt.sh zip
             # rcodesign signs the Mac app (ad hoc) on Linux; pinned and checked against its release's checksum.
             v=0.29.0; f=apple-codesign-$v-x86_64-unknown-linux-musl
             curl -fsSL -o /tmp/$f.tar.gz "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F$v/$f.tar.gz"
@@ -419,8 +432,8 @@ jobs:
           name: Smoke test of the Linux package (Xvfb, Mesa's software OpenGL)
           no_output_timeout: 5m
           command: |
-            apt-get install -y -qq xvfb xauth mesa-utils libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 libgles2 \
-              libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 libfontconfig1 > /dev/null
+            tools/ci-apt.sh xvfb xauth mesa-utils libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 libgles2 \
+              libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 libfontconfig1
             mkdir -p /tmp/smoke && tar -C /tmp/smoke -xzf /tmp/dist/ValheimWorldEditor-*-linux-x64.tar.gz
             # The OpenGL the virtual screen offers (Mesa's software renderer, llvmpipe).
             xvfb-run -a -s "-screen 0 1600x1000x24" glxinfo -B | grep -E 'renderer|version' || true
@@ -501,7 +514,7 @@ jobs:
       - run:
           name: Tools (zip, SteamCMD's 32-bit libraries, GitHub's CLI, SSH for git fetch, ssign and osslsigncode)
           command: |
-            apt-get update -qq && apt-get install -y -qq zip unzip lib32gcc-s1 openssh-client osslsigncode > /dev/null
+            tools/ci-apt.sh zip unzip lib32gcc-s1 openssh-client osslsigncode
             gh=2.63.2
             curl -fsSLO "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_linux_amd64.tar.gz"
             curl -fsSL "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_checksums.txt" | grep "gh_${gh}_linux_amd64.tar.gz" | sha256sum -c -

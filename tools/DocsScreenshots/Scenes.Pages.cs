@@ -520,6 +520,52 @@ public sealed partial class Scenes
     }
 
     /// <summary>
+    /// start-server-error.jpg: A dedicated server filled in and Connect pressed, the message under the form saying the
+    /// server does not answer. The address is this computer on a port where nothing listens (no server is ever reached:
+    /// the connection is refused at once).
+    /// </summary>
+    private void StartServerError(Editor e)
+    {
+        WaitForLook(e);
+        e.Send("click A dedicated server");
+        e.Send("wait 800");
+        e.Send("type my.server.com or 203.0.113.10|127.0.0.1");
+        e.Send($"set SSH port|{UnusedPort()}");
+        e.Send("type the account you log in with|valheim");
+        e.Send("type or use a key file below|password");
+        e.Send("type the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server|5f0c2a9e41d87b36");
+        e.Send("click Connect");
+        e.Send("wait 3000");
+        e.Shot(Out("start-server-error.jpg"));
+    }
+
+    /// <summary>
+    /// A TCP port of this computer where nothing listens: 2222 when it is free (a plain number in the picture), else one
+    /// the system gives out and takes back.
+    /// </summary>
+    private static int UnusedPort()
+    {
+        foreach (int wanted in new[] { 2222, 0 })
+        {
+            var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, wanted);
+            try
+            {
+                probe.Start();
+                return ((System.Net.IPEndPoint)probe.LocalEndpoint).Port;
+            }
+            catch (System.Net.Sockets.SocketException ex) when (wanted != 0)
+            {
+                Console.WriteLine($"start-server-error: port {wanted} is taken ({ex.SocketErrorCode}), another one is used");
+            }
+            finally
+            {
+                probe.Stop();
+            }
+        }
+        throw new InvalidOperationException("no free port");
+    }
+
+    /// <summary>
     /// settings.jpg (Settings from Language down to History and Save, Claude off: its top and its end side by side)
     /// and settings-claude.jpg (Claude switched on and listening, its section beside the end of Settings, the token
     /// and the program's path replaced after the shot). The app runs from the stand-in home (Program.cs), so the

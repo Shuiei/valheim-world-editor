@@ -128,4 +128,25 @@ public sealed partial class Scenes
 
     /// <summary>Runs xdotool with these arguments (RunOnDisplay); its output, trimmed.</summary>
     private static string RunXdotool(params string[] args) => RunOnDisplay("xdotool", args).Trim();
+
+    /// <summary>
+    /// A picture before and after one click of the tool in hand at a point: the pointer is put on the sky between the
+    /// click and the second picture, so no preview of the tool covers what the click did.
+    /// </summary>
+    /// <param name="e">The editor.</param>
+    /// <param name="at">The world point clicked.</param>
+    /// <param name="file">The final picture's name: the two are named before-… and after-… of it.</param>
+    /// <param name="keepMessage">Keep the status bar's message in the second picture.</param>
+    /// <returns>The two pictures' paths, for <see cref="Halves"/>.</returns>
+    private (string Before, string After) ClickBetweenShots(Editor e, (double X, double Z) at, string file, bool keepMessage)
+    {
+        string before = Out("before-" + file), after = Out("after-" + file);
+        e.Shot(before);
+        e.Send($"mouse down {at.X} {at.Z}");
+        e.Send($"mouse up {at.X} {at.Z}");
+        e.Point(1300, 150);
+        e.Send("wait 500");
+        e.Shot(after, keepMessage: keepMessage);
+        return (before, after);
+    }
 }

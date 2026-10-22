@@ -46,7 +46,7 @@ and [Hexium](https://valheim.hexium.gg/mods/Tie/WorldEditorBridge).
 2. [Back up a world](docs/guides/back-up-a-world.md), then follow [your first edit](docs/start/first-edit.md):
    raise a hill, plant trees, save, and see it in game.
 3. Pick a way to edit on the start page: **My game** or **A dedicated server** (live), or **A saved world** with the
-   game closed.
+   game closed. In the editor, `F1` opens the help at the tool you are using.
 
 ## Documentation
 
@@ -72,11 +72,15 @@ What changed and when: [CHANGELOG.md](CHANGELOG.md).
 ## Safety
 
 Nothing is written until you press **Save to world** or **Apply live** (or, live with **Auto** on, as you make each
-change), and every offline save is read back and checked before the old one goes. The plugin only listens on the
-computer it runs on and needs a secret token; everything happens on your computer, and nothing is sent anywhere else,
-except what you let Claude see when you connect it (the area's data and pictures of the view go to your Claude app). Keep your own copy of a world you care about
-anyway: see [Back up a world before editing](docs/guides/back-up-a-world.md). The details:
-[Safety](docs/concepts/safety.md). Found a security problem? Report it privately, see [SECURITY.md](SECURITY.md).
+change), and every offline save is read back and checked before the old one goes.
+
+The plugin only listens on the computer it runs on and needs a secret token. Everything happens on your computer and
+nothing is sent anywhere else, except what you let Claude see when you connect it (the area's data and pictures of the
+view go to your Claude app).
+
+Keep your own copy of a world you care about anyway: see
+[Back up a world before editing](docs/guides/back-up-a-world.md). The details: [Safety](docs/concepts/safety.md).
+Found a security problem? Report it privately, see [SECURITY.md](SECURITY.md).
 
 ## For developers
 

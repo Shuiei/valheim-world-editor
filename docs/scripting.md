@@ -3,7 +3,7 @@
 Write a few lines of C# that shape, paint and fill the open area by rule: a mountain range, a forest only on gentle
 slopes, terraces, a paved square at exactly the average height.
 
-**Where:** tool rail, CREATE section · **Key:** none (`Ctrl+Enter` runs the script) · **Works in:** saved worlds, live
+**Where:** tool rail, **CREATE** section · **Key:** none (`Ctrl+Enter` runs the script) · **Works in:** saved worlds, live
 (not the Workshop)
 
 ![The Script tool: the Terraced hill example run on a 3 × 3 area, its code in the panel and the result line under it](images/script.jpg)
@@ -16,7 +16,7 @@ You need nothing installed: the editor compiles the script itself. If you have n
 ## Use it
 
 1. Open an area in the 3D editor. A script works on the **open area** (the zones you see).
-2. Choose **Script** in the CREATE section of the tool rail.
+2. Choose **Script** in the **CREATE** section of the tool rail.
 3. Pick an example or a saved script in the list, or write your own in the code box.
 4. Press **Run (Ctrl+Enter)**. The output box shows "Compiling…", "Running…", then what the script printed and
    what it changed, or what went wrong.
@@ -301,6 +301,8 @@ The output box says what happened; the status bar says it in short. In every cas
 - **Errors** while it runs stop it, with their line: an object name the editor cannot make (`the editor cannot make
   a “Beech” (a prefab name, like Beech1 or rock4_forest)`), a paint or mountain preset it does not know (the message
   lists the right ones), a size of 0 or less in `Move`, a division by zero…
+- "**The script has no statement to run**": the code box is empty or holds only comments. Write at least one line
+  of code, or pick an example in the list.
 - "**The script ran and changed nothing.**" Check with `Print` that your loop finds what you expect: a kind name
   spelled differently, points outside the area or on its edge.
 - "**The area changed while the script ran: nothing changed. Run it again.**" You edited, undid or saved while it

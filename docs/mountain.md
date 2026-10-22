@@ -42,7 +42,7 @@ cone with its crater, a few gentle hills with saddles between them.*
 | **Turn** | **Ridge** and **Mountain range** only: the direction it runs, 0° to 179°. |
 | **Seed** | The number its detail comes from: the same preset, values and seed make the same mountain again. |
 | **Randomize** | A new mountain of the preset: new size, roughness, direction and seed. If it would not fit in the open area, it is made smaller as a whole, height too, so the slopes stay as gentle. |
-| **Take away the trees and rocks it buries** | On at first. Trees, rocks, ore, bushes and pickables where it raises the ground more than 2 m are taken away (saving would do it anyway). Building pieces stay. |
+| **Take away the trees and rocks it buries** | On at first. Trees, rocks, ore, bushes and pickables where it raises the ground more than 2 m are taken away (saving would do it anyway). Building pieces stay, and so does what is in a dungeon high above. |
 | **Grow the biome's trees and rocks on it** | On at first. Grows the biome's own trees and rocks, by the game's rules, on the slopes it raised by more than a metre, away from what already stands there. A second undo step. |
 
 ## Presets

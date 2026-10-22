@@ -17,7 +17,8 @@ bushes and pickables inside. Nothing has changed yet: the button at the bottom d
    does.
 4. Press the button at the bottom, or `Enter`. Its label names the action: **Flatten (Enter)**, **Remove the objects
    (Enter)**, **Regrow nature (Enter)**…
-5. Not right? `Ctrl+Z` takes it back: each action is one step in History. **Save** (or **Apply live**) keeps it.
+5. Not right? `Ctrl+Z` takes it back: each action is one step in History. **Save to world** (or **Apply live**)
+   keeps it.
 
 The chosen action is remembered. The [Mask](masks.md), on its own card next to the panel, limits the ground actions
 and Remove, Select, Regrow and Restore from a backup to the ground it lets through.
@@ -125,10 +126,12 @@ A copy holds:
 - **The objects, with all their data**: a chest's contents, a sign's text, their health, who built them.
 - **The ground under the buildings only**: under each building piece plus 1 m, fading out over 3 more metres. The
   rest of the selection's ground is not copied, so a pasted town sits in the land it lands on.
-- **Heights relative to the copy's average ground**, which goes to the height of the ground where you click.
+- **Heights two ways.** Trees, rocks and other nature keep their height above the ground and follow the ground
+  where each one lands. Building pieces and the parts of a linked group (a mod's ship) keep the building's shape,
+  measured from the copy's average ground, which goes to the height of the ground where you click.
 
-The [Select](select.md) tool's copy differs: trees and rocks each land on the ground, while building pieces keep the
-building's shape.
+The [Select](select.md) tool's copy holds only the objects you selected, and the ground under their building pieces
+without its paint. It pastes the same way.
 
 ### Pasting
 

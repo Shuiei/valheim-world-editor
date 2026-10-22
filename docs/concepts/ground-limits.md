@@ -34,7 +34,7 @@ What this means in practice:
 
 The **No limit: past the game's ±8 m** switch lets the ground tools move the ground up to 400 m from the generated
 ground: mountains, cliffs, canyons, deep caves. It is in the brush options and under the Area tool's Flatten, Raise
-and Lower (the same switch), and it is off each time the editor starts. The [Mountain](../terrain.md) tool and
+and Lower (the same switch), and it is off each time the editor starts. The [Mountain](../mountain.md) tool and
 pasting a copy always go past the limit when they need to, and scripts do unless told not to.
 
 While you work, the part past ±8 m is kept as a separate lift on top of the ground; undo, History and **Restore** treat
@@ -50,7 +50,9 @@ The game never keeps ground edits past 8 m, but it does level the ground under i
 trader's camp) without any limit, and counts that levelled ground as generated (see
 [Locations level the ground](#locations-level-the-ground)). The editor uses this. When you save or apply live, it
 turns ground past the limit into **ground discs**: invisible locations of the game's own, with no model. Each disc
-levels a circle of 8 m radius to its height and blends the ground around it out to about 13 m.
+levels a circle of 8 m radius to its height and blends the ground around it out to about 13 m: just past the circle the
+ground goes about three quarters of the way to the disc's height (the game counts the blend from the disc's middle, so it
+starts with a small step), then less and less, to nothing at 13 m.
 
 1. Discs go on a 6 m grid, only where your ground is more than 5 m away from what the ground would be without them.
 2. The editor works out the ground exactly as the game will build it from the discs, in the game's order, and adjusts
@@ -60,9 +62,10 @@ levels a circle of 8 m radius to its height and blends the ground around it out 
 
 Every player's game builds the same ground from the discs, console players included, with no mod.
 
-<!-- picture: concept-ground-discs.jpg: a side diagram (cross-section) of a hill raised 30 m with No limit: the
-generated ground line, a row of flat disc tops 6 m apart under the new surface, each disc's 8 m flat circle and its
-blend out to 13 m, and the thin ±8 m band of ordinary edits on top that makes up the final shape -->
+![Cross-section of a hill raised 30 m: flat disc tops on a 6 m grid under the surface, one disc's 8 m flat circle and 13 m blend, ±8 m of edits on top](../images/concept-ground-discs.jpg)
+*A hill raised 30 m, as it is saved. The discs' flat tops (orange) step up the hill on a 6 m grid, under your surface
+(white); one disc, in red, levels 8 m around its middle and blends the ground out to 13 m. The ordinary edits (green)
+make up the rest, within ±8 m of the disc ground. Where the hill is under 5 m up there is no disc.*
 
 ### What it means for you
 
