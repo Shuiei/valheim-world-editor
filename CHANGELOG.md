@@ -12,6 +12,13 @@ the plugin is unchanged in versions without that part.
   so console players on crossplay cannot join. The start page says so too, and the seed search no longer claims to use
   the game's own generator.
 
+## v1.103.1 — 2026-10-21
+
+### Fixed
+- **Settings' add-on and extension switches take effect at once.** Turning an add-on or a mod's extension on or off
+  in Settings changed nothing in the worlds listed until a world or the Workshop was opened: the list now follows the
+  switches as soon as Settings is saved.
+
 ## v1.103.0 — 2026-10-21
 
 ### Changed
