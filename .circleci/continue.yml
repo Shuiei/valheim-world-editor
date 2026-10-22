@@ -410,6 +410,10 @@ jobs:
       - run:
           name: Check what is in them
           command: for p in /tmp/dist/*; do tools/check-package.sh "$p"; done
+      # The SDK's zip as a release makes it (its own folder: the release job makes it again), both builds in it.
+      - run:
+          name: The SDK for mod authors' zip, and what is in it
+          command: tools/sdk.sh /tmp/sdk-dist && tools/check-package.sh /tmp/sdk-dist/ValheimWorldEditor.Sdk-*.zip
       - run:
           name: Smoke test of the Linux package (Xvfb, Mesa's software OpenGL)
           no_output_timeout: 5m
