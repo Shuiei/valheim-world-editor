@@ -65,7 +65,10 @@ world. Objects placed live are made by the server, so players see them like some
 
 The plugin does all this in the game's own loop, a few requests per frame, so the game never reads or changes its
 world from two places at once. A big change (thousands of objects) can make the server hitch for a moment. If the game
-does not answer within 30 seconds, nothing of that request is done and nothing is marked applied: apply again. One
+does not take a request within 30 seconds, the plugin drops it: nothing of it is done and nothing is marked applied, so
+apply again. When the answer is lost on the way back instead (a dropped tunnel), the editor cannot know whether it was
+done; sending it again is safe, as the plugin (1.45.3 and later) recognises a request it already did and does not make
+its objects twice. One
 apply runs at a time.
 
 ### Moving an object keeps it the same object

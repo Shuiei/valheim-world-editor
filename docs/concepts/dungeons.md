@@ -55,7 +55,9 @@ stands at the opening of the room that was there first.
 ### Entrances, one per zone
 
 The game lays out **one dungeon per zone**, and keeps the space above an entrance free even before the dungeon is laid
-out. So the editor places a dungeon only where nothing is up there yet; otherwise put the entrance in another zone.
+out. So the editor places a dungeon behind the game's entrance only where nothing is up there yet; otherwise put the
+entrance in another zone. A Plains dungeon, reached by a portal instead, is stacked higher in 50 m steps when the space
+is taken.
 
 A placed dungeon's entrance is the game's own location for the biome, written as the game writes a location, so the
 game makes its door, its stones and its way in each time the zone loads. The dungeon goes where the game lays that

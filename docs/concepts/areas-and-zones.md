@@ -97,7 +97,7 @@ When the reset is written:
 - **The game makes it again** the next time a player comes near: new vegetation, and its location built again at its
   place, with fresh loot and creatures. Live, a zone with a player near it is made again at once.
 
-A zone counts as selected when the selection reaches into it past the outer half of the soft edge, so a zone that the
-selection only grazes is not reset. A reset cannot be undone once it is saved or applied; until then, cancel or undo
+A zone counts as selected when the selection's outline takes in at least one of its ground points, whatever the soft
+edge, so a selection that crosses into a zone at all resets it. A reset cannot be undone once it is saved or applied; until then, cancel or undo
 the marking. After a reset is written the editor reads the world again, so the history starts over (see
 [History](saving-and-history.md#history)).
