@@ -307,6 +307,7 @@
   "paste.msg.pasted": "Pasted{0}{1}{2}{3}.",
   "paste.msg.pastedCopies": " {0} copies",
   "paste.msg.pastedGround": " with the ground",
+  "paste.msg.pastedSiteDug": ", its site dug out",
   "paste.msg.pastedObjects": ", {0} object(s)",
   "paste.msg.pastedCleared": ", {0} tree(s), rock(s) and the like cleared from the site",
   "paste.msg.pasteMore": "Click again to paste more, Esc when done.",

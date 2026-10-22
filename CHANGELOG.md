@@ -36,7 +36,7 @@ the plugin is unchanged in versions without that part.
   the Select panel clears when undo removes what was selected; path and Place marks near the area's edge no longer
   spike; old messages ("Opening…", the Workshop's, a discarded world's) no longer linger; a Recent world that can't be
   opened says why; a link or the log your system can't open is named so you can open it yourself; a live world opened by
-  its address no longer says "live" twice; zone resets now warn that tamed animals go too.
+  its address no longer says "live" twice; a paste without its ground says its site was dug out instead of "with the ground"; zone resets now warn that tamed animals go too.
 - **Texts.** About twenty tooltips and messages that said something untrue are corrected (the support colours, what
   Esc does, the ±8 m limit, presets, Follow, backups) and plurals and grammar fixed.
 
