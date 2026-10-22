@@ -26,7 +26,7 @@ The editor opens on its start page. You come back to it from a world's map (**Wo
 | **The Workshop** | **Open the Workshop**, whether Homestead is installed, and every blueprint, newest first: click one to open it in the Workshop. See [the Workshop](workshop.md). |
 | **A new world** | **Make a new world**: a seed's world before it exists, and a search for one that suits you. See [a new world](new-world.md). |
 
-At the bottom of the menu: **Settings**, **Documentation** (this documentation, in the browser), **Open log**, the
+At the bottom of the menu: **Settings**, **Documentation** (this documentation, in its own window: see [the Help window](README.md)), **Open log**, the
 version and the folder of the editor's settings and log.
 
 A world opens on its map. Pick a zone and the area size there, then **Edit in 3D** (see [the map](map.md)).

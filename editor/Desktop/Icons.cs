@@ -35,6 +35,8 @@ public static class Icons
         ["select"] = "M5 3l14 8-6 2-2 6z",
         ["move"] = "M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3",
         ["back"] = "M15 5l-7 7 7 7",
+        ["forward"] = "M9 5l7 7-7 7",
+        ["external"] = "M14 4h6v6M20 4l-9 9M18 14v6H4V6h6",
         ["undo"] = "M9 14l-5-5 5-5M4 9h10a6 6 0 0 1 0 12h-3",
         ["redo"] = "M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3",
         ["history"] = "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2",

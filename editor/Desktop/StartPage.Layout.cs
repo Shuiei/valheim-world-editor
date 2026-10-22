@@ -25,7 +25,7 @@ public sealed partial class StartPage
         settingsButton.Tip("start.settings");
         DocsLink.Tip("start.docs");
         settingsButton.Click += (_, _) => SettingsRequested?.Invoke();
-        DocsLink.Click += async (_, _) => await OpenUrl(new Uri(DocsUrl));
+        DocsLink.Click += (_, _) => OpenHelp();
         LogLink.Tip("start.log");
         LogLink.Click += async (_, _) => await OpenLog();
         // The side menu: Home, the ways to edit a world, the ways to make something new.

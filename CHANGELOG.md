@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.107.0 — 2026-10-21
+
+### Added
+- **The documentation is now inside the editor.** **Documentation** on the start page opens it in its own window,
+  beside the editor: every page with its pictures (click one to see it full size), a search through all of them,
+  links between pages, Back and Forward. It works without internet and always matches your version of the editor;
+  **Open in browser** shows the same page on GitHub.
+
 ## v1.106.0 — 2026-10-21
 
 ### Changed
