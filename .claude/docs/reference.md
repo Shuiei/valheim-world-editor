@@ -5,6 +5,7 @@
 - `docs/development.md`: layout, CLI/driver, build, versions, release, tests, fuzzing.
 - `docs/modding.md` + `docs/worldeditor.schema.json`: SDK and mod integration contract.
 - `docs/claude.md`, `docs/scripting.md`: MCP tools and script API.
+- `docs/dev/writing-docs.md`: how the user docs are written (page kinds, tool template, page map); `docs/README.md` is their contents (also the in-app Help window's).
 - `.claude/skills/valheim-build`: building style and workflow for in-game builds.
 - `VERSION` and `CHANGELOG.md` at repo root; one bump per PR.
 - CI: CircleCI (tests, releases via approval). Required checks: CodeRabbit approval, CodeQL.

@@ -5,8 +5,8 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Like the web editor's Save: asks first, writes (with a backup), then says what was done. Live, it applies
-    /// instead; in the Workshop it saves the blueprint.
+    /// Like the web editor's Save: asks first, writes (the old save kept until the new one reads back; no backup
+    /// folder), then says what was done. Live, it applies instead; in the Workshop it saves the blueprint.
     /// </summary>
     internal async Task Save()
     {

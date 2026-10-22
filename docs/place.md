@@ -1,287 +1,203 @@
-# Place (`T`)
+# Place
 
-![A wood planted with the brush](images/plant-brush.jpg)
-*The Meadows woods preset in Brush mode: the see-through trees and bushes under the pointer are exactly what
-a click will place.*
+Put trees, rocks, bushes, crops, building pieces and spawn points into the world, one at a time or by the hundred.
 
-Place trees, rocks, bushes, crops, building pieces, spawn points or anything else the game has, in four
-patterns: a brush, a line, a grid or a zone. A see-through **preview** always shows exactly what will be
-placed, so you see how many there are and how they look before you click.
+**Where:** tool rail, EDIT section · **Key:** `T` · **Works in:** saved worlds, live (in the Workshop, `T` opens
+**Build** instead: see [Workshop](workshop.md))
 
-## How to use it
+![The Meadows woods preset in Brush mode over open grass](images/plant-brush.jpg)
+*The see-through trees and bushes inside the brush circle are exactly what a click places.*
 
-1. Press `T` (or **Place** in the rail's EDIT section).
-2. Choose what to place: a preset under **Choose a preset**, or **Choose kinds…** to tick kinds in the
-   list (see [Choosing what to place](#choosing-what-to-place)).
-3. Choose a mode: **Brush**, **Line**, **Grid** or **Zone**.
-4. Brush: click where the preview is, or drag to keep adding. Line, Grid and Zone: draw the shape, check
-   the preview, then press **Place (Enter)**.
+<!-- picture: place-brush-before-after.jpg: two frames side by side on the same empty meadow, Place tool, Brush mode, Meadows woods preset, Brush size 10 m: left the see-through preview in the brush circle before the click, right the same spot after one click with the trees standing; Place panel visible on the left of each frame -->
 
-Every click, stroke or Enter is one undo step (`Ctrl+Z`). Nothing is written to the world until you
-**Save** (or **Apply live**).
+## Use it
 
-The panel is in sections, top to bottom: the four mode buttons, **Line shape** (Line mode only),
-**Choose a preset**, **Selected kinds**, **Objects** (where they stand, how big and turned), then the
-chosen mode's own section (**BRUSH**, **ALONG THE LINE**, **GRID** or **ZONE FILL**) and the buttons. The
-[Mask](masks.md) is on its own card next to it. The Place tool's settings are remembered between runs.
+To plant a small wood:
 
-## Choosing what to place
+1. Press `T`.
+2. In the **Place** panel, under **Choose a preset**, choose **Meadows woods**.
+3. At the top of the panel, choose **Brush**.
+4. Point at the ground: the see-through preview shows what a click places.
+5. Click to place it, or drag to keep adding.
 
-Under **Selected kinds** the panel lists the kinds you chose, each on a row with its share and a ✕ to
-drop it ("None yet" while there are none). **Choose kinds…** under them opens **Choose kinds**, a list of
-every kind in a card beside the panel; **Done** closes it.
+For Line, Grid and Zone, draw the shape instead, check the preview, then press `Enter` (**Place (Enter)**).
 
-![Choose kinds, searching rock](images/place-chooser.jpg)
-*The Choose kinds card searching "rock": every category with a match is open, the ticked kinds counted
-after the category's name.*
+Each click, stroke or `Enter` is one undo step (`Ctrl+Z`). Nothing is written to the world until you **Save to world**
+(or **Apply live**). To move or delete what you placed, use [Select](select.md).
+
+## Settings
+
+The panel, top to bottom. Rows that do not apply to the chosen mode or kinds are hidden. The settings are remembered
+between runs. The [Mask](masks.md) is on its own card beside the panel and applies to every mode.
+
+| Setting | What it does |
+|---|---|
+| **Brush**, **Line**, **Grid**, **Zone** | The mode: see [Modes](#modes). |
+| **Line shape** | Line mode only: **Points**, **Circle** or **Rectangle**. See [Line](#line). |
+| **Choose a preset** | Loads a mix: its kinds with their shares, plus Density, Spacing, Clumping, Patch size, Size and Tilt, with random facing on. Built in: **Meadows woods**, **Black forest**, **Swamp**, **Berry patch**, **Forest floor**, **Meadows rocks**; yours follow as **Yours: *name***. Kinds the world cannot place are left out (the status bar says how many). **None** loads nothing; choosing it after a preset unticks every kind. |
+| **Save as preset…** / **Delete** | Saves the chosen kinds, shares and those settings under a name. **Delete** removes one of yours, after asking. |
+| **Selected kinds** | The kinds you chose, each with its share slider and a ✕ to drop it ("None yet" while there are none). With two or more kinds, drag a slider to set that kind's share: the others follow so the shares make 100%, and each keeps at least 1%. Beech at 75% with Birch gives three beeches for one birch. |
+| **Choose kinds…** | Opens the **Choose kinds** card: see [Choose what to place](#choose-what-to-place). |
+| **OBJECTS: Elevation** | **On the ground**: each object stands on the ground (a building piece by its bottom). **Above the ground**: **Height** metres above the ground under it. **At one height**: every object's bottom at the same **Height**, whatever the ground does (a level wall, a platform). |
+| **Height** | The metres for Above the ground, or the height for At one height. |
+| **Snap to pieces already there** | Shown when a ticked kind is a building piece. On: the piece locks onto the pieces around it, like the hammer. In Brush mode, **Beside** puts it end to end with the piece next to the cursor and **On top** sits it on the piece under the cursor. The line under the buttons says what it snapped to ("Snapped beside woodwall."). See [Snapping](concepts/objects.md#snapping). |
+| **Leave saplings and crops room to grow** | Shown when a sapling, a crop or a tree that grows from one is ticked. On: they keep the room the game needs to grow them. Off: as tight as you like (they may not grow). See [Growing rules](concepts/objects.md#growing-rules). |
+| **Size %** min / max | Each object gets a random size between the two, 10 to 300% (80 to 120 at first). |
+| **Tilt** | Random lean, 0 to 20°. |
+| **Rotation** | Turns the brush's pattern and every object's facing, -180 to 180°. |
+| **Random facing (off: all face the rotation)** | On: each object faces a random way. Off: all face the Rotation. |
+| **BRUSH: Brush size** | Brush radius, 1 to 30 m. |
+| **One at a time, exactly at the cursor** | Brush: one object exactly under the cursor per click; a drag adds no more. Only an object right on that spot blocks it. |
+| **Density** | Brush and Zone: objects per 100 m², 0.2 to 20. |
+| **Spacing** | Brush and Zone: the least distance between objects, 0.5 to 15 m, also from objects already there. In Grid: the cell size, 1 to 30 m. |
+| **Clumping** | Brush and Zone: gathers the objects in groves with clearings between them, 0 to 100%. 0 is an even spread. |
+| **Patch size** | With Clumping: how big the groves and clearings are, 5 to 120 m. |
+| **fit** | Shown when a ticked kind is wider than the spacing ("Beech1 is about 6.2 m wide: 4 m apart they overlap."). Click it to set the spacing to that width. |
+| **Place (Enter)**, **Clear (Esc)**, **Remove last point (Backspace)** | Line, Grid and Zone: place what the preview shows, remove the shape, or take back the last point clicked. |
+| **New layout (R)** | New random spots, kinds, sizes and facings for the preview (and new groves with Clumping). |
+
+The line at the bottom says how many objects the preview shows and which keys apply. An orange line under the
+selected kinds warns when something needs care: "Nothing to place yet", or crops that "only grow on cultivated ground
+(paint it with Cultivate first)".
+
+## Choose what to place
+
+**Choose kinds…** opens a card beside the panel with every kind the game saves in a world, including kinds your world
+has none of yet and your mods' kinds. Creatures, dropped items and ragdolls are not in it. **Done** closes it.
+
+![The Choose kinds card searching "rock"](images/place-chooser.jpg)
+*The Choose kinds card searching "rock", with BigRock ticked: the Rocks category counts 1 ticked kind beside its total,
+and BigRock heads the Recent row.*
 
 | Control | What it does |
 |---|---|
-| **Search kinds (oak, rock, bush…)** | Filters the list by name. Spawn points and nests are also found by the creature they spawn (boar finds `Spawner_Boar`). Searching opens every category with a match. |
-| **Tick boxes** | Every ticked kind is used; each object picks one of them at random, by share. The list is grouped in categories that fold open or shut with a click on their name. After the name: how many of its kinds there are, or "ticked / all" once some are ticked. Which categories are open is remembered (Trees & logs at first). |
-| **Shares** | In the panel, with two or more kinds chosen, a slider per kind sets how much of what is placed is that kind, in %: Beech at 75% with Birch gives three beeches for one birch. Moving one slider moves the others, keeping their proportions, so the shares always make 100% (each kind keeps at least 1%). An equal share sits in the middle: the slider ends at twice it (99% with two kinds, 67% with three, 50% with four); a share past the end shows there, with the real % beside it. Remembered. |
-| **Choose a preset** | Loads a mix: its kinds with their shares, and its Density, Spacing, Clumping, Patch size, Size and Tilt, with random facing on. Built in: **Meadows woods**, **Black forest**, **Swamp**, **Berry patch**, **Forest floor**, **Meadows rocks**; yours follow as "Yours: name". Kinds a world cannot place are left out (the status bar says how many). **None** (the default) loads nothing; choosing it after a preset unticks every kind. |
-| **Save as preset…** / **Delete** | Saves the chosen kinds, shares and those settings under a name (kept in the editor's data folder); **Delete** removes one of yours, after asking. |
-| **Pick from world** | Eyedropper: click an object in the world to place only its kind; `Shift` + click adds it to the ticked kinds (or takes it away when it is ticked). `Esc` cancels. |
+| **Search kinds (oak, rock, bush…)** | Filters the list by name and opens every category with a match. Spawn points and nests are also found by their creature (`boar` finds `Spawner_Boar`). |
+| Tick boxes | Every ticked kind is placed; each object picks one of them at random, by share. Click a category's name to fold or open it; after the name, how many kinds it has, or "ticked / all". |
+| **Pick from world** | Click an object in the world to place only its kind; `Shift` + click adds it to the ticked kinds (or takes it out). `Esc` cancels. |
 | **Untick all** | Unticks every kind. |
-| **FAVOURITES** | Click the ☆ after a kind in the list to star it; starred kinds show as buttons above the list. |
-| **RECENT** | The last eight kinds you placed, newest first, as buttons above the list, after the kinds chosen now (so what is chosen always shows there). |
-| Favourite and Recent buttons | A click ticks or unticks that kind; `Shift` + click places only that kind. **all** / **none** after the row's name tick or untick every kind of the row. Both lists are kept in the editor's data folder. |
+| **Favourites** | Click the ☆ after a kind to star it; starred kinds show as buttons above the list. |
+| **Recent** | The last eight kinds you placed, newest first, after the kinds chosen now. |
+| Favourite and Recent buttons | Click: tick or untick that kind. `Shift` + click: place only that kind. **all** / **none** tick or untick the whole row. |
 
-The list has every kind the game saves in a world, including kinds your world has none of yet, and the
-kinds of your mods. Creatures, dropped items and ragdolls are left out. Kinds without a model show as
-boxes in the preview.
-
-Its categories, in order: **Trees & logs**, **Rocks**, **Bushes & shrubs**, **Pickables**, **Ore &
-deposits**, **Ruins & structures**, **Furniture & props**, **Bones & remains**, **Spawn points**,
-**Creature nests**, **Creatures & NPCs** (traders, birds), **Effects & markers** (mist, music, boss event
-zones), **Your buildings** (building pieces) and **Other objects**, which keeps only what fits none of
-them (tombstones...).
-
-A line in orange under the selected kinds warns about what needs care: "Nothing to place yet", or crops
-that "only grow on cultivated ground (paint it with Cultivate first)".
-
-## Spawn points
-
-![Boar and draugr spawn points by a hut](images/spawn-points.jpg)
-*Two boar spawn points and a draugr one placed by a hut. Each shows as an orange box with a marker above it, seen
-through anything in front; the one selected is open in the Inspector, whose line says what it spawns
-(`Spawn point: Boar · 0–2 ★ · spawns once`).*
-
-The game's invisible spawn points (`Spawner_Boar`, `Spawner_Draugr`, ...) are what puts creatures in
-camps, villages and dungeons: each spawns its creature where it stands. They are under **Spawn points**,
-each with what it spawns under its name, read from your game:
-
-- the creature and its stars (`Boar · 0–2 ★`);
-- **spawns once**: the creature is spawned the first time a player comes near, and never again once it
-  dies (most of the game's spawn points); **back N min after it dies**: it comes back that long after it
-  died (the `*_respawn_*` ones, `Spawner_Location_*`, `Spawner_imp_respawn`, `Spawner_Fish4`; the time is
-  the kind's own, often 60 min);
-- **by night only** or **by day only** for the few that wait; **when an event wakes it** for the
-  `TriggerSpawner_` ones.
-
-Which creature, its stars and its respawn time are the game's, fixed per spawn point kind: pick the kind
-that spawns what you want. The [Inspector](select.md#inspecting-and-changing-an-objects-data) shows the
-same line for a spawn point or nest that is already in the world.
-
-**Creature nests** are the visible ones (greydwarf nests, bone piles, Elaking holes...). They keep
-spawning creatures around themselves until destroyed; their line says how many and how far ("Greydwarf,
-Greydwarf_Elite · up to 3 around, within 5 m").
-
-In the 3D view, spawn points show as orange boxes (red when their creature comes back) and nests as
-purple ones, each with a marker of the same colour above it, seen through anything in front, within
-250 m of the camera. View → **Spawn points** and **Creature nests** show or hide them (they are spoilers,
-hidden at first).
+The categories: **Trees & logs**, **Rocks**, **Bushes & shrubs**, **Pickables**, **Ore & deposits**, **Ruins &
+structures**, **Furniture & props**, **Bones & remains**, **Spawn points**, **Creature nests**, **Creatures & NPCs**
+(traders, birds), **Effects & markers** (mist, music, boss event zones), **Your buildings** (building pieces) and
+**Other objects**. Kinds without a model show as boxes in the preview.
 
 ## Modes
 
 | Mode | How it works |
 |---|---|
-| **Brush** | The preview follows the cursor, inside the brush's circle. A **click** places exactly what the preview shows; a **drag** keeps adding objects under the brush (not with **One at a time**). `Shift` + drag removes the ticked kinds under the brush. |
-| **Line** | Click points along a route (or hold and drag), or draw a **Circle** or a **Rectangle**. Objects go every **Every** metres along it, or **end to end** like the game's hammer snaps them. |
-| **Grid** | Drag a box. One object goes in the middle of each cell; the box gets as many whole cells as fit best (at least one), centred in it. |
-| **Zone** | Click points around a zone (or hold and drag to draw it freely). Objects go at random spots inside it (**Density**, **Spacing**). |
+| **Brush** | The preview follows the cursor inside the brush circle. A click places exactly what it shows; a drag keeps adding (how fast follows Density and the sculpt brushes' **Strength**). `Shift` + drag removes the ticked kinds under the brush. With only building pieces ticked, **One at a time** switches itself on and each piece snaps. |
+| **Line** | Click points along a route, or draw a circle or a rectangle. Objects go every **Every** metres, or end to end. |
+| **Grid** | Drag a box. One object goes in the middle of each cell; the box gets as many whole cells as fit. |
+| **Zone** | Click points around a zone, or hold and drag to draw it freely. Objects go at random spots inside (Density, Spacing). |
 
-In Line and Zone, drag a point to move it, drag the outline to add a point, `Ctrl` + click a point to
-remove it. In Line, Grid and Zone, press **Place (Enter)** (or double-click the last point of a line or
-zone); **Clear (Esc)** removes the shape; **Remove last point (Backspace)** takes back the last point you
-clicked.
-
-The line under the buttons says how many objects the preview shows and what the keys do.
-
-### Brush
-
-The brush lays out a pattern of random spots in its circle, at least **Spacing** apart, as many as
-**Density** asks (400 at most). The pattern stays put while you move, so what you see is what a click
-places. **New layout (R)** draws a new one.
-
-While you drag, the brush adds objects about 30 times a second around the cursor, away from what
-already stands and from what the stroke has placed. How fast it fills follows **Density** and the brush
-**Strength** (the sculpt brushes' setting, which the brush shares). The whole stroke is one undo step.
+In Line and Zone, drag a point to move it, drag the outline to add a point, and `Ctrl` + click a point to remove it.
+Double-clicking the last point places the shape, like `Enter`. In Grid and Zone, `,` `.` and `Alt` + wheel turn the
+whole box or zone, with its cells.
 
 ### Line
 
 ![A fence along a line through points](images/plant-line.jpg)
-*A fence placed end to end along a line through points, the Line panel beside it.*
-
-Under **Line shape**:
+*The preview of a fence end to end along a line through points, the Line panel beside it.*
 
 | Control | What it does |
 |---|---|
-| **Points** | Click points along the way, or hold and drag to draw freely (a point every 2 m). **Close the loop (back to the first point)** goes back to the first point at the end, to fence a zone in. **Smooth curve through the points** draws a smooth curve instead of straight stretches. |
-| **Circle** | Press at the centre and drag out to the size. Let go to see it; Enter places it. |
+| **Points** | Click points along the way, or hold and drag to draw freely. **Close the loop (back to the first point)** returns to the first point, to fence a zone in. **Smooth curve through the points** draws a curve instead of straight stretches. |
+| **Circle** | Press at the centre and drag out to the size; let go to see it. |
 | **Rectangle** | Press at one corner and drag to the opposite one. |
-
-Under **ALONG THE LINE**, when not end to end:
-
-| Control | What it does |
-|---|---|
-| **Every** | Distance between two objects along the line, 0.5 to 30 m. |
-| **Wiggle** | Random sideways offset from the line, up to this many metres (0 to 5). |
+| **End to end (snap together, like in game)** | Each piece starts where the last one ends, turned along the line, like the hammer snaps them: a fence, a stake wall, a row of walls or floors. Several ticked kinds alternate. It switches itself on when every ticked kind is a piece the game snaps. With it, a circle snaps its size to whole pieces, and a rectangle's sides fill from the corners so the corners meet. |
+| **Layers** | With End to end: the line stacked 1 to 20 pieces high (a wall 3 high, a double fence). |
+| **Every** | Without End to end: the distance between objects, 0.5 to 30 m. |
+| **Wiggle** | Random sideways offset from the line, 0 to 5 m. |
 | **Follow the line (plus the rotation; replaces random facing)** | On (the default): each object faces along the line, plus the Rotation. Off: random facing. Circles and rectangles always follow their outline. |
+
+![A ring of stake walls and a stone wall rectangle two layers high](images/line-shapes.jpg)
+*Line's Circle (a ring of stake walls) and Rectangle (stone walls, Layers 2), placed end to end; the Place panel shows
+End to end on and Layers at 2.*
+
+- When the line does not end on a whole piece, the bottom line says how much is left ("0.8 m of the line left at
+  the end: move a point to close it").
+- A line that starts within 1 m of a piece already there (with **Snap to pieces already there** on) continues it, at
+  its level.
+- On a slope, end-to-end pieces stay level and step up or down with the ground, like a fence going up a hill. For one
+  even fence, flatten the ground along the line first ([Path](path.md), Flatten), or use **At one height**.
 
 ### Grid
 
-![Carrots and turnips on a turned grid](images/plant-grid.jpg)
-*Carrots and turnips on a grid turned 15° over cultivated ground. The orange line in the panel warns that
-the crops need cultivated ground.*
-
-Under **GRID**, **Spacing** is the space between objects, centre to centre (1 to 30 m): the size of each
-cell.
+![Carrots and turnips on a turned grid, seen from above](images/plant-grid.jpg)
+*Carrots and turnips on a grid turned 15°, seen from close above so each cell's crop shows. The orange line in the
+panel warns that crops need cultivated ground.*
 
 ### Zone
 
 ![A zone drawn point by point](images/plant-zone.jpg)
 *A zone drawn point by point, with bushes and young trees previewed at random spots inside.*
 
-Under **ZONE FILL**, **Density** and **Spacing** set how many objects go in and how far apart. The spots
-are drawn once and kept while the zone stays the same; **New layout (R)** draws new ones.
+The spots are drawn once and kept while the zone stays the same; **New layout (R)** draws new ones.
 
-In Grid and Zone mode, `,` `.` and `Alt` + wheel **turn the whole box or zone** (with its cells and the
-objects' facing) instead of only the facing.
+## Spawn points and nests
 
-## Fences and walls: end to end
+Spawn points are the game's invisible markers that put creatures in camps, villages and dungeons. Find them in
+**Choose kinds** under **Spawn points** (search the creature: `boar`), then place them like any kind. Each kind shows
+what it spawns, read from your game:
 
-![A stake wall ring and a stone wall rectangle](images/line-shapes.jpg)
-*Line's Circle (a ring of stake walls) and Rectangle (stone walls, two layers high), placed end to end.*
+- the creature and its stars (`Boar · 0–2 ★`);
+- **spawns once** (the first time a player comes near, never again once it dies), or **back *N* min after it dies**;
+- **by night only**, **by day only**, or **when an event wakes it** for the few that wait.
 
-In **Line** mode, **End to end (snap together, like in game)** places pieces so that each one starts
-exactly where the last one ends, turned along the line, like the game's hammer snaps them: a fence, a
-stake wall, a row of walls or floors in a few clicks.
+The creature, stars and respawn time are fixed per kind: pick the kind that spawns what you want. **Creature nests**
+(greydwarf nests, bone piles...) keep spawning around themselves until destroyed; their line says how many and how far
+("Greydwarf, Greydwarf_Elite · up to 3 around, within 5 m"). See [Spawn points](concepts/objects.md#spawn-points).
 
-How the length is found: a piece's two ends are the middles of its two short sides, from its snap
-points (read from your game); kinds without snap points use their model's box. Ticking several kinds
-alternates them. End to end (and **One at a time** for the Brush) switches itself on when every ticked
-kind is a piece that the game snaps (fences, walls, stakes, floors...) and off for other kinds, until you
-change it yourself.
+![Spawn points by a hut, one selected and open in the Inspector](images/spawn-points.jpg)
+*Close on two boar spawn points and a draugr one by a hut. The selected draugr's Inspector line says what it spawns
+and whether it comes back.*
 
-| Control | What it does |
+In the 3D view each spawn point and nest shows as a plain box with a marker above it, seen through anything in front,
+within 250 m: orange for a spawn point (red when its creature comes back), purple for a nest. They are hidden at first: switch on **Spawn
+points** and **Creature nests** in the [View panel](editor-basics.md).
+
+## Shortcuts
+
+| Key or mouse | What it does |
 |---|---|
-| **Circle** | With End to end, the size snaps so that whole pieces close the ring. |
-| **Rectangle** | With End to end, the sides snap to whole pieces, and each side is filled from its corner, so the corners meet exactly. |
-| **Layers** | With End to end: the line stacked this many pieces high, 1 to 20, each layer on top of the one below (a wall 3 high, a double fence). |
+| `T` | Opens Place. |
+| Click / drag | Brush: place / keep adding. Line and Zone: add points. Grid: draw the box. |
+| `Shift` + drag | Brush: remove the ticked kinds under the brush. |
+| `Ctrl` + click a point | Line and Zone: remove that point. |
+| `Enter` | Place the line, grid or zone. |
+| `Esc` | Clear the shape; cancel **Pick from world**. |
+| `Backspace` | Remove the last point. |
+| `R` | New layout. |
+| `,` `.` or `Alt` + wheel | Turn by 1° (`Shift`: 15°): the facing, or in Grid and Zone the whole box or zone. |
+| `[` `]` | Brush size. |
+| `PgUp` / `PgDn` | Raise or lower the elevation by 0.5 m (`Shift`: 0.1 m). From On the ground, it starts lifting above it. |
+| `Alt` + click | Switch to At one height, at the top of the piece clicked (to build on it), or of the ground there. |
+| `Ctrl+Z` | Undo the last placement. |
 
-- When a line does not end on a whole piece, the line under the buttons says how much is left ("0.8 m of
-  the line left at the end: move a point to close it").
-- A line that starts within 1 m of a piece already there (with **Snap to pieces already there** on)
-  continues it: it starts at that piece's snap point and stays at its level.
-- On a slope the pieces stay level, each standing on the lowest of the ground at its start, middle and
-  end (so it never floats): every piece is a little higher or lower than the last one, touching it, like
-  a fence going up a hill. For one straight, even fence, flatten the ground along the line first (Path
-  tool, Flatten), or use **At one height**.
+All the editor's keys are in [Shortcuts](help/shortcuts.md).
 
-## Objects: where they stand
+## Tips and limits
 
-The **Objects** section is for every mode.
+- **Undo:** `Ctrl+Z` takes back a click, a stroke or a shape. After saving, use History or a backup: see
+  [Undo changes](guides/undo-changes.md).
+- At most 2000 objects per line, grid or zone, and 400 per brush click.
+- Objects go only inside the open area, not on its outermost line of points, and where the Mask allows.
+- An object on the ground is left out where the ground is more than 0.3 m under water (kelp and seaweed excepted).
+  Above the ground or At one height, it may stand over water.
+- Brush and Zone keep Spacing from what already stands. Line and Grid ignore it, except an object right on the spot,
+  so placing the same shape twice does not double it.
+- Crops grow only on cultivated ground: paint it with **Cultivate** (or the Area tool's Paint) first.
+- Building pieces you place are player built, by the player chosen in View → **Built by**; trees, rocks and spawn
+  points are not. See [Player-built pieces](concepts/objects.md#player-built-pieces).
+- New objects are fresh: no contents, no health. To fill a chest, see
+  [Change what a chest holds](guides/fill-a-chest.md).
 
-| Control | What it does |
-|---|---|
-| **Elevation**: **On the ground** | Each object stands on the ground where it goes. A building piece stands by its bottom (its lowest snap point: walls have their middle at their origin); other objects sit 5 cm into the ground. |
-| **Elevation**: **Above the ground** | Each object stands **Height** metres above the ground under it. |
-| **Elevation**: **At one height** | Every object at the same **Height** (its bottom there), whatever the ground does: a level wall over uneven ground, a floor for a platform. |
-| **Height** | The metres for Above the ground, or the height for At one height. |
-| `PgUp` / `PgDn` | Up or down by 0.5 m (`Shift`: 0.1 m). From On the ground they start lifting above it. |
-| `Alt` + click | At one height: the top of the piece clicked (to build on it), or the ground there. |
-| **Size %** min / max | Each object gets a random size between the two, 10 to 300% of its normal size (80 to 120 at first). |
-| **Tilt** | Random lean of each object, up to this many degrees (0 to 20). |
-| **Rotation** | Turns the brush's pattern and every object's facing (-180 to 180°). `,` `.` or `Alt` + wheel change it by 1° (`Shift`: 15°). |
-| **Random facing (off: all face the rotation)** | On: each object faces a random direction. Off: they all face the Rotation. |
-| **Leave saplings and crops room to grow** | Only shown when a sapling, a crop or a tree that grows from one is ticked. See [Room to grow](#room-to-grow). |
+## Related
 
-Size, Tilt and the facing rows are hidden for an end-to-end line: its pieces are placed at their own size,
-upright and along the line.
-
-### Building pieces: snapping
-
-When a ticked kind is a building piece (it has snap points: walls, fences, floors, beams...), the Brush
-places one at a time under the cursor, and **Snap to pieces already there** (on by default) locks it
-onto the pieces around it (within 12 m), like the game's hammer:
-
-| Control | What it does |
-|---|---|
-| **Beside** | The piece goes end to end with the piece next to the cursor, at its level (bottom with bottom, top with top), where a pair of snap points meets within 1 m, in whichever quarter turn meets best. |
-| **On top** | The piece sits on top of the piece under the cursor (or the nearest within 3 m), its bottom on that piece's top. |
-| Facing | A snapped piece faces like the piece it attaches to; **Rotation** turns it from there in quarter turns. |
-
-The line under the buttons says what it snapped to ("Snapped beside woodwall."). Untick **Snap to pieces
-already there** to place freely.
-
-## The brush and zone settings
-
-Under **BRUSH** (and **ZONE FILL** for the scatter rows):
-
-| Control | Modes | What it does |
-|---|---|---|
-| **Brush size** | Brush | Brush radius, 1 to 30 m; `[` `]` change it. |
-| **One at a time, exactly at the cursor** | Brush | One object exactly under the cursor per click. Only an object right on that spot (0.3 m) blocks it. A drag adds no more, so Density, Spacing, Clumping and Patch size are hidden while it is on (Brush size stays: `Shift` + drag still removes inside it). |
-| **Density** | Brush, Zone | Objects per 100 m², 0.2 to 20. |
-| **Spacing** | Brush, Zone | The least distance between objects, 0.5 to 15 m, also from objects already there. |
-| **Clumping** | Brush, Zone | Gathers the objects in groves with clearings between them, 0 to 100%. See below. **New layout (R)** moves the groves. |
-| **Patch size** | Brush, Zone (with Clumping) | How big the groves and clearings are, 5 to 120 m. |
-| **fit** | Brush, Zone, Grid, Line (not End to end) | Shown when a ticked kind at its largest size is wider than the mode's spacing: "Beech1 is about 6.2 m wide: 4 m apart they overlap." **fit** sets the spacing (Spacing, Every or the grid's Spacing) to it, rounded up to the half metre. |
-| **New layout (R)** | All | New random positions, kinds, sizes and facings for the preview. |
-
-How Clumping works: a noise pattern is laid over the world, its blobs **Patch size** across. Where the
-pattern is low, spots are thinned out; the higher the Clumping, the more of the ground is cleared and the
-smaller and fewer the groves. The pattern is fixed to the world, not to the brush, so strokes next to each
-other match.
-
-## Rules it follows
-
-Every object, in every mode, goes through these checks before it is shown in the preview:
-
-- **Inside the open area.** Not on its outermost line of points.
-- **The Mask** applies (biome, height, slope, paint).
-- **Not under water**: an object on the ground is left out where the ground is more than 0.3 m under
-  the water line, except kelp and seaweed. Objects placed above the ground or at one height may stand
-  over water.
-- **Spacing**: Brush and Zone keep Spacing from every object already there. Line and Grid ignore what
-  stands, except an object right on the spot (0.3 m), so you cannot place the same pattern twice by
-  accident.
-- **Clumping** (Brush and Zone) thins the spots out where its pattern is low.
-- **At most 2000** objects per line, grid or zone, and 400 per brush click.
-
-### Room to grow
-
-**Leave saplings and crops room to grow** (on at first) follows the game's growing rules. A sapling or a
-crop only grows when nothing stands within its grow radius (read from your game: 0.5 m for most crops,
-2 to 3 m for tree saplings). With it on:
-
-- saplings and crops keep at least their grow radius from everything, including each other;
-- grown crops (`Pickable_Carrot`...) and trees that grow from saplings (`Beech1`, `Oak1`...) keep the room
-  their sapling needs, like a planted field or orchard;
-- bushes do not grow from anything in the game: use **Spacing** for them.
-
-Off: place them as tightly as you like (they may not grow in game).
-
-**Crops need cultivated ground** in the game. When a ticked crop needs it, the panel says so: paint the
-ground with **Cultivate** (or the Area tool's Paint) first.
-
-## What placed objects are
-
-- New objects are fresh: for a kind the world already has, a copy of one with nothing unique kept (no
-  contents, no health); for a kind it does not have, a new object exactly like the game makes one.
-- Building pieces (kinds built with the hammer, hoe or another tool) go in as player-built pieces, built by
-  the player chosen in View → Building → **Built by** (see
-  [Player-built pieces](editor-basics.md#player-built-pieces)). Trees, rocks and spawn points are not.
-- The kinds you place go to the **RECENT** row.
+- [Plant a forest, a field or a hedge](guides/plant-a-forest.md)
+- [Clear trees and rocks, level a building site](guides/clear-an-area.md)
+- [What an object is](concepts/objects.md#what-an-object-is)
+- [Select](select.md) · [Masks](masks.md)

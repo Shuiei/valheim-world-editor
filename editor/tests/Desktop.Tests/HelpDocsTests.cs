@@ -15,12 +15,13 @@ public class HelpDocsTests
     private static readonly string Repo = Path.GetFullPath(Path.Combine(Fixtures.Root, "..", "..", ".."));
 
     [Fact]
-    public void EveryPageOfDocsIsCarriedButTheReleaseNotes()
+    public void EveryPageOfDocsIsCarriedButTheReleaseNotesAndTheDevelopersPages()
     {
         string docs = Path.Combine(Repo, "docs");
+        string[] notCarried = ["architecture.md", "development.md"];
         var onDisk = Directory.EnumerateFiles(docs, "*.md", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(docs, f).Replace('\\', '/'))
-            .Where(p => !p.StartsWith("releases/", StringComparison.Ordinal))
+            .Where(p => !p.StartsWith("releases/", StringComparison.Ordinal) && !p.StartsWith("dev/", StringComparison.Ordinal) && !notCarried.Contains(p))
             .Order(StringComparer.Ordinal);
         Assert.Equal(onDisk, HelpDocs.Pages);
         Assert.Contains(HelpDocs.Home, HelpDocs.Pages);

@@ -56,7 +56,7 @@ public class HelpWindowTests
             Assert.False(w.BackButton.IsEnabled);
             w.Go(new HelpTarget("map.md"));
             w.Go(new HelpTarget("map.md"));
-            w.Go(new HelpTarget("select.md", "selecting"));
+            w.Go(new HelpTarget("select.md", "shortcuts"));
             w.BackButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(new HelpTarget("map.md"), w.Shown);
             w.BackButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
@@ -76,15 +76,17 @@ public class HelpWindowTests
     [AvaloniaFact]
     public void TheContentsMarkThePageShownWithItsPartsUnderIt()
     {
-        With(new HelpTarget("select.md", "selecting"), w =>
+        // Every tool page has these parts (docs/dev/writing-docs.md's template).
+        With(new HelpTarget("select.md", "shortcuts"), w =>
         {
             var on = w.Side.Children.OfType<Button>().Where(b => b.Classes.Contains("on")).Select(b => ((TextBlock)b.Content!).Text).ToList();
-            Assert.Equal(["Select", "Selecting"], on);
+            Assert.Equal([HelpContents.Find("select.md")!.Title, "Shortcuts"], on);
             var texts = SideTexts(w);
-            Assert.Contains("How to use it", texts);
-            Assert.Contains("Ground tools", texts);
-            Assert.Equal(1, texts.Count(t => t == "Select"));
-            w.Side.Children.OfType<Button>().First(b => b.Content is TextBlock { Text: "Ground tools" })
+            Assert.Contains("Use it", texts);
+            string terrain = HelpContents.Find("terrain.md")!.Title;
+            Assert.Contains(terrain, texts);
+            Assert.Equal(1, texts.Count(t => t == on[0]));
+            w.Side.Children.OfType<Button>().First(b => b.Content is TextBlock t && t.Text == terrain)
                 .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(new HelpTarget("terrain.md"), w.Shown);
         });
@@ -132,8 +134,8 @@ public class HelpWindowTests
         {
             var opened = new List<Uri>();
             w.OpenUrl = u => { opened.Add(u); return Task.FromResult(true); };
-            w.Follow("#controls");
-            Assert.Equal(new HelpTarget("map.md", "controls"), w.Shown);
+            w.Follow("#shortcuts");
+            Assert.Equal(new HelpTarget("map.md", "shortcuts"), w.Shown);
             w.Follow("select.md");
             Assert.Equal(new HelpTarget("select.md"), w.Shown);
             w.Follow("https://example.com/");
@@ -146,7 +148,7 @@ public class HelpWindowTests
     [AvaloniaFact]
     public void AHeadingAskedForIsScrolledToAndAnotherPlaceStartsAtTheTop()
     {
-        With(new HelpTarget("terrain.md", "mountain"), w =>
+        With(new HelpTarget("terrain.md", "tips-and-limits"), w =>
         {
             Dispatcher.UIThread.RunJobs();
             Assert.True(w.Scroller.Offset.Y > 100);

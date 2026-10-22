@@ -33,8 +33,8 @@
     <!-- The Script tool's API, compiled with each script. -->
     <EmbeddedResource Include="ScriptApi.csx" LogicalName="TerrainEditor.ScriptApi.csx" />
     <!-- The documentation, shown in the Help window (HelpDocs): its pages and pictures go inside the program, so help
-         works offline and always matches the version. -->
-    <EmbeddedResource Include="../../docs/**/*.md" Exclude="../../docs/releases/**" LogicalName="Docs/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
+         works offline and always matches the version. Not the pages for the editor's own developers. -->
+    <EmbeddedResource Include="../../docs/**/*.md" Exclude="../../docs/releases/**;../../docs/dev/**;../../docs/architecture.md;../../docs/development.md" LogicalName="Docs/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
     <EmbeddedResource Include="../../docs/images/**/*" LogicalName="Docs/images/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
   </ItemGroup>
   <ItemGroup>

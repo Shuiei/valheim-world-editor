@@ -535,7 +535,7 @@ run on any thread; what is in use is swapped in whole (`State`). The SDK's sampl
 `editor/tests/Core.Tests/Samples/` and loaded as a mod's DLL in `ModExtensionsTests`.
 
 **Objects mods link into one** (`editor/Core/App/ObjectLinks.cs`, user docs in
-[select.md](select.md#linked-objects-ships-and-other-mods-groups), mod authors' in
+[select.md](select.md#ships-and-other-linked-objects), mod authors' in
 [modding.md](modding.md#linked-objects)): nothing in the code knows a mod. A `LinkRule` comes from the `links` of a
 mod's `worldeditor.json` (`ModManifests`; the editor ships none for any mod, its tests give their example mod's through
 `ModManifests.Base`); it names the data keys of an object's id, of what a part hangs on, of its offset and turn in that
@@ -584,7 +584,7 @@ after it. `VersionTests` checks `CHANGELOG.md` has its section. Steps in
 
 | To add | Where | Then |
 |---|---|---|
-| A tool | A value in `ToolMode` (`editor/Desktop/ToolPanel.cs`) and its rail button there; `<Name>Tool.cs` for the mouse (wired in `GlView`, like `Tape` for Measure) and `<Name>Panel.cs` with its `Card`, built and added to the tool column in `MainWindow.cs`, shown when its mode is on. Changes go through `EditSession` (`Commit`, `EditGround`…) so they are pending and undoable. | A tip for each control in `editor/Core/Lang/en.json` (`tip.` keys, `TipsTests` fails otherwise) and its other texts there too; `<Name>ToolTests` and `<Name>PanelTests` files; a `docs/<tool>.md` page and the README's table. |
+| A tool | A value in `ToolMode` (`editor/Desktop/ToolPanel.cs`) and its rail button there; `<Name>Tool.cs` for the mouse (wired in `GlView`, like `Tape` for Measure) and `<Name>Panel.cs` with its `Card`, built and added to the tool column in `MainWindow.cs`, shown when its mode is on. Changes go through `EditSession` (`Commit`, `EditGround`…) so they are pending and undoable. | A tip for each control in `editor/Core/Lang/en.json` (`tip.` keys, `TipsTests` fails otherwise) and its other texts there too; `<Name>ToolTests` and `<Name>PanelTests` files; a `docs/<tool>.md` page on the tool template of `docs/dev/writing-docs.md`, listed in `docs/README.md` (the Help window's contents), and its keys in `docs/help/shortcuts.md`. |
 | A Claude tool | A `[McpServerTool]` method in `editor/Desktop/ClaudeTools.cs`, run through `OnUi`, `CannotEdit` first. | `ClaudeToolsTests`; the table in `docs/claude.md`. |
 | A script API member | `editor/Desktop/ScriptApi.csx` (and what it calls in `ScriptHost`). Add, do not rename. | `ScriptHostTests`; `docs/scripting.md`. |
 | A kind of game data | A reader in `editor/Core/App/GameCatalogues*.cs` (an `IStartScan` in the one pass when it is in the bundles, listed in `AtStart`), a `Kind` line in `GameData.Kinds` with its `Use` and trim, and the type that takes it (often in `editor/Core/WorldGen/`, namespace `TerrainEditor.Terrain`). | `--export-test-data editor/tests/fixtures` for its copy; `NOTICE.md`; the list in `docs/development.md`; a test in `editor/tests/Core.Tests` reading the copy. |

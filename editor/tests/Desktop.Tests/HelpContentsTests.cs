@@ -42,6 +42,7 @@ public class HelpContentsTests
         var listed = HelpContents.Sections.SelectMany(s => s.Entries).Select(e => e.Target.Page).ToHashSet();
         Assert.Equal(HelpDocs.Pages.Where(p => p != HelpDocs.Home).Order(), listed.Order());
         Assert.Equal("Select", HelpContents.Find("select.md")?.Title);
+        Assert.Equal("Install the editor", HelpContents.Find("start/install.md")?.Title);
         Assert.Null(HelpContents.Find("nowhere.md"));
     }
 }
