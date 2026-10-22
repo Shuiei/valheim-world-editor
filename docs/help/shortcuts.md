@@ -3,7 +3,8 @@
 Every key and mouse action of the editor, grouped by what you are doing. The **?** button in the top bar (or `F3`)
 shows the main ones while you work.
 
-The keys work in the 3D editor only: not while you type in a box, and not on the start page or the world map. On a
+The keys work in the 3D editor only: not while you type in a box, and not on the start page or the world map
+(`F1` excepted: it works everywhere). On a
 Mac, press `Cmd` wherever this page says `Ctrl` (`Cmd+Z` undoes, `Cmd`+click adds to a selection) and `Option` for
 `Alt`.
 
@@ -31,7 +32,7 @@ While walking or flying the wheel does not zoom and drags do not slide the view.
 | `V` | Open or close the **View** panel. |
 | `L` | Open or close **History**. |
 | `?` (`Shift+/`) or `F3` | Open or close the **Controls** help card. |
-| `F1` | The Help window at the page of the tool in use (see [The Help window](#the-help-window)). |
+| `F1` | The Help window at the page of the tool in use (see [The Help window](#the-help-window)). The small **?** at the top of each panel opens that panel's page. |
 | `Ctrl+S` | **Save to world** (a saved world), **Apply live** (live), **Save blueprint** (the Workshop). |
 
 ## Choose a tool
@@ -108,7 +109,8 @@ These work in the **Select** tool (`E`). A click in the **View** tool picks obje
 
 | Key or mouse | Action |
 |---|---|
-| Click | Add a point. Click on the line: insert a point there. |
+| Click | Add a point. |
+| Drag the line | Add a point there and move it. |
 | Drag a point | Move it. |
 | `Ctrl`+click a point | Remove it. |
 | `Alt`+click | Take the ground's height there as the path's height (Ramp: its start). |
@@ -122,7 +124,7 @@ These work in the **Select** tool (`E`). A click in the **View** tool picks obje
 | Key or mouse | Action |
 |---|---|
 | Left drag (Brush) | Place objects under the brush. `Shift` + drag: take them away. |
-| Click (Line, Zone) | Add a point. Click on a segment: insert a point. Drag a point: move it. `Ctrl`+click a point: remove it. |
+| Click (Line, Zone) | Add a point. Drag the outline: add a point there. Drag a point: move it. `Ctrl`+click a point: remove it. |
 | Double-click the last point | Place along the shape. |
 | Drag (Grid, line shapes) | Draw the grid's box, or the shape from one end to the other. |
 | `Alt`+click | Take the height there as the **Elevation**. |

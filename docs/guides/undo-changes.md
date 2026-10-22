@@ -16,7 +16,7 @@ everything not saved yet.
    (shown only when Claude made changes in the open area). Do it in each area Claude changed: the status bar says how
    many of Claude's changes in other areas are kept.
 6. To drop everything not saved or applied yet, click **Discard** in the top bar, then confirm. Saved and applied
-   changes stay.
+   changes stay: a saved step you had undone comes back, so save after undoing it if you want it gone.
 7. To take back a change you already saved, undo it (or **Remove** it), then **Save to world** again. Live, undo it
    and **Apply live** again (or let **Auto** send it).
 

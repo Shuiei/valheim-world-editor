@@ -11,7 +11,8 @@ Search the whole world for an object, an item in any chest, or a text on a sign 
 4. Press **Find** (or `Enter`). Every result is pinned in orange on the map, and listed with a count per kind.
 5. Click a result in the list. The map centres on it and picks its zone.
 6. Press **Edit in 3D**. The editor opens with that object selected. For an item or a text, its data opens too.
-7. Optional: change the chest's contents or the sign's text, then **Save** (or **Apply live**).
+7. Optional: change the chest's contents or the sign's text (see
+   [Change what a chest holds or a sign says](fill-a-chest.md)), then **Save to world** (or **Apply live**).
 
 ![Search the world for Beech1: every beech pinned in orange, one picked with a gold ring](../images/map-search.jpg)
 *Each pin is one object found; the one picked in the list is larger, with a gold ring.*
@@ -19,8 +20,8 @@ Search the whole world for an object, an item in any chest, or a text on a sign 
 ## Check it worked
 
 - The line above the results says how many were found. The list shows the first 300; up to 2,000 are pinned.
-- **Nothing found?** Check the spelling and what you chose to look for. The search sees the world as it is in the editor:
-  objects you deleted but did not save are not found. The game's own bookkeeping objects (`_ZoneCtrl`…) are found
+- **Nothing found?** Check the spelling and what you chose to look for. The search sees the world as it is in the
+  editor: objects you deleted but did not save are not found. The game's own bookkeeping objects (`_ZoneCtrl`…) are found
   only when your text starts with `_`.
 
 ## Undo it

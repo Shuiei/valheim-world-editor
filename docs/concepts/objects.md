@@ -235,12 +235,12 @@ whether it comes back are fixed by the spawn point's kind, so to get another cre
 themselves until destroyed ("Greydwarf, Greydwarf_Elite · up to 3 around, within 5 m").
 
 ![Boar and draugr spawn points by a hut, one selected and open in the Inspector](../images/spawn-points.jpg)
-*Spawn points by a hut: orange boxes with a marker above each. The selected draugr spawn point is open in the
-Inspector, whose line says what it spawns.*
+*Spawn points by a hut: a plain box for each, with an orange marker above it. The selected draugr spawn point is open
+in the Inspector, whose line says what it spawns.*
 
 The Place tool and the Inspector show this line for each kind, read from your game (`Spawn point: Boar · 0–2 ★ · spawns
-once`). In 3D, spawn points show as orange boxes (red when their creature comes back) and nests as purple ones, each
-with a marker seen through anything in front. Both are hidden at first, because they give away where things are; turn
+once`). In 3D, each spawn point and nest shows as a plain box with a marker above it, seen through anything in front: orange
+for a spawn point (red when its creature comes back), purple for a nest. Both are hidden at first, because they give away where things are; turn
 them on in the View panel.
 
 ## How a paste clears its site
@@ -251,10 +251,11 @@ A copy (from the Area tool or a blueprint) holds:
 - **The ground under the buildings only**: under each building piece (by its real shape) and 1 m round it, fading into
   the ground where it lands over 3 more metres. The rest of the selection's ground stays behind, so a pasted town sits
   in the land where it lands, instead of carrying a square of foreign ground with it. Blueprints hold no ground.
-- **Heights** relative to the copy's average ground height, which goes to the height of the ground where you click.
+- **Heights**: building pieces keep the building's shape, measured from the copy's average ground height, which goes
+  to the height of the ground where you click. Trees, rocks and the like keep their height above the ground, so each
+  lands on the ground where it goes.
 
-The Select tool's copy differs: trees, rocks and the like each land on the ground where they go, and building pieces
-keep the building's shape with the ground under them.
+The Select tool's copy is placed the same way.
 
 ![A stone hut pasted into the side of a mound with Clear the site on, before and after the click](../images/paste-clear-site.jpg)
 *Before the click (left), the paste outline cuts into the mound; after it (right), the ground in the hut's way is dug
@@ -279,7 +280,8 @@ moves the objects in the game under their own ids when it can (see
 
 A blueprint is a building kept as a file, in the format of
 [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/), the in-game building mod: the same file shows
-in Homestead's hammer tab, ready to build in game, and pastes into any world from the editor. Sharing a building means sharing its `.blueprint` file and the `.png` picture beside it.
+in Homestead's hammer tab, ready to build in game, and pastes into any world from the editor. Sharing a building
+means sharing its `.blueprint` file and the `.png` picture beside it.
 
 **What it keeps.** Building pieces only: trees, rocks and items left lying are not kept, and neither is the ground.
 Each piece is a line with its kind, its place in metres from the **anchor** (the middle of the building at ground

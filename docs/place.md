@@ -2,7 +2,7 @@
 
 Put trees, rocks, bushes, crops, building pieces and spawn points into the world, one at a time or by the hundred.
 
-**Where:** tool rail, EDIT section · **Key:** `T` · **Works in:** saved worlds, live (in the Workshop, `T` opens
+**Where:** tool rail, **EDIT** section · **Key:** `T` · **Works in:** saved worlds, live (in the Workshop, `T` opens
 **Build** instead: see [Workshop](workshop.md))
 
 ![The Meadows woods preset in Brush mode over open grass](images/plant-brush.jpg)
@@ -23,7 +23,9 @@ To plant a small wood:
 4. Point at the ground: the see-through preview shows what a click places.
 5. Click to place it, or drag to keep adding.
 
-For Line, Grid and Zone, draw the shape instead, check the preview, then press `Enter` (**Place (Enter)**).
+For Line, Grid and Zone, draw the shape instead, check the preview, then press `Enter` (**Place (Enter)**). The
+shape stays after placing, its preview now empty (what it would place is there already): press **Clear (Esc)** to draw
+the next one.
 
 Each click, stroke or `Enter` is one undo step (`Ctrl+Z`). Nothing is written to the world until you **Save to world**
 (or **Apply live**). To move or delete what you placed, use [Select](select.md).
@@ -184,7 +186,7 @@ All the editor's keys are in [Shortcuts](help/shortcuts.md).
 
 ## Tips and limits
 
-- **Undo:** `Ctrl+Z` takes back a click, a stroke or a shape. After saving, use History or a backup: see
+- **Undo:** `Ctrl+Z` takes back a click, a stroke or a shape, after saving too (then save again). See
   [Undo changes](guides/undo-changes.md).
 - At most 2000 objects per line, grid or zone, and 400 per brush click.
 - Objects go only inside the open area, not on its outermost line of points, and where the Mask allows.

@@ -141,7 +141,7 @@ game's own.
 
 - **The [Mask](masks.md) applies to every action**, and so does the ±8 m limit unless
   [No limit](terrain.md#no-limit) is on. Where the path reaches the limit, the points turn red and the status bar says
-  so.
+  so. The No limit switch is at the bottom of any sculpt brush's panel, and stays on when you come back to Path.
 - **A sharp corner** needs two points close together, or **Smooth curve through the points** off: a smooth curve
   passes through every point you click.
 - **Check a ramp's slope first** with [Measure](measure.md): measured from foot to top, **Slope** is what the ramp

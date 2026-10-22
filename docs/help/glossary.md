@@ -39,7 +39,7 @@ pasted into any world. See [The Workshop](../workshop.md).
 **Bridge.** Short for WorldEditorBridge, the editor's plugin in the game. See **Plugin**.
 
 **Brush.** A tool you drag over the ground: the sculpt brushes (Raise, Lower, Flatten…) and the paint brushes (Dirt,
-Cultivate, Paved, Clear). Place has a brush too. See [Sculpt and paint](../terrain.md).
+Cultivate, Paved, Clear paint). Place has a brush too. See [Sculpt and paint](../terrain.md).
 
 **Built by.** The player written as the builder of the pieces you place, chosen in the View panel. See
 [Player-built pieces](../concepts/objects.md#player-built-pieces).
@@ -73,8 +73,8 @@ the editor can save into. See [Zones](../concepts/areas-and-zones.md#zones).
 **Ground disc.** An invisible location the editor writes to hold ground past the game's 8 m limit. See
 [No limit](../concepts/ground-limits.md#no-limit).
 
-**History.** The list of every change of the session, to undo, redo or remove one. See
-[History](../concepts/saving-and-history.md#history).
+**History.** The list of your steps in a world (`L`), to undo, redo or remove one. Kept after each save or apply,
+so it comes back when you open the world again. See [History](../concepts/saving-and-history.md#history).
 
 **Homestead.** A Valheim building mod whose blueprints the editor saves; with it in your game you build them with
 the hammer. Not needed to paste blueprints in the editor. See [The Workshop](../workshop.md).
@@ -139,6 +139,9 @@ and checks it. See [Saving a world](../concepts/saving-and-history.md#saving-a-w
 
 **Spawn point.** An invisible object of the game where creatures appear. See
 [Spawn points](../concepts/objects.md#spawn-points).
+
+**Step.** One change in History: a brush stroke, a click, a paste, a script run. `Ctrl+Z` undoes one step. See
+[Pending changes](../concepts/saving-and-history.md#pending-changes).
 
 **Stamp.** A brush shape made from a height picture, put into the ground whole or painted. See
 [Sculpt and paint](../terrain.md).

@@ -3,11 +3,11 @@
 Generate whole dungeons and put them in your world behind an entrance, edit the game's own dungeons room by room, and
 build inside them.
 
-**Where:** tool rail, CREATE section · **Key:** none · **Works in:** saved worlds, live; the generator also in the
+**Where:** tool rail, **CREATE** section · **Key:** none · **Works in:** saved worlds, live; the generator also in the
 Workshop (**Library** → **Generate dungeon…**)
 
 ![A Burial Chambers dungeon of the game's own rooms, cut open, with the Dungeon panel](images/dungeon-rooms.jpg)
-*A dungeon of the game's own rooms (Burial Chambers, 18 rooms), 5000 m up and cut 2 m above the floor. Orange and
+*A dungeon of the game's own rooms (Burial Chambers, 25 rooms), 5000 m up and cut 2 m above the floor. Orange and
 blue squares mark where rooms meet. **Delete room (Del)** is greyed until a room is selected.*
 
 A Valheim dungeon is a location on the ground (a mound, a cave mouth) whose door leads to rooms kept 5000 m above it.
@@ -133,7 +133,7 @@ A dungeon nobody has been near has no rooms yet: the panel says *The game has no
 has been near it).* Visit it in game, then open the area again.
 
 ![A Frost Cave seen from above after Go to the dungeon, cut 4 m above the floor, with green open ends and orange door squares](images/dungeon-inside.jpg)
-*A Frost Cave after **Go to the dungeon**, its roofs cut 4 m above the floor: the panel lists it (`Frost Cave, 17 rooms, at
+*A Frost Cave after **Go to the dungeon**, its roofs cut 4 m above the floor: the panel lists it (`Frost Cave, 17 room(s), at
 -640, -350`). Green frames mark open ends (a room was deleted), orange squares where rooms meet without a door.*
 
 ## Add rooms
@@ -151,7 +151,7 @@ turns red and the line warns. The game builds the list anyway: it is only a warn
 
 ![An ice corridor shown see-through at a green open end, picked in the ROOMS list](images/dungeon-add-room.jpg)
 *`cave_new_icecorridor01` picked under **ROOMS** (narrowed with "icecorridor") and pointed at an open end: it shows
-there see-through, joined the game's way. The line at the bottom reads `17 rooms, 4 open end(s).`*
+there see-through, joined the game's way. The line at the bottom reads `17 room(s), 4 open end(s).`*
 
 ## Doors
 
@@ -212,7 +212,8 @@ Any blueprint can be a dungeon: switch on **A dungeon** when you save it in the 
 **Details**). Pasted into a world from the Blueprints panel, it does not go on the ground:
 
 - The entrance of the biome's dungeon goes where you click, facing you, and the building 5000 m above it.
-- The paste tool's turn and mirror apply (`R`, `F`, `,` `.`); its height does not.
+- The paste tool's turn and mirror apply (`R`, `F`, `,` `.`); its **Height** and **Copies** do not, though the
+  panel shows them.
 - Put a **portal** (`portal_wood`) in the building where players should arrive, facing the way they should look: the
   entrance's door opens there, and that portal is left out. Without one, players arrive at the building's middle,
   facing north.

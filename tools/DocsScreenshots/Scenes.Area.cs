@@ -96,7 +96,8 @@ public sealed partial class Scenes
         e.Shot(before);
         e.Send($"mouse down {at.X} {at.Z}");
         e.Send($"mouse up {at.X} {at.Z}");
-        Move(e, P(-8, 90));
+        // Onto the sky, off the ground: no preview of the tool over what was just done.
+        e.Point(1300, 150);
         e.Send("wait 500");
         e.Shot(after, keepMessage: true);
         Halves(Out("paste-clear-site.jpg"), ("Before the click", "After the click"), before, after, new HalvesCut(720));
@@ -238,7 +239,11 @@ public sealed partial class Scenes
         e.Send("wait 500");
         RunOnDisplay("xdotool", "key", "ctrl+l");
         e.Send("wait 300");
-        TypeKeys(e, png);
+        // Typed behind a folder that is not there ("Q/..."), so the path box has no names to complete it with (it adds
+        // what the names have in common: ".cache/vw" became ".cache/vwe-e-tmp"); then the "Q" goes.
+        TypeKeys(e, "Q" + png);
+        RunOnDisplay("xdotool", "key", "Home", "Delete");
+        e.Send("wait 300");
         RunOnDisplay("xdotool", "key", "Return");
         RunOnDisplay("xdotool", "mousemove", "1915", "1075");
         e.Send("wait 1500");

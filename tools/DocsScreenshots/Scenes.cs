@@ -9,7 +9,8 @@ namespace TerrainEditor.DocsScreenshots;
 /// </summary>
 /// <remarks>
 /// The scenes are split by documentation page: the ground tools (Scenes.Ground.cs and Scenes.Shapes.cs), objects
-/// (Scenes.Objects.cs), building and dungeons (Scenes.Building.cs), and the pages around the 3D editor (Scenes.Pages.cs).
+/// (Scenes.Objects.cs), building and dungeons (Scenes.Building.cs), the pages around the 3D editor (Scenes.Pages.cs), and
+/// the diagrams drawn without the app (Scenes.Diagrams.cs, run with no editor).
 /// The helpers the scenes share are in Scenes.Input.cs (pointer and key input) and Scenes.Builds.cs (builds and nature). A picture shows
 /// its subject clearly: nothing in front of it (the tool panel stays on the left, the subject right of it), neither
 /// too close nor too far.
@@ -124,15 +125,24 @@ public sealed partial class Scenes
             ("claude-history", ClaudeHistory),
             ("start-missing", StartMissing),
             ("start-setup", StartSetup),
+            ("start-server-error", StartServerError),
             ("save-confirm", SaveConfirm),
             // Live mode (live-mode.md), with $DOCS_LIVE.
             ("live", Live),
             ("new-world", NewWorld),
         ];
+        Drawn =
+        [
+            // Drawn, without the app (Scenes.Diagrams.cs): how No limit ground is saved (ground-limits.md).
+            ("concept-ground-discs", GroundDiscs),
+        ];
     }
 
     /// <summary>The scenes by name, in the order they run when none is named.</summary>
     public IReadOnlyList<(string Name, Action<Editor> Run)> All { get; }
+
+    /// <summary>The diagrams drawn without the app (no editor is started for them), by name.</summary>
+    public IReadOnlyList<(string Name, Action Draw)> Drawn { get; }
 
     /// <summary>A point on the bare zone, dx east and dz north of its middle (metres).</summary>
     private static (double X, double Z) P(double dx, double dz) => (Cx + dx, Cz + dz);

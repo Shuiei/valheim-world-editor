@@ -13,8 +13,8 @@ Put a building from your blueprint library (made in the Workshop, saved from a w
 3. Type a word of its name or tags in **Search blueprints**.
 4. Click **Paste** beside the blueprint. It follows the cursor, see-through.
 5. Turn it with `R` (a quarter turn) or `,` `.`; press `F` to mirror it.
-6. Optional: to sink it into a slope, lower it with `Ctrl` + wheel, and switch on **Clear the site** in the Paste
-   panel to dig out the ground in its way and take away trees and rocks.
+6. Optional: to sink it into a slope, lower it with `Ctrl` + wheel. **Clear the site** in the Paste panel (on at
+   first) digs out the ground in its way and takes away trees and rocks.
 7. Click where it should stand. Click again elsewhere for more copies.
 8. Press `Esc` to stop pasting.
 9. Click **Save to world** (or **Apply live**).

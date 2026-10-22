@@ -3,7 +3,8 @@
 See the whole world, pick the place to edit in 3D, search every object, chest and sign, reset zones anywhere at once,
 and save what is waiting.
 
-**Where:** opens with every world; **Map** in the editor's top bar goes back to it · **Key:** none · **Works in:**
+**Where:** opens with every world; **Map** in the editor's top bar goes back to it · **Key:** none (`F1` opens this
+page) · **Works in:**
 saved worlds, live
 
 > [!WARNING]
@@ -32,7 +33,8 @@ alt biome when it has one ("alt biome Dark Meadows", shown a few seconds after t
 ## Settings
 
 The top of the side panel gives the world's name, seed, save number and how many objects it holds (live: the
-connection instead of the save number). **Worlds** goes back to the start page.
+connection instead of the save number); after a save it shows the new save number. **Worlds** goes back to the start
+page: with changes pending it asks first, and **Leave anyway** loses them.
 
 | Setting | What it does |
 |---|---|
@@ -144,6 +146,9 @@ it, ready for **Edit in 3D**.
   changes in it.
 - **Only zones inside the world** are listed for reset. A dedicated server with nobody online also generates zones far
   outside the world: those are left out.
+- **To take a change back**, **Unmark all** cancels marked resets, and **Discard** drops everything pending. To undo
+  one change, open its area in 3D and press `Ctrl+Z` or use History: see
+  [Undo a step, take back one change, or discard everything](guides/undo-changes.md).
 - **Search finds nothing?** Check the spelling and the **Look for** choice; bookkeeping objects need a leading `_`.
 - **Worlds made with Expand World**: with its add-on installed and on, a wider world shows whole, the location icons
   come from its data, and the readout adds the territory and the status effects a player gets there ("territory

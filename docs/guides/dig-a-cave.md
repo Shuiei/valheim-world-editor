@@ -7,18 +7,18 @@ mound to dig through looks best.
 
 The game's ground cannot overhang, so a cave is a dug trench with boulders laid over it, like the game's own caves.
 
-1. In the tool rail's **CREATE** section, click **Cave**. The [Path](../path.md) tool opens with **Cave (dig and
+1. Optional: for a floor deeper than 8 m, press `1` (**Raise**) and tick **No limit: past the game's ±8 m** at the
+   bottom of its panel (see [No limit](../terrain.md#no-limit)). It stays on for the other tools.
+2. In the tool rail's **CREATE** section, click **Cave**. The [Path](../path.md) tool opens with **Cave (dig and
    roof)** chosen.
-2. Click points along the cave, from one entrance to the other. Make the line long enough for both entrance slopes.
-3. In the panel, choose a **Preset**: **Tunnel** (narrow), **Cave** or **Cavern** (a wide hall).
-4. Optional: change **Width**, **Depth** (how far down the floor is) and **Headroom** (the height inside). **Depth**
+3. Click points along the cave, from one entrance to the other. Make the line long enough for both entrance slopes.
+4. In the panel, choose a **Preset**: **Tunnel** (narrow), **Cave** or **Cavern** (a wide hall).
+5. Optional: change **Width**, **Depth** (how far down the floor is) and **Headroom** (the height inside). **Depth**
    must be larger than **Headroom** by 1.5 m for a roof.
-5. Optional: for a floor deeper than 8 m, tick **No limit: past the game's ±8 m** in the
-   [brush settings](../terrain.md#no-limit) first.
 6. Optional: choose the boulders in **Roof**; **By biome** matches the land.
 7. Press **Apply (Enter)**. The status bar says how long the cave is, how many boulders roof it, and how many trees
    and rocks were taken away.
-8. Press **Clear (Esc)**, then **Save** (or **Apply live**).
+8. Press **Clear (Esc)**, then click **Save to world** (or **Apply live**).
 
 ![A cave dug through a big mound and roofed with boulders, seen from its entrance slope](../images/path-cave.jpg)
 *A cave seen from its entrance: the slope leads down under the boulder roof, with daylight at the far end.*
@@ -34,6 +34,11 @@ The game's ground cannot overhang, so a cave is a dug trench with boulders laid 
 
 The whole cave, trench, boulders and clearing, is one undo step: `Ctrl+Z` takes it back. **Randomize** then gives new
 sizes and boulders for the next try.
+
+After saving, undo it and save again (see [Undo a step, take back one change, or discard everything](undo-changes.md)).
+A cave saved with No limit on starts the History over (see
+[When the history starts over](../concepts/saving-and-history.md#when-the-history-starts-over)): put the place back with
+[Restore one area from a backup](restore-from-backup.md) instead.
 
 ## Related
 

@@ -9,7 +9,8 @@ using TerrainEditor.DocsScreenshots;
 // Each scene opens a fresh editor (a stand-in home: no one's names or folders) and leaves without
 // saving. Run:
 //   dotnet run --project tools/DocsScreenshots -- <dir> [scene ...]
-// Pictures go to docs/images (or $DOCS_OUT). With scene names, only those scenes run.
+// Pictures go to docs/images (or $DOCS_OUT). With scene names, only those scenes run. The drawn diagrams
+// (Scenes.Diagrams.cs) are made without the app.
 // $HOMESTEAD_DLL (Homestead.dll from its Thunderstore package) puts Homestead in the stand-in game's
 // BepInEx, so the start page and the Blueprints panel show it installed.
 // $DOCS_APP (a released ValheimWorldEditor program) is driven instead of the Debug build in editor/Desktop/bin.
@@ -23,7 +24,7 @@ if (args.Length < 1)
 string dir = args[0];
 string output = Environment.GetEnvironmentVariable("DOCS_OUT") is { Length: > 0 } o ? o : Path.Combine(Editor.Repo, "docs", "images");
 var scenes = new Scenes(dir, output);
-string[] names = args.Length > 1 ? args[1..] : [.. scenes.All.Select(s => s.Name)];
+string[] names = args.Length > 1 ? args[1..] : [.. scenes.All.Select(s => s.Name), .. scenes.Drawn.Select(s => s.Name)];
 Directory.CreateDirectory(output);
 string? homestead = Environment.GetEnvironmentVariable("HOMESTEAD_DLL") is { Length: > 0 } h ? h : null;
 string? app = Environment.GetEnvironmentVariable("DOCS_APP") is { Length: > 0 } a ? a : null;
@@ -31,6 +32,13 @@ string[]? live = Environment.GetEnvironmentVariable("DOCS_LIVE") is { Length: > 
 foreach (string name in names)
 {
     var started = Stopwatch.StartNew();
+    // A drawn diagram: no editor to start.
+    if (scenes.Drawn.FirstOrDefault(s => s.Name == name).Draw is { } draw)
+    {
+        draw();
+        Console.WriteLine($"{name}: {started.Elapsed.TotalSeconds:0} s");
+        continue;
+    }
     if (name == "live" && live is not { Length: 2 })
     {
         Console.WriteLine("live: skipped ($DOCS_LIVE must be \"<bridge address> <token>\")");

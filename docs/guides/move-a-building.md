@@ -39,8 +39,9 @@ should float or be left behind. After saving, open the world in game and walk in
 - The clipboard stays: you can paste in another area or another world.
 - To move by exact metres, use **EXACT PLACE** → **Move by** in the Select panel.
 - For a ship or other mod vehicle, select any part: the whole group moves.
-- In live mode a moved building keeps its ids in the running game: see
-  [Edit the world you are playing](edit-your-game-live.md).
+- In live mode, a building moved while no player is near it stays the same object in the game, so mods that track
+  it keep track: see
+  [Moving an object keeps it the same object](../concepts/live-editing.md#moving-an-object-keeps-it-the-same-object).
 
 ## Related
 

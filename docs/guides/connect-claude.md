@@ -31,7 +31,8 @@ If Claude says it cannot reach the editor, see [Claude cannot connect](../help/t
 ## Undo it
 
 - `Ctrl+Z` takes back the last step, Claude's or yours.
-- **Take back Claude's changes**, at the top of History, removes every step Claude made and keeps yours.
+- **Take back Claude's changes**, at the top of History, removes every step Claude made in the open area and keeps
+  yours.
 - **Discard** drops everything not saved.
 - To stop Claude reaching the editor, turn **Allow Claude to connect** off and **Save**. **New token** then **Save**
   locks out any copy of the old command.

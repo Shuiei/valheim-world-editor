@@ -63,10 +63,14 @@ key file, a saved password or asks for one, and boxes for what is not saved.
 The servers are kept in `servers.cfg` in the editor's data folder (the start page's side menu shows it), one section
 per server (`Host`, `SshPort`, `User`, `Password`, `KeyFile`, `Token`, `BridgePort`, `GameFolder`, `HostKey`), so you
 can also edit it by hand. A server is one account on one address and port: connecting again with the same ones
-updates its section. `Password` is only filled when **Save password** was ticked, as plain text (on Linux only you can read
-the file): prefer an SSH key. `HostKey` is the server's identity, remembered on the first connection. If it ever
-changes, the editor refuses to connect, as someone could be pretending to be your server. If you reinstalled the
-server, empty the `HostKey` line of each saved server with that address to accept the new identity.
+updates its section.
+
+`Password` is only filled when **Save password** was ticked, as plain text (on Linux only you can read the file):
+prefer an SSH key.
+
+`HostKey` is the server's identity, remembered on the first connection. If it ever changes, the editor refuses to
+connect, as someone could be pretending to be your server. If you reinstalled the server, empty the `HostKey` line of
+each saved server with that address to accept the new identity.
 
 ## Related
 

@@ -3,7 +3,7 @@
 Build on a blank plot with every piece the game has, see what would hold and what it costs, and keep it as a
 blueprint to build in game or paste into any world.
 
-**Where:** start page, **The Workshop** → **Open the Workshop**; in a world, **Blueprints** (tool rail, CREATE section)
+**Where:** start page, **The Workshop** → **Open the Workshop**; in a world, **Blueprints** (tool rail, **CREATE** section)
 → **New in Workshop** · **Key:** none · **Works in:** the Workshop's own plot (the
 **Blueprints** panel works in saved worlds and live)
 
@@ -46,8 +46,8 @@ level, is the blueprint's **anchor**, the point Homestead measures every piece f
 - The top bar has **Start**, the **Support check** switch, the **Cut** slider and **Save blueprint**. It counts the
   pieces, says how many would fall and whether the building is saved
   (`12 piece(s) · 2 would fall · not saved as a blueprint`).
-- Under the title: what the building costs in game. Point at it for every material, the crafting stations needed
-  nearby and the pieces with no known recipe.
+- Under the title: what the building costs in game; a long line ends in "…". Point at it for every material, the
+  crafting stations needed nearby and the pieces with no known recipe.
 
 There is no **Discard**: undo, or open the blueprint again. Leaving with a building not saved as a blueprint
 (**Start**, opening another, quitting) asks first.
@@ -98,7 +98,7 @@ tall house is left out), each with its own picture, pieces, cost, **Open** and *
 | Drag a row onto the plot | Adds the blueprint where you drop it. |
 | Drop files on the plot | `.blueprint` and `.vbuild` files from your file manager are imported, then added where they land. Dropped on a world, they are only imported. |
 | **Import file…** | Imports a `.blueprint` (Homestead, PlanBuild) or `.vbuild` file into the library. |
-| **Generate dungeon…** | Shows the dungeon generator (building pieces only; see [Dungeon](dungeons.md)). **Open on the plot** puts the dungeon there alone, **Add to the plot** adds it in the middle; either way its blueprint is kept in the library. **← Library** goes back. |
+| **Generate dungeon…** | Shows the dungeon generator (building pieces only; see [Dungeon](dungeons.md)). **Open on the plot** puts the dungeon there alone, **Add to the plot** adds it in the middle; either way its blueprint is kept in the library, without a `.png` picture beside it. **← Library** goes back. |
 
 An opened or added blueprint keeps its exact form, moved as one so its lowest building piece sits on the plot. A
 Homestead blueprint keeps its anchor at the plot's middle; other files are centred. Saving it again keeps the anchor's
@@ -242,7 +242,8 @@ All the editor's keys are in [Shortcuts](help/shortcuts.md).
 - A tab shows at most 300 pieces: search to find the others.
 - **What comes back.** Pasted from the editor, a blueprint's objects hold what they held (chest contents, signs, the
   boss). Built in game with Homestead, it is only the pieces: chests are empty and no creatures come.
-- Copy and paste are for worlds: on the plot, use **Add** or drag a blueprint in.
+- Copy and paste are for worlds: `Ctrl+V` does nothing on the plot, so `Ctrl+X` there only removes the pieces
+  (`Ctrl+Z` brings them back). To add a building, use **Add** or drag a blueprint in.
 - A blueprint made with mods you do not have opens without their pieces; saving it then writes it without them.
 - Creatures inside a building piece are stood on top of the highest piece under them (the message says how many).
   The top bar counts the ones still inside a piece.
