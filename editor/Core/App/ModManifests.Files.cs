@@ -73,7 +73,10 @@ public static partial class ModManifests
     {
         if (from is var (folder, mod) && ExtensionPath(root, folder) is { } path)
         {
-            notes.Extensions[path] = new Offered(path, mod, Names(root["gameComponents"], IsScriptName, 32), Names(root["settingsFiles"], IsSettingsFile, 8), addOn);
+            notes.Extensions[path] = new Offered(path, mod, Names(root["gameComponents"], IsScriptName, 32), Names(root["settingsFiles"], IsSettingsFile, 8), addOn)
+            {
+                WorldGenerators = GeneratorNames(root["worldGenerators"]),
+            };
         }
     }
 
@@ -101,6 +104,23 @@ public static partial class ModManifests
             ? []
             : [.. list.OfType<JsonValue>().Select(v => v.TryGetValue(out string? s) ? s : null).OfType<string>()
                 .Where(ok).Distinct(StringComparer.Ordinal).Take(most)];
+
+    /// <summary>
+    /// The world generators a manifest says its extension registers ("worldGenerators"), by the id their worlds' files
+    /// name, with the mod's name for the player: entries whose id (100 characters at most) and name (64 at most) are
+    /// not blank, 8 at most; null when there are none.
+    /// </summary>
+    internal static Dictionary<string, string>? GeneratorNames(JsonNode? node)
+    {
+        if (node is not JsonObject map)
+        {
+            return null;
+        }
+        var names = map.Where(e => e.Key.Length is > 0 and <= 100 && !string.IsNullOrWhiteSpace(e.Key))
+            .Select(e => (e.Key, Name: e.Value is JsonValue v && v.TryGetValue(out string? s) ? s.Trim() : ""))
+            .Where(e => e.Name.Length is > 0 and <= 64).Take(8).ToDictionary(e => e.Key, e => e.Name, StringComparer.Ordinal);
+        return names.Count > 0 ? names : null;
+    }
 
     /// <summary>Whether a "gameComponents" entry is a class name: letters, digits and underscores, not starting with a digit.</summary>
     private static bool IsScriptName(string s) =>
