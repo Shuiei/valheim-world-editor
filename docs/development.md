@@ -206,8 +206,8 @@ editor ([modding.md](modding.md#add-ons)). The ones made here live in `addons/<N
 
 | Path | What it holds |
 |---|---|
-| `addons/<Name>/src/<Project>/` | The extension: one netstandard2.0 project referencing `sdk/ValheimWorldEditor.Sdk` (never the editor), and its `worldeditor.json` (with `serves`, the mod's DLL). One DLL: the editor loads nothing else from the add-on's folder. |
-| `addons/<Name>/tests/<Project>.Tests/` | Its own tests, against the SDK only, run by CI's `addon-tests` job with every other add-on's. |
+| `addons/<Name>/src/<Project>/` | The extension: one netstandard2.0 project (net10.0 when it needs what only the editor's .NET has, as the Riverheim add-on loading the player's Riverheim, or the SDK's world-rules model, as the Expand World add-on) referencing `sdk/ValheimWorldEditor.Sdk` (never the editor), and its `worldeditor.json` (with `serves`, the mod's DLL, unless it looks for its mods itself). One DLL: the editor loads nothing else from the add-on's folder. |
+| `addons/<Name>/tests/<Project>.Tests/` | Its own tests, against the SDK only (the Expand World add-on's also against the editor's Core and its tests' helpers and fixtures, to check its rules with the editor's generator), run by CI's `addon-tests` job with every other add-on's. |
 | `addons/<Name>/VERSION`, `CHANGELOG.md` | Its own version and changes: the zip's name and the DLL's version. `Directory.Build.props` there reads it over the repository's settings. |
 | `addons/<Name>/README.md`, `package-readme.txt` | What it does, for this repository; what the player reads in the zip (`README.txt`). |
 
@@ -406,7 +406,7 @@ BepInEx's own pack for the BepInEx and Harmony assemblies Riverheim names, at th
 never kept in the repository: building a test project downloads them from Thunderstore (`editor/tests/TestMods.targets`) into
 the system's temporary folder (`vwe-test-mods/<project>`), and the test run deletes them when it ends
 (`editor/tests/Support/TestMods.cs`; CI deletes them after its last test process). Building the tests needs the network for
-them. Unity's classes Riverheim's plugin derives from come from a stand-in the Riverheim add-on's tests write (`addons/Riverheim/tests/Riverheim.WorldEditor.Tests/Support/UnityStandIn.cs`); those tests link `editor/tests/Support/TestMods.cs` and import `editor/tests/TestMods.targets`.
+them. Unity's classes Riverheim's plugin derives from come from a stand-in the Riverheim add-on's tests write (`addons/Riverheim/tests/Riverheim.WorldEditor.Tests/Support/UnityStandIn.cs`); those tests link `editor/tests/Support/TestMods.cs` and import `editor/tests/TestMods.targets`; the Expand World add-on's link all of `editor/tests/Support`, with a copy of YamlDotNet standing in for the one Expand World Data installs (`YamlStandIn`).
 
 CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
 `windows-smoke` on main only: they are slow, and the packaging they check seldom changes; `windows-tests` on main

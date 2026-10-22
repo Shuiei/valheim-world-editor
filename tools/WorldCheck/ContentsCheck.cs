@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Numerics;
-using TerrainEditor.App;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
 
@@ -43,8 +42,7 @@ internal static class ContentsCheck
         {
             return 1;
         }
-        var found = ExpandWorld.Look(args[2], "check");
-        world.Rules = ExpandWorld.Rules(new Dictionary<string, string>(), found, ExpandWorld.ReadData(found), world.StartingGlobalKeys);
+        world.Rules = ExpandWorldFiles.Rules(args[2], world.StartingGlobalKeys);
         var terrain = new ValheimGen.TerrainService(world, null);
         // The named kinds' locations only, and every zone whose ground they change (a blueprint's snapshots reach
         // the zones round its own).

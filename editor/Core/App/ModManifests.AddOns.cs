@@ -33,7 +33,7 @@ public static partial class ModManifests
                 }
                 bool served = serves == null || AddOns.IsInstalled(settings, serves);
                 bool on = !settings.AddOnsOff.Contains(name, StringComparer.Ordinal);
-                addOns.Add(new AddOns.AddOn(name, folder, serves, served, ExtensionPath(root, folder), on));
+                addOns.Add(new AddOns.AddOn(name, folder, serves, served, ExtensionPath(root, folder), on) { WorldGenerators = GeneratorNames(root["worldGenerators"]) });
                 if (!on)
                 {
                     Console.WriteLine($"add-on {name}: turned off in Settings.");

@@ -11,5 +11,11 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../editor/Core/ValheimWorldEditor.Core.csproj" />
+    <!-- The contents and vegetation checks read Expand World Data's files with the add-on's readers. -->
+    <ProjectReference Include="../../addons/ExpandWorld/src/ExpandWorld.WorldEditor/ExpandWorld.WorldEditor.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The add-on's tests check how the checks read the mods' files (ExpandWorldFiles). -->
+    <InternalsVisibleTo Include="ExpandWorld.WorldEditor.Tests" />
   </ItemGroup>
 </Project>

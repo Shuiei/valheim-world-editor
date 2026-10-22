@@ -1,56 +1,45 @@
 using Avalonia.Headless.XUnit;
 using TerrainEditor.App;
+using ValheimGen;
+using ValheimWorldEditor.Sdk;
 using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The New world page reads Expand World's rules again once the game's own location rules are read (they are read in
-/// the background, often after the page opens), so the location file converts; rules given to the page stay as given.
+/// The New world page asks the world rules providers again once the game's own location rules are read (they are read
+/// in the background, often after the page opens), so a location file converts; rules given to the page stay as given.
 /// </summary>
 [Collection("DataDir")]
 public sealed class NewWorldPageRefreshRulesTests : IDisposable
 {
-    private readonly string? _dataDir = AppSettings.DataDirOverride;
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-refresh-" + Guid.NewGuid().ToString("N")[..8]);
-
-    public NewWorldPageRefreshRulesTests()
-    {
-        AppSettings.DataDirOverride = _dir;
-    }
-
-    /// <summary>Puts the data folder and the game's location rules back, and deletes the folder.</summary>
+    /// <summary>Forgets the extensions, and puts the game's location rules back.</summary>
     public void Dispose()
     {
-        ValheimGen.SeedLocations.Use(new ValheimGen.SeedLocations.RuleSet());
-        AppSettings.DataDirOverride = _dataDir;
-        if (Directory.Exists(_dir))
-        {
-            Directory.Delete(_dir, true);
-        }
+        ModExtensions.Forget();
+        SeedLocations.Use(new LocationRuleSet());
     }
 
-    /// <summary>Makes a BepInEx folder with Expand World Data installed, its settings, the library and a location file, and names it in the saved settings.</summary>
-    private void Bep()
+    /// <summary>A provider whose location file converts only once the game's location rules are read, as Expand World Data's.</summary>
+    private sealed class Located : IWorldEditorExtension, IWorldRulesProvider
     {
-        string bep = Path.Combine(_dir, "bep", "BepInEx");
-        Directory.CreateDirectory(Path.Combine(bep, "config", "expand_world"));
-        YamlStandIn.Install(bep);
-        TestMods.Install(bep, TestMods.Data);
-        File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[3. Data]\nLocation data = true\n");
-        File.WriteAllText(Path.Combine(bep, "config", "expand_world", "expand_locations.yaml"), "- prefab: StartTemple:Twice\n  biome: Meadows\n  quantity: 2\n");
-        var settings = AppSettings.Load();
-        settings.ExpandWorld = true;
-        settings.ExpandWorldFolder = bep;
-        Assert.Null(settings.Save());
+        public void Register(IExtensionRegistry registry) => registry.AddWorldRules(this);
+
+        public Task<WorldRules?> ForWorld(WorldRulesRequest world) => ForNewWorld();
+
+        public Task<WorldRules?> ForNewWorld() => Task.FromResult<WorldRules?>(new WorldRules
+        {
+            DataInstalled = true,
+            Locations = SeedLocations.Available ? new LocationRuleSet { Locations = [new LocationRule { Prefab = "StartTemple:Twice" }] } : null,
+        });
     }
 
     [AvaloniaFact]
     public void TheLocationFileConvertsOnceTheGamesRulesAreRead()
     {
-        Bep();
-        ValheimGen.SeedLocations.Use(new ValheimGen.SeedLocations.RuleSet());
+        ModExtensions.UseForTests(("Located", new Located()));
+        SeedLocations.Use(new LocationRuleSet());
         using var page = new NewWorldPage([], previewSize: 16);
         // Opened before the game's rules: the location file waits.
         Assert.True(page.Rules.DataInstalled);
@@ -70,9 +59,9 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
     [AvaloniaFact]
     public void RulesGivenToThePageStayAsGiven()
     {
-        Bep();
+        ModExtensions.UseForTests(("Located", new Located()));
         Fixtures.UseLocations();
-        using var page = new NewWorldPage([], previewSize: 16, rules: new ValheimGen.WorldRules { DataInstalled = true });
+        using var page = new NewWorldPage([], previewSize: 16, rules: new WorldRules { DataInstalled = true });
         page.RefreshRules();
         Assert.Null(page.Rules.Locations);
     }

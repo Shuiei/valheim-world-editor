@@ -176,9 +176,9 @@ Until then the map shows the seed's land with nothing on it.
 - If the bosses and traders cannot be read from your game's files, the page says so: the map still shows the
   biomes, but the marks are missing and the search cannot look for them. The log (**Open log** at the bottom of the start
   page's side menu) says why.
-- With the **Expand World** switch in Settings on, the seeds looked at and the world made follow the mods' settings
+- With the Expand World add-on installed and on (Settings → Add-ons), the seeds looked at and the world made follow the mods' settings
   and data files (the page says so above Create): a wider world, other biomes and places. See
-  [Expand World](expand-world.md). A biome the mods' biome file adds and a territory show on the map in their own
+  the [Expand World add-on](../addons/ExpandWorld/README.md). A biome the mods' biome file adds and a territory show on the map in their own
   colours, and the water line is the mods' sea level.
 - With an add-on for a world generation mod in use (the [Riverheim add-on](../addons/Riverheim/README.md)) and the
   mod installed, a **Generator** choice appears under Saved

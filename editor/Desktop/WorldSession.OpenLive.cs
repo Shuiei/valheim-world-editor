@@ -11,16 +11,18 @@ public sealed partial class WorldSession
     public static async Task<WorldSession> OpenLive(LiveBridge live, string label)
     {
         WorldSession session;
-        List<string> mods;
+        LiveGame game;
         try
         {
             await Task.Run(NeedGame);
             await LearnMods(live);
-            mods = await BridgeMods(live);
+            var mods = await BridgeMods(live);
+            game = new LiveGame(live, mods);
             var world = await live.LoadWorld();
-            // The mods' settings and data files as the game has them, through its bridge (an older one: the local folders).
-            var settings = AppSettings.Load();
-            world.Rules = await ExpandWorld.ResolveLive(world, settings, live);
+            // The world file's keys as the game's disk has them (a mod takes some out of the loaded list), then the
+            // world rules providers' rules, from the mods' files as the game has them, through its bridge.
+            await world.TakeLiveKeys(live);
+            world.Rules = await WorldRulesSource.ForWorld(world, game);
             await ModSettings.RefreshLive(live, ModExtensions.RequestedSettingsFiles);
             // The game's world file, read through the bridge with the rules, says whether a world generation mod made the
             // world; its generator is told the mod's version the game runs.
@@ -35,7 +37,7 @@ public sealed partial class WorldSession
             throw;
         }
         // Once the session is there to end it (Dispose): a world that failed to load leaves no game connected.
-        ModExtensions.LiveConnected(new LiveGame(live, mods));
+        ModExtensions.LiveConnected(game);
         return session;
     }
 

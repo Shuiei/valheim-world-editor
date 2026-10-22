@@ -23,4 +23,29 @@ public interface ILiveGame
     /// <param name="body">What to send (empty for nothing).</param>
     /// <param name="cancel">Gives up waiting.</param>
     Task<byte[]> CallAsync(string modId, string name, byte[] body, CancellationToken cancel = default);
+
+    /// <summary>
+    /// The BepInEx plugins the game loaded (its bridge's /plugins); null from a bridge too old to list them (before
+    /// WorldEditorBridge 1.54.0).
+    /// </summary>
+    /// <param name="cancel">Stops waiting.</param>
+    Task<IReadOnlyList<GamePlugin>?> Plugins(CancellationToken cancel = default);
+
+    /// <summary>
+    /// A file under the game's BepInEx/config, by its path there ("/" between parts), as its bytes; null when there is
+    /// no such file, or the bridge is older than 1.54.0. Throws <see cref="System.InvalidOperationException"/> when the
+    /// bridge refuses it (out of the folder, over 4 MB) or fails.
+    /// </summary>
+    /// <param name="path">The file's path under BepInEx/config.</param>
+    /// <param name="cancel">Stops waiting.</param>
+    Task<byte[]?> ConfigFile(string path, CancellationToken cancel = default);
+
+    /// <summary>
+    /// The entries of a folder under the game's BepInEx/config ("" for the folder itself); null when there is no such
+    /// folder, or the bridge is older than 1.54.0. Throws <see cref="System.InvalidOperationException"/> when the bridge
+    /// refuses it or fails.
+    /// </summary>
+    /// <param name="path">The folder's path under BepInEx/config.</param>
+    /// <param name="cancel">Stops waiting.</param>
+    Task<IReadOnlyList<ConfigEntry>?> ConfigFolder(string path, CancellationToken cancel = default);
 }

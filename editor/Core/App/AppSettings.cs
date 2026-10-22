@@ -86,19 +86,6 @@ public sealed partial class AppSettings
     public bool DriverOpenGl { get; set; }
 
     /// <summary>
-    /// Expand World (Settings): worlds are generated as the Expand World mods make them, from the settings the world
-    /// file keeps and the mods' files in the BepInEx folder. Off unless chosen: every world is generated as the
-    /// game itself does, whatever the world was made with.
-    /// </summary>
-    public bool ExpandWorld { get; set; }
-
-    /// <summary>
-    /// The BepInEx folder Expand World's settings and data files are read from (Settings), looked at before the
-    /// folders the editor knows; null or empty for none (the first folder that has the mods is used).
-    /// </summary>
-    public string? ExpandWorldFolder { get; set; }
-
-    /// <summary>
     /// How many steps the editor's history keeps (Settings); 0 or less: no limit (only a memory budget).
     /// </summary>
     public int HistorySteps { get; set; }

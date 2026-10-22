@@ -204,7 +204,7 @@ no data tables. Everything is read at run time from the player's install:
   ask for (`settingsFiles`, `ModExtensions.RequestedSettingsFiles`) by section and name, from the first local BepInEx
   folder that has each at `WorldSession.ReadModFiles`, then from the game's BepInEx/config through the bridge
   (`LiveBridge.ConfigFile`) as a live world opens (`WorldSession.OpenLive`); extensions read them as
-  `IEditorHost.Setting`. `ExpandWorld.ReadCfg` reads its files with the same parser (`ModSettings.Entries`).
+  `IEditorHost.Setting`. The Expand World add-on's `ExpandWorldMod.ReadCfg` reads its files with the same parser (the SDK's `SettingsFile.Entries`).
 - Mods' data names: `editor/Core/App/ModKeys.cs` reads the string literals of every DLL in the plugins
   folders (`GameCatalogues.KeyNamesIn`, as `zdo-keys` reads `assembly_valheim.dll`), keeps them in
   `mod-zdo-keys.json` (user data folder) until a DLL changes, and gives them to `ZdoKeys.UseMods`;
@@ -289,8 +289,11 @@ CodeRabbit is told the same for `editor/Core/WorldGen/**` (`.coderabbit.yaml`).
 
 Expand World (Size and Rivers) patches the game's generator through Harmony: it replaces literals (the
 radius 10000, the edge 10500, the distance bands, the stream heights...) and adds a few transforms
-(altitude, water depth, forest). The editor carries those as `WorldRules` (`editor/Core/WorldGen/WorldRules.cs`),
-on the generator's `World`; `WorldGenerator.Rules.cs` turns them into the values the formulas use, each
+(altitude, water depth, forest). The editor carries those as `WorldRules`, the world-rules model: `WorldRules` and
+what it holds (biome table and rules, territories, location, vegetation and dungeon rules, location contents) are in
+the SDK's net10.0 build (`sdk/ValheimWorldEditor.Sdk/WorldRules/`, namespace `ValheimGen`), so that an add-on can make
+them; their behaviour that needs the editor's own maths stays in Core as extension methods (`HeightTransforms`,
+`RgbaColors`). They ride on the generator's `World`; `WorldGenerator.Rules.cs` turns them into the values the formulas use, each
 **in the floating-point type of the literal it stands in for, computed as the mod computes it**: at the
 game's own values (`WorldRules.Vanilla`) every one is the literal to the bit, so the reference tests hold
 unchanged. Where the mod only patches when a setting is set (the altitude and depth postfixes, the forest
@@ -303,16 +306,16 @@ biome file's, each with its terrain biome, colours, lava and `HeightTransform`),
 evaluated by `WorldGenerator.BiomeRules.cs` in place of the game's biome layout, boiling included) and the
 territories (`Territory`). Every table keyed by the biome enum goes through `BiomeTable` (names, map colours,
 the point map's indices), so a biome the game does not have is drawn and placed like the others. The files are
-read by `editor/Core/App/ExpandWorld.Data.cs` through `YamlReader`, which loads the YamlDotNet library found under the
+read by the Expand World add-on (`addons/ExpandWorld`, `ExpandWorldMod.Data.cs`) through `YamlReader`, which loads the YamlDotNet library found under the
 BepInEx plugins folder (the mod depends on it; the editor ships none) into its own load context and drives it by
 reflection into plain lists and maps. The mod's own conversions (fractions of the radius to metres, the defaults
-it fills in, the files it refuses) live in `ExpandWorld.Biomes/World/Territories.cs`.
+it fills in, the files it refuses) live in `ExpandWorldMod.Biomes/World/Territories.cs`.
 
-The places follow the same way: `WorldRules.Locations` carries the location kinds (a `SeedLocations.RuleSet`
-made by `ExpandWorld.Locations.cs` from the mod's file against the game's own kinds, with the mod's clones, blueprints,
-groups and distance rules as extra fields of `SeedLocations.Rule`; or the game's kinds with Expand World Size's
+The places follow the same way: `WorldRules.Locations` carries the location kinds (a `LocationRuleSet`
+made by `ExpandWorldMod.Locations.cs` from the mod's file against the game's own kinds, with the mod's clones, blueprints,
+groups and distance rules as extra fields of `LocationRule`; or the game's kinds with Expand World Size's
 multiplier), and `WorldRules.Vegetation` the vegetation rules (`VegetationRule`, which Regrow now reads for every
-world, made by `ExpandWorld.Vegetation.cs`). A layout (`SeedLocations.Layout`) and Regrow take the world's own rules
+world, made by `ExpandWorldMod.Vegetation.cs`). A layout (`SeedLocations.Layout`) and Regrow take the world's own rules
 when it has them, else the game's, so the same code lays out vanilla and modded worlds; the mod's own placement
 patches (the zone's middle for wide kinds, the forced start temple, its distance checks, the extra draws for a prefab
 choice or a scale by axis) are branches on the rules in `SeedLocations.Placer` and `Regrow`, each mirrored as the
@@ -333,8 +336,8 @@ locations), and each zone starts with its own location's square (with Expand Wor
 ones too, as circles widened by the rule's clear radius, and the areas the mod's vegetation adds as it grows).
 
 New world builds a location whose contents Expand World Data's file changes the way the mod spawns it
-(`WorldCreator.Contents.cs`): `SeedLocations.Rule.Contents` (`LocationContents`, made by `ExpandWorld.Contents.cs`
-with the data entries of `ExpandWorld.DataEntries.cs`) holds the swaps, data and added objects, and says why the game
+(`WorldCreator.Contents.cs`): `LocationRule.Contents` (`LocationContents`, made by `ExpandWorldMod.Contents.cs`
+with the data entries of `ExpandWorldMod.DataEntries.cs`) holds the swaps, data and added objects, and says why the game
 must make the location itself when the editor cannot (`LeftToGame`). Its own objects are rolled as the game rolls them
 (`Dungeons.Replay`, which hands back the random state after the rolls), then swapped and given data drawing on from
 there; the added objects are drawn from the zone's seed again. Each object then makes the draws its scripts make as it
@@ -345,16 +348,28 @@ default items rolled as the game rolls them), as Regrow's objects do; checked ag
 The pages follow: the seed preview covers the rules' radius (`SeedPreview.Preview.Radius`), a new world is made with
 the rules (`WorldCreator.Create`'s `rules`), the overview's texel grows with the world (`MapData.TexelMeters`), and
 the Desktop names and colours a biome of the biome file through the table (`ZoneFilter.BiomeName`,
-`WorldScene.GroundColor`). The rules a new world follows come from the folder in Settings or the first with the mods
-(`ExpandWorld.ForNewWorld`); users' side of it is in [expand-world.md](expand-world.md).
+`WorldScene.GroundColor`). The rules a new world follows come from the first BepInEx folder with the mods
+(`ExpandWorldMod.ForNewWorld`); users' side of it is in [the add-on's README](../addons/ExpandWorld/README.md).
+
+A world's rules come from the world rules providers (`editor/Core/App/WorldRulesSource.cs`): the running extensions'
+(`IExtensionRegistry.AddWorldRules`, asked by `ModExtensions.FirstRules`, a fault turning the extension off: the
+Expand World add-on's `ExpandWorldRules`); the first rules other than the game's own win, and with none the world is
+the game's own. A world's card names the mod a provider says made it (`IWorldRulesProvider.MadeBy`,
+`ModExtensions.MadeBy`, `Worlds.Info.MadeBy`). A provider is handed the world as a
+`WorldRulesRequest` (its keys, grid and, live, the game as an `ILiveGame` with its plugins and config files) and the
+editor as an `IEditorHost` (its BepInEx folders, data folder, and the game's own rules as `IWorldGameData`,
+`GameWorldData`). The add-on's readers (`ExpandWorldMod*.cs`) use only those and the SDK (their log lines and the game's
+rules set at registration, `ExpandWorldMod.Editor.cs`); its tests use the editor's Core and test helpers, to check the
+rules with the editor's generator, placer and dungeons. A live world's keys come from the game's world file first (`WorldSave.TakeLiveKeys`),
+and the save's grid from its keys (`WorldSave.SavedGridWidth`, `ews_gridwidth`) whatever the providers say.
 
 Three things to keep apart: the water level the rules move (`WorldRules.WaterLevel`, which the generator's
 lakes and streams and the editor's own water follow), the **literal 30** the game's zone system keeps for its
 vegetation, locations, biome points and map mask (`WorldGenerator.LiteralWaterLevel`: neither mod changes
 it), and the generator's stretched coordinates (`WorldGenerator.Stretched`: the mod divides a point on the
 way into `GetBiome`, `GetBiomeHeight` and the map's mask, and multiplies it back for the rivers). The
-reader of the mods' files is `editor/Core/App/ExpandWorld.cs`; the rules apply only with the Expand World switch
-in Settings on (`AppSettings.ExpandWorld`), else every world is generated as the game does.
+reader of the mods' files is the Expand World add-on (`addons/ExpandWorld`); without it (or with its switch off),
+every world is generated as the game does.
 
 World generation mods write a header before the game's file version in the world file (a marker, -1, then the
 generator's id, then what the mod keeps): `WorldSave.ReadMetadata` reads it through `WorldGenerators.ReadVersion`
@@ -401,7 +416,7 @@ The endpoints (the plugin's header comment lists them with their byte layouts):
 | `POST /watch`, `POST /zone`, `POST /zone/movers` | Two digests per zone (the editor asks every 2 s): the first changes when an object is made or removed or one that stays put changes, and the zone's objects are read whole (`/zone`); the second (1.57.3 on; older plugins give one digest, read as 0) when a kind that moves or ticks on its own (`ZSyncTransform`, fires, smelters...) moves or changes, and only those objects are read (`/zone/movers`). `WorldSave.MergeLive` takes both: objects of a zone read whole that the game lacks vanish, nothing of a zone read in part does; the editor's own objects (`LiveSync.IsOurs`) are given back as `Merged.Made`, and `WorldSession.TakeMade` gives the editor's copies the game's place, turn and data (`EditStore.TakeFromGame`, same id, no history step; `LiveSync.Moved`). |
 | `POST /models` | Prefab names, one per line: JSON, what the game draws of each (each renderer's mesh name and vertex count, submesh, material name, matrix in the root's frame, the root's scale; LOD 0, active, not the worn and broken looks). `WorldSession.OpenLive` asks it for the mod prefabs; `ModCatalogue.TakeModels` keeps them. On a dedicated server (no graphics) the game has no textures or colours to report, so only names. |
 | `GET /catalogue` | JSON: every prefab with a ZNetView the game knows, mods' too, in GameData's formats (prefabs, pieces, piece-cost) and the mod of each (Jötunn's `ModQuery`, when installed). `WorldSession.OpenLive` hands it to `GameData.AddMods`; `ModCatalogue` keeps the ones that are not the game's own in `mod-catalogue.json` (data folder) and lays them over the game's data (the game's entries win). |
-| `GET /plugins`, `GET /config?path=`, `GET /world/meta` | The game's files, read only (`WorldEditorBridgePlugin.Files.cs`, 1.54.0, feature `files`): the plugins BepInEx loaded (id, name, version); a file under `BepInEx/config` as its bytes or a folder there as a JSON list of entries (nothing outside the folder: no absolute path, `..` or link, 400; 4 MB at most, 413); the world's meta file as it lies on disk (its starting global keys as written, which a mod may take out of the loaded list): the file the game saves (`worlds/name/_main.n.fwl2`), else the older `worlds/name.fwl`, 404 with neither. `ExpandWorld.ResolveLive` copies the mods' settings and data files through them into `live-bepinex` (data folder) and reads that as a local BepInEx folder (`LiveBridge.Files`; 404 means an older plugin: the local folders). |
+| `GET /plugins`, `GET /config?path=`, `GET /world/meta` | The game's files, read only (`WorldEditorBridgePlugin.Files.cs`, 1.54.0, feature `files`): the plugins BepInEx loaded (id, name, version); a file under `BepInEx/config` as its bytes or a folder there as a JSON list of entries (nothing outside the folder: no absolute path, `..` or link, 400; 4 MB at most, 413); the world's meta file as it lies on disk (its starting global keys as written, which a mod may take out of the loaded list): the file the game saves (`worlds/name/_main.n.fwl2`), else the older `worlds/name.fwl`, 404 with neither. Extensions read them as `ILiveGame.Plugins`, `ConfigFile` and `ConfigFolder` (`LiveGame`); the Expand World add-on's `ExpandWorldMod.ResolveLive` copies the mods' settings and data files through them into `live-bepinex` (data folder) and reads that as a local BepInEx folder (`LiveBridge.Files`, `LiveBridge.FilesVersion`; 404 means an older plugin: the local folders). |
 
 Changing the protocol means changing both sides in one pull request, under one `VERSION`. An
 editor meets older plugins in the wild: a missing endpoint answers 404, and the editor says the
@@ -503,7 +518,8 @@ either breaks it, the user's own scripts and the docs.
 (Settings, Mod extensions: `ModExtensions.Allow`), or is an add-on's (`Offered.AddOn`: `editor/Core/App/AddOns.cs`, the
 `addons` folder next to the program, or next to the macOS app; `ModManifests.ReadAddOns` lists each in
 `ModManifests.InstalledAddOns` and reads its manifest, before the mods' own, only while the DLL its `serves` names is
-in a plugins folder, `ExpandWorld.HasPlugin`; it runs with no switch, and Settings lists it apart, `BuildAddOns`); each
+in a plugins folder, `AddOns.IsInstalled`; it runs without being allowed, and Settings lists it apart with its switch,
+`AppSettings.AddOnsOff`, `BuildAddOns`); each
 file is loaded once per run, in an `AssemblyLoadContext`
 of its own that hands it the editor's `ValheimWorldEditor.Sdk` (one set of SDK types), and registers its hooks. They are
 used through `ModExtensions` only: `Decode` (the inspector's `Decoded`), `Rewrite` (`ObjectLinks.Remap`, after the

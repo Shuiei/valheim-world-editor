@@ -4,9 +4,12 @@
        mod's own projects (net472 for the game) can share code with their extension. Released as
        ValheimWorldEditor.Sdk.dll with each editor version; the editor loads extensions against its
        own copy. -->
+  <!-- net10.0 too, as the editor runs: the world-rules model (WorldRules/, the rules a world is generated with) is in
+       that build only, for add-ons that read or make world rules (they run on the editor's .NET); netstandard2.0
+       extensions see the same SDK without it. -->
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>12.0</LangVersion>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <LangVersion Condition="'$(TargetFramework)' == 'netstandard2.0'">12.0</LangVersion>
     <Nullable>enable</Nullable>
     <AssemblyName>ValheimWorldEditor.Sdk</AssemblyName>
     <RootNamespace>ValheimWorldEditor.Sdk</RootNamespace>
@@ -14,8 +17,20 @@
          breaks (SdkInfo.ApiVersion). -->
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
   </PropertyGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
     <!-- Vector3 and Quaternion, which netstandard2.0 does not hold; the game and .NET both have them. -->
     <PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
+    <Compile Remove="WorldRules/**" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <!-- The editor reaches the model's internals (its generator's own uses of the rules). -->
+    <InternalsVisibleTo Include="ValheimWorldEditor.Core" />
+    <InternalsVisibleTo Include="ValheimWorldEditor" />
+    <InternalsVisibleTo Include="Core.Tests" />
+    <InternalsVisibleTo Include="Desktop.Tests" />
+    <InternalsVisibleTo Include="AddOns.Tests" />
+    <InternalsVisibleTo Include="Fuzz" />
+    <InternalsVisibleTo Include="WorldCheck" />
+    <InternalsVisibleTo Include="ExpandWorld.WorldEditor.Tests" />
   </ItemGroup>
 </Project>

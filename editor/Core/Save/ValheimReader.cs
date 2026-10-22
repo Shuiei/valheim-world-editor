@@ -60,24 +60,7 @@ public static class WorldVersion
 public static class StableHash
 {
     /// <summary>Valheim's StringExtensionMethods.GetStableHashCode, used for prefab and data keys.</summary>
-    public static int Of(string str)
-    {
-        unchecked
-        {
-            int num = 5381;
-            int num2 = num;
-            for (int i = 0; i < str.Length && str[i] != 0; i += 2)
-            {
-                num = ((num << 5) + num) ^ str[i];
-                if (i == str.Length - 1 || str[i + 1] == '\0')
-                {
-                    break;
-                }
-                num2 = ((num2 << 5) + num2) ^ str[i + 1];
-            }
-            return num + num2 * 1566083941;
-        }
-    }
+    public static int Of(string str) => ValheimWorldEditor.Sdk.GameHash.Of(str);
 
     /// <summary>
     /// The prefab an object's name in a copy or blueprint stands for: a kind with no known name (from a mod, or not in

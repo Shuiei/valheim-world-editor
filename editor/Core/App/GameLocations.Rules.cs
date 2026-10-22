@@ -22,10 +22,10 @@ public static partial class GameLocations
     /// biome adding it, null for the main lists. The prefab is named by the manifest from its asset ID, else by
     /// m_prefabName.
     /// </summary>
-    private static SeedLocations.Rule Location(AssetTypeValueField l, Manifest manifest, string? altBiome)
+    private static LocationRule Location(AssetTypeValueField l, Manifest manifest, string? altBiome)
     {
-        var rule = new SeedLocations.Rule { AltBiome = altBiome };
-        foreach (var prop in typeof(SeedLocations.Rule).GetProperties())
+        var rule = new LocationRule { AltBiome = altBiome };
+        foreach (var prop in typeof(LocationRule).GetProperties())
         {
             // The game's field is the property's name in camelCase (Prioritized is m_prioritized).
             var f = l["m_" + char.ToLowerInvariant(prop.Name[0]) + prop.Name[1..]];
@@ -41,7 +41,7 @@ public static partial class GameLocations
             {
                 prop.SetValue(rule, f.AsFloat);
             }
-            else if (prop.PropertyType == typeof(string) && prop.Name != nameof(SeedLocations.Rule.AltBiome))
+            else if (prop.PropertyType == typeof(string) && prop.Name != nameof(LocationRule.AltBiome))
             {
                 prop.SetValue(rule, f.AsString);
             }
@@ -56,10 +56,10 @@ public static partial class GameLocations
     /// One AltBiome: each rule property from the game's field its JSON name gives (m_ before it); a field the asset
     /// lacks keeps the game's default.
     /// </summary>
-    private static SeedLocations.AltBiomeRule AltBiome(AssetTypeValueField a)
+    private static AltBiomeRule AltBiome(AssetTypeValueField a)
     {
-        var alt = new SeedLocations.AltBiomeRule();
-        foreach (var prop in typeof(SeedLocations.AltBiomeRule).GetProperties())
+        var alt = new AltBiomeRule();
+        foreach (var prop in typeof(AltBiomeRule).GetProperties())
         {
             string key = prop.GetCustomAttributes(typeof(System.Text.Json.Serialization.JsonPropertyNameAttribute), false)
                 .OfType<System.Text.Json.Serialization.JsonPropertyNameAttribute>().Single().Name;

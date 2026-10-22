@@ -11,7 +11,7 @@ carries none of the mod; this repository holds none of its code.
 
 ## Install
 
-1. The Valheim World Editor 1.103.0 or later.
+1. The Valheim World Editor 1.104.0 or later.
 2. From the editor's [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page,
    `ValheimWorldEditor-addon-Riverheim-<version>.zip`: unpack it into the `addons` folder next to the editor (on
    macOS, next to `ValheimWorldEditor.app`), so that you have `addons/Riverheim/worldeditor.json`.
@@ -24,17 +24,18 @@ carries none of the mod; this repository holds none of its code.
 - The worlds list tags it **Riverheim** on its card.
 - Opening it needs the add-on on (Settings → Add-ons) and Riverheim installed in a BepInEx folder the editor knows
   (the Valheim folder, the editor's own profile, the folders added in Settings, r2modman's and Thunderstore Mod
-  Manager's profiles, or the Expand World folder). The editor draws the world with your own copy of Riverheim: it
+  Manager's profiles). The editor draws the world with your own copy of Riverheim: it
   carries none of the mod. It also needs the Valheim folder (Settings), as for any world: Riverheim's file names a
   few of the game's Unity files, which are read from there.
 - The ground of the zones the game has not made yet, the biomes, the ground's paint, the forests, the map and the
   predictions (locations, regrowth) are Riverheim's, as the game makes them with the mod: checked point by point
   against a server running Riverheim 1.2.1.
 - Opening takes a few seconds more: Riverheim lays the whole world out first, as the game does when it loads it.
-- When it cannot be opened, the card or the message says why: the add-on is off or missing, Riverheim is not installed
-  anywhere the editor looks, the world was made with Riverheim's deprecated beta (no Riverheim release opens those), the world
+- When it cannot be opened, its card stays in the list, greyed out, and says why: the add-on is turned off (Settings →
+  Add-ons) or missing, Riverheim is not installed anywhere the editor looks, the world was made with Riverheim's deprecated beta (no Riverheim release opens those), the world
   file has a Riverheim setting this editor does not know, your Riverheim does not know the world's preset (an older
-  Riverheim than the one that made it: update it), or your Riverheim could not lay the world out (the log says why).
+  Riverheim than the one that made it: update it), or your Riverheim could not be loaded (the log says why). That your
+  Riverheim could not lay the world out, or is of another release than a live game's, is said as the world opens.
 
 Worlds made without Riverheim never use it, even with the add-on on and the mod installed.
 
@@ -54,7 +55,7 @@ at a time.
 
 ## With Expand World
 
-Riverheim's world can be played with the Expand World mods. With the Expand World switch on too, the editor
+Riverheim's world can be played with the Expand World mods. With the [Expand World add-on](../ExpandWorld/README.md) too, the editor
 does what the game does with both, setting by setting (checked on a server running both):
 
 | Expand World setting | On a Riverheim world |

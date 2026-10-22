@@ -15,10 +15,13 @@ public static class Fixtures
         {
             for (string? d = AppContext.BaseDirectory; d != null; d = Path.GetDirectoryName(d))
             {
-                string f = Path.Combine(d, "tests", "fixtures");
-                if (Directory.Exists(f))
+                // Up from the editor's tests (editor/tests), or from an add-on's (the repository's editor/tests).
+                foreach (string f in new[] { Path.Combine(d, "tests", "fixtures"), Path.Combine(d, "editor", "tests", "fixtures") })
                 {
-                    return f;
+                    if (Directory.Exists(f))
+                    {
+                        return f;
+                    }
                 }
             }
             throw new DirectoryNotFoundException("editor/tests/fixtures not found above " + AppContext.BaseDirectory);
@@ -40,14 +43,14 @@ public static class Fixtures
     /// --export-locations` reads them from Valheim 0.221: CI has no game.
     /// </summary>
     public static void UseLocations() =>
-        ValheimGen.SeedLocations.Use(ValheimGen.SeedLocations.RuleSet.FromJson(File.ReadAllText(Path.Combine(Root, "locations.json"))));
+        ValheimGen.SeedLocations.Use(ValheimGen.LocationRuleSet.FromJson(File.ReadAllText(Path.Combine(Root, "locations.json"))));
 
     /// <summary>
     /// The game's alt biomes with every field the layout reads, as Valheim 0.221 has them (editor/tests/fixtures/altbiomes.json,
     /// read from the game by GameLocations: CI has no game).
     /// </summary>
-    public static List<ValheimGen.SeedLocations.AltBiomeRule> AltBiomes() =>
-        System.Text.Json.JsonSerializer.Deserialize<List<ValheimGen.SeedLocations.AltBiomeRule>>(File.ReadAllText(Path.Combine(Root, "altbiomes.json")))!;
+    public static List<ValheimGen.AltBiomeRule> AltBiomes() =>
+        System.Text.Json.JsonSerializer.Deserialize<List<ValheimGen.AltBiomeRule>>(File.ReadAllText(Path.Combine(Root, "altbiomes.json")))!;
 
     /// <summary>
     /// The game's data (terrain modifiers, object data names...) trimmed to what the tests meet, as `ValheimWorldEditor

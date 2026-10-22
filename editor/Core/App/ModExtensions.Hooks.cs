@@ -25,7 +25,7 @@ public static partial class ModExtensions
         return null;
     }
     /// <summary>The editor as extensions ask it (IEditorHost).</summary>
-    public static IEditorHost Host { get; } = new EditorHost();
+    public static IEditorHost Host { get; } = new EditorHost(AppSettings.Load);
     /// <summary>A world with nothing to find in it.</summary>
     public static IWorldView NoWorld { get; } = new EmptyWorld();
 

@@ -13,16 +13,16 @@ public class SeedLocationsPlacerModTests
     private const int Seed = 12345;
 
     /// <summary>A generator with the mod installed and a location file in use (these kinds).</summary>
-    private static WorldGenerator Gen(bool data = true, params SeedLocations.Rule[] kinds) =>
-        WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { DataInstalled = data, Locations = data ? new SeedLocations.RuleSet { Locations = [.. kinds] } : null } });
+    private static WorldGenerator Gen(bool data = true, params LocationRule[] kinds) =>
+        WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { DataInstalled = data, Locations = data ? new LocationRuleSet { Locations = [.. kinds] } : null } });
 
     /// <summary>A placer for a generator; the biome map is not needed for these checks.</summary>
     private static SeedLocations.Placer Placer(WorldGenerator gen) => new(gen, () => throw new InvalidOperationException("no biome map needed"));
 
     /// <summary>A kind that passes the ground checks anywhere on land or sea, with these settings changed.</summary>
-    private static SeedLocations.Rule Open(string prefab, float exterior = 10f, Action<SeedLocations.Rule>? set = null)
+    private static LocationRule Open(string prefab, float exterior = 10f, Action<LocationRule>? set = null)
     {
-        var rule = new SeedLocations.Rule
+        var rule = new LocationRule
         {
             Prefab = prefab,
             Name = prefab,
@@ -81,9 +81,9 @@ public class SeedLocationsPlacerModTests
     public void AwayFromAndCloseToRulesAreCheckedByNameAndGroup()
     {
         var a = Open("Crypt2:A", set: r => { r.BasePrefab = "Crypt2"; r.Groups = ["crypts"]; });
-        var away = Open("Hut", set: r => { r.Group = "_1"; r.MinDistanceFromSimilar = 1f; r.AwayFrom = [new SeedLocations.DistanceRule("crypts", 300f)]; });
-        var close = Open("Camp", set: r => { r.GroupMax = "_2"; r.MaxDistanceFromSimilar = 1f; r.CloseTo = [[new SeedLocations.DistanceRule("Crypt2:A", 500f)]]; });
-        var closeTwo = Open("Camp2", set: r => { r.GroupMax = "_3"; r.MaxDistanceFromSimilar = 1f; r.CloseTo = [[new SeedLocations.DistanceRule("Crypt2:A", 500f)], [new SeedLocations.DistanceRule("Nowhere", 500f)]]; });
+        var away = Open("Hut", set: r => { r.Group = "_1"; r.MinDistanceFromSimilar = 1f; r.AwayFrom = [new DistanceRule("crypts", 300f)]; });
+        var close = Open("Camp", set: r => { r.GroupMax = "_2"; r.MaxDistanceFromSimilar = 1f; r.CloseTo = [[new DistanceRule("Crypt2:A", 500f)]]; });
+        var closeTwo = Open("Camp2", set: r => { r.GroupMax = "_3"; r.MaxDistanceFromSimilar = 1f; r.CloseTo = [[new DistanceRule("Crypt2:A", 500f)], [new DistanceRule("Nowhere", 500f)]]; });
         var placer = Placer(Gen(true, a, away, close, closeTwo));
         placer.Register(a, new Vector3(0f, 30f, 0f));
         Assert.False(placer.RightNeighbours(away, new Vector3(100f, 30f, 0f)));

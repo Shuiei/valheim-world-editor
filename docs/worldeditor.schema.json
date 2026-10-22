@@ -29,6 +29,12 @@
       "description": "Class names of the game's scripts whose fields the extension reads (IEditorHost.Game): read from the player's Valheim while the extension runs.",
       "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,99}$" }
     },
+    "worldGenerators": {
+      "type": "object",
+      "maxProperties": 8,
+      "description": "The world generators the extension registers (IWorldGenerator), by the id their worlds' files name, with the mod's name for the player: read even while the extension does not run, so that such a world says why it cannot open.",
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 64 }
+    },
     "settingsFiles": {
       "type": "array",
       "maxItems": 8,

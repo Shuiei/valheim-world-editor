@@ -6,6 +6,9 @@ namespace TerrainEditor.Save;
 
 public sealed partial class LiveBridge : IDisposable
 {
+    /// <summary>The first WorldEditorBridge that serves the game's files (GET /plugins, /config, /world/meta).</summary>
+    public const string FilesVersion = "1.54.0";
+
     /// <summary>A plugin BepInEx loaded in the game, as GET /plugins lists it.</summary>
     /// <param name="Id">The plugin's GUID.</param>
     /// <param name="Name">Its name.</param>

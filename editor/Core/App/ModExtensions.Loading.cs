@@ -100,6 +100,9 @@ public static partial class ModExtensions
         public void AddWorldGenerator(IWorldGenerator generator) => loaded.Generators.Add(generator);
 
         /// <inheritdoc/>
+        public void AddWorldRules(IWorldRulesProvider provider) => loaded.WorldRules.Add(provider);
+
+        /// <inheritdoc/>
         public IEditorHost Host => ModExtensions.Host;
 
         /// <inheritdoc/>

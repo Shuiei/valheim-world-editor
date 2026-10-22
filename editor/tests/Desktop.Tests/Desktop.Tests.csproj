@@ -26,9 +26,6 @@
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.4" />
-    <!-- A copy of YamlDotNet to stand in for the one a BepInEx folder has (NewWorldPageRefreshRulesTests): the editor
-         itself ships none and loads the player's. -->
-    <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- The helpers both test projects share: the test world, the fixtures, a stand-in game. -->

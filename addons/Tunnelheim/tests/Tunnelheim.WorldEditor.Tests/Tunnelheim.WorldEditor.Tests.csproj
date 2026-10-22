@@ -28,5 +28,7 @@
     <None Include="fixtures/**" CopyToOutputDirectory="PreserveNewest" />
     <!-- The editor's stand-in for what a tool sees, shared by every tool's tests (tested in Core.Tests). -->
     <Compile Include="../../../../editor/tests/Support/ToolContextRecorder.cs" Link="Support/ToolContextRecorder.cs" />
+    <!-- The fake host's game world data: none (shared with the other add-ons' tests). -->
+    <Compile Include="../../../../editor/tests/Support/NoWorldGameData.cs" Link="Support/NoWorldGameData.cs" />
   </ItemGroup>
 </Project>

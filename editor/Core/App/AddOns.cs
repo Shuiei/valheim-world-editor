@@ -1,3 +1,5 @@
+using ValheimWorldEditor.Sdk;
+
 namespace TerrainEditor.App;
 
 /// <summary>
@@ -20,7 +22,14 @@ public static class AddOns
     /// <param name="Served">Whether that DLL is in a plugins folder (always for none): the add-on is then in use.</param>
     /// <param name="Dll">Its extension DLL's full path, or null when it brings none (only its manifest's notes).</param>
     /// <param name="On">Whether its switch in Settings is on (<see cref="AppSettings.AddOnsOff"/>): off, it is not used.</param>
-    public sealed record AddOn(string Name, string Folder, string? Serves, bool Served, string? Dll, bool On = true);
+    public sealed record AddOn(string Name, string Folder, string? Serves, bool Served, string? Dll, bool On = true)
+    {
+        /// <summary>
+        /// The world generators its extension registers, by the id their worlds' files name, with the mod's name
+        /// ("worldGenerators"): known even while it is off or waiting, to say why their worlds cannot open. Null for none.
+        /// </summary>
+        public IReadOnlyDictionary<string, string>? WorldGenerators { get; init; }
+    }
 
     /// <summary>
     /// The add-ons turned off once Settings' switches are taken (<see cref="AppSettings.AddOnsOff"/>): those whose switch
@@ -102,5 +111,5 @@ public static class AddOns
 
     /// <summary>Whether a mod's DLL is in one of the plugins folders the settings name (or found by themselves).</summary>
     internal static bool IsInstalled(AppSettings settings, string dll) =>
-        LocalGame.BepInExFolders(settings).Any(f => ExpandWorld.HasPlugin(Path.Combine(f.BepInEx, "plugins"), dll));
+        LocalGame.BepInExFolders(settings).Any(f => PluginFiles.Has(Path.Combine(f.BepInEx, "plugins"), dll, Console.WriteLine));
 }

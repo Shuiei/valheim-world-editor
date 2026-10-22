@@ -38,9 +38,6 @@ public static partial class SettingsDialog
         private IReadOnlyList<Lang.Language> _languages = [];
         private ComboBox _language = null!;
         private CheckBox _driverGl = null!;
-        private CheckBox _expandWorld = null!;
-        private TextBox _expandWorldFolder = null!;
-        private Button _expandWorldBrowse = null!;
         private TextBlock _error = null!;
 
         /// <summary>Builds the window, the valheim folder choice, the BepInEx and world folder lists and Claude's section.</summary>

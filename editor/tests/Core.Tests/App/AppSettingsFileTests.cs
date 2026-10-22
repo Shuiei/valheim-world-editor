@@ -25,6 +25,33 @@ public class AppSettingsFileTests : AppSettingsTestBase
         Assert.True(AppSettings.Load().ClaudeScripts);
     }
 
+    // A settings file of an editor from before the Expand World add-on (its switch and folder) still reads, with the
+    // rest of its settings, and is saved without them.
+    [Fact]
+    public void ASettingsFileWithTheOldExpandWorldSettingsStillReads()
+    {
+        string path = Path.Combine(Data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            string bep = Path.Combine(Data, "BepInEx");
+            File.WriteAllText(path, $$"""{ "ExpandWorld": true, "ExpandWorldFolder": "/somewhere/BepInEx", "BepInExFolders": [{{System.Text.Json.JsonSerializer.Serialize(bep)}}], "HistorySteps": 50 }""");
+
+            var settings = AppSettings.Load();
+
+            Assert.Equal([bep], settings.BepInExFolders);
+            Assert.Equal(50, settings.HistorySteps);
+            Assert.False(File.Exists(path + ".bad"));
+            Assert.Null(settings.Save());
+            Assert.DoesNotContain("ExpandWorld", File.ReadAllText(path), StringComparison.Ordinal);
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
     // Settings that cannot be read are kept aside before the defaults are written over them, and a
     // settings file that cannot be written is left alone without an error.
     // Lists stored as null read as empty, a stored path that is not a valid path does not stop a world opening, and the

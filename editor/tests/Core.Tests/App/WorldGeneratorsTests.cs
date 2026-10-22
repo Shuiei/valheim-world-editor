@@ -73,7 +73,7 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
         Assert.True(WorldGenerators.ForNewWorld(settings).IsVanilla);
         Use(new FlatlandGenerator());
         var made = WorldGenerators.ForNewWorld(settings).Generator;
-        Assert.Equal(("Flatland", "height 50", 50f), (made?.Name, made?.Settings, made?.Header?.Settings.Value));
+        Assert.Equal(("Flatland", "height 50", 50f), (made?.Name, made?.Settings, (made?.Header as GeneratorHeader)?.Settings.Value));
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
     [Fact]
     public void TheRulesFewWordsNameTheGenerator()
     {
-        Assert.Contains("Flatland 2.0.0 (height 50)", ExpandWorld.Describe(new WorldRules { Generator = new GeneratorRules("test.flatland", "Flatland", "2.0.0", "height 50") }));
-        Assert.DoesNotContain("Flatland", ExpandWorld.Describe(new WorldRules { Radius = 20000f }));
+        Assert.Contains("Flatland 2.0.0 (height 50)", WorldRulesText.Describe(new WorldRules { Generator = new GeneratorRules("test.flatland", "Flatland", "2.0.0", "height 50") }));
+        Assert.DoesNotContain("Flatland", WorldRulesText.Describe(new WorldRules { Radius = 20000f }));
     }
 }

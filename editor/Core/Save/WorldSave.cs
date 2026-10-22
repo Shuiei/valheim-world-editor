@@ -70,7 +70,7 @@ public sealed partial class WorldSave
 
     /// <summary>
     /// What a world generation mod changed about this world's generation (the game's own values until the opener
-    /// works them out: <c>ExpandWorld.Resolve</c>); the terrain service's generator is made with them.
+    /// works them out: <c>WorldRulesSource</c>); the terrain service's generator is made with them.
     /// </summary>
     public ValheimGen.WorldRules Rules { get; set; } = ValheimGen.WorldRules.Vanilla;
 

@@ -129,8 +129,8 @@ public sealed partial class WorldSession : IDisposable
     {
         NeedGame();
         var world = WorldSave.Load(dir);
-        var settings = AppSettings.Load();
-        world.Rules = ExpandWorld.Resolve(world, settings);
+        // Called away from the window (Open runs on a worker): waiting for the providers holds no one up.
+        world.Rules = WorldRulesSource.ForWorld(world, null).GetAwaiter().GetResult();
         TakeGenerator(world);
         WorldSave.Builder = Builders.Default(world);
         return From(world, null, world.Name);

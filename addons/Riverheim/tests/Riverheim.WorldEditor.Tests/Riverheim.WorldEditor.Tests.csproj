@@ -28,6 +28,8 @@
     <None Include="fixtures/**" CopyToOutputDirectory="PreserveNewest" />
     <!-- The editor's tests' installer of the real mods (tested with the editor's tests). -->
     <Compile Include="../../../../editor/tests/Support/TestMods.cs" Link="Support/TestMods.cs" />
+    <!-- The fake host's game world data: none (shared with the other add-ons' tests). -->
+    <Compile Include="../../../../editor/tests/Support/NoWorldGameData.cs" Link="Support/NoWorldGameData.cs" />
   </ItemGroup>
   <Import Project="../../../../editor/tests/TestMods.targets" />
 </Project>

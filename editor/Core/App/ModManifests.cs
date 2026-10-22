@@ -37,7 +37,11 @@ public static partial class ModManifests
     /// <param name="GameComponents">The game's scripts whose fields it asks for ("gameComponents"; ModComponents reads them).</param>
     /// <param name="SettingsFiles">The BepInEx settings files it asks for ("settingsFiles"; ModSettings reads them).</param>
     /// <param name="AddOn">An add-on's (AddOns): it runs without being allowed in Settings.</param>
-    public sealed record Offered(string Dll, string Mod, IReadOnlyList<string> GameComponents, IReadOnlyList<string> SettingsFiles, bool AddOn = false);
+    public sealed record Offered(string Dll, string Mod, IReadOnlyList<string> GameComponents, IReadOnlyList<string> SettingsFiles, bool AddOn = false)
+    {
+        /// <summary>The world generators it registers, by id, with the mod's name ("worldGenerators"); null for none.</summary>
+        public IReadOnlyDictionary<string, string>? WorldGenerators { get; init; }
+    }
 
     /// <summary>
     /// What a manifest says of a prefab.

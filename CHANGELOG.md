@@ -4,12 +4,58 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.104.0 — unreleased
+## v1.107.0 — 2026-10-21
 
 ### Changed
 - **Fly goes through the ground.** In Fly (`F` twice), `C` now takes the camera below the ground, into what a mod digs
   under it: Tunnelheim's tunnels and cellars, which the 3D view draws but no camera could reach. Space brings it back
   up. Walk still keeps the eyes 1.8 m over the ground, and the usual view turns around a point on it.
+
+## v1.106.0 — 2026-10-21
+
+### Changed
+- **Expand World is now an add-on.** Worlds made with the Expand World mods follow them with the Expand World add-on,
+  its own download beside the editor's (unpack it into the addons folder); its switch under Add-ons in Settings
+  replaces the Expand World switch. The Expand World folder setting is gone: add the BepInEx folder with the mods in
+  Settings instead. Everything else works as before.
+
+## v1.105.0 — 2026-10-21
+
+### Added
+- **Add-ons for mods that change the world through settings.** An add-on can now give the rules worlds are generated
+  with, from a mod's settings and data files, on this computer or from a live game's own files, as Expand World's
+  support does. See [World rules](docs/modding.md#world-rules).
+
+## v1.104.0 — 2026-10-21
+
+### Added
+- **Clearer cards for worlds of world generation mods that cannot open.** A world made with such a mod stays in the
+  world list, greyed out, and now says what is missing: the add-on for it turned off, the add-on waiting for its mod,
+  the add-on not running, or the mod's own extension not turned on; and with the Riverheim add-on, a Riverheim too old
+  for the world. See [World generators](docs/modding.md#world-generators).
+
+## v1.103.3 — 2026-10-21
+
+### Fixed
+- **A mod's object changed twice before applying is updated in place in the game.** When a mod's tool changed the
+  same object twice before the changes were applied live (two digs in one tunnel column, say), the game's object was
+  removed and a new one made instead of being updated; with Tunnelheim, which keeps its records, the column then held
+  two records.
+
+## v1.103.2 — 2026-10-21
+
+### Fixed
+- **The New world page says when players need a mod.** With a world generation mod's generator chosen (Riverheim),
+  the page still said the world was a normal one players need no mod for; it now says every player needs the mod,
+  so console players on crossplay cannot join. The start page says so too, and the seed search no longer claims to use
+  the game's own generator.
+
+## v1.103.1 — 2026-10-21
+
+### Fixed
+- **Settings' add-on and extension switches take effect at once.** Turning an add-on or a mod's extension on or off
+  in Settings changed nothing in the worlds listed until a world or the Workshop was opened: the list now follows the
+  switches as soon as Settings is saved.
 
 ## v1.103.0 — 2026-10-21
 
@@ -594,7 +640,7 @@ the plugin is unchanged in versions without that part.
   the editor reads the mods' settings and data files from the game's own BepInEx folder through WorldEditorBridge,
   along with the world's own settings from its file on the game's disk, instead of the BepInEx folders on this
   computer. The YamlDotNet library the data files need is still taken from a local BepInEx folder. An older plugin
-  leaves the local folders in use, said in the log. See [Expand World](docs/expand-world.md#live-mode).
+  leaves the local folders in use, said in the log. See [Expand World](addons/ExpandWorld/README.md#live-mode).
 
 ### WorldEditorBridge
 - Three read-only routes for the editor: `GET /plugins` lists the plugins BepInEx loaded (id, name, version),
@@ -610,7 +656,7 @@ the plugin is unchanged in versions without that part.
   made with the mods' settings and data (the page says so above Create), biomes the mods add are named and coloured
   as their files say, and a world made with Expand World Size shows "Expand World" on its card on the start page.
   Settings gets a folder for the mods' files, for a server world opened from its files. See
-  [Expand World](docs/expand-world.md).
+  [Expand World](addons/ExpandWorld/README.md).
 
 ## v1.52.0 — 2026-10-19
 

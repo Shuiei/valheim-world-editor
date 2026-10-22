@@ -12,7 +12,7 @@ public class SeedLocationsRuleSetTests
     [Fact]
     public void ARuleSetIsReadWithItsLocations()
     {
-        var rules = SeedLocations.RuleSet.FromJson("{\"locations\":[{\"prefab\":\"A\",\"enable\":1,\"quantity\":2}],\"altBiomes\":[]}");
+        var rules = LocationRuleSet.FromJson("{\"locations\":[{\"prefab\":\"A\",\"enable\":1,\"quantity\":2}],\"altBiomes\":[]}");
 
         var rule = Assert.Single(rules.Locations);
         Assert.Equal("A", rule.Prefab);
@@ -23,13 +23,13 @@ public class SeedLocationsRuleSetTests
     [Fact]
     public void TextWithNoRulesIsRefused()
     {
-        Assert.Throws<JsonException>(() => SeedLocations.RuleSet.FromJson("null"));
+        Assert.Throws<JsonException>(() => LocationRuleSet.FromJson("null"));
     }
 
     [Fact]
     public void ANullFieldIsLeftOutOfTheText()
     {
-        var rules = new SeedLocations.RuleSet { Locations = [new SeedLocations.Rule { Prefab = "A", AltBiome = null }] };
+        var rules = new LocationRuleSet { Locations = [new LocationRule { Prefab = "A", AltBiome = null }] };
 
         string text = rules.ToJson();
 
@@ -41,9 +41,9 @@ public class SeedLocationsRuleSetTests
     [Fact]
     public void TheTextReadsBackToTheSameRules()
     {
-        var rules = new SeedLocations.RuleSet { Locations = [new SeedLocations.Rule { Prefab = "B", Quantity = 5 }] };
+        var rules = new LocationRuleSet { Locations = [new LocationRule { Prefab = "B", Quantity = 5 }] };
 
-        var back = SeedLocations.RuleSet.FromJson(rules.ToJson());
+        var back = LocationRuleSet.FromJson(rules.ToJson());
 
         Assert.Equal("B", Assert.Single(back.Locations).Prefab);
         Assert.Equal(5, back.Locations[0].Quantity);
