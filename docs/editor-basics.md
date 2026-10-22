@@ -96,8 +96,8 @@ ground.*
    start where the usual view was looking. `W` `A` `S` `D` move where you look at 6 m/s; Shift runs at 12 m/s.
    Right drag looks around, up and down. You keep to the ground as it rises and falls, the ground you just edited
    included.
-2. **Fly**: `F` again. Space goes up, `C` goes down; 15 m/s (Shift: 45 m/s). You can never go below eye height
-   over the ground.
+2. **Fly**: `F` again. Space goes up, `C` goes down; 15 m/s (Shift: 45 m/s). `C` also takes you through the ground,
+   into what a mod digs under it (Tunnelheim's tunnels, cellars); Space brings you back up.
 3. **The usual view**: `F` a third time. The view turns around a point on the ground 20 m ahead of where you were.
 
 The status bar says which mode is on and its keys. While walking or flying the wheel does not zoom and drags do not

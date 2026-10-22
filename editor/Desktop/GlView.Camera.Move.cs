@@ -51,7 +51,10 @@ public sealed partial class GlView
             // Walking 6 m/s (Shift: running 12); flying 15 (Shift: 45).
             float speed = _eye == EyeMode.Walk ? (fast ? 12 : 6) : (fast ? 45 : 15);
             _eyePos += (flat + new Vector3(0, d.Y, 0)) * speed * dt;
-            KeepOverGround(walk: _eye == EyeMode.Walk);
+            if (_eye == EyeMode.Walk)
+            {
+                KeepOverGround();
+            }
         }
     }
 }
