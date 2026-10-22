@@ -92,14 +92,7 @@ public sealed partial class Scenes
         e.Send("wait 300");
         Move(e, at);
         e.Send("wait 500");
-        string before = Out("before-paste-clear-site.jpg"), after = Out("after-paste-clear-site.jpg");
-        e.Shot(before);
-        e.Send($"mouse down {at.X} {at.Z}");
-        e.Send($"mouse up {at.X} {at.Z}");
-        // Onto the sky, off the ground: no preview of the tool over what was just done.
-        e.Point(1300, 150);
-        e.Send("wait 500");
-        e.Shot(after, keepMessage: true);
+        var (before, after) = ClickBetweenShots(e, at, "paste-clear-site.jpg", keepMessage: true);
         Halves(Out("paste-clear-site.jpg"), ("Before the click", "After the click"), before, after, new HalvesCut(720));
     }
 

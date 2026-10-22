@@ -172,14 +172,7 @@ public sealed partial class Scenes
         e.Send("wait 300");
         Move(e, at);
         e.Send("wait 500");
-        string before = Out("before-place-brush-before-after.jpg"), after = Out("after-place-brush-before-after.jpg");
-        e.Shot(before);
-        e.Send($"mouse down {at.X} {at.Z}");
-        e.Send($"mouse up {at.X} {at.Z}");
-        // Onto the sky, off the ground: no preview of the tool over what was just placed.
-        e.Point(1300, 150);
-        e.Send("wait 500");
-        e.Shot(after);
+        var (before, after) = ClickBetweenShots(e, at, "place-brush-before-after.jpg", keepMessage: false);
         Halves(Out("place-brush-before-after.jpg"), ("Before the click", "After one click"), before, after,
             new HalvesCut(0, Keep: [new SKRectI(GroundPairLeft, GroundPairTop, 452, 842)], From: 770));
     }
