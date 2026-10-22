@@ -50,7 +50,9 @@ The game never keeps ground edits past 8 m, but it does level the ground under i
 trader's camp) without any limit, and counts that levelled ground as generated (see
 [Locations level the ground](#locations-level-the-ground)). The editor uses this. When you save or apply live, it
 turns ground past the limit into **ground discs**: invisible locations of the game's own, with no model. Each disc
-levels a circle of 8 m radius to its height and blends the ground around it out to about 13 m.
+levels a circle of 8 m radius to its height and blends the ground around it out to about 13 m: just past the circle the
+ground goes about three quarters of the way to the disc's height (the game counts the blend from the disc's middle, so it
+starts with a small step), then less and less, to nothing at 13 m.
 
 1. Discs go on a 6 m grid, only where your ground is more than 5 m away from what the ground would be without them.
 2. The editor works out the ground exactly as the game will build it from the discs, in the game's order, and adjusts
