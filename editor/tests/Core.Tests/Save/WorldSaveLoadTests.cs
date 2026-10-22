@@ -62,7 +62,7 @@ public class WorldSaveLoadTests
     public void TheSaveGridComesFromTheWorldFileWhateverTheSettings()
     {
         using var w = new TempWorld();
-        // Expand World Size writes the grid its chunk files lie on; the editor reads them on it, switch or no switch.
+        // Expand World Size writes the grid its chunk files lie on; the editor reads them on it, with the Expand World add-on or without it.
         WorldFileHead.Write(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_world_radius 20000", "ews_gridwidth 1024"]);
         Assert.Equal(1024, w.Load().GridWidth);
         // A width no save can have is read as the game's.

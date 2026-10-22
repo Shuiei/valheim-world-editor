@@ -19,7 +19,7 @@ updates:
       app:
         patterns: ["*"]
 
-  # The C# tests (xUnit, JUnit logger, coverage and hang dump; SkiaSharp for Core's).
+  # The C# tests (xUnit, JUnit logger, coverage and hang dump; SkiaSharp for Core's, YamlDotNet for Expand World's).
   - package-ecosystem: nuget
     directories:
       - /editor/tests/Core.Tests
@@ -27,6 +27,7 @@ updates:
       - /editor/tests/AddOns.Tests
       - /addons/Tunnelheim/tests/Tunnelheim.WorldEditor.Tests
       - /addons/Riverheim/tests/Riverheim.WorldEditor.Tests
+      - /addons/ExpandWorld/tests/ExpandWorld.WorldEditor.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3

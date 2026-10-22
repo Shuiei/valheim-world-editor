@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using ValheimGen;
 
@@ -22,4 +23,11 @@ public interface IWorldRulesProvider
 
     /// <summary>The rules a new world is made and looked at with (the New world page); null for the game's own.</summary>
     Task<WorldRules?> ForNewWorld();
+
+    /// <summary>
+    /// The mod a world's file says made it, for the world's card on the start page ("Expand World"); null when it says
+    /// none (the default). Asked for every world listed: answer from the keys alone, quickly.
+    /// </summary>
+    /// <param name="startingGlobalKeys">The starting global keys its world file keeps.</param>
+    string? MadeBy(IReadOnlyList<string> startingGlobalKeys) => null;
 }

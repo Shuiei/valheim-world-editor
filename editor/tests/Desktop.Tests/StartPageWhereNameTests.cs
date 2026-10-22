@@ -26,10 +26,10 @@ public class StartPageWhereNameTests
     [Fact]
     public void TheModsAWorldWasMadeWithFollowThePlace()
     {
-        static Worlds.Info World(bool expandWorld, string? generator) => new("W", "/w", DateTime.Now, 2, "recent", true, null, expandWorld, generator);
+        static Worlds.Info World(string? madeBy, string? generator) => new("W", "/w", DateTime.Now, 2, "recent", true, null, madeBy, generator);
         string recent = Lang.T("start.where.recent");
-        Assert.Equal(recent, StartPage.MadeWith(World(false, null)));
-        Assert.Equal(Lang.T("start.world.generator", recent, "Riverheim"), StartPage.MadeWith(World(false, "Riverheim")));
-        Assert.Equal(Lang.T("start.world.expandWorld", Lang.T("start.world.generator", recent, "Riverheim")), StartPage.MadeWith(World(true, "Riverheim")));
+        Assert.Equal(recent, StartPage.MadeWith(World(null, null)));
+        Assert.Equal(Lang.T("start.world.generator", recent, "Riverheim"), StartPage.MadeWith(World(null, "Riverheim")));
+        Assert.Equal(Lang.T("start.world.generator", Lang.T("start.world.generator", recent, "Riverheim"), "Expand World"), StartPage.MadeWith(World("Expand World", "Riverheim")));
     }
 }

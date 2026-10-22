@@ -17,20 +17,15 @@ public static partial class LocalGame
         AllBepInExFolders(settings).DistinctBy(f => Path.GetFullPath(f.BepInEx).TrimEnd(Path.DirectorySeparatorChar));
 
     /// <summary>
-    /// A mod's plugin DLL in the BepInEx folders the editor knows: the folder named in Settings for Expand World
-    /// (<see cref="AppSettings.ExpandWorldFolder"/>) first, then <see cref="BepInExFolders"/>; null when none has it.
+    /// A mod's plugin DLL in the BepInEx folders the editor knows (<see cref="BepInExFolders"/>), the first that has it;
+    /// null when none has it.
     /// </summary>
     /// <param name="settings">The editor's settings.</param>
     /// <param name="dll">The DLL's file name.</param>
     /// <returns>The DLL's full path and the BepInEx folder it is in.</returns>
     public static (string Dll, string BepInEx)? FindPlugin(AppSettings settings, string dll)
     {
-        var folders = BepInExFolders(settings).Select(f => f.BepInEx);
-        if (!string.IsNullOrWhiteSpace(settings.ExpandWorldFolder))
-        {
-            folders = folders.Prepend(settings.ExpandWorldFolder);
-        }
-        foreach (string bep in folders)
+        foreach (var (bep, _) in BepInExFolders(settings))
         {
             if (PluginFiles.Find(Path.Combine(bep, "plugins"), dll, Console.WriteLine) is { } found)
             {

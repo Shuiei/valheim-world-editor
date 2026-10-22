@@ -11,9 +11,9 @@ public static partial class Worlds
     /// <param name="Where">"recent", "yours" (a folder added in Settings) or "local" (the game's folders).</param>
     /// <param name="Usable">Whether the editor can open it.</param>
     /// <param name="Problem">Why it cannot, for the player; null when it can.</param>
-    /// <param name="ExpandWorld">Whether the world was made with Expand World Size (its world file keeps the mod's settings).</param>
+    /// <param name="MadeBy">The mod its world file says made it, as a running world rules provider names it ("Expand World"); null for none.</param>
     /// <param name="Generator">The world generation mod the world was made with (its world file has the mod's header), by name; null for none.</param>
-    public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem, bool ExpandWorld = false, string? Generator = null);
+    public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem, string? MadeBy = null, string? Generator = null);
 
     /// <summary>Every world found, each once: recent ones first, then the newest saves first.</summary>
     public static List<Info> Find(AppSettings settings)
@@ -93,7 +93,7 @@ public static partial class Worlds
     }
 
     /// <summary>
-    /// A usable world with what its file says it was made with (Expand World Size's keys, a world generation mod's
+    /// A usable world with what its file says it was made with (the keys a world rules provider knows, a world generation mod's
     /// header), and not usable when that is what it cannot be opened without (its generator's problem) or cannot be read.
     /// </summary>
     /// <param name="info">The world as its folder shows it.</param>
@@ -106,13 +106,13 @@ public static partial class Worlds
         {
             Usable = problem == null,
             Problem = problem,
-            ExpandWorld = head != null && ExpandWorld.Keys(head.StartingGlobalKeys).Count > 0,
+            MadeBy = head == null ? null : ModExtensions.MadeBy(head.StartingGlobalKeys),
             Generator = head?.Generator?.Generator.Name,
         };
     }
 
     /// <summary>
-    /// A world file's head, for what the world was made with (Expand World Size's keys, a world generation mod's header); null when
+    /// A world file's head, for what the world was made with (its keys, a world generation mod's header); null when
     /// the file cannot be read (said in the log; the world opens, or not, as Check said). A file made by a world
     /// generation mod the editor cannot read gives the problem (the world cannot be opened either).
     /// </summary>

@@ -61,7 +61,7 @@ public sealed partial class NewWorldPage : IDisposable
     private readonly bool _rulesGiven;
 
     /// <summary>
-    /// Reads Expand World's rules again when the location file could not convert before (the game's own location
+    /// Asks the world rules providers again when a location file could not convert before (the game's own location
     /// rules were not read yet when the page opened: GameLocations.UseGameRules reads them in the background) and
     /// they are read now. Any thread; the hint is updated on the window's thread.
     /// </summary>

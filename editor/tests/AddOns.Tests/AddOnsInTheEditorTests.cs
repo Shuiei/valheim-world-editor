@@ -7,7 +7,8 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// Each of the repository's add-ons in the editor, installed as a player installs it: waiting while its mod is missing;
+/// Each of the repository's add-ons in the editor, installed as a player installs it: its DLL of its own version;
+/// waiting while its mod is missing;
 /// with the mod, its manifest used (its data holders known), its extension loaded and running without being allowed,
 /// and every hook it registered called by the editor without turning it off. Runs alone (the manifests and extensions
 /// are shared).
@@ -23,6 +24,19 @@ public sealed class AddOnsInTheEditorTests : IDisposable
 
     [Fact]
     public void TheRepositoryHasAddOns() => Assert.NotEmpty(RepositoryAddOns.Names());
+
+    [Theory]
+    [MemberData(nameof(Names))]
+    public void AnAddOnsDllCarriesItsOwnVersion(string name)
+    {
+        // Released on its own zip, named after its VERSION (tools/addons.sh): the DLL says the same version.
+        string version = File.ReadAllText(Path.Combine(RepositoryAddOns.Folder, Path.GetFileName(name), "VERSION")).Trim();
+        if (RepositoryAddOns.Dll(name) is { } dll)
+        {
+            Assert.Equal(version, System.Reflection.AssemblyName.GetAssemblyName(dll).Version?.ToString(3));
+            Assert.StartsWith(version, System.Diagnostics.FileVersionInfo.GetVersionInfo(dll).ProductVersion, StringComparison.Ordinal);
+        }
+    }
 
     [Theory]
     [MemberData(nameof(Names))]

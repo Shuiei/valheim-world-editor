@@ -117,7 +117,7 @@ public static class WorldGenerators
     public static WorldRules ForNewWorld(AppSettings settings)
     {
         Decide(settings);
-        var rules = WorldRulesSource.ForNewWorld(settings);
+        var rules = WorldRulesSource.ForNewWorld();
         foreach (var g in ModExtensions.Generators)
         {
             if (g.NewWorldSettings() is not { } made)
