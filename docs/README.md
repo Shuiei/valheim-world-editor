@@ -38,3 +38,4 @@ Every page is also in the editor: **Documentation** on the start page.
 - [Translating](translating.md): the language catalogues, and how to make one.
 - [For mod authors](modding.md): what the editor learns from mods, `worldeditor.json`, extensions.
 - [Development](development.md): building the editor, its tests and the documentation's pictures.
+- [Architecture](architecture.md): how the editor's code is organised, for anyone changing it.
