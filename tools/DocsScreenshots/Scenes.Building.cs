@@ -361,6 +361,14 @@ public sealed partial class Scenes
     private void Dungeon(Editor e)
     {
         Bare(e, unsaved: false);
+        DungeonGenerate(e);
+        DungeonEntrance(e);
+        DungeonRooms(e);
+    }
+
+    /// <summary>dungeon-generate.jpg: the generator's heading and choices, beside its plan of both levels drawn larger.</summary>
+    private void DungeonGenerate(Editor e)
+    {
         e.Send("click Dungeon");
         e.Send("choose Black Forest");
         e.Send("choose Medium");
@@ -379,25 +387,30 @@ public sealed partial class Scenes
         {
             File.Delete(f);
         }
+    }
+
+    /// <summary>dungeon-entrance.jpg: the generated dungeon placed, its entrance on the ground, the door facing the camera.</summary>
+    private void DungeonEntrance(Editor e)
+    {
         e.Send("click Level 1");
         e.Send("click Place in the world");
         e.Send("wait 4000");
         // No spawn point markers or birds in front of the entrance.
-        e.Send("click View");
-        e.Send("click Spawn points");
-        e.Send("click Creatures & NPCs");
-        e.Send("click View");
+        ToggleSpawnsAndCreatures(e);
         // The summary and the Go to buttons in the panel, the line under them below its edge.
         e.Scroll(250, 500, -2);
         Camera(e, 3, 1, 200, 10, 17);
         e.Send("wait 1000");
         e.Shot(Out("dungeon-entrance.jpg"));
-        e.Send("click View");
-        e.Send("click Spawn points");
-        e.Send("click Creatures & NPCs");
-        e.Send("click View");
-        // The game's own rooms: a dungeon the game lays out, which the panel edits room by room (placed where the view
-        // looks: the same spot, the same rooms).
+        ToggleSpawnsAndCreatures(e);
+    }
+
+    /// <summary>
+    /// dungeon-rooms.jpg: a dungeon the game lays out (the game's own rooms), placed where the view looks, opened with Go
+    /// inside and cut 2 m above the floor.
+    /// </summary>
+    private void DungeonRooms(Editor e)
+    {
         Camera(e, 8, 0, 200, 30, 34);
         e.Send("key Z ctrl");
         e.Scroll(250, 400, -30);
@@ -418,6 +431,15 @@ public sealed partial class Scenes
         e.Point(1300, 150);
         e.Send("wait 1500");
         e.Shot(Out("dungeon-rooms.jpg"));
+    }
+
+    /// <summary>Switches the View panel's Spawn points and Creatures &amp; NPCs (off, then on again).</summary>
+    private static void ToggleSpawnsAndCreatures(Editor e)
+    {
+        e.Send("click View");
+        e.Send("click Spawn points");
+        e.Send("click Creatures & NPCs");
+        e.Send("click View");
     }
 
     /// <summary>

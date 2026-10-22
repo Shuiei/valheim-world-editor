@@ -114,65 +114,89 @@ public sealed partial class Scenes
         CopyFolder(World, world);
         try
         {
-            e.Send($"world {world}");
-            e.Send($"area {ZoneX} {ZoneZ} 1");
-            e.CloseLocationNote();
-            foreach (string sw in new[] { "Water", "Limit marks", "Unsaved marks", "View" })
-            {
-                e.Send($"click {sw}");
-            }
-            Level(e);
-            Hut(e, P(-4, -3), P(4, 3));
-            e.Send("key Escape");
-            e.Send("click Save to world");
-            e.Send("click Save");
-            e.Send("wait 1000");
-            e.Send("click OK");
-            // The game's own backup of the world with the hut, as it makes them when it saves.
-            var date = new DateTime(2026, 10, 20, 18, 0, 0, DateTimeKind.Local);
-            string backup = System.IO.Path.Combine(root, "Docs_backup_auto-20261020180000");
-            CopyFolder(world, backup);
-            Directory.SetLastWriteTime(backup, date);
-            // The grief: part of the near (north) wall taken down, both rows.
-            e.Send("key E");
-            Camera(e, 6, 0, 200, 24, 22);
-            e.Send("wait 300");
-            Click(e, P(2, 1.5));
-            foreach (var p in new[] { P(0, 1.5), P(-2, 1.5), P(2, -2.5), P(0, -2.5), P(-2, -2.5) })
-            {
-                Click(e, p, "ctrl");
-            }
-            e.Send("key Delete");
-            // The polygon drawn from above, where no wall is in the way of the points.
-            Camera(e, 0, 0, 200, 80, 40);
-            e.Send("wait 300");
-            e.Send("key B");
-            e.Send("click Polygon");
-            foreach (var p in new[] { P(-7, -6), P(7, -6), P(7, 6), P(-7, 6) })
-            {
-                Click(e, p);
-            }
-            e.Send("key Return");
-            e.Send("choose Restore from a backup");
-            e.Send("set Soft edge|2");
-            e.Send("click Your buildings");
-            e.Send(string.Format(System.Globalization.CultureInfo.InvariantCulture, "choose Game · {0:g}", date));
-            Camera(e, 8, 0, 200, 26, 28);
-            e.Send("wait 500");
-            string before = Out("before-area-backup.jpg"), after = Out("after-area-backup.jpg");
-            ShotWithList(e, before, 300, 492);
-            e.Send("key Return");
-            WaitForMessage(e, "Restored");
-            e.Shot(after, keepMessage: true);
-            // The open list is the before picture's; the panel's backup line (read by the restore) and the status bar
-            // are the after picture's.
-            Halves(Out("area-backup.jpg"), ("Griefed", "After Restore the selection"), before, after,
-                new HalvesCut(1000, AreaPanelRight, Keep: [MaskCard], KeepBefore: [new SKRectI(178, 508, 404, 580)]));
+            var date = SavedHutWithBackup(e, root, world);
+            GriefHut(e);
+            RestoreFromBackupShot(e, date);
         }
         finally
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// A hut built and saved on the world copy, then a copy of that world made as the game's own backup beside it.
+    /// </summary>
+    /// <returns>The backup's date, as its list entry shows it.</returns>
+    private static DateTime SavedHutWithBackup(Editor e, string root, string world)
+    {
+        e.Send($"world {world}");
+        e.Send($"area {ZoneX} {ZoneZ} 1");
+        e.CloseLocationNote();
+        foreach (string sw in new[] { "Water", "Limit marks", "Unsaved marks", "View" })
+        {
+            e.Send($"click {sw}");
+        }
+        Level(e);
+        Hut(e, P(-4, -3), P(4, 3));
+        e.Send("key Escape");
+        e.Send("click Save to world");
+        e.Send("click Save");
+        e.Send("wait 1000");
+        e.Send("click OK");
+        // The game's own backup of the world with the hut, as it makes them when it saves.
+        var date = new DateTime(2026, 10, 20, 18, 0, 0, DateTimeKind.Local);
+        string backup = System.IO.Path.Combine(root, "Docs_backup_auto-20261020180000");
+        CopyFolder(world, backup);
+        Directory.SetLastWriteTime(backup, date);
+        return date;
+    }
+
+    /// <summary>The grief: part of the hut's near (north) wall taken down, both rows.</summary>
+    private static void GriefHut(Editor e)
+    {
+        e.Send("key E");
+        Camera(e, 6, 0, 200, 24, 22);
+        e.Send("wait 300");
+        Click(e, P(2, 1.5));
+        foreach (var p in new[] { P(0, 1.5), P(-2, 1.5), P(2, -2.5), P(0, -2.5), P(-2, -2.5) })
+        {
+            Click(e, p, "ctrl");
+        }
+        e.Send("key Delete");
+    }
+
+    /// <summary>
+    /// A polygon round the hut with Restore from a backup and the backup chosen (before), then the selection restored
+    /// (after), side by side.
+    /// </summary>
+    private void RestoreFromBackupShot(Editor e, DateTime date)
+    {
+        // The polygon drawn from above, where no wall is in the way of the points.
+        Camera(e, 0, 0, 200, 80, 40);
+        e.Send("wait 300");
+        e.Send("key B");
+        e.Send("click Polygon");
+        foreach (var p in new[] { P(-7, -6), P(7, -6), P(7, 6), P(-7, 6) })
+        {
+            Click(e, p);
+        }
+        e.Send("key Return");
+        e.Send("choose Restore from a backup");
+        e.Send("set Soft edge|2");
+        e.Send("click Your buildings");
+        e.Send(string.Format(System.Globalization.CultureInfo.InvariantCulture, "choose Game · {0:g}", date));
+        Camera(e, 8, 0, 200, 26, 28);
+        e.Send("wait 500");
+        string before = Out("before-area-backup.jpg"), after = Out("after-area-backup.jpg");
+        ShotWithList(e, before, 300, 492);
+        e.Send("key Return");
+        WaitForMessage(e, "Restored");
+        e.Shot(after, keepMessage: true);
+        // The open list is the before picture's; the panel's backup line (read by the restore) and the status bar are
+        // the after picture's.
+        Halves(Out("area-backup.jpg"), ("Griefed", "After Restore the selection"), before, after,
+            new HalvesCut(1000, AreaPanelRight, Keep: [MaskCard], KeepBefore: [new SKRectI(178, 508, 404, 580)]));
     }
 
     /// <summary>
