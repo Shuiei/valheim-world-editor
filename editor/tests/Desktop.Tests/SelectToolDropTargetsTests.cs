@@ -1,5 +1,4 @@
 using Avalonia.Headless.XUnit;
-using Avalonia.Input;
 using TerrainEditor.App;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectToolRun;
@@ -18,9 +17,7 @@ public class SelectToolDropTargetsTests
     public void ATreeMovedInAWoodLandsOnTheGround()
     {
         var v = Open(T(1, Beech, 40, 30, 40, false), T(2, Beech, 50, 30, 50, false));
-        v.Tool.OnGround = true;
-        v.Click(40, 40);
-        v.Drag(KeyModifiers.None, (40, 40), (45, 45), (50, 50));
+        v.MoveOnGroundTo50();
         Assert.Equal(50, v.Last.Position.X, 1);
         Assert.Equal(30, v.Last.Position.Y, 2);
     }

@@ -22,9 +22,7 @@ public class SelectToolLandTests
     public void ATreeMovedOntoAFloorLandsOnItsTop()
     {
         var v = Open(T(1, Beech, 40, 30, 40, false), T(2, Floor, 50, 31, 50));
-        v.Tool.OnGround = true;
-        v.Click(40, 40);
-        v.Drag(KeyModifiers.None, (40, 40), (45, 45), (50, 50));
+        v.MoveOnGroundTo50();
         Assert.Equal(50, v.Last.Position.X, 1);
         Assert.Equal(50, v.Last.Position.Z, 1);
         Assert.Equal(31 + PieceCatalog.Get(Floor)!.MaxY, v.Last.Position.Y, 2);
@@ -39,9 +37,7 @@ public class SelectToolLandTests
         var c = v.S.Scene;
         // The second tree drawn as a 2 × 8 × 2 m tower, its top above the first tree's 5 m box.
         v.W.View.SetBoxes([(1, new Vector3(59 - c.Cx, 30, -(61 - c.Cz)), new Vector3(61 - c.Cx, 38, -(59 - c.Cz)))]);
-        v.Tool.OnGround = true;
-        v.Click(40, 40);
-        v.Drag(KeyModifiers.None, (40, 40), (45, 45), (50, 50));
+        v.MoveOnGroundTo50();
         Assert.Equal(30, v.Last.Position.Y, 2);
         // The copy is drawn (given its box) so it can be dragged on.
         v.W.View.SetBoxes([Box(c, c.Things.Count - 1)]);

@@ -63,6 +63,22 @@ internal static class ClipboardSetup
     }
 
     /// <summary>
+    /// A copy of Walled()'s box around the mound (grid 32 to 48) with its tree (named Beech1) and its wall (woodwall).
+    /// </summary>
+    internal static CopyData WalledCopy(EditSession s) =>
+        CopyData.FromArea(AreaBoxes.Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], n => n == Beech ? "Beech1" : "woodwall")!;
+
+    /// <summary>
+    /// The ghosts of a paste at grid point at, on the area's ground as it is now (read at the nearest grid point), at
+    /// their world positions.
+    /// </summary>
+    internal static List<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> GhostsAt(PasteTool paste, EditSession s, Vector2 at)
+    {
+        var (ox, oz) = GridOrigin(s);
+        return paste.Ghosts(at, g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz);
+    }
+
+    /// <summary>
     /// A copy of one point with no ground of its own, holding the object and the outline given.
     /// </summary>
     /// <param name="obj">The object the copy holds.</param>

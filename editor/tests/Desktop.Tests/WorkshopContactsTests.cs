@@ -16,8 +16,6 @@ public class WorkshopContactsTests
     {
         using var r = new BlueprintsPanelRun();
         var w = r.W;
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        w.Tell = _ => Task.CompletedTask;
         Directory.CreateDirectory(r.Homestead);
         string path = Path.Combine(r.Homestead, Homestead.FileName("Hillside"));
         File.WriteAllText(path, "#Name:Hillside\n#Creator:test\n#HomesteadVersion:1\n"
@@ -26,7 +24,7 @@ public class WorkshopContactsTests
             + "#Pieces\n"
             + "wood_floor;Building;0;0;0;0;0;0;1;\"\";1;1;1\n"
             + "wood_floor;Building;0;12;0;0;0;0;1;\"\";1;1;1\n");
-        await w.OpenWorkshop(path);
+        await r.OpenWorkshop(path);
         Assert.Contains("Opened “Hillside”: 2 piece(s)", w.MessageText.Text);
         Assert.Equal(0, w.LastSupport!.Breaking);
     }

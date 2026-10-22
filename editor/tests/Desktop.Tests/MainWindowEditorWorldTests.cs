@@ -245,11 +245,7 @@ public class MainWindowEditorWorldTests
     [AvaloniaFact]
     public void TheLocationsNoteLeavesTheToolColumnClear()
     {
-        var w = new MainWindow(load: false) { Width = 1440, Height = 900 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = ClipboardSetup.WindowOn(TestScenes.Flat(2), 1440, 900);
         w.Tools.ChooseMode(ToolMode.Place);
         w.LocationText.Text = "3 location(s) here.";
         w.LocationNote.IsVisible = true;

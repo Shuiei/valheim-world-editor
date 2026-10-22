@@ -82,6 +82,16 @@ internal static class TestScenes
     internal static WorldScene.Thing Beech(int id, Vector3 at) => new(id, StableHash.Of("Beech1"), at, Vector3.Zero, 1, false);
 
     /// <summary>
+    /// A beech (see <see cref="Beech"/>) <paramref name="dx"/> and <paramref name="dz"/> metres from the origin of a flat
+    /// one-zone area (Flat(1)), at this height.
+    /// </summary>
+    internal static WorldScene.Thing BeechInFlat(int id, float dx, float dz, float y = 30)
+    {
+        var probe = Flat(1).Scene;
+        return Beech(id, new Vector3(probe.OriginX + dx, y, probe.OriginZ + dz));
+    }
+
+    /// <summary>
     /// The game given opened live, and its area of radius 1 around zone (0, 0) with its edit session.
     /// </summary>
     internal static async Task<(WorldSession World, EditSession Area)> LiveArea(FakeGame game)

@@ -1,6 +1,5 @@
 using System.Numerics;
 using Xunit;
-using static TerrainEditor.Desktop.Tests.AreaBoxes;
 using static TerrainEditor.Desktop.Tests.ClipboardSetup;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -15,7 +14,7 @@ public class CopyDataAreaTests
     public void TreesFollowTheGroundWhereTheyLandAndPiecesKeepTheShape()
     {
         var s = Walled();
-        var c = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], n => n == Beech ? "Beech1" : "woodwall")!;
+        var c = WalledCopy(s);
         Assert.Equal([true, false], c.Objects.Select(o => o.Follow));
         Assert.Equal(0, c.Objects[0].Dy, 2);
         var paste = new PasteTool { Clip = c, Ground = false, ClearSite = false };
@@ -30,9 +29,8 @@ public class CopyDataAreaTests
     public void ATreeOnTheCopiedGroundStandsOnItWhereItsGhostShows()
     {
         var s = Walled();
-        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], n => n == Beech ? "Beech1" : "woodwall"), ClearSite = false };
-        var (ox, oz) = GridOrigin(s);
-        var ghosts = paste.Ghosts(new Vector2(90, 90), g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz);
+        var paste = new PasteTool { Clip = WalledCopy(s), ClearSite = false };
+        var ghosts = GhostsAt(paste, s, new Vector2(90, 90));
         var (_, _, add) = paste.Apply(s.Ground, new Vector2(90, 90));
         Assert.Equal(ghosts.Select(g => g.Position), add.Select(a => a.Item1.Position));
         Assert.Equal(s.Ground.HeightOf(90 * s.Ground.W + 90), add[0].Item1.Position.Y, 2);

@@ -7,6 +7,7 @@ using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.ComboBoxChoices;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -54,13 +55,12 @@ public class DungeonPanelInfoTests
             Dispatcher.UIThread.RunJobs();
             var p = w.DungeonPanel;
             var t = w.View.Dungeon;
-            var names = ((IEnumerable<string>)p.DungeonBox.ItemsSource!).ToList();
-            Assert.Equal(2, names.Count);
+            Assert.Equal(2, Lines(p.DungeonBox).Count);
             // The other dungeon chosen in the list, then the first again.
-            p.DungeonBox.SelectedIndex = names.FindIndex(n => n.Contains("1 room(s)", StringComparison.Ordinal));
+            Choose(p.DungeonBox, "1 room(s)");
             Assert.Single(t.Dungeon!.Rooms);
             Assert.DoesNotContain("overlapping", p.Info.Text, StringComparison.Ordinal);
-            p.DungeonBox.SelectedIndex = names.FindIndex(n => n.Contains("3 room(s)", StringComparison.Ordinal));
+            Choose(p.DungeonBox, "3 room(s)");
             Assert.Equal(3, t.Dungeon!.Rooms.Count);
             Assert.Contains("1 overlapping pair(s).", p.Info.Text, StringComparison.Ordinal);
             // A corridor chosen in the list, pointed (from below) at the entrance's first opening: it would

@@ -15,11 +15,7 @@ public class MainWindowCursorTests
     [AvaloniaFact]
     public void ThePanelsStopAboveATwoLineStatusBar()
     {
-        var w = new MainWindow(load: false) { Width = 1280, Height = 720 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = ClipboardSetup.WindowOn(TestScenes.Flat(2), 1280, 720);
         w.Tools.ChooseMode(ToolMode.Place);
         w.ShowRight(w.ViewPanelCard);
         w.MessageText.Text = string.Join(" ", Enumerable.Repeat("A long message that does not fit on one line of the status bar.", 6));

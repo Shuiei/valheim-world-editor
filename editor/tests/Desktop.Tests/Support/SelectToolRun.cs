@@ -50,6 +50,16 @@ internal static class SelectToolRun
             Tool.Up(At(path[^1].X, 30, path[^1].Z), Size, keys);
         }
 
+        /// <summary>
+        /// With "put on the ground" on, the object at world point (40, 40) clicked and dragged to (50, 50).
+        /// </summary>
+        public void MoveOnGroundTo50()
+        {
+            Tool.OnGround = true;
+            Click(40, 40);
+            Drag(KeyModifiers.None, (40, 40), (45, 45), (50, 50));
+        }
+
         public HashSet<int> Selected => [.. W.View.Selected];
 
         public WorldScene.Thing Last => S.Scene.Things[^1];

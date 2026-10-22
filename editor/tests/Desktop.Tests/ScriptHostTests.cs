@@ -82,7 +82,7 @@ public class ScriptHostTests
         string api = new StreamReader(stream).ReadToEnd();
         int at = api.IndexOf("// Kinds: ", StringComparison.Ordinal);
         string kinds = api[at..api.IndexOf("public static IEnumerable<Obj> OfKind", at, StringComparison.Ordinal)];
-        Assert.All(Enum.GetNames<TerrainEditor.App.ObjectKind>(), k => Assert.Contains($" {k}", kinds));
+        Assert.All(Enum.GetNames<ObjectKind>(), k => Assert.Contains($" {k}", kinds));
     }
 
     [Fact]

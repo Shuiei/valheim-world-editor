@@ -19,10 +19,11 @@ public class EditSessionDiscardTests
         s.Commit("Placed", null, [], [(new NewObject(0, at.Prefab, at.Position + new Vector3(3, 0, 3), Vector3.Zero, 1f), false)]);
     }
 
-    // A saved step undone is waiting too: Discard puts it back. It dropped it from the redo list instead, leaving its
-    // undo waiting ("1 deleted") with nothing to redo it.
-    [Fact]
-    public void DiscardRedoesASavedStepThatWasUndone()
+    /// <summary>
+    /// Runs the test on the first zone of a copy of the test world with a tree planted (Plant), saved and then undone;
+    /// the area is let go and the copy deleted after.
+    /// </summary>
+    private static void WithASavedStepUndone(Action<EditSession> test)
     {
         string dir = Fixtures.CopyFixture();
         var s = WorldScene.Load(dir, 0, 0, 1).Session!;
@@ -31,11 +32,7 @@ public class EditSessionDiscardTests
             Plant(s);
             Assert.True(s.Save().Saved);
             s.Undo();
-            Assert.Equal((0, 1, 0, 0), s.Pending);
-            Assert.Equal(0, s.UndoUnapplied());
-            Assert.Equal((0, 0, 0, 0), s.Pending);
-            Assert.Single(s.UndoList);
-            Assert.Empty(s.RedoList);
+            test(s);
         }
         finally
         {
@@ -44,29 +41,28 @@ public class EditSessionDiscardTests
         }
     }
 
+    // A saved step undone is waiting too: Discard puts it back. It dropped it from the redo list instead, leaving its
+    // undo waiting ("1 deleted") with nothing to redo it.
+    [Fact]
+    public void DiscardRedoesASavedStepThatWasUndone() => WithASavedStepUndone(s =>
+    {
+        Assert.Equal((0, 1, 0, 0), s.Pending);
+        Assert.Equal(0, s.UndoUnapplied());
+        Assert.Equal((0, 0, 0, 0), s.Pending);
+        Assert.Single(s.UndoList);
+        Assert.Empty(s.RedoList);
+    });
+
     // Undone, then saved: the step is not in the world any more, so it is not marked saved (History's "applied"), and
     // redone it waits; Discard then undoes it again.
     [Fact]
-    public void AStepUndoneWhenTheWorldIsSavedIsNoLongerMarkedSaved()
+    public void AStepUndoneWhenTheWorldIsSavedIsNoLongerMarkedSaved() => WithASavedStepUndone(s =>
     {
-        string dir = Fixtures.CopyFixture();
-        var s = WorldScene.Load(dir, 0, 0, 1).Session!;
-        try
-        {
-            Plant(s);
-            Assert.True(s.Save().Saved);
-            s.Undo();
-            Assert.True(s.Save().Saved);
-            Assert.False(Assert.Single(s.RedoList).Applied);
-            s.Redo();
-            Assert.Equal((0, 0, 1, 0), s.Pending);
-            Assert.Equal(1, s.UndoUnapplied());
-            Assert.Equal((0, 0, 0, 0), s.Pending);
-        }
-        finally
-        {
-            s.Scene.Owner!.Dispose();
-            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
-        }
-    }
+        Assert.True(s.Save().Saved);
+        Assert.False(Assert.Single(s.RedoList).Applied);
+        s.Redo();
+        Assert.Equal((0, 0, 1, 0), s.Pending);
+        Assert.Equal(1, s.UndoUnapplied());
+        Assert.Equal((0, 0, 0, 0), s.Pending);
+    });
 }

@@ -25,8 +25,7 @@ public class MapPageLifecycleTests
         await r.Open();
         var world = r.W.World!;
         int opened = world.World.SaveNumber;
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
-        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        WorldSessionRun.RaisedZone(world, 10, 10);
         Assert.True(world.Save().Done);
         r.M.Show(world);
         var w = world.World;
