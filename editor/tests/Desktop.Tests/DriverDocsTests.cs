@@ -21,9 +21,9 @@ public class DriverDocsTests
                 Dispatcher.UIThread.RunJobs();
                 return JsonDocument.Parse(answer).RootElement.Clone();
             }
-            var opened = await Send("docs map.md#controls");
+            var opened = await Send("docs map.md#shortcuts");
             Assert.Equal("map.md", opened.GetProperty("page").GetString());
-            Assert.Equal("controls", opened.GetProperty("anchor").GetString());
+            Assert.Equal("shortcuts", opened.GetProperty("anchor").GetString());
             Assert.Equal("select.md", (await Send("docs select.md")).GetProperty("page").GetString());
             Assert.True((await Send("docs search select box")).GetProperty("hits").GetInt32() > 0);
             Assert.Equal("select.md", (await Send("docs shot " + picture)).GetProperty("page").GetString());

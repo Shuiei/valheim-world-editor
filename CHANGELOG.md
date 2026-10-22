@@ -719,7 +719,7 @@ the plugin is unchanged in versions without that part.
 ### Added
 - **A double click on an object in the View tool switches to Select with it selected.** Its arrows and ring show at
   once, ready to move or turn it, without pressing `E` and clicking it again. Only a plain double click on an object
-  does it: with `Ctrl` or `Shift` held, or on empty ground, View stays. See [Select](docs/select.md#how-to-use-it).
+  does it: with `Ctrl` or `Shift` held, or on empty ground, View stays. See [Select](docs/select.md#use-it).
 
 ## v1.47.36 — 2026-10-19
 
@@ -922,7 +922,7 @@ the plugin is unchanged in versions without that part.
 ## v1.47.0 — 2026-10-17
 
 ### Added
-- **Your changes are kept when the game saved the world since you opened it.** Save used to be refused then, and the only way out was to leave the world and lose every unsaved change. The editor now offers to bring them over: it reads the game's save and makes each pending change again on it (changed ground, zone resets, No limit ground, deleted, added and moved objects with their data). Where the game changed the same zone or object, it asks once per kind whose version stays; the world is then the game's save with your changes pending and your history kept, and nothing is written until you save. See [Saving](docs/editor-basics.md#saving).
+- **Your changes are kept when the game saved the world since you opened it.** Save used to be refused then, and the only way out was to leave the world and lose every unsaved change. The editor now offers to bring them over: it reads the game's save and makes each pending change again on it (changed ground, zone resets, No limit ground, deleted, added and moved objects with their data). Where the game changed the same zone or object, it asks once per kind whose version stays; the world is then the game's save with your changes pending and your history kept, and nothing is written until you save. See [Saving](docs/concepts/saving-and-history.md#the-game-saved-since-you-opened-it).
 
 ## v1.45.110 — 2026-10-17
 
@@ -1807,7 +1807,7 @@ the plugin is unchanged in versions without that part.
 ## v1.31.0 — 2026-10-14
 
 ### Added
-- **Linked objects**: objects a mod builds out of others (a ship and the pieces built on it) are drawn where the mod builds them, around their root, turned and leaning with it, instead of in a pile where the game saves them. Such a group is moved, turned, copied and deleted whole: a double click on a part selects it, and any part brings the rest along (the Select tool, copy and paste, Claude's tools). Each pasted copy gets ids of its own, so the game keeps the copies apart. The editor knows no mod: a mod says how its objects link in the `links` of its `worldeditor.json`. See [Linked objects](docs/select.md#linked-objects-ships-and-other-mods-groups) and [for mod authors](docs/modding.md#linked-objects).
+- **Linked objects**: objects a mod builds out of others (a ship and the pieces built on it) are drawn where the mod builds them, around their root, turned and leaning with it, instead of in a pile where the game saves them. Such a group is moved, turned, copied and deleted whole: a double click on a part selects it, and any part brings the rest along (the Select tool, copy and paste, Claude's tools). Each pasted copy gets ids of its own, so the game keeps the copies apart. The editor knows no mod: a mod says how its objects link in the `links` of its `worldeditor.json`. See [Linked objects](docs/select.md#ships-and-other-linked-objects) and [for mod authors](docs/modding.md#linked-objects).
 
 ## v1.30.0 — 2026-10-14
 

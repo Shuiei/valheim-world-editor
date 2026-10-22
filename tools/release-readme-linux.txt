@@ -50,8 +50,9 @@ Documentation: https://github.com/Shuiei/valheim-world-editor
     2. Click the world. Single-player worlds are in ~/.config/unity3d/IronGate/Valheim/worlds_local
        and are listed by themselves; "Another world folder" opens any other (it holds
        _main.<n>.chunks files).
-    3. "Save to world" first copies the whole world folder to <World>_backup_terraineditor-<date>,
-       then writes the changes. Start the game again to see them.
+    3. Copy the world folder first (your own backup: the editor keeps none). "Save to world" writes
+       the changes and checks they read back before letting the old save go. Start the game again
+       to see them.
 
   In every way the world map opens first: click a spot and choose "Edit in 3D". "Worlds" (on the
   map page) goes back to the start page. Live changes are sent with "Apply live" (or "Auto").

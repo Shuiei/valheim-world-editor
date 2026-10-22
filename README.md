@@ -6,414 +6,80 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Shuiei/valheim-world-editor/badge)](https://scorecard.dev/viewer/?uri=github.com/Shuiei/valheim-world-editor)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15376/badge)](https://www.bestpractices.dev/projects/15376)
 
-**A world editor for Valheim, in the spirit of Minecraft's MCEdit, WorldEdit and WorldPainter.**
-Open a world, saved or running, in a 3D window that draws it with the game's own terrain, textures
-and models. Shape the land, build, place and move anything, then save it back or watch it change in
-game as you work.
+**A world editor for Valheim, in the spirit of Minecraft's MCEdit, WorldEdit and WorldPainter:** open a world, saved
+or running, in a 3D window drawn with the game's own terrain, textures and models; shape it, build, and save it back
+or watch it change in game as you work.
 
 ![The 3D editor showing a base, with the tool rail, tool panel and View panel](docs/images/overview.jpg)
 
-**[Download the latest release](https://github.com/Shuiei/valheim-world-editor/releases/latest)**
-for Windows or Linux, or macOS on Apple silicon (experimental). Unpack it and start it. You don't need to install
-anything else.
+## Download
 
-Also on [Nexus Mods](https://www.nexusmods.com/valheim/mods/4348) (the editor and its plugin). The
-WorldEditorBridge plugin, for mod managers, is on
-[Thunderstore](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) and
-[Hexium](https://valheim.hexium.gg/mods/Tie/WorldEditorBridge).
+**[Download the latest release](https://github.com/Shuiei/valheim-world-editor/releases/latest)** for Windows or
+Linux, or macOS on Apple silicon (experimental). Unpack it and start it: nothing else to install.
+
+Also on [Nexus Mods](https://www.nexusmods.com/valheim/mods/4348) (the editor and its plugin). The WorldEditorBridge
+plugin, for live editing and mod managers, is on [Thunderstore](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/)
+and [Hexium](https://valheim.hexium.gg/mods/Tie/WorldEditorBridge).
 
 ## What you can do
 
-**Terrain**
-- **Sculpt the ground** with brushes that raise, lower, flatten, smooth, erode, naturalize or restore
-  it, and **paint** it with dirt, cultivated soil or paved stone.
-- **Go past the game's ±8 m limit.** Raise mountains, ridges and volcanoes, or dig canyons, with a
-  preview before you click. The editor stores that ground as invisible locations the game levels by
-  itself. It works for every player, console players included, and nobody needs a mod.
-- **Draw roads, ramps, rivers and caves** along a line. Caves are roofed with the game's own
-  boulders.
-
-**Building**
-- **The Workshop** is a blank plot where you build with every piece the game has: hammer,
-  cultivator and serving tray. Pieces snap exactly as they do with the in-game hammer. A **support
-  check** tints each piece green to red, like the game's build mode. **Cut** shows the building only
-  up to a height, so you can work inside it.
-- **Blueprints** are saved in the format of [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/).
-  A building you save in the editor shows up in Homestead's hammer tab, ready to build in game. One
-  you save in game opens in the editor. The library shows each blueprint's 3D picture, cost,
-  description and tags. You can drag a blueprint onto the plot or drop `.blueprint` (Homestead,
-  PlanBuild) and `.vbuild` files on it.
-- **Paste a blueprint into any world.** Before you click, it shows as see-through models. It clears
-  its site: the ground in the way is dug out, and the trees and rocks there are removed.
-
-**Dungeons**
-- **Generate a whole dungeon** from a few choices: biome, style, walls, size, up to 16 levels,
-  monsters, loot, light, a boss behind a gate with its key in a chest. It is placed behind the game's
-  entrance of its kind, 5000 m up as the game keeps dungeons, or opened in the Workshop to build on.
-- **Edit Frost Caves, crypts and other dungeons room by room.** Add the game's rooms at their
-  openings, joined the way the game joins them, with the chests, creatures, decorations and doors the
-  game would put in them; delete rooms, and cap the open ends. The game builds the dungeon from the list
-  you make, no mod needed.
-- **Build inside a dungeon** with the hammer's pieces, on the rooms' floors.
-
-![A generated dungeon opened on the Workshop's plot, cut open to show its rooms](docs/images/workshop-dungeon.jpg)
-
-**New worlds**
-- **See a seed's world before it exists**: its land and biomes, and exactly where the game will put
-  the start, the bosses' altars, the traders (Haldor, the Bog Witch, Hildir) and the dungeons.
-- **Find a seed** with what you want near the start: Swamp, Mountain or Plains within a distance,
-  every early biome on foot, a trader or the first bosses close by. Then make the world: a normal
-  one, that everyone joins without any mod.
-
-![A seed's world before it exists: the start, the bosses' altars and the traders](docs/images/new-world.jpg)
-
-**Objects**
-- **Place anything the game has**: trees, rocks, bushes, crops and building pieces. Use a brush,
-  lines, circles, grids or whole zones; the brush follows the game's growing rules.
-- **Select, move, turn, copy and delete** objects, whole buildings included.
-- **Look inside objects and change what they hold**: chest contents, sign texts, portal tags…
-- **Search the whole world** for a kind of object, an item in any chest, or the text of a sign.
-
-**Areas and worlds**
-- **Work on an area**, a box or polygon: level, paint, clear, copy and paste it. You can also have the
-  game generate its zones again from scratch.
-- **Restore an area from a backup**, ground and objects, to undo griefing without rolling back the
-  whole world.
-- **Write C# scripts** that shape, paint and fill an area with terrain, trees, rocks and buildings.
-- **Measure** distances and slopes, and colour the ground by steepness.
-- **Undo anything.** The history panel goes back to any point, or takes out one change only. It is
-  kept with the world after each save, so you can still undo after closing the editor.
-
-## The start page
-
-The editor opens on its start page. Its side menu has three parts:
-
-- **Home** picks up where you left off: when Valheim is running with the plugin, a card to
-  **Edit live** its world; then the saved worlds and blueprints you opened last (blueprints with
-  their pictures), and the servers that connect in one click. Click one to open it.
-- **Edit a world**: the three ways to edit, below.
-- **Create**: **The Workshop**, a blank plot to build on and keep as a blueprint, needing no world
-  at all ([docs/workshop.md](docs/workshop.md)); and **A new world**, to choose a seed by what is
-  near its start and make the world ([docs/new-world.md](docs/new-world.md)).
-
-At the bottom of the menu: **Settings**, **Documentation**, **Open log** and the folder of the
-editor's settings and log.
-
-![The start page's Home: the game running, and the worlds opened last](docs/images/start-home.jpg)
-
-## Three ways to edit
-
-| | What it edits | What you need |
-|---|---|---|
-| **My game** (live) | The world you are playing: single player, or the one you host. Changes show in game right away. | BepInEx and the WorldEditorBridge plugin in your Valheim. |
-| **A dedicated server** (live) | Your server's world, while people play. The editor logs in over SSH and opens its own encrypted tunnel. | BepInEx and the plugin on the server, and an SSH login to it. |
-| **A saved world** (offline) | World files on this computer, with the game closed. | Nothing. |
-
-![The Workshop, under Create on the start page](docs/images/start-workshop.jpg)
-
-One program runs on Windows, Linux and macOS (experimental), and everything happens on your computer. Nothing is
-sent anywhere else.
+- **Sculpt and paint the ground** with brushes that raise, lower, flatten, smooth, erode, naturalize or restore it,
+  and paint dirt, cultivated soil or paved stone.
+- **Go past the game's ±8 m limit**: raise mountains, ridges and volcanoes or dig canyons. Players need no mod,
+  console players included.
+- **Draw roads, ramps, rivers and caves** along a line.
+- **Place anything the game has**, trees, rocks, crops and building pieces, with a brush, lines, grids or whole
+  zones; select, move, turn, copy and delete objects, whole buildings included.
+- **Look inside objects and change them**: chest contents, sign texts, portal tags. Search the whole world for an
+  object, an item in any chest, or a sign's text.
+- **Build in the Workshop** with every piece of the hammer, cultivator and serving tray, with the game's snapping and
+  support check, and keep it as a [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprint to
+  build in game or paste into any world.
+- **Generate a whole dungeon**, or edit Frost Caves, crypts and other dungeons room by room.
+- **See a seed's world before it exists**, find a seed with what you want near the start, and make the world.
+- **Edit live**: your own game or a dedicated server while people play, and see each change in game at once.
+- **Undo anything**, take out one change from the middle, or restore an area from a backup to undo griefing.
 
 ## Quick start
 
-1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows), `-linux-x64.tar.gz` (Linux) or
-   `-macos-arm64-experimental.zip` (a Mac with Apple silicon) from the
-   [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest).
-2. Unpack it anywhere and double-click **ValheimWorldEditor**.
-3. Pick a way to edit in the start page's side menu. To try it safely, open **A saved world** with
-   the game closed, or **The Workshop**. Next time, **Home** lists what you opened.
-
-The sections below cover each step in more detail.
-
-## Installation
-
-### What you need
-
-- **Windows 10/11 or Linux**, 64-bit; or **macOS 12 or later on Apple silicon** (M1 and later), experimental:
-  the Mac build has not been tried on a Mac yet ([below](#macos-experimental)).
-- **Valheim** installed through Steam on the same computer. The editor finds it by itself and reads
-  what it needs straight from the game's files (nothing is copied): the textures and models, and how
-  the game's locations shape the ground. Without it no world or Workshop opens: the start page asks
-  for its folder.
-- For the **live** ways: **BepInEx** in the game that hosts the world (your Valheim, or the
-  server), using [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
-  plus the WorldEditorBridge plugin (its own download, next to the editor's). Players who join need
-  neither.
-
-Nothing else: no Python, no .NET, no `ssh` command. Everything the editor needs comes in the
-download: one program file, drawn with OpenGL (any graphics driver of the last ten years; on
-Windows through Direct3D, like games, or the driver's own OpenGL when chosen in **Settings**).
-
-### Install and start
-
-1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows),
-   `ValheimWorldEditor-<version>-linux-x64.tar.gz` (Linux) or
-   `ValheimWorldEditor-<version>-macos-arm64-experimental.zip` (macOS, see [below](#macos-experimental)) from the
-   [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page.
-2. Unpack it anywhere (Desktop, Documents…). It holds the editor and its `README.txt`. For live
-   editing, the WorldEditorBridge plugin is a separate download: `WorldEditorBridge-<version>.zip`
-   on the same page, or from a mod manager (below).
-3. Double-click **ValheimWorldEditor** (`ValheimWorldEditor.exe` on Windows). It opens in its own
-   window, on the start page's **Home**. (Windows may say "Windows protected your PC" the first
-   time, until SmartScreen knows the editor's signature: "More info" shows its publisher, then
-   "Run anyway".)
-
-The editor reads the game's look (textures, models, the terrain and map) and how its locations shape
-the ground straight from your Valheim install: nothing is copied, so it always matches your version of
-the game. The first time, and after a Valheim update, it reads the game's files for a few seconds (a
-card on the start page says so). If Valheim is not found, the card explains how to
-find its folder and asks for it: in Steam, right-click Valheim, then **Manage › Browse local files**;
-the folder that opens (the one with `valheim_Data`, or `valheim.app` on a Mac) is the one to choose. Usual places:
-
-- Linux: `~/.local/share/Steam/steamapps/common/Valheim` (Flatpak Steam:
-  `~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Valheim`)
-- Windows: `C:\Program Files (x86)\Steam\steamapps\common\Valheim`
-- macOS: `~/Library/Application Support/Steam/steamapps/common/Valheim`
-- Another Steam library: `<library>/steamapps/common/Valheim`
-
-A folder near it works too (`steamapps`, `common`, `valheim_Data`, `valheim.app`): the editor finds the game folder
-from it. The folder can be changed later in **Settings**.
-
-### Add-ons for mods
-
-Some mods need more than the editor knows to be shown or edited. Their support comes as **add-ons**, each its own
-download on the same [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page: unpack
-`ValheimWorldEditor-addon-<Name>-<version>.zip` into the `addons` folder next to the editor (on macOS, next to
-`ValheimWorldEditor.app`). An add-on is used while its mod is in your BepInEx plugins folders; **Settings** lists the
-installed ones. The mod itself stays where it is.
-
-| Add-on | For | What it does |
-|---|---|---|
-| [Tunnelheim](addons/Tunnelheim/README.md) | [Tunnelheim](https://thunderstore.io/c/valheim/p/Tunnelheim/Tunnelheim/) (`ValheimTunneling.dll`) | Draws the tunnels the mod digs, as the game builds them, and adds a Tunnel tool: the mod's digs, Add Earth and smoothing, and bores, rooms, shafts and stairs; tunnels go with copies and blueprints. |
-
-### macOS (experimental)
-
-The Mac build is for Apple silicon (M1 and later), macOS 12 or later; Intel Macs are not supported yet. It has not
-been tried on a Mac yet: if something does not work, [open an issue](https://github.com/Shuiei/valheim-world-editor/issues)
-with the editor's log (**Open log** on the start page).
-
-1. Unzip `ValheimWorldEditor-<version>-macos-arm64-experimental.zip` and move **ValheimWorldEditor.app** where you
-   like (Applications, for example).
-2. The first time, macOS refuses to open it: the editor is signed, but not with an Apple Developer certificate, so
-   macOS cannot check who made it. Double-click it once and close the message, then in **System Settings › Privacy
-   & Security** click **Open Anyway** next to ValheimWorldEditor. Or, in Terminal:
-   `xattr -dr com.apple.quarantine /Applications/ValheimWorldEditor.app`. After that it opens with a double-click.
-3. **Cmd** works wherever the documentation says **Ctrl** (`Cmd+Z` undoes, Cmd + click adds to a selection).
-
-The editor finds Valheim in Steam's libraries (inside `valheim.app`), the worlds in
-`~/Library/Application Support/IronGate/Valheim/worlds_local`, and r2modman's profiles. Its own settings and log are
-in `~/Library/Application Support/ValheimWorldEditor`. The game's terrain is drawn with the game's own shader when
-the Mac game ships one the editor can read; otherwise in plain colours (the rest of the game's look is the same).
-
-### My game (live)
-
-1. **Install BepInEx** in your Valheim, once: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
-   either with a mod manager (r2modman, Thunderstore Mod Manager) or by hand into the Valheim folder,
-   following its page.
-2. **Add the plugin:** with a mod manager, install
-   [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) from
-   Thunderstore or Hexium (BepInEx comes with it). By hand: copy `WorldEditorBridge.dll` from
-   `WorldEditorBridge-<version>.zip` (on the releases page) into `BepInEx/plugins` of your Valheim.
-   The editor itself is only on the
-   [releases page](https://github.com/Shuiei/valheim-world-editor/releases): Thunderstore does not
-   host programs.
-3. **Start Valheim** with BepInEx and load your world (single player, or start a server from the
-   game to host it). On this first start the plugin writes its settings,
-   `BepInEx/config/Tie.WorldEditorBridge.cfg`, with a random token. The editor reads that file, so
-   the game has to have started once with the plugin.
-4. The start page notices the game by itself: **Home** shows "Valheim is running with the world …"
-   (and **My game**, in the menu, says *running*): click **Edit live**. On your own computer it finds
-   the plugin and its token by itself, also in mod manager profiles. Until then, **My game** says
-   what is missing.
-
-![My game on the start page](docs/images/start-game.jpg)
-
-Edit, then **Apply live** (or switch on **Auto** to apply every change right away): you see it in
-game at once, and the game saves it as usual.
-
-### A dedicated server (live)
-
-![Connecting to a server](docs/images/start-server.jpg)
-
-1. **On the server, once:** install BepInEx (BepInExPack for Valheim, following its instructions
-   for dedicated servers), copy `WorldEditorBridge.dll` (from `WorldEditorBridge-<version>.zip` on
-   the releases page) into its `BepInEx/plugins` (or install
-   [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) in a mod
-   manager's server profile).
-2. **Start the server once with the plugin**, so it writes `BepInEx/config/Tie.WorldEditorBridge.cfg`.
-   That file holds the plugin's **token**, a random secret made on that first start. Until the
-   server has started once with the plugin, there is no token to enter. See the `README.txt` in the
-   plugin's zip.
-3. On the start page, **A dedicated server**: enter the server's address, the user you log in to it
-   with (SSH), the password or an SSH key file, and the **plugin token**: the `Token` line of
-   `BepInEx/config/Tie.WorldEditorBridge.cfg` on the server. Tick **Save password** to not type the
-   password again.
-4. **Connect.** The editor logs in, opens its own encrypted tunnel to the plugin and loads the
-   world. The plugin only listens on the server itself, so it is never exposed to the internet.
-5. The server is then **saved** in the list, with its token: next time it is one click, here or on
-   **Home** (when its password is saved or it logs in with a key).
-
-If something is wrong, the editor says what: login refused, no answer, wrong token, plugin not
-running on the server, or a server whose identity changed since last time (it refuses to connect
-then). Already
-have your own tunnel (`ssh -L`, PuTTY)? Use **More options → I made my own tunnel**. More in
-[docs/live-mode.md](docs/live-mode.md).
-
-### A saved world (offline)
-
-![Saved worlds](docs/images/start-offline.jpg)
-
-1. **Close Valheim, or stop the server** that uses the world. A running game saves over the files
-   the editor writes.
-2. On the start page, **A saved world**: click the world (the worlds you opened last are on **Home**
-   too). Worlds in Valheim's usual folders are listed by themselves (the list follows the worlds you add or remove; **Refresh** looks at once); for another one (a copy of a server's world, for example) use **Another world
-   folder** with **Browse…** or by typing it (`<savedir>/worlds_local/<World>` for a server).
-3. Edit, then **Save to world**. The editor writes your changes as the next save and reads them back
-   to check them (if they do not read back right, the new files are removed and nothing changed).
-   As with Apply live, the world stays open with its history: undo a step and save again to take it
-   back. The save the world was opened from is kept until you leave the world, then only the latest
-   save stays. Start the game or server again to see the result.
-
-In every way, the [world map](docs/map.md) opens first: click a spot and choose **Edit in 3D**.
-**Worlds** (on the map page) goes back to the start page.
-
-### Game, plugin and worlds not where they usually are
-
-![Settings](docs/images/settings.jpg)
-
-The editor looks in the usual places by itself: Valheim in every Steam library (also Flatpak Steam
-and extra libraries), BepInEx in the Valheim folder and in the default r2modman / Thunderstore Mod
-Manager profiles, and worlds in Valheim's own world folders (Proton's too). When yours are
-elsewhere, set them in **Settings** on the start page:
-
-- **Language**: the editor's language, by default the computer's when the editor has it (else
-  English). Taken when the editor starts again. To translate it: [docs/translating.md](docs/translating.md).
-- **Valheim game folder**: the folder with `valheim_Data` (a copy outside Steam, a second install…).
-  **Automatic** goes back to searching the Steam libraries.
-- **BepInEx folders**: a `BepInEx` folder, a mod manager profile, or a folder of profiles (a mod
-  manager with its own data folder). Used to find the plugin for **My game**.
-- **World folders**: a world, or a folder of worlds (a server's `<savedir>/worlds_local` copy, a
-  backup folder…). Always listed under **A saved world**.
-- **Claude**: **Allow Claude to connect**, its port and token, and the lines to give Claude Code or
-  Claude Desktop. See [docs/claude.md](docs/claude.md).
-- **Mod extensions**: one switch per extension a mod in the folders above offers. See
-  [docs/modding.md](docs/modding.md#extensions).
-- **Add-ons**: the add-ons installed in the `addons` folder next to the editor (editor support for
-  a mod, each its own download), and whether each is in use: an add-on is used while the mod it is
-  for is in the plugins folders, with no switch. See [docs/modding.md](docs/modding.md#add-ons).
-- **Drawing** (Windows): **Draw with the graphics driver's OpenGL**. Off by default: the editor
-  draws through Direct3D, as games do. Taken when the editor starts again.
-
-For a **dedicated server**, the server form has an optional **Server's Valheim folder** (the
-folder with its `BepInEx`, for example `/home/valheim/server`). With it the editor reads the
-plugin's port from the server and, when the plugin does not answer, says exactly why: no BepInEx
-there, no plugin in `BepInEx/plugins`, or a server that is not running with BepInEx. It is saved
-with the server; **edit** next to a saved server changes it. (The token is still always typed.)
-
-### Where things are kept
-
-Settings, saved servers (`servers.cfg`), what the editor remembers between runs, blueprints, the
-index of the game's files (`game-index.json`) and a log (`ValheimWorldEditor.log`, a new one each run) are in `~/.local/share/ValheimWorldEditor`
-(Linux), `%LOCALAPPDATA%\ValheimWorldEditor` (Windows) or `~/Library/Application Support/ValheimWorldEditor` (macOS). The bottom of the start page's menu shows
-the folder.
+1. [Install the editor](docs/start/install.md): download, unpack, start it.
+2. [Back up a world](docs/guides/back-up-a-world.md), then follow [your first edit](docs/start/first-edit.md):
+   raise a hill, plant trees, save, and see it in game.
+3. Pick a way to edit on the start page: **My game** or **A dedicated server** (live), or **A saved world** with the
+   game closed.
 
 ## Documentation
 
-| Page | Covers |
-|---|---|
-| [Getting around](docs/editor-basics.md) | The start page, the window, the tool rail, camera, walking and flying, the area and Follow, the top bar, saving and discarding, history, the Workshop's top bar, the View panel, player-built pieces, every shortcut |
-| [World map](docs/map.md) | The overview map, opening an area in 3D, searching the world, resetting zones across the world, edited zones |
-| [Ground tools](docs/terrain.md) | The sculpt brushes and how each works, brush shapes and falloffs, stamps, Erode, ground paint, the ±8 m limit, No limit, Shape, Mountain |
-| [Path](docs/path.md) | Roads, ramps, rivers, caves and paint along a line |
-| [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
-| [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |
-| [Area, copy and paste](docs/area.md) | Box and polygon selections, every Area action (Regrow nature, Replace, Heightmap, Restore from a backup, Reset zones), copy, cut, paste and stacking, how a paste clears its site |
-| [Place](docs/place.md) | Any kind of object: brush, lines, circles, rectangles, grids and zones; presets; spawn points and nests; snapping pieces end to end; the growing rules |
-| [Select](docs/select.md) | Selecting (clicks, zones, whole buildings), moving, turning, exact place, saved selections, linked objects, the Inspector |
-| [Dungeons](docs/dungeons.md) | Generating dungeons (every choice, how they are laid out), placing them behind their entrance, editing the game's rooms, building inside |
-| [The Workshop](docs/workshop.md) | Building on a blank plot with the Build panel, how pieces snap, the support check, Cut, Homestead blueprints: library, cost, pictures, tags, sharing |
-| [A new world](docs/new-world.md) | Seeing a seed's world before making it (biomes, start, bosses, traders, dungeons), finding seeds with what you want near the start, creating the world |
-| [Live mode](docs/live-mode.md) | Editing your game or a dedicated server while it runs: connecting, Apply live and Auto, following the game, moving things, undo after applying, modded games |
-| [Expand World add-on](addons/ExpandWorld/README.md) | Worlds made with the Expand World mods (Size, Rivers, Data): installing it, what is read from where, what follows the mods and what does not |
-| [Riverheim add-on](addons/Riverheim/README.md) | Worlds made with the Riverheim mod: what opening them needs, what follows the mod |
-| [Script](docs/scripting.md) | C# scripts that shape, paint and populate an area: the examples, how they run, everything they can use, recipes |
-| [Claude](docs/claude.md) | Letting Claude shape the world or build in the Workshop from a prompt (MCP): turning it on, what it can do, safety |
-| [Translating](docs/translating.md) | The language catalogues, making or correcting one, adding texts in the code |
-| [For mod authors](docs/modding.md) | What the editor learns from building mods by itself, the optional `worldeditor.json`, linked objects, extensions (the SDK), live mode hooks |
-| [Development](docs/development.md) | Project layout, the driver and the documentation's pictures, building, tests |
+The same documentation is in the editor (**Documentation** on the start page): start at
+[docs/README.md](docs/README.md).
+
+- **Getting started**: [Install](docs/start/install.md), [your first edit](docs/start/first-edit.md),
+  [your first build](docs/start/first-build.md).
+- **How-to guides**: one task each, from [editing your game live](docs/guides/edit-your-game-live.md) to
+  [restoring an area from a backup](docs/guides/restore-from-backup.md). The list is in [docs/README.md](docs/README.md).
+- **Tools**: [the editor window](docs/editor-basics.md), [the world map](docs/map.md),
+  [sculpt and paint](docs/terrain.md), [Place](docs/place.md), [Select](docs/select.md),
+  [the Workshop](docs/workshop.md), [live mode](docs/live-mode.md) and the rest.
+- **How it works**: [saving and history](docs/concepts/saving-and-history.md),
+  [ground limits](docs/concepts/ground-limits.md), [safety](docs/concepts/safety.md).
+- **Help**: [troubleshooting](docs/help/troubleshooting.md), [questions](docs/help/faq.md),
+  [shortcuts](docs/help/shortcuts.md), [glossary](docs/help/glossary.md).
+- **Mods**: [Expand World](addons/ExpandWorld/README.md), [Riverheim](addons/Riverheim/README.md) and
+  [Tunnelheim](addons/Tunnelheim/README.md) add-ons; [for mod authors](docs/modding.md).
 
 What changed and when: [CHANGELOG.md](CHANGELOG.md).
 
 ## Safety
 
-- **Nothing is written until you choose to.** Edits stay in the editor until you press **Save to
-  world** or **Apply live**. **Discard** drops everything that is not saved or applied yet.
-- **Offline saves are checked.** The editor writes your changes as the world's next save and reads
-  them back. If they don't read back right, the new files are removed and the world is as it was.
-  The save you opened the world from is kept until you leave the world.
-- **The editor follows the game's rules.** Ground moves at most 8 m from its original height, the
-  way the game allows. Ground at that limit turns red (**View → Limit marks** hides it). The only
-  way past the limit is **No limit** and **Mountain**, which use locations the game itself
-  understands. The edge of the loaded area stays locked, so it joins its neighbours seamlessly.
-- **The plugin is private.** WorldEditorBridge only listens on the computer it runs on, and it needs
-  a secret token. A server is reached through the editor's own SSH tunnel and is never exposed to
-  the internet.
-- **Claude only connects if you allow it** (Settings), only from this computer, with a secret token,
-  and what it changes stays pending like your own changes.
-- Keep your own copies of worlds you care about anyway.
-- Found a security problem? Report it privately, see [SECURITY.md](SECURITY.md).
-
-## Questions
-
-**Do the players on my server need anything?**
-No. Only the game or server that hosts the world needs BepInEx and the plugin. Players who join,
-console players included, need nothing. That also goes for mountains past ±8 m.
-
-**I play with the Expand World mods. Does the editor know?**
-Yes, with the Expand World add-on installed: the ground, the map, the biomes and the predictions follow the
-mods' settings and data files. See the [Expand World add-on](addons/ExpandWorld/README.md). Without it, every
-world is generated as the game itself does.
-
-**My world was made with Riverheim. Can I open it?**
-Yes, with the Riverheim add-on installed and Riverheim itself in your BepInEx folder: the editor draws the world
-with your own copy of the mod, as the game does. See the [Riverheim add-on](addons/Riverheim/README.md).
-
-**Do I need Homestead?**
-Only to build blueprints in game. The Workshop, the library and pasting blueprints into a world all
-work without it. When Homestead is missing, the editor says so and links to it. Note that a server
-running Homestead turns away players who don't have it, and console players can't install mods.
-
-**The editor asks for a token. Where is it?**
-In `BepInEx/config/Tie.WorldEditorBridge.cfg`, on the `Token` line. The plugin writes that file the
-first time the game or server starts with it, so start it once after installing the plugin. For your
-own game the editor reads the token by itself; for a dedicated server you copy it from the server.
-
-**Can I edit while the game is running?**
-Yes, in live mode with the plugin. For a saved world, close the game or stop the server first: a
-running game saves over the files the editor writes.
-
-**Is the editor on Thunderstore or Hexium?**
-Only the plugin, [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/),
-is there. The editor is a program, not a mod, so it is only on the
-[releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest). Use the same version
-of both.
-
-**The 3D view or the map flickers, objects come and go, or lines cross the window (Windows).**
-That is the graphics driver. Update it; on a laptop with two graphics chips, choose the faster one for
-`ValheimWorldEditor.exe` (Windows' Settings › System › Display › Graphics, or the NVIDIA / AMD control
-panel). If it still happens, switch **Draw with the graphics driver's OpenGL** in **Settings**
-(**Drawing**), then start the editor again.
-
-**Something is wrong or missing.**
-[Open an issue](https://github.com/Shuiei/valheim-world-editor/issues) and attach the editor's log:
-**Open log** at the bottom of the start page's menu opens it (`ValheimWorldEditor.log`, started over at
-each run, so attach it before starting the editor again).
+Nothing is written until you press **Save to world** or **Apply live**, and every offline save is read back and
+checked before the old one goes. The plugin only listens on the computer it runs on and needs a secret token;
+everything happens on your computer, and nothing is sent anywhere else. Keep your own copy of a world you care about
+anyway: see [Back up a world before editing](docs/guides/back-up-a-world.md). The details:
+[Safety](docs/concepts/safety.md). Found a security problem? Report it privately, see [SECURITY.md](SECURITY.md).
 
 ## For developers
 
-### Command line
-
-The program also takes a world or a live server directly, which is handy for scripts:
+The program also opens a world or a live game from the command line:
 
 ```sh
 ValheimWorldEditor "<world folder>"                                   # open that world's map
@@ -421,29 +87,28 @@ ValheimWorldEditor --live http://127.0.0.1:5182 --token <token>       # connect 
 ValheimWorldEditor --world "<world folder or name>" --zone 3,-2       # straight into the 3D editor there
 ```
 
-### Building from source
+Build it from source with the .NET 10 SDK:
 
 ```sh
 dotnet publish editor/Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```
 
-Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages
-(the program and its README; the Mac app signed ad hoc with [rcodesign](https://github.com/indygreg/apple-platform-rs),
-which `NO_MACOS=1` leaves out); `tools/thunderstore.sh <folder>` the
-plugin's (`WorldEditorBridge-<version>.zip`). The tests, which CircleCI runs
-on every push (the app's visual tests need a display, which CI gives them; without one they skip, or
-leave them out with `--filter-not-trait Category=Visual`):
+Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages (the program and its
+README; the Mac app signed ad hoc with [rcodesign](https://github.com/indygreg/apple-platform-rs), which `NO_MACOS=1`
+leaves out); `tools/thunderstore.sh <folder>` the plugin's (`WorldEditorBridge-<version>.zip`). CircleCI runs the
+tests on every push (the app's visual tests need a display; without one they skip, or leave them out with
+`--filter-not-trait Category=Visual`):
 
 ```sh
 dotnet test --project editor/tests/Core.Tests/Core.Tests.csproj -c Release
 dotnet test --project editor/tests/Desktop.Tests/Desktop.Tests.csproj -c Release
 ```
 
-See [docs/development.md](docs/development.md).
+Project layout, the documentation's pictures and the tests: [docs/development.md](docs/development.md). How the code
+fits together: [docs/architecture.md](docs/architecture.md). Translating: [docs/translating.md](docs/translating.md).
 
 ## License
 
-[MIT](LICENSE), © 2026 Thibault Bene. The repository holds none of Valheim's code: the world
-generator is written for the editor, following the game's formulas. The data files read from the
-game remain Iron Gate's and are not covered: see [NOTICE.md](NOTICE.md). Not affiliated with or
-endorsed by Iron Gate or Coffee Stain.
+[MIT](LICENSE), © 2026 Thibault Bene. The repository holds none of Valheim's code: the world generator is written for
+the editor, following the game's formulas. The data files read from the game remain Iron Gate's and are not covered:
+see [NOTICE.md](NOTICE.md). Not affiliated with or endorsed by Iron Gate or Coffee Stain.

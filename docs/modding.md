@@ -56,7 +56,7 @@ Vehicles' file:
 | Key | What the editor does with it |
 |---|---|
 | `version` | The format's version: `1`. A file of a later version, or without one, is skipped whole. |
-| `data` | By data key, as your code names it (the name whose hash the game saves): `label`, how the [inspector](select.md#inspecting-and-changing-an-objects-data) names the value (else its key; the editor's own names for the game's keys come first); `readOnly`, the inspector shows the value but does not let it be changed (values your mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
+| `data` | By data key, as your code names it (the name whose hash the game saves): `label`, how the [inspector](select.md#inspector) names the value (else its key; the editor's own names for the game's keys come first); `readOnly`, the inspector shows the value but does not let it be changed (values your mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
 | `prefabs` | By prefab name: `hidden`, not offered in the [Place](place.md) list or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading your piece is listed under in the Build panel's **Mods** tab, after the mod's name ("*mod name* · Hulls"). Without a group, a piece is listed under its crafting station, else under "No station needed". `group` counts only for the mods' own pieces. `data`: objects of it only hold your mod's data (a register, what was dug in an area) and have nothing to see: the editor never draws, picks or lists them in an area (your extension still reads them), and a [zone reset](area.md) keeps them when it keeps the buildings, removing them with everything else otherwise. |
 | `links` | How your objects link into one: see [Linked objects](#linked-objects). |
 | `extension` | Your editor extension's DLL, relative to the file's folder and inside it: see [Extensions](#extensions). |
@@ -90,7 +90,7 @@ editors check the file and complete its keys as you type.
 If your mod builds objects out of others (a ship and the pieces built on it, a cart and its load),
 the game saves each piece apart, and the editor sees loose pieces, piled where the game saved them.
 Tell it how they link and it draws them as your mod builds them, and moves, copies and deletes each
-group whole (see [Linked objects](select.md#linked-objects-ships-and-other-mods-groups) for what
+group whole (see [Linked objects](select.md#ships-and-other-linked-objects) for what
 the player sees). It works for mods that link the common way: the root (and any part others hang
 on) holds an int id of its own; each part keeps, in its data, the id of what it hangs on and its
 offset and turn in that one's frame.
