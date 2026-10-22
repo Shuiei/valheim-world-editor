@@ -1,3 +1,5 @@
+using ValheimWorldEditor.Sdk;
+
 namespace TerrainEditor.App;
 
 /// <summary>
@@ -30,7 +32,7 @@ public static partial class LocalGame
         }
         foreach (string bep in folders)
         {
-            if (ExpandWorld.FindPlugin(Path.Combine(bep, "plugins"), dll) is { } found)
+            if (PluginFiles.Find(Path.Combine(bep, "plugins"), dll, Console.WriteLine) is { } found)
             {
                 return (found, bep);
             }

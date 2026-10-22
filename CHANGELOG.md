@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.105.0 — 2026-10-21
+
+### Added
+- **Add-ons for mods that change the world through settings.** An add-on can now give the rules worlds are generated
+  with, from a mod's settings and data files, on this computer or from a live game's own files, as Expand World's
+  support does. See [World rules](docs/modding.md#world-rules).
+
 ## v1.104.0 — 2026-10-21
 
 ### Added

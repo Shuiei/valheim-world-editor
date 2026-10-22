@@ -1,5 +1,4 @@
 using System.Globalization;
-using TerrainEditor.Terrain;
 using ValheimGen;
 using NVector3 = System.Numerics.Vector3;
 
@@ -243,5 +242,5 @@ public static partial class ExpandWorld
         index < s.Length && float.TryParse(s[index], NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : fallback;
 
     /// <summary>Whether a name is a prefab of the game the editor can make.</summary>
-    private static bool Known(string name) => PrefabCatalog.Get(Save.StableHash.Of(name)) != null;
+    private static bool Known(string name) => Game.HasPrefab(name);
 }

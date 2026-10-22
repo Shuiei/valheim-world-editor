@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace ValheimWorldEditor.Sdk;
 
 /// <summary>What an extension can ask of the editor at any time (see <see cref="IExtensionRegistry.Host"/>).</summary>
@@ -27,6 +29,20 @@ public interface IEditorHost
     /// </summary>
     /// <param name="dllName">The DLL's file name ("SomeMod.dll").</param>
     PluginFile? FindPlugin(string dllName);
+
+    /// <summary>
+    /// The BepInEx folders the editor knows, in the order it looks at them: the Valheim folder's, the profile the editor
+    /// runs from, the folders added in Settings, then the mod managers' profiles.
+    /// </summary>
+    IReadOnlyList<BepInExFolder> BepInExFolders { get; }
+
+    /// <summary>The editor's data folder (its settings and caches): an extension's own files go in a folder of its own there.</summary>
+    string DataFolder { get; }
+
+#if NET
+    /// <summary>The game's own world rules and objects, as the player's Valheim has them (for world rules an extension makes).</summary>
+    IWorldGameData World { get; }
+#endif
 
     /// <summary>The player's Valheim's Managed folder (the game's and Unity's assemblies); null when Valheim is not found.</summary>
     string? GameManagedFolder { get; }

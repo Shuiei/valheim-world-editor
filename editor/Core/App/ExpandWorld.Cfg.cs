@@ -1,3 +1,5 @@
+using ValheimWorldEditor.Sdk;
+
 namespace TerrainEditor.App;
 
 // BepInEx's settings files.
@@ -11,7 +13,7 @@ public static partial class ExpandWorld
     public static Dictionary<string, string> ReadCfg(string text)
     {
         Dictionary<string, string> values = [];
-        foreach (var (_, key, value) in ModSettings.Entries(text))
+        foreach (var (_, key, value) in SettingsFile.Entries(text))
         {
             values[key] = value;
         }
@@ -23,5 +25,24 @@ public static partial class ExpandWorld
     /// are then the defaults).
     /// </summary>
     /// <param name="path">The settings file; null for none.</param>
-    private static Dictionary<string, string> CfgOf(string? path) => ReadCfg(ModSettings.TextOf(path) ?? "");
+    private static Dictionary<string, string> CfgOf(string? path) => ReadCfg(CfgText(path) ?? "");
+
+    /// <summary>A settings file's text; null when there is no file or it cannot be read (said in the log).</summary>
+    /// <param name="path">The settings file; null for none.</param>
+    private static string? CfgText(string? path)
+    {
+        if (path == null)
+        {
+            return null;
+        }
+        try
+        {
+            return File.ReadAllText(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Caught(ex, $"reading {Path.GetFileName(path)} (its settings are taken as the mod's defaults)");
+            return null;
+        }
+    }
 }

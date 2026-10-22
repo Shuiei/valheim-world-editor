@@ -241,7 +241,8 @@ offers one."
 | `AddTool(IEditorTool)` | A tool of your own on the 3D editor's rail, under **Mods**, with its `Info` (`ToolInfo`: an id, unique in your extension; its name on the rail; a line of help in its tooltip; `Icon`, an SVG path drawn 16 × 16, else your name's first letter). Chosen, it shows a card of its `Controls`: `SliderControl` (min, max, value, `Step`, `Unit`), `ChoiceControl` (a list), `ToggleControl`, `ButtonControl` and `TextControl` (a line you change with `SetText`); the player's values are remembered from one run to the next. The editor calls `OnChosen` and `OnLeft` as it is chosen and left, `OnControl(id)` as a value changes or a button is pressed, `OnPointer` with each move, press, drag and release over the 3D view (`PointerInput`: the ray, the keys held, and what it points at: the ground, your scene layer, or a thing, with the point and the ground's normal there), and `OnKey` with each key pressed (the key's name, as "Enter", "Escape", "Back" or "A"; return true when you used it, false leaves it to the editor, so Ctrl+Z still undoes). The `IToolContext` handed to each call gives the area (`Area`, as for scene layers), your controls' values (`Number`, `Choice`, `IsOn`), shapes drawn over the area until you change them (`Preview`, in the world's frame), a line on the status bar (`Status`) and `Commit(label, ToolEdit)`: objects added (a prefab, a place, a turn and its data set through an `ICopy`), changed (a copy of an object the area gave you, with your changes) and removed, in one step of the area's history, undone and saved like any other edit. Your data holders are kept with the history as other objects are, though they are never drawn; an object you did not get from the area is left alone. |
 | `AddLiveListener(ILiveListener)` | Told when the editor connects to a game (`OnConnected`, with the game) and when that ends (`OnDisconnected`: the world was closed, or another opened). See [Live mode](#live-mode). |
 | `AddWorldGenerator(IWorldGenerator)` | Your world generation mod's worlds (see [World generators](#world-generators)). |
-| `Host` | The editor, outside the hooks: `Host.Live`, the game connected (null when there is none: a saved world, the Workshop); `Host.Game`, the game's components your manifest's `gameComponents` asks for (`Components("Ship")`: each with its prefab, the object it is on and its fields by name, as the game saves them; ready once a world or the Workshop is open, so ask from your hooks, not from `Register`); `Host.Setting(file, section, key)`, a setting from a file your manifest's `settingsFiles` names, as the text the file holds (null when the file or the setting is not there: use your mod's default; ready, like `Host.Game`, once a world or the Workshop is open); and `Host.Redraw()`, for your shapes and cuts to be made again at the next frame (after the game told you something new). |
+| `AddWorldRules(IWorldRulesProvider)` | The rules worlds are generated with, from your world generation mod's settings and data files (see [World rules](#world-rules)). |
+| `Host` | The editor, outside the hooks: `Host.Live`, the game connected (null when there is none: a saved world, the Workshop); `Host.Game`, the game's components your manifest's `gameComponents` asks for (`Components("Ship")`: each with its prefab, the object it is on and its fields by name, as the game saves them; ready once a world or the Workshop is open, so ask from your hooks, not from `Register`); `Host.Setting(file, section, key)`, a setting from a file your manifest's `settingsFiles` names, as the text the file holds (null when the file or the setting is not there: use your mod's default; ready, like `Host.Game`, once a world or the Workshop is open); `Host.BepInExFolders`, the player's BepInEx folders the editor knows, in the order it looks at them (each with its `Path` and where it is, for the player); `Host.DataFolder`, the editor's data folder (keep your own files in a folder of yours there); `Host.World` (net10.0 extensions), the game's own world rules and objects (see [World rules](#world-rules)); and `Host.Redraw()`, for your shapes and cuts to be made again at the next frame (after the game told you something new). |
 | `Log(message)` | Writes a line, named after your mod ("extension ExampleVehicles: …"), to the editor's log, `ValheimWorldEditor.log` in its data folder (**Open log** on the start page; started over at each run). |
 
 Shape and cut hooks get the world around the object too (`IWorldView`): `TryFind(idKey, id, out
@@ -281,6 +282,26 @@ manifest's `worldGenerators` for the editor to say what is missing). Your `IWorl
   the log.
 
 Anything else your generator throws is a fault: its extension is turned off, and the player is told the add-on failed.
+
+### World rules
+
+A world generation mod that changes the game's own generation through settings and data files (a larger world, its
+own biomes, locations and vegetation, as Expand World does) does not lay the world out itself: the editor's generator
+follows the rules it is given. Build your extension for net10.0 (the SDK's `net10.0` build holds the rules model,
+`WorldRules` and the types it holds, in the `ValheimGen` namespace) and register an `IWorldRulesProvider`:
+
+- `ForWorld(world)`: the rules a world opens with. The `WorldRulesRequest` gives its `Name`, the
+  `StartingGlobalKeys` its world file keeps (a mod's settings stored there), the `LoadedGlobalKeys` its save holds,
+  the `GridWidth` its chunk files lie on, and the game it runs in when it is live (`Live`, else null): read the
+  mod's files from the game then, through `Live.Plugins()`, `Live.ConfigFile(path)` and `Live.ConfigFolder(path)`
+  (under its BepInEx/config; null from a WorldEditorBridge older than 1.54.0), else from `Host.BepInExFolders`;
+- `ForNewWorld()`: the rules a new world is made and looked at with (the New world page).
+
+Return null (or `WorldRules.Vanilla`) when your mod does not change the world (not installed, or at its defaults): the
+next provider is asked, and with none the world is the game's own. Location, vegetation and room rules are made
+against the game's own (`Host.World`: its `Locations` once `ReadLocations()` has read them, its `Vegetation`,
+`HasPrefab(name)` and `IsGameRoom(name)`). `WorldRulesText.Describe(rules)` says what rules change in a few words, for
+your log lines. A provider that throws is a fault: its extension is turned off, and the next is asked.
 
 ### Rules
 
@@ -409,6 +430,9 @@ the editor is not connected), or in your live listener's `OnConnected`.
 - `CallAsync(modId, name, body)`: calls your route and gives back its answer's bytes. It throws when
   the mod or the route is not registered, when the route failed (with the game's message), or when
   the game cannot be reached.
+- `Plugins()`, `ConfigFile(path)` and `ConfigFolder(path)`: the BepInEx plugins the game loaded, and a file or a
+  folder's entries under its BepInEx/config, read only (null from a bridge older than 1.54.0, and for a path that is
+  not there). They throw `InvalidOperationException` when the bridge refuses the path (out of the folder, over 4 MB).
 
 Ask the game for what only it knows (what your mod built in code), keep it, and call
 `registry.Host.Redraw()` for your shapes and cuts to be made again. The sample's `LiveLink` calls the

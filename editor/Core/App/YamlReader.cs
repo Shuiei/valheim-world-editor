@@ -54,7 +54,7 @@ public sealed class YamlReader
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Log.Caught(ex, $"searching a plugins folder for {DllName} (taken as not there)");
+            ExpandWorld.Caught(ex, $"searching a plugins folder for {DllName} (taken as not there)");
             return null;
         }
     }
@@ -77,7 +77,7 @@ public sealed class YamlReader
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or TypeLoadException or MissingMemberException or InvalidOperationException)
         {
-            Log.Caught(ex, $"loading {dll} (Expand World Data's files cannot be read without it)");
+            ExpandWorld.Caught(ex, $"loading {dll} (Expand World Data's files cannot be read without it)");
             return null;
         }
     }

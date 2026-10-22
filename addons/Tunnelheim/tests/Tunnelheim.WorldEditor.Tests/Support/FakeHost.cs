@@ -1,10 +1,11 @@
 using ValheimWorldEditor.Sdk;
+using WorldEditor.Tests;
 
 namespace Tunnelheim.WorldEditor.Tests;
 
 /// <summary>
 /// The editor as the add-on sees it outside the hooks: no game connected, no game components (no hoe strokes), the
-/// mod's settings as set (none by default: the mod's defaults).
+/// mod's settings as set (none by default: the mod's defaults); no BepInEx folders, none of the game's world rules.
 /// </summary>
 internal sealed class FakeHost : IEditorHost, IGameData
 {
@@ -21,6 +22,12 @@ internal sealed class FakeHost : IEditorHost, IGameData
     public string? GameManagedFolder => null;
 
     public IGameData Game => this;
+
+    public IReadOnlyList<BepInExFolder> BepInExFolders => [];
+
+    public string DataFolder => "";
+
+    public IWorldGameData World { get; } = new NoWorldGameData();
 
     public void Redraw()
     {

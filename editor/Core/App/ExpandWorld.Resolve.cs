@@ -1,5 +1,5 @@
-using TerrainEditor.Save;
 using ValheimGen;
+using ValheimWorldEditor.Sdk;
 
 namespace TerrainEditor.App;
 
@@ -7,47 +7,43 @@ namespace TerrainEditor.App;
 public static partial class ExpandWorld
 {
     /// <summary>
-    /// A world's rules: the game's own values while the Expand World switch is off (a world made with Expand World Size
-    /// is noted in the log), else from the world file's keys and the mods' settings files (<see cref="Rules(IReadOnlyDictionary{string, string}, Found)"/>), said
-    /// in the log.
+    /// A world's rules from the world file's keys and the mods' settings and data files
+    /// (<see cref="Rules(IReadOnlyDictionary{string, string}, Found)"/>), said in the log: a live game's own files,
+    /// through its bridge (<see cref="ResolveLive"/>), else those of the first BepInEx folder with the mods.
     /// </summary>
-    /// <param name="save">The world (its name and starting global keys).</param>
-    /// <param name="settings">The editor's settings.</param>
-    // Called away from the window (WorldSession.Open runs on a worker): waiting for the game's rules holds no one up.
-    public static WorldRules Resolve(WorldSave save, AppSettings settings) => ResolveLocal(save, settings).GetAwaiter().GetResult();
+    /// <param name="world">The world (its name, keys and grid; the game it runs in when live).</param>
+    /// <param name="host">The editor (its BepInEx folders, and its data folder a live game's files are copied to).</param>
+    /// <param name="chosen">The Expand World folder named in Settings; null or blank for none.</param>
+    public static Task<WorldRules> Resolve(WorldRulesRequest world, IEditorHost host, string? chosen) =>
+        world.Live is { } live ? ResolveLive(world, host, chosen, live) : ResolveLocal(world, host.BepInExFolders, chosen);
 
-    /// <summary><see cref="Resolve(WorldSave, AppSettings)"/>, waiting for the game's location rules without holding a thread.</summary>
-    /// <param name="save">The world (its name and starting global keys).</param>
-    /// <param name="settings">The editor's settings.</param>
-    private static async Task<WorldRules> ResolveLocal(WorldSave save, AppSettings settings)
+    /// <summary>A world's rules from the local BepInEx folders, waiting for the game's location rules without holding a thread.</summary>
+    /// <param name="world">The world.</param>
+    /// <param name="folders">The BepInEx folders the editor knows, in order.</param>
+    /// <param name="chosen">The Expand World folder named in Settings.</param>
+    private static async Task<WorldRules> ResolveLocal(WorldRulesRequest world, IEnumerable<BepInExFolder> folders, string? chosen)
     {
-        var keys = Keys(save.StartingGlobalKeys);
-        if (!settings.ExpandWorld)
-        {
-            NoteSwitchOff(save.Name, keys.Count);
-            return WorldRules.Vanilla;
-        }
-        var found = Find(settings);
+        var found = Find(folders, chosen);
         var data = ReadData(found);
         await NeedGameRules(data).ConfigureAwait(false);
-        return Resolve(save, keys, found, data);
+        return Resolve(world, Keys(world.StartingGlobalKeys), found, data);
     }
 
     /// <summary>The rules from a world's keys and a folder's files read already, said in the log.</summary>
-    /// <param name="save">The world.</param>
+    /// <param name="world">The world.</param>
     /// <param name="keys">The world's Expand World Size keys.</param>
     /// <param name="found">The folder's mods and files.</param>
     /// <param name="data">Expand World Data's settings and files from it.</param>
-    private static WorldRules Resolve(WorldSave save, Dictionary<string, string> keys, Found found, DataFiles data)
+    private static WorldRules Resolve(WorldRulesRequest world, Dictionary<string, string> keys, Found found, DataFiles data)
     {
-        var rules = Rules(keys, found, data, save.Zones?.GlobalKeys);
-        Console.WriteLine($"Expand World: {save.Name}: {SizeSource(keys.Count, found)}; {FolderText(found)}; {Describe(rules)}.");
+        var rules = Rules(keys, found, data, world.LoadedGlobalKeys);
+        Note($"Expand World: {world.Name}: {SizeSource(keys.Count, found)}; {FolderText(found)}; {WorldRulesText.Describe(rules)}.");
         NoteData(data, rules);
         if (keys.Count > 0 && !found.Size)
         {
-            Console.WriteLine("Expand World: the world was made with Expand World Size, but no BepInEx folder the editor knows has the mod installed and on: it is shown as the game makes it without the mod (add the mod's folder in Settings).");
+            Note("Expand World: the world was made with Expand World Size, but no BepInEx folder the editor knows has the mod installed and on: it is shown as the game makes it without the mod (add the mod's folder in Settings).");
         }
-        NoteGrid(save, rules);
+        NoteGrid(world, rules);
         return rules;
     }
 
@@ -59,18 +55,18 @@ public static partial class ExpandWorld
     /// <param name="data">Expand World Data's files.</param>
     internal static async Task NeedGameRules(DataFiles data)
     {
-        if (SeedLocations.Available || (data.Locations is not { Count: > 0 } && data.AltBiomes is not { Count: > 0 }))
+        if (Game.LocationsRead || (data.Locations is not { Count: > 0 } && data.AltBiomes is not { Count: > 0 }))
         {
             return;
         }
         try
         {
-            await GameLocations.UseGameRules(GameLook.Bundles).ConfigureAwait(false);
+            await Game.ReadLocations().ConfigureAwait(false);
         }
         catch (Exception e)
         {
             // Run away from the caller's code: whatever reading them throws ends here, in the log.
-            Log.Caught(e, "reading the game's location rules for the world's location and alt biome files (the files are not used)");
+            Caught(e, "reading the game's location rules for the world's location and alt biome files (the files are not used)");
         }
     }
 
@@ -78,11 +74,11 @@ public static partial class ExpandWorld
     /// Notes a save whose chunk files lie on another grid than the settings ask for: the game lays them out again at
     /// its next load; until then the editor reads and writes them as they lie.
     /// </summary>
-    private static void NoteGrid(WorldSave save, WorldRules rules)
+    private static void NoteGrid(WorldRulesRequest world, WorldRules rules)
     {
-        if (rules.GridWidth != save.GridWidth)
+        if (rules.GridWidth != world.GridWidth)
         {
-            Console.WriteLine($"Expand World: {save.Name}'s chunk files are laid out on a {save.GridWidth} zone grid and the settings ask for {rules.GridWidth}: the game converts the save at its next load; the editor keeps the files' grid.");
+            Note($"Expand World: {world.Name}'s chunk files are laid out on a {world.GridWidth} zone grid and the settings ask for {rules.GridWidth}: the game converts the save at its next load; the editor keeps the files' grid.");
         }
     }
 
@@ -99,11 +95,11 @@ public static partial class ExpandWorld
             string alts = Kind(data.AltBiomes, "the game's (no file)", $"{rules.Locations?.AltBiomes.Count ?? 0}");
             string rooms = Kind(data.Rooms, "the game's (no file)", $"{rules.Dungeons?.Rooms?.Count ?? 0}");
             string dungeons = Kind(data.Dungeons, "the game's (no file)", $"{rules.Dungeons?.Dungeons.Count ?? 0}");
-            Console.WriteLine($"Expand World Data: biomes {biomes}; world {world}{(rules.LegacyGeneration ? " (legacy generation)" : "")}; territories {territories}; locations {locations}; vegetation {vegetation}; alt biomes {alts}; rooms {rooms}; dungeons {dungeons}.");
+            Note($"Expand World Data: biomes {biomes}; world {world}{(rules.LegacyGeneration ? " (legacy generation)" : "")}; territories {territories}; locations {locations}; vegetation {vegetation}; alt biomes {alts}; rooms {rooms}; dungeons {dungeons}.");
         }
         foreach (string note in data.Notes)
         {
-            Console.WriteLine("Expand World Data: " + note);
+            Note("Expand World Data: " + note);
         }
     }
 
@@ -114,11 +110,13 @@ public static partial class ExpandWorld
     private static string Kind(IReadOnlyList<Entry>? entries, string noFile, string read) => entries == null ? "off" : entries.Count == 0 && noFile != "" ? noFile : read;
 
     /// <summary>Notes a world made with Expand World Size that opens with the game's own generation.</summary>
-    private static void NoteSwitchOff(string world, int keys)
+    /// <param name="world">The world's name.</param>
+    /// <param name="keys">How many Expand World Size keys its world file keeps.</param>
+    internal static void NoteSwitchOff(string world, int keys)
     {
         if (keys > 0)
         {
-            Console.WriteLine($"Expand World: {world} was made with Expand World Size ({keys} settings in its world file), but the Expand World switch in Settings is off: generated as the game itself does.");
+            Note($"Expand World: {world} was made with Expand World Size ({keys} settings in its world file), but the Expand World switch in Settings is off: generated as the game itself does.");
         }
     }
 

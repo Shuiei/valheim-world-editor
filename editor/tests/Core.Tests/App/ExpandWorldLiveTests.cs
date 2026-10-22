@@ -6,7 +6,7 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// A live world's rules (ExpandWorld.ResolveLive): the mods' settings and data files as the game's bridge serves them,
+/// A live world's rules (WorldSave.TakeLiveKeys, then WorldRulesSource with the game: ExpandWorld.ResolveLive): the mods' settings and data files as the game's bridge serves them,
 /// the world's keys from its file on the game's disk, the blueprint files the location file names; the local BepInEx
 /// folders with the switch off, with an older bridge, or when the bridge fails.
 /// </summary>
@@ -45,8 +45,15 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
     /// <summary>The world's rules with the switch on and the local folder of <see cref="LocalCfg"/>, through this game's bridge.</summary>
     private async Task<WorldRules> Resolve(WorldSave save, FakeGame game)
     {
+        return await ResolveLive(save, game, new AppSettings { ExpandWorld = true, ExpandWorldFolder = Local(LocalCfg) });
+    }
+
+    /// <summary>The world's rules as a live world opens: its keys from the game's file, then the providers' with the game.</summary>
+    private static async Task<WorldRules> ResolveLive(WorldSave save, FakeGame game, AppSettings settings)
+    {
         using var live = new LiveBridge(game.Url, game.Token);
-        return await ExpandWorld.ResolveLive(save, new AppSettings { ExpandWorld = true, ExpandWorldFolder = Local(LocalCfg) }, live);
+        await save.TakeLiveKeys(live);
+        return await WorldRulesSource.ForWorld(save, new LiveGame(live, []), settings);
     }
 
     [Fact]
@@ -55,8 +62,7 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
         using var w = new TempWorld();
         var save = w.Load();
         using var game = new FakeGame { Plugins = [Size], WorldMeta = Meta("ews_world_radius 25000") };
-        using var live = new LiveBridge(game.Url, game.Token);
-        var rules = await ExpandWorld.ResolveLive(save, new AppSettings { ExpandWorldFolder = Local(LocalCfg) }, live);
+        var rules = await ResolveLive(save, game, new AppSettings { ExpandWorldFolder = Local(LocalCfg) });
         Assert.True(rules.IsVanilla);
         Assert.Equal(["ews_world_radius 25000"], save.StartingGlobalKeys);
         Assert.Equal(0, game.ConfigReads);
@@ -111,7 +117,7 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
         Assert.True(Assert.Single(rules.Locations.Locations, l => l.Prefab == "MyHut").Blueprint);
         // Copied as a BepInEx folder: the loaded mods' settings, the yaml files, every blueprint at any depth (a
         // blueprint may name others); one the bridge refuses is left out and noted, the rest still copied.
-        string config = Path.Combine(ExpandWorld.LiveFolder, "config");
+        string config = Path.Combine(ExpandWorld.LiveFolder(AppSettings.DataDir), "config");
         Assert.True(File.Exists(Path.Combine(config, "expand_world_size.cfg")));
         Assert.False(File.Exists(Path.Combine(config, "expand_world_rivers.cfg")));
         Assert.True(File.Exists(Path.Combine(config, "expand_world", "more", "expand_locations.yaml")));
@@ -133,7 +139,7 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
         var rules = await Resolve(save, game);
         // The keys stay as the game loaded them (none here); the settings file is still the game's, not the local one.
         Assert.Equal(20000f, rules.Radius);
-        Assert.True(File.Exists(Path.Combine(ExpandWorld.LiveFolder, "config", "expand_world_size.cfg")));
+        Assert.True(File.Exists(Path.Combine(ExpandWorld.LiveFolder(AppSettings.DataDir), "config", "expand_world_size.cfg")));
     }
 
     [Fact]

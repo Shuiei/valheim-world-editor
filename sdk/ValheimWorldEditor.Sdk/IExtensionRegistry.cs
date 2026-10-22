@@ -92,4 +92,13 @@ public interface IExtensionRegistry
     /// </summary>
     /// <param name="generator">The generator.</param>
     void AddWorldGenerator(IWorldGenerator generator);
+#if NET
+
+    /// <summary>
+    /// Gives the rules worlds are generated with (see <see cref="IWorldRulesProvider"/>): a world generation
+    /// mod's settings and data files read into the editor's world-rules model. Only on the editor's .NET.
+    /// </summary>
+    /// <param name="provider">The provider.</param>
+    void AddWorldRules(IWorldRulesProvider provider);
+#endif
 }

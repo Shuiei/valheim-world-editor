@@ -43,11 +43,5 @@ public static partial class BlueprintFormats
     /// <summary>
     /// Unity's Quaternion.Euler: z, then x, then y.
     /// </summary>
-    public static Quaternion FromEuler(Vector3 e)
-    {
-        const float K = MathF.PI / 360f;
-        Quaternion qx = new(MathF.Sin(e.X * K), 0, 0, MathF.Cos(e.X * K)), qy = new(0, MathF.Sin(e.Y * K), 0, MathF.Cos(e.Y * K)), qz = new(0, 0, MathF.Sin(e.Z * K), MathF.Cos(e.Z * K));
-        // System.Numerics multiplies right to left like Unity: qy * qx * qz applies qz first.
-        return qy * qx * qz;
-    }
+    public static Quaternion FromEuler(Vector3 e) => ValheimGen.Mathf.Euler(e);
 }

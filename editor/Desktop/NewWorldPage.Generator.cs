@@ -62,8 +62,8 @@ public sealed partial class NewWorldPage : IDisposable
     /// <summary>What worlds made with these rules follow, for the page; empty for the game's own.</summary>
     /// <param name="rules">The rules.</param>
     internal static string GenerationText(WorldRules rules) => rules.IsVanilla ? ""
-        : rules.Generator is { Slow: true } g ? Lang.T("newWorld.hint.generator", ExpandWorld.Describe(rules), g.Name)
-        : Lang.T("newWorld.hint.expandWorld", ExpandWorld.Describe(rules));
+        : rules.Generator is { Slow: true } g ? Lang.T("newWorld.hint.generator", WorldRulesText.Describe(rules), g.Name)
+        : Lang.T("newWorld.hint.expandWorld", WorldRulesText.Describe(rules));
 
     /// <summary>
     /// What kind of world these rules make, for the page: a normal one players need no mod for, or, with a world

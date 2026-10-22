@@ -22,26 +22,4 @@ public static partial class ExpandWorld
 
     /// <summary>The world file's key of a setting ("World radius" is "ews_world_radius").</summary>
     public static string KeyOf(string setting) => KeyPrefix + setting.ToLowerInvariant().Replace(' ', '_');
-
-    /// <summary>
-    /// The zone grid a world's chunk files are laid out on, from its keys ("ews_gridwidth", written by the host that
-    /// saved it): the game's 512 when the world has none, and when the value is not a width the chunk ids can name
-    /// (512 to 2048; said in the log).
-    /// </summary>
-    /// <param name="startingGlobalKeys">The world file's starting global keys.</param>
-    /// <param name="world">The world's name, for the log.</param>
-    public static int SavedGridWidth(IEnumerable<string> startingGlobalKeys, string world)
-    {
-        string? text = Keys(startingGlobalKeys).GetValueOrDefault(GridWidthKey);
-        int? width = Int(text);
-        if (width is >= Save.ChunkMath.VanillaWidth and <= Save.ChunkMath.MaxWidth)
-        {
-            return width.Value;
-        }
-        if (text != null)
-        {
-            Console.WriteLine($"Expand World: {world}'s world file says its save grid is \"{text}\" zones wide, which no save can be: read as the game's {Save.ChunkMath.VanillaWidth}.");
-        }
-        return Save.ChunkMath.VanillaWidth;
-    }
 }

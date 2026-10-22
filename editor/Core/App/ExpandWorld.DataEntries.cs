@@ -1,6 +1,6 @@
 using System.Globalization;
-using TerrainEditor.Save;
 using ValheimGen;
+using ValheimWorldEditor.Sdk;
 using NVector3 = System.Numerics.Vector3;
 using Quaternion = System.Numerics.Quaternion;
 
@@ -145,7 +145,7 @@ public static partial class ExpandWorld
             {
                 return number;
             }
-            return key.StartsWith('$') || key.Contains('.', StringComparison.Ordinal) ? null : StableHash.Of(key);
+            return key.StartsWith('$') || key.Contains('.', StringComparison.Ordinal) ? null : GameHash.Of(key);
         }
 
         /// <summary>
@@ -176,7 +176,7 @@ public static partial class ExpandWorld
             "floats" when float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float f) => new("floats", key, F(f)),
             "longs" when long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out long l) => new("longs", key, l.ToString(CultureInfo.InvariantCulture)),
             "bools" when bool.TryParse(text, out bool b) => new("ints", key, b ? "1" : "0"),
-            "hashes" when text.Length > 0 => new("ints", key, StableHash.Of(text).ToString(CultureInfo.InvariantCulture)),
+            "hashes" when text.Length > 0 => new("ints", key, GameHash.Of(text).ToString(CultureInfo.InvariantCulture)),
             _ => null,
         };
 
@@ -185,7 +185,7 @@ public static partial class ExpandWorld
         {
             "strings" => new("strings", key, text),
             "vecs" when Numbers(text) is { } v => new("vec3", key, $"{F(v[0])} {F(v[2])} {F(v[1])}"),
-            "quats" when Numbers(text) is { } e => Quat(key, BlueprintFormats.FromEuler(new NVector3(e[1], e[0], e[2]))),
+            "quats" when Numbers(text) is { } e => Quat(key, Mathf.Euler(new NVector3(e[1], e[0], e[2]))),
             "bytes" when Base64(text) => new("bytes", key, text),
             _ => null,
         };

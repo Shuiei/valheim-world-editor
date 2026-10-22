@@ -64,6 +64,8 @@ public static partial class ModExtensions
         public List<ILiveListener> LiveListeners { get; } = [];
         /// <summary>Its world generators.</summary>
         public List<IWorldGenerator> Generators { get; } = [];
+        /// <summary>Its world rules providers.</summary>
+        public List<IWorldRulesProvider> WorldRules { get; } = [];
 
         /// <summary>Why it was turned off (a hook threw); null while it runs.</summary>
         public string? Fault { get; set; }

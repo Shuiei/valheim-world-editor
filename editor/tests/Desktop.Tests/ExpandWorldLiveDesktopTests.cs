@@ -44,6 +44,6 @@ public sealed class ExpandWorldLiveDesktopTests : IDisposable
         Assert.True(world.IsLive);
         Assert.Equal(20000f, world.World.Rules.Radius);
         Assert.True(world.World.Rules.SizeInstalled);
-        Assert.True(File.Exists(Path.Combine(ExpandWorld.LiveFolder, "config", "expand_world_size.cfg")));
+        Assert.True(File.Exists(Path.Combine(ExpandWorld.LiveFolder(AppSettings.DataDir), "config", "expand_world_size.cfg")));
     }
 }

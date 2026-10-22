@@ -1,12 +1,13 @@
 using ValheimGen;
+using ValheimWorldEditor.Sdk;
 
 namespace TerrainEditor.App;
 
 /// <summary>
 /// Expand World, the world generation mods (Expand World Size, Data and Rivers, by JereKuusela), as the editor reads
 /// them: which of them a BepInEx folder has, their settings files, and what a world was made with. It gives a world's
-/// <see cref="WorldRules"/>: the game's own values unless the Expand World switch in Settings is on
-/// (<see cref="AppSettings.ExpandWorld"/>); then the Size settings the world file keeps (every non-default one, as
+/// <see cref="WorldRules"/>, as the editor's world rules provider (ExpandWorldRules: only while the Expand World switch
+/// in Settings is on): the Size settings the world file keeps (every non-default one, as
 /// "ews_&lt;setting&gt; &lt;value&gt;" among the starting global keys; a world without any uses the Size settings
 /// file), the Rivers settings file, and the Data settings file and data files, all from the first BepInEx folder the
 /// editor knows that has any of the mods.
@@ -16,7 +17,8 @@ namespace TerrainEditor.App;
 /// (expand_world_rivers.cfg), Expand World Data 1.79 (expand_world_data.cfg and the expand_world folder: the biome,
 /// world, territory, location, vegetation and alt biome files). The parts: this file (the mods in a BepInEx folder),
 /// ExpandWorld.Resolve (a world's rules and the log), ExpandWorld.Live (a live world's, the files through the game's
-/// bridge), ExpandWorld.Rules (the rules from the keys and files), ExpandWorld.Describe, ExpandWorld.Keys,
+/// bridge), ExpandWorld.Editor (what the readers take from the editor), ExpandWorld.Rules (the rules from the keys and
+/// files), ExpandWorld.Keys,
 /// ExpandWorld.Cfg and ExpandWorld.Values (reading what the mods write), ExpandWorld.Data (the data files, through
 /// <see cref="YamlReader"/>), ExpandWorld.Fields (an entry's values), ExpandWorld.Biomes, ExpandWorld.World,
 /// ExpandWorld.Territories, ExpandWorld.Locations, ExpandWorld.Vegetation and ExpandWorld.AltBiomes (the files'
@@ -29,9 +31,6 @@ public static partial class ExpandWorld
 
     /// <summary>What Expand World Size puts before a setting's name in the world file's keys.</summary>
     public const string KeyPrefix = "ews_";
-
-    /// <summary>The key Expand World Size keeps the save's zone grid under (zones per side).</summary>
-    public const string GridWidthKey = KeyPrefix + "gridwidth";
 
     /// <summary>The folder under BepInEx/config holding Expand World Data's yaml files.</summary>
     public const string DataFolder = "expand_world";
@@ -70,25 +69,25 @@ public static partial class ExpandWorld
     }
 
     /// <summary>
-    /// The BepInEx folder with the mods: the one named in Settings (<see cref="AppSettings.ExpandWorldFolder"/>) when it
-    /// has any of them, else the first folder the editor knows (<see cref="LocalGame.BepInExFolders"/>) that has any;
-    /// <see cref="Found.None"/> when none has.
+    /// The BepInEx folder with the mods: the one named in Settings when it has any of them, else the first folder the
+    /// editor knows (IEditorHost.BepInExFolders) that has any; <see cref="Found.None"/> when none has.
     /// </summary>
-    /// <param name="settings">The editor's settings (the Expand World folder, the Valheim path, added BepInEx folders).</param>
-    public static Found Find(AppSettings settings)
+    /// <param name="folders">The BepInEx folders the editor knows, in order.</param>
+    /// <param name="chosen">The Expand World folder named in Settings; null or blank for none.</param>
+    public static Found Find(IEnumerable<BepInExFolder> folders, string? chosen)
     {
-        if (!string.IsNullOrWhiteSpace(settings.ExpandWorldFolder))
+        if (!string.IsNullOrWhiteSpace(chosen))
         {
-            var chosen = Look(settings.ExpandWorldFolder, "the Expand World folder in Settings");
-            if (chosen.Any)
+            var mine = Look(chosen, "the Expand World folder in Settings");
+            if (mine.Any)
             {
-                return chosen;
+                return mine;
             }
-            Console.WriteLine($"Expand World: the folder in Settings, {settings.ExpandWorldFolder}, has none of the mods: the other BepInEx folders are looked at.");
+            Note($"Expand World: the folder in Settings, {chosen}, has none of the mods: the other BepInEx folders are looked at.");
         }
-        foreach (var (dir, where) in LocalGame.BepInExFolders(settings))
+        foreach (var folder in folders)
         {
-            var found = Look(dir, where);
+            var found = Look(folder.Path, folder.Where);
             if (found.Any)
             {
                 return found;
@@ -98,25 +97,22 @@ public static partial class ExpandWorld
     }
 
     /// <summary>
-    /// The rules a new world is made and looked at with (the New world page): the game's own values while the Expand
-    /// World switch is off, else the mods' settings files and data files of the folder found (a new world has no world
-    /// file yet, so no keys); said in the log.
+    /// The rules a new world is made and looked at with (the New world page): the mods' settings files and data files
+    /// of the folder found (a new world has no world file yet, so no keys), said in the log; the game's own values when
+    /// no folder has the mods.
     /// </summary>
-    /// <param name="settings">The editor's settings.</param>
-    public static WorldRules ForNewWorld(AppSettings settings)
+    /// <param name="folders">The BepInEx folders the editor knows, in order.</param>
+    /// <param name="chosen">The Expand World folder named in Settings; null or blank for none.</param>
+    public static WorldRules ForNewWorld(IEnumerable<BepInExFolder> folders, string? chosen)
     {
-        if (!settings.ExpandWorld)
-        {
-            return WorldRules.Vanilla;
-        }
-        var found = Find(settings);
+        var found = Find(folders, chosen);
         if (!found.Any)
         {
             return WorldRules.Vanilla;
         }
         var data = ReadData(found);
         var rules = Rules(new Dictionary<string, string>(), found, data);
-        Console.WriteLine($"Expand World: a new world: {FolderText(found)}; {Describe(rules)}.");
+        Note($"Expand World: a new world: {FolderText(found)}; {WorldRulesText.Describe(rules)}.");
         NoteData(data, rules);
         return rules;
     }
@@ -140,30 +136,6 @@ public static partial class ExpandWorld
     /// <summary>The path when the file exists, else null.</summary>
     private static string? Existing(string path) => File.Exists(path) ? path : null;
 
-    /// <summary>
-    /// Whether a plugin's DLL is somewhere in a plugins folder under its own name (not a mod manager's ".old" of a mod
-    /// turned off). Subfolders that cannot be read are passed over (another mod's, without access); a folder that
-    /// cannot be searched at all is said in the log and has none.
-    /// </summary>
-    internal static bool HasPlugin(string plugins, string dll) => FindPlugin(plugins, dll) != null;
-
-    /// <summary>
-    /// Where a plugin's DLL is in a plugins folder under its own name (see <see cref="HasPlugin"/>), the first in name
-    /// order; null when it is not there.
-    /// </summary>
-    internal static string? FindPlugin(string plugins, string dll)
-    {
-        try
-        {
-            return Directory.Exists(plugins)
-                ? Directory.EnumerateFiles(plugins, dll, new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0, MatchCasing = MatchCasing.CaseInsensitive })
-                    .Where(f => string.Equals(Path.GetFileName(f), dll, StringComparison.OrdinalIgnoreCase)).Order(StringComparer.Ordinal).FirstOrDefault()
-                : null;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Log.Caught(ex, $"searching a plugins folder for {dll} (taken as not there)");
-            return null;
-        }
-    }
+    /// <summary>Whether a plugin's DLL is in a plugins folder (PluginFiles.Has), a folder that cannot be read said in the log.</summary>
+    internal static bool HasPlugin(string plugins, string dll) => PluginFiles.Has(plugins, dll, Note);
 }

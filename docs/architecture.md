@@ -204,7 +204,7 @@ no data tables. Everything is read at run time from the player's install:
   ask for (`settingsFiles`, `ModExtensions.RequestedSettingsFiles`) by section and name, from the first local BepInEx
   folder that has each at `WorldSession.ReadModFiles`, then from the game's BepInEx/config through the bridge
   (`LiveBridge.ConfigFile`) as a live world opens (`WorldSession.OpenLive`); extensions read them as
-  `IEditorHost.Setting`. `ExpandWorld.ReadCfg` reads its files with the same parser (`ModSettings.Entries`).
+  `IEditorHost.Setting`. `ExpandWorld.ReadCfg` reads its files with the same parser (the SDK's `SettingsFile.Entries`).
 - Mods' data names: `editor/Core/App/ModKeys.cs` reads the string literals of every DLL in the plugins
   folders (`GameCatalogues.KeyNamesIn`, as `zdo-keys` reads `assembly_valheim.dll`), keeps them in
   `mod-zdo-keys.json` (user data folder) until a DLL changes, and gives them to `ZdoKeys.UseMods`;
@@ -351,13 +351,22 @@ the Desktop names and colours a biome of the biome file through the table (`Zone
 `WorldScene.GroundColor`). The rules a new world follows come from the folder in Settings or the first with the mods
 (`ExpandWorld.ForNewWorld`); users' side of it is in [expand-world.md](expand-world.md).
 
+A world's rules come from the world rules providers (`editor/Core/App/WorldRulesSource.cs`): the running extensions'
+(`IExtensionRegistry.AddWorldRules`, asked by `ModExtensions.FirstRules`, a fault turning the extension off) then the
+editor's own, `ExpandWorldRules`; the first rules other than the game's own win. A provider is handed the world as a
+`WorldRulesRequest` (its keys, grid and, live, the game as an `ILiveGame` with its plugins and config files) and the
+editor as an `IEditorHost` (its BepInEx folders, data folder, and the game's own rules as `IWorldGameData`,
+`GameWorldData`). The readers in `ExpandWorld*.cs` use only those and the SDK (their log lines and the game's rules
+through `ExpandWorld.Editor.cs`). A live world's keys come from the game's world file first (`WorldSave.TakeLiveKeys`),
+and the save's grid from its keys (`WorldSave.SavedGridWidth`, `ews_gridwidth`) whatever the providers say.
+
 Three things to keep apart: the water level the rules move (`WorldRules.WaterLevel`, which the generator's
 lakes and streams and the editor's own water follow), the **literal 30** the game's zone system keeps for its
 vegetation, locations, biome points and map mask (`WorldGenerator.LiteralWaterLevel`: neither mod changes
 it), and the generator's stretched coordinates (`WorldGenerator.Stretched`: the mod divides a point on the
 way into `GetBiome`, `GetBiomeHeight` and the map's mask, and multiplies it back for the rivers). The
-reader of the mods' files is `editor/Core/App/ExpandWorld.cs`; the rules apply only with the Expand World switch
-in Settings on (`AppSettings.ExpandWorld`), else every world is generated as the game does.
+reader of the mods' files is `editor/Core/App/ExpandWorld.cs`; its rules apply only with the Expand World switch
+in Settings on (`AppSettings.ExpandWorld`, checked by `ExpandWorldRules`), else every world is generated as the game does.
 
 World generation mods write a header before the game's file version in the world file (a marker, -1, then the
 generator's id, then what the mod keeps): `WorldSave.ReadMetadata` reads it through `WorldGenerators.ReadVersion`
@@ -404,7 +413,7 @@ The endpoints (the plugin's header comment lists them with their byte layouts):
 | `POST /watch`, `POST /zone`, `POST /zone/movers` | Two digests per zone (the editor asks every 2 s): the first changes when an object is made or removed or one that stays put changes, and the zone's objects are read whole (`/zone`); the second (1.57.3 on; older plugins give one digest, read as 0) when a kind that moves or ticks on its own (`ZSyncTransform`, fires, smelters...) moves or changes, and only those objects are read (`/zone/movers`). `WorldSave.MergeLive` takes both: objects of a zone read whole that the game lacks vanish, nothing of a zone read in part does; the editor's own objects (`LiveSync.IsOurs`) are given back as `Merged.Made`, and `WorldSession.TakeMade` gives the editor's copies the game's place, turn and data (`EditStore.TakeFromGame`, same id, no history step; `LiveSync.Moved`). |
 | `POST /models` | Prefab names, one per line: JSON, what the game draws of each (each renderer's mesh name and vertex count, submesh, material name, matrix in the root's frame, the root's scale; LOD 0, active, not the worn and broken looks). `WorldSession.OpenLive` asks it for the mod prefabs; `ModCatalogue.TakeModels` keeps them. On a dedicated server (no graphics) the game has no textures or colours to report, so only names. |
 | `GET /catalogue` | JSON: every prefab with a ZNetView the game knows, mods' too, in GameData's formats (prefabs, pieces, piece-cost) and the mod of each (Jötunn's `ModQuery`, when installed). `WorldSession.OpenLive` hands it to `GameData.AddMods`; `ModCatalogue` keeps the ones that are not the game's own in `mod-catalogue.json` (data folder) and lays them over the game's data (the game's entries win). |
-| `GET /plugins`, `GET /config?path=`, `GET /world/meta` | The game's files, read only (`WorldEditorBridgePlugin.Files.cs`, 1.54.0, feature `files`): the plugins BepInEx loaded (id, name, version); a file under `BepInEx/config` as its bytes or a folder there as a JSON list of entries (nothing outside the folder: no absolute path, `..` or link, 400; 4 MB at most, 413); the world's meta file as it lies on disk (its starting global keys as written, which a mod may take out of the loaded list): the file the game saves (`worlds/name/_main.n.fwl2`), else the older `worlds/name.fwl`, 404 with neither. `ExpandWorld.ResolveLive` copies the mods' settings and data files through them into `live-bepinex` (data folder) and reads that as a local BepInEx folder (`LiveBridge.Files`; 404 means an older plugin: the local folders). |
+| `GET /plugins`, `GET /config?path=`, `GET /world/meta` | The game's files, read only (`WorldEditorBridgePlugin.Files.cs`, 1.54.0, feature `files`): the plugins BepInEx loaded (id, name, version); a file under `BepInEx/config` as its bytes or a folder there as a JSON list of entries (nothing outside the folder: no absolute path, `..` or link, 400; 4 MB at most, 413); the world's meta file as it lies on disk (its starting global keys as written, which a mod may take out of the loaded list): the file the game saves (`worlds/name/_main.n.fwl2`), else the older `worlds/name.fwl`, 404 with neither. Extensions read them as `ILiveGame.Plugins`, `ConfigFile` and `ConfigFolder` (`LiveGame`); `ExpandWorld.ResolveLive` copies the mods' settings and data files through them into `live-bepinex` (data folder) and reads that as a local BepInEx folder (`LiveBridge.Files`, `LiveBridge.FilesVersion`; 404 means an older plugin: the local folders). |
 
 Changing the protocol means changing both sides in one pull request, under one `VERSION`. An
 editor meets older plugins in the wild: a missing endpoint answers 404, and the editor says the
