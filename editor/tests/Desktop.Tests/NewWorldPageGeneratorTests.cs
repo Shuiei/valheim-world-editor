@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using TerrainEditor.App;
 using ValheimGen;
 using ValheimWorldEditor.Sdk;
 using Xunit;
@@ -39,11 +40,13 @@ public sealed class NewWorldPageGeneratorTests
         Assert.Equal(1, page.GeneratorChoice.SelectedIndex);
         Assert.Same(flatland, page.Rules.Generator);
         Assert.Contains("Flatland 2.0.0 (height 50)", page.Generation.Text);
+        Assert.Equal(NewWorldPage.KindText(page.Rules), page.WorldKind.Text);
         // The game's generator: the rules are the game's own, and nothing is said.
         page.GeneratorChoice.SelectedIndex = 0;
         Assert.Null(page.Rules.Generator);
         Assert.True(page.Rules.IsVanilla);
         Assert.False(page.Generation.IsVisible);
+        Assert.Equal(NewWorldPage.KindText(WorldRules.Vanilla), page.WorldKind.Text);
         page.GeneratorChoice.SelectedIndex = 1;
         Assert.Same(flatland, page.Rules.Generator);
         Assert.True(page.Generation.IsVisible);
@@ -57,5 +60,14 @@ public sealed class NewWorldPageGeneratorTests
         Assert.Equal("", NewWorldPage.GenerationText(WorldRules.Vanilla));
         Assert.StartsWith("World generation: Expand World (", NewWorldPage.GenerationText(new WorldRules { Radius = 20000f }), StringComparison.Ordinal);
         Assert.Contains("Your Flatland lays each seed's world out", NewWorldPage.GenerationText(new WorldRules { Generator = Flatland }), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheWorldsKindSaysWhenPlayersNeedTheMod()
+    {
+        string firstLoad = Lang.T("newWorld.hint.firstLoad");
+        Assert.Equal(Lang.T("newWorld.hint.normalWorld") + " " + firstLoad, NewWorldPage.KindText(WorldRules.Vanilla));
+        Assert.Equal(Lang.T("newWorld.hint.modWorld", "Flatland") + " " + firstLoad, NewWorldPage.KindText(new WorldRules { Generator = Flatland }));
+        Assert.Contains("every player needs Flatland", NewWorldPage.KindText(new WorldRules { Generator = Flatland }), StringComparison.Ordinal);
     }
 }

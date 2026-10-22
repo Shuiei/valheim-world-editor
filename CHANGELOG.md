@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.103.2 — 2026-10-21
+
+### Fixed
+- **The New world page says when players need a mod.** With a world generation mod's generator chosen (Riverheim),
+  the page still said the world was a normal one players need no mod for; it now says every player needs the mod,
+  so console players on crossplay cannot join. The start page says so too, and the seed search no longer claims to use
+  the game's own generator.
+
 ## v1.103.1 — 2026-10-21
 
 ### Fixed
