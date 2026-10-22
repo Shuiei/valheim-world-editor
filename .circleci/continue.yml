@@ -39,7 +39,8 @@
 #                  (tools/thunderstore.sh, against a Valheim dedicated server from SteamCMD and
 #                  BepInExPack_Valheim), tags the commit and makes the GitHub release with the packages
 #                  tested above (the Sign release workflow on GitHub adds Sigstore signatures to them)
-#   publish-*      the plugin on Thunderstore and Hexium, and the plugin and the editor on Nexus Mods
+#   publish-*      the plugin (only) on Thunderstore and Hexium, and the plugin, the editor and every
+#                  add-on (a file each) on Nexus Mods
 #                  (tools/release/publish.cs, tools/release/sites.json), side by side
 # How to release: docs/development.md#releasing.
 # Security and bug patterns (CodeQL) are checked by GitHub's code scanning, set up on GitHub itself.
@@ -575,10 +576,12 @@ jobs:
               /tmp/dist/ValheimWorldEditor-addon-*.zip
       - store_artifacts:
           path: /tmp/dist/notes.md
+      # The plugin for every site, the add-ons for Nexus Mods (publish.cs), the notes.
       - persist_to_workspace:
           root: /tmp/dist
           paths:
             - WorldEditorBridge-*.zip
+            - ValheimWorldEditor-addon-*.zip
             - notes.md
 
   # A required check of a release pull request, reported at once: its code is main's, tested already.
@@ -591,7 +594,7 @@ jobs:
           name: Tested on main
           command: echo "A release pull request changes only CHANGELOG.md and docs/releases/; its code was tested on main."
 
-  # The plugin on one mod site, or the plugin and the editor on Nexus Mods (tools/release/publish.cs).
+  # The plugin on one mod site, or the plugin, the editor and the add-ons on Nexus Mods (tools/release/publish.cs).
   publish:
     executor: dotnet
     parameters:
