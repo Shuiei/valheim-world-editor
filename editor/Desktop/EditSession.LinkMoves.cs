@@ -12,7 +12,7 @@ public sealed partial class EditSession
     /// when only parts of it were moved, where the first of them takes it along), and its parts go along as one block,
     /// their offsets unchanged: stored at the root's new place with their own turn as it was when the mod saves them so
     /// (it builds the group there again), else where they are now drawn, moved as the root was. Other moves are left
-    /// as they are; the ones given come first, in their order.
+    /// as they are; the ones given come first, in their order. Tie groups (ObjectTies) then move as one block too.
     /// </summary>
     /// <param name="moves">The moves (index into the scene's things, new place, turn and scale).</param>
     internal List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> WholeGroupMoves(
@@ -21,7 +21,9 @@ public sealed partial class EditSession
         var links = ReadLinks();
         if (links.IsEmpty)
         {
-            return moves;
+            var tied = new List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)>(moves);
+            TiedMoves(tied);
+            return tied;
         }
         var things = Scene.Things;
         var at = ShownById();
@@ -90,6 +92,7 @@ public sealed partial class EditSession
                 }
             }
         }
+        TiedMoves(result);
         return result;
     }
 }

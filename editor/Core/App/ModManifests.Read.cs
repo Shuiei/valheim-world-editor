@@ -35,6 +35,7 @@ public static partial class ModManifests
         ReadPrefabs(root["prefabs"], notes);
         ReadExtension(root, from, notes, addOn);
         ReadLinks(root["links"], notes);
+        ReadTies(root["ties"], notes);
     }
 
     /// <summary>The manifest's root object, when the text is a JSON object of a version this editor reads; else null.</summary>

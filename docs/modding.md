@@ -59,6 +59,7 @@ Vehicles' file:
 | `data` | By data key, as your code names it (the name whose hash the game saves; a key named here is known by its name even when your DLL does not hold it as text): `label`, how the [inspector](select.md#inspector) names the value (else its key; the editor's own names for the game's keys come first); `readOnly`, the inspector shows the value but does not let it be changed (values your mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
 | `prefabs` | By prefab name: `hidden`, not offered in the [Place](place.md) list or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading your piece is listed under in the Build panel's **Mods** tab, after the mod's name ("*mod name* · Hulls"). Without a group, a piece is listed under its crafting station, else under "No station needed". `group` counts only for the mods' own pieces. `data`: objects of it only hold your mod's data (a register, what was dug in an area) and have nothing to see: the editor never draws, picks or lists them in an area (your extension still reads them), and a [zone reset](area.md) keeps them when it keeps the buildings, removing them with everything else otherwise. |
 | `links` | How your objects link into one: see [Linked objects](#linked-objects). |
+| `ties` | How your objects are tied to one that names them (a train's wagons): see [Tied objects](#tied-objects). |
 | `extension` | Your editor extension's DLL, relative to the file's folder and inside it: see [Extensions](#extensions). |
 | `gameComponents` | Class names of the game's own scripts whose fields your extension needs (`"TerrainOp"`, `"Ship"`; 32 at most): while your extension runs, the editor reads every component of them in the game's prefabs from the player's Valheim (once, then kept until the game changes) and hands them to it as `Host.Game` (see [Hooks](#hooks)). |
 | `settingsFiles` | File names of your mod's BepInEx settings files your extension reads (`"author.mod.cfg"`, in `BepInEx/config`; 8 at most): as a world opens, the editor reads them from the first of the player's BepInEx folders that has each and, live, from the connected game's own through its bridge (a server's, whose synced settings its players get). Your extension reads one setting with `Host.Setting(file, section, key)` (see [Hooks](#hooks)). |
@@ -143,6 +144,42 @@ offset and turn in that one's frame.
   object (its links taken away), where it was pasted. A mirrored paste mirrors the parts' offsets and
   turns too. Values in `dropOnCopy` go, unless an extension's copy rewriter handles them.
 - Data keys are named as your code names them, as in `data`.
+
+## Tied objects
+
+Some mods tie objects together without keeping where each stands from the other: a train names the wagons it pulls,
+a deck names nothing but what is built on it names the deck. The game saves each object where it stands, and your
+mod puts them together again while it runs. Tell the editor how they are tied and it keeps them one group:
+
+```json
+{
+  "version": 1,
+  "ties": [
+    { "name": "train", "root": "ExampleVehicles_Wagons", "member": "ExampleVehicles_Self", "idBytes": 12 },
+    { "name": "deck", "root": "ExampleVehicles_DeckId", "member": "ExampleVehicles_OnDeck" }
+  ]
+}
+```
+
+| Key | |
+|---|---|
+| `root` | Data key of the ids a root names: an int, a long, or a byte array holding several ids one after the other. Required. |
+| `member` | Data key of a member's own id, of the same kind (an int, a long, or a byte array). Required. |
+| `idBytes` | For a byte array, how many bytes one id is (1 to 64; 12 for the game's object ids). Without it, the whole value is one id. |
+| `name` | What one group is called in the editor's messages. Default: `group`. |
+
+A member is in a root's group when its own id is one the root names. The ids are compared as the bytes they are,
+whatever they mean to your mod: the editor never looks them up in the game.
+
+- **Selecting, moving and deleting.** Selecting any object of a group and moving or turning takes the whole group,
+  as one block: each member keeps where it stands from the others, and is saved where it stands. Deleting the root
+  takes its members; deleting a member takes only it.
+- **Copying.** A copy takes the whole group. Each paste (and each of its repeats) gets new ids of the same kind and
+  size, random, in the root and in the members it names, so a copy never takes the original's members: a list keeps
+  the ids of the members copied, a single id is always new, and a member whose root was not copied loses its id.
+- **Live and saved.** The new ids are your mod's to resolve: it finds a pasted root's members by the ids they hold, as
+  it does after the game loads a world (the game gives every object a new object id at each load).
+- A rule with the same `root` and `member` keys in a newer file replaces an older one's, in its place in the order.
 
 ## Extensions
 

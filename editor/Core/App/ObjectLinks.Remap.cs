@@ -30,11 +30,17 @@ public static partial class ObjectLinks
         // Values extensions rewrite (ModExtensions): theirs to decide, not dropped.
         var rewritten = ModExtensions.RewrittenKeys;
         bool rewrite = rewritten.Count > 0 && copy.Any(o => o.Data?.Any(f => f.Value != null && rewritten.Contains(f.Key)) == true);
+        random ??= Random.Shared;
+        // Ties (ObjectTies) made the copy's own first: a root and its members get new ids of their own.
+        var tieRules = ObjectTies.Current;
+        if (ObjectTies.AnyIn(copy, tieRules))
+        {
+            copy = ObjectTies.Remap(copy, tieRules, random);
+        }
         if (links.All(l => l == null) && !rewrite)
         {
             return [.. copy];
         }
-        random ??= Random.Shared;
         var (at, ids) = NewCopyIds(links, taken, random);
         var result = new NewObject[copy.Count];
         for (int i = 0; i < copy.Count; i++)

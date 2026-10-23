@@ -8,8 +8,8 @@ namespace TerrainEditor.Desktop;
 public sealed partial class EditSession
 {
     /// <summary>
-    /// Things with the rest of the linked groups they belong to (ObjectLinks): each group's parts in the area come after
-    /// the things given (which keep their order).
+    /// Things with the rest of the linked groups (ObjectLinks) and tie groups (ObjectTies) they belong to: each group's
+    /// parts in the area come after the things given (which keep their order).
     /// </summary>
     /// <param name="indices">Indices into the scene's things.</param>
     /// <param name="anyPart">Any part brings its whole group (the Select tool); false: only a root brings its parts.</param>
@@ -21,16 +21,17 @@ public sealed partial class EditSession
     {
         var list = indices.ToList();
         var parts = new HashSet<int>();
+        var nouns = new HashSet<string>();
         var links = ReadLinks();
         if (links.IsEmpty)
         {
-            return (list, parts, 0, LinkRule.DefaultName);
+            int tied = WithTied(list, parts, nouns, anyPart);
+            return (list, parts, tied, nouns.Count == 1 ? nouns.First() : LinkRule.DefaultName);
         }
         var things = Scene.Things;
         var at = ShownById();
         var have = list.ToHashSet();
         var roots = new HashSet<int>();
-        var nouns = new HashSet<string>();
         foreach (int i in list.ToList())
         {
             if (i < 0 || i >= things.Count || links.Get(things[i].Id) == null)
@@ -57,6 +58,7 @@ public sealed partial class EditSession
                 }
             }
         }
-        return (list, parts, roots.Count, nouns.Count == 1 ? nouns.First() : LinkRule.DefaultName);
+        int groups = roots.Count + WithTied(list, parts, nouns, anyPart);
+        return (list, parts, groups, nouns.Count == 1 ? nouns.First() : LinkRule.DefaultName);
     }
 }

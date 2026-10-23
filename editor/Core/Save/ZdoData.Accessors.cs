@@ -36,4 +36,7 @@ public sealed partial class ZdoData
 
     /// <summary>The int value with this key, or null when there is none.</summary>
     public int? GetInt(int key) => TryGet(IntList, key, out int v) ? v : null;
+
+    /// <summary>The long value with this key, or null when there is none.</summary>
+    public long? GetLong(int key) => TryGet(LongList, key, out long v) ? v : null;
 }
