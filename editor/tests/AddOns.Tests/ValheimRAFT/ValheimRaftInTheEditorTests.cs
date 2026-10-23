@@ -101,6 +101,66 @@ public sealed class ValheimRaftInTheEditorTests : IDisposable
         }
     }
 
+    /// <summary>An object of the second fixture: where it was saved, where the mod built it, and its data.</summary>
+    private sealed record Built(string Prefab, Vector3 Saved, Quaternion SavedTurn, Vector3 At, Quaternion Turn, ZdoData Data);
+
+    /// <summary>The add-on's second fixture (valheimraft-swivels.txt): a ship with turned and moved swivels, a sail on a mast, a cart and a land vehicle.</summary>
+    private static List<Built> ReadSwivels()
+    {
+        string file = Directory.GetFiles(Path.Combine(RepositoryAddOns.Folder, "ValheimRAFT", "tests"), "valheimraft-swivels.txt", SearchOption.AllDirectories)
+            .First(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
+        var all = new List<Built>();
+        var byTag = new Dictionary<string, Built>();
+        foreach (string[] t in File.ReadLines(file).Where(l => l.Length > 0 && !l.StartsWith('#')).Select(l => l.Split(' ')))
+        {
+            float F(int i) => float.Parse(t[i], CultureInfo.InvariantCulture);
+            if (t[0] == "O")
+            {
+                var b = new Built(t[2], new Vector3(F(3), F(4), F(5)), new Quaternion(F(6), F(7), F(8), F(9)), new Vector3(F(10), F(11), F(12)),
+                    new Quaternion(F(13), F(14), F(15), F(16)), new ZdoData { Prefab = StableHash.Of(t[2]) });
+                byTag[t[1]] = b;
+                all.Add(b);
+                continue;
+            }
+            var z = byTag[t[1]].Data;
+            switch (t[0])
+            {
+                case "I":
+                    z.SetInt(StableHash.Of(t[2]), int.Parse(t[3], CultureInfo.InvariantCulture));
+                    break;
+                case "F":
+                    z.FloatList.Add((StableHash.Of(t[2]), F(3)));
+                    break;
+                case "V":
+                    z.SetVec3(StableHash.Of(t[2]), new Vector3(F(3), F(4), F(5)));
+                    break;
+            }
+        }
+        return all;
+    }
+
+    [Fact]
+    public void SwivelsSailsOnMastsCartsAndParkedVehiclesAreDrawnWhereTheModBuiltThem()
+    {
+        var objects = ReadSwivels();
+        var members = objects.Select((o, i) => ObjectLinks.Read(o.Data) is { } link
+            ? new LinkIndex.Member(i, o.Saved, BlueprintFormats.ToEuler(o.SavedTurn), link) { Prefab = o.Data.Prefab }
+            : null).OfType<LinkIndex.Member>().ToList();
+
+        // With the objects' data: the add-on's placer turns the swivels' parts and puts the parked vehicle in place.
+        var links = LinkIndex.Of(members, i => objects[i].Data);
+
+        Assert.Equal(objects.Count, members.Count);
+        Assert.Equal(objects.Count, links.Group(objects.FindIndex(o => o.Prefab == "ValheimVehicles_WaterVehicleShip")).Count);
+        for (int i = 0; i < objects.Count; i++)
+        {
+            var (at, turn) = links.Pose(i)!.Value;
+            var o = objects[i];
+            Assert.True(Vector3.Distance(o.At, at) < 1e-3f, $"{o.Prefab} is drawn at {at}, the mod built it at {o.At}");
+            Assert.True(Math.Abs(Quaternion.Dot(o.Turn, BlueprintFormats.FromEuler(turn))) > 1 - 1e-5f, $"{o.Prefab} is turned {turn}");
+        }
+    }
+
     [Fact]
     public void APastedShipsRopesAreTiedToItsOwnPieces()
     {

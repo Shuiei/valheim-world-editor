@@ -20,8 +20,10 @@ public sealed class ManifestTests
     {
         var link = Assert.Single(_manifest["links"]!.AsArray())!;
         Assert.Equal(Keys.Id, (string?)link["id"]);
-        // A piece on a swivel names the swivel first, then the vehicle.
-        Assert.Equal(["SwivelParentId", "MBParentId"], link["parents"]!.AsArray().Select(p => (string?)p));
+        // A sail names its mast first, a piece on a swivel the swivel, then the vehicle; a cart is carried by it.
+        Assert.Equal(["SailParentId", "SwivelParentId", "MBParentId", "VehicleTempPieceParentId"], link["parents"]!.AsArray().Select(p => (string?)p));
+        Assert.Equal("SailParentPosition", (string?)link["placements"]!["SailParentId"]!["offset"]);
+        Assert.True((bool)link["placements"]!["VehicleTempPieceParentId"]!["carried"]!);
         // The ropes are rewritten by the extension; without it a copy leaves them out.
         Assert.Contains(Keys.Ropes, link["dropOnCopy"]!.AsArray().Select(p => (string?)p));
     }
@@ -38,6 +40,6 @@ public sealed class ManifestTests
     public void ThePrefabsTheExtensionDrawsAreTheModsPieces()
     {
         var prefabs = _manifest["prefabs"]!.AsObject();
-        Assert.All([Keys.Sail, Keys.RopeAnchor, Keys.DockAnchor], p => Assert.NotNull(prefabs[p]?["group"]));
+        Assert.All([Keys.Sail, Keys.RopeAnchor, Keys.DockAnchor, Keys.Swivel, Keys.LandVehicle, Keys.RopeLadder], p => Assert.NotNull(prefabs[p]?["group"]));
     }
 }

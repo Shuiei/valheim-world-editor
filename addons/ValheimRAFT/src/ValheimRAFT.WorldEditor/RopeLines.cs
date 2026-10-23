@@ -7,7 +7,8 @@ namespace ValheimRAFT.WorldEditor;
 /// The ropes of rope anchors (<see cref="Keys.RopeAnchor"/>, and the dock's tie points): the mod strings each, while the
 /// game runs, from the anchor's tie point to what it names (its <see cref="Keys.Ropes"/>), found here through the world
 /// by its id. Drawn as a straight rope, as the mod draws it, in the world's frame (it reaches another object). A rope
-/// to something not in the area is not drawn. The tie points were measured on the mod's prefabs (ValheimRAFT 5.0.9).
+/// to something not in the area is not drawn. The tie points were measured on the mod's and the game's prefabs
+/// (ValheimRAFT 5.0.9, Valheim 1.0.20).
 /// </summary>
 internal sealed class RopeLines : IShapeProvider
 {
@@ -37,16 +38,40 @@ internal sealed class RopeLines : IShapeProvider
             {
                 continue;
             }
-            // The mod ties a rope to the dock at its tie point, to anything else where it stands (another rope
-            // anchor too; its tie points on a vanilla ship or an animal are their bones, which the editor does not
-            // have).
-            var to = other.Prefab == Keys.DockAnchor ? other.Position + Vector3.Transform(DockTie * other.Scale, other.Orientation) : other.Position;
+            var to = other.Position + Vector3.Transform(TieOn(other.Prefab, rope.Point) * other.Scale, other.Orientation);
             if (Line(from, to) is { } shape)
             {
                 yield return shape;
             }
         }
     }
+
+    /// <summary>
+    /// The tie points the mod knows on what a rope is tied to, in its frame, by prefab and the rope's tie point: the
+    /// dock's, a Karve's and a longship's ropes (their prefabs' own, measured on the game's), and the neck of a deer, a
+    /// boar, a piglet or a neck as their prefabs have it at rest (the game moves it as the animal walks).
+    /// </summary>
+    private static readonly Dictionary<string, Vector3[]> Ties = new()
+    {
+        [Keys.DockAnchor] = [DockTie],
+        ["Karve"] = [new(0, 7.88f, 0), new(-0.972f, 0.805f, 2.273f), new(-0.95f, 0.805f, -2.452f), new(0.972f, 0.805f, 2.273f), new(0.95f, 0.805f, -2.452f)],
+        ["VikingShip"] =
+        [
+            new(0, 2.416f, 9.959f), new(0, 0.802f, 0.275f), new(2.4128f, 0.5304f, -0.9136f), new(-2.4128f, 0.5304f, -0.9136f),
+            new(-2.32512f, 1.36864f, 3.57056f), new(-2.2288f, 1.305f, -3.808f), new(2.32512f, 1.36864f, 3.57056f), new(2.2288f, 1.305f, -3.808f),
+        ],
+        ["Deer"] = [new(0, 1.17609f, 0.48907f)],
+        ["Boar"] = [new(0, 0.67175f, 0.41237f)],
+        ["Boar_piggy"] = [new(0, 0.33587f, 0.20618f)],
+        ["Neck"] = [new(0, 0.78225f, 0.18676f)],
+    };
+
+    /// <summary>
+    /// Where on an object of a prefab the mod ties a rope with that tie point, in its frame: one of its known tie points,
+    /// else where it stands (another rope anchor too).
+    /// </summary>
+    public static Vector3 TieOn(string prefab, byte point) =>
+        Ties.TryGetValue(prefab, out var ties) && point < ties.Length ? ties[point] : Vector3.Zero;
 
     /// <summary>
     /// A rope from one point to another: two crossed ribbons, so that it shows from every side; null when the points

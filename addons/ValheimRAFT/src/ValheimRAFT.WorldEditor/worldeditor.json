@@ -12,11 +12,22 @@
     "MBRotation": { "label": "Turn on the vehicle (old)", "readOnly": true, "help": "The turn older versions of the mod kept, as a quaternion." },
     "MBPieceCount": { "label": "Pieces", "readOnly": true, "help": "How many pieces the mod counted on this vehicle." },
     "VehicleChunkBounds": { "label": "Hull bounds", "readOnly": true, "help": "The boxes the mod's boundary tools set for this vehicle's hull." },
-    "VehicleTempPieceParentId": { "label": "Carried by", "readOnly": true, "help": "The vehicle carrying this object (a cart, an animal): the mod moves it with the vehicle." },
+    "VehicleTempPieceParentId": { "label": "Carried by", "readOnly": true, "help": "The vehicle carrying this object (a cart, an animal): it moves, turns and is copied with the vehicle." },
     "MBCultivatableParentId": { "label": "Planted in", "readOnly": true, "help": "The soil piece this plant grows in." },
     "Mechanism_swivelTargetId": { "label": "Swivel it moves", "help": "The swivel this switch moves (its persistent id)." },
     "MBRopeAnchor_Ropes": { "label": "Ropes", "readOnly": true, "help": "What this anchor's ropes are tied to." },
     "SailParentId": { "label": "Mast", "readOnly": true, "help": "The mast this sail hangs on (its persistent id)." },
+    "SailParentPosition": { "label": "Place on the mast", "readOnly": true, "help": "Where the mod hangs this sail, in metres, in the frame of its mast's yard." },
+    "SailParentRotation": { "label": "Turn on the mast", "readOnly": true, "help": "How the mod turns this sail on its mast's yard, in degrees." },
+    "swivel_mode": { "label": "Swivel mode", "help": "0 none, 1 turns, 2 moves, 3 follows the wind." },
+    "swivel_motionState": { "label": "Swivel position", "help": "0 at its start, 1 going back to it, 2 at its target, 3 going to it." },
+    "swivel_hingeAxes": { "label": "Swivel axes", "help": "The axes a turning swivel turns about: 1 x, 2 y, 4 z, added." },
+    "swivel_maxX": { "label": "Swivel turn x", "help": "How far a turning swivel turns about x, in degrees." },
+    "swivel_maxY": { "label": "Swivel turn y", "help": "How far a turning swivel turns about y, in degrees." },
+    "swivel_maxZ": { "label": "Swivel turn z", "help": "How far a turning swivel turns about z, in degrees." },
+    "swivel_offsetX": { "label": "Swivel move x", "help": "How far a moving swivel moves along x, in metres." },
+    "swivel_offsetY": { "label": "Swivel move y", "help": "How far a moving swivel moves along y, in metres." },
+    "swivel_offsetZ": { "label": "Swivel move z", "help": "How far a moving swivel moves along z, in metres." },
     "m_sailCornersCountHash": { "label": "Sail corners", "readOnly": true, "help": "How many corners the mod weaves this sail between." },
     "m_sailCorner1Hash": { "label": "Sail corner 1", "readOnly": true, "help": "A corner of the sail, in metres, in its frame." },
     "m_sailCorner2Hash": { "label": "Sail corner 2", "readOnly": true, "help": "A corner of the sail, in metres, in its frame." },
@@ -207,12 +218,16 @@
     {
       "name": "vehicle",
       "id": "PersistentID",
-      "parents": ["SwivelParentId", "MBParentId"],
+      "parents": ["SailParentId", "SwivelParentId", "MBParentId", "VehicleTempPieceParentId"],
       "offset": "MBPosition",
       "rotation": "MBRotationVec",
       "rotationQuaternion": "MBRotation",
       "storedAt": "root",
-      "references": ["SailParentId", "Mechanism_swivelTargetId", "MBCultivatableParentId", "VehicleTempPieceParentId"],
+      "placements": {
+        "SailParentId": { "offset": "SailParentPosition", "rotation": "SailParentRotation" },
+        "VehicleTempPieceParentId": { "carried": true }
+      },
+      "references": ["Mechanism_swivelTargetId", "MBCultivatableParentId"],
       "dropOnCopy": ["MBRopeAnchor_Ropes"]
     }
   ]

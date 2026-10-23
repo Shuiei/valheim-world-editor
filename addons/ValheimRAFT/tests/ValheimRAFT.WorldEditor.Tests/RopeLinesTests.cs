@@ -54,6 +54,25 @@ public sealed class RopeLinesTests
     }
 
     [Fact]
+    public void ARopeToAVanillaShipOrAnAnimalEndsAtTheTiePointTheModPicks()
+    {
+        var turn = Quaternion.CreateFromYawPitchRoll(0.5f, 0, 0);
+        var anchor = Holding(Keys.RopeAnchor, new Vector3(0, 30, 0), 1);
+        var karve = Holding("Karve", new Vector3(20, 30, 0), 2, turn);
+        var boar = Holding("Boar", new Vector3(0, 30, 15), 3);
+        anchor.Bytes[Keys.Ropes] = RopeList.Write([new Rope(2, 2), new Rope(3, 0)]);
+
+        var shapes = new RopeLines().ShapesOf(anchor, new FakeWorld(anchor, karve, boar)).ToList();
+
+        // The Karve's third tie point (its back left rope), the boar's neck.
+        Near(karve.Position + Vector3.Transform(new Vector3(-0.95f, 0.805f, -2.452f), turn), End(shapes[0]));
+        Near(boar.Position + new Vector3(0, 0.67175f, 0.41237f), End(shapes[1]));
+        // A tie point the prefab does not have: where it stands.
+        Assert.Equal(Vector3.Zero, RopeLines.TieOn("Karve", 9));
+        Assert.Equal(Vector3.Zero, RopeLines.TieOn("piece_chest_wood", 0));
+    }
+
+    [Fact]
     public void TheDocksRopesStartAtItsTiePoint()
     {
         var dock = Holding(Keys.DockAnchor, new Vector3(8, 31, 0), 3);

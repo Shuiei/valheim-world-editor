@@ -12,6 +12,8 @@ internal sealed class FakeObject(string prefab, Vector3 position = default, Quat
 
     public Dictionary<string, Vector3> Vectors { get; } = [];
 
+    public Dictionary<string, float> Floats { get; } = [];
+
     public Dictionary<string, byte[]> Bytes { get; } = [];
 
     public string Prefab => prefab;
@@ -32,11 +34,7 @@ internal sealed class FakeObject(string prefab, Vector3 position = default, Quat
         return false;
     }
 
-    public bool TryGetFloat(string key, out float value)
-    {
-        value = 0;
-        return false;
-    }
+    public bool TryGetFloat(string key, out float value) => Floats.TryGetValue(key, out value);
 
     public bool TryGetVector3(string key, out Vector3 value) => Vectors.TryGetValue(key, out value);
 
@@ -97,6 +95,22 @@ internal sealed class FakeWorld(params FakeObject[] objects) : IWorldView
     {
         obj = objects.FirstOrDefault(o => o.TryGetInt(idKey, out int held) && held == id)!;
         return obj != null;
+    }
+}
+
+/// <summary>A world of no object whose ground stands at one height (none: the editor has no ground there).</summary>
+internal sealed class FakeGround(float? height) : IWorldView, IGroundView
+{
+    public bool TryFind(string idKey, int id, out IObjectView obj)
+    {
+        obj = null!;
+        return false;
+    }
+
+    public bool TryGroundHeight(float x, float z, out float h)
+    {
+        h = height ?? 0;
+        return height != null;
     }
 }
 

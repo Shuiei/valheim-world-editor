@@ -36,6 +36,30 @@ internal static class Keys
     /// <summary>The dock's tie point, a rope anchor too.</summary>
     public const string DockAnchor = "ValheimVehicles_DockAttachpoint";
 
+    /// <summary>The swivel, whose platform the mod turns or moves with what is built on it.</summary>
+    public const string Swivel = "ValheimVehicles_Swivel";
+
+    /// <summary>The land vehicle (a vehicle on its own, or parked on a ship).</summary>
+    public const string LandVehicle = "ValheimVehicles_VehicleLand";
+
+    /// <summary>The rope ladder, its rope and rungs hung by the mod while the game runs.</summary>
+    public const string RopeLadder = "MBRopeLadder";
+
+    /// <summary>Int: a swivel's mode (0 none, 1 turns, 2 moves, 3 follows the wind).</summary>
+    public const string SwivelMode = "swivel_mode";
+
+    /// <summary>Int: where a swivel is (0 at its start, 1 going back to it, 2 at its target, 3 going to it).</summary>
+    public const string SwivelState = "swivel_motionState";
+
+    /// <summary>Int: the axes a turning swivel turns about (1 x, 2 y, 4 z; added).</summary>
+    public const string SwivelHinges = "swivel_hingeAxes";
+
+    /// <summary>Float: how far a turning swivel turns about each axis, in degrees (the name with X, Y or Z in place of the #).</summary>
+    public const string SwivelMax = "swivel_max#";
+
+    /// <summary>Float: how far a moving swivel moves along each axis, in metres (the name with X, Y or Z in place of the #).</summary>
+    public const string SwivelOffset = "swivel_offset#";
+
     /// <summary>A custom sail's corner key (1 to 4).</summary>
     public static string SailCornerKey(int corner) => SailCorner.Replace("#", corner.ToString(System.Globalization.CultureInfo.InvariantCulture));
 }

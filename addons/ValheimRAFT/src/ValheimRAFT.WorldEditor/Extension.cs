@@ -17,6 +17,8 @@ public sealed class Extension : IWorldEditorExtension
         registry.AddDecoder(Keys.Ropes, ropes);
         registry.AddCopyRewriter(ropes, Keys.Ropes);
         registry.AddShapes(new RopeLines(), Keys.RopeAnchor, Keys.DockAnchor);
+        registry.AddShapes(new RopeLadders(), Keys.RopeLadder);
+        registry.AddLinkPlacer(new VehiclePlacer(), Keys.Swivel, Keys.LandVehicle);
         var sails = new SailCloth();
         registry.AddShapes(sails, Keys.Sail);
         registry.AddDecoder(Keys.SailColour, sails);
