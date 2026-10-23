@@ -547,6 +547,10 @@ jobs:
     executor: dotnet
     steps:
       - checkout
+      # Before the release is made: a file name Nexus Mods refuses stopped v1.109.0 half published (its add-ons).
+      - run:
+          name: The mod sites' file names (tools/release/sites.json)
+          command: dotnet run tools/release/publish.cs -- check
       - attach_workspace:
           at: /tmp/dist
       - run:
