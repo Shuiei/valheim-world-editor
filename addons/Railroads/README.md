@@ -31,7 +31,8 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
   - a station sign stops trains at the nearest point of straight track (or of a loop's circle) within 10 m, as when
     it is built, and is in the trains' station menu.
 - **Trains and flatbeds stay whole.** A locomotive and the wagons it pulls are one train, a flatbed and
-  what is built on its deck one deck: selecting any of them and moving, turning or copying takes the whole train,
+  what is built on its deck one deck, and a train takes its flatbed's deck along: selecting any of them and moving,
+  turning or copying takes the whole train,
   deleting the locomotive takes its wagons, and the train goes on the track where you put it.
 - **Pasted copies are pieces of their own.** The mod names other objects by the game's ids and ids of its own, which
   in a copy would name the originals: a pasted train pulls the copy's own wagons (the mod couples them as it does when
@@ -43,7 +44,9 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
 
 Checked on a dedicated server running Railroads 0.2.6 and the editor's plugin, live: the add-on puts vehicles on the
 same lines and at the same points as the mod, and signs' stops at the same place; pasted, moved, turned and deleted
-track and vehicles are applied in the game, keep their turn after a restart, and leave the original train as it was.
+track and vehicles are applied in the game, keep their turn after a restart, and leave the original train as it was;
+a train moved whole (its wagons and the floor on its flatbed with it) and a pasted coupled train stay on their track
+and coupled after a restart, each flatbed with its own deck.
 
 ## Good to know
 

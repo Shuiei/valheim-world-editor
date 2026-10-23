@@ -62,18 +62,42 @@ public static partial class ObjectTies
     }
 
     /// <summary>
-    /// The groups among objects: each root with the members naming one of its ids (a member a root names once, the first
-    /// root reading it; a root naming none of them makes no group). An object is in one group at most.
+    /// The groups among objects: each root with the members naming one of its ids (under a rule, a member is the first
+    /// root's naming it; a root naming none of them makes no group). Groups sharing an object make one (a train's
+    /// flatbed and what is built on its deck go with the train): its first root first, with that root's rule.
     /// </summary>
     /// <param name="objects">The objects, by a number of the caller's (an index), with their data.</param>
     /// <param name="rules">The rules.</param>
     /// <returns>Each group, its root first, then its members in the root's order, with its rule.</returns>
     public static List<(List<int> Group, TieRule Rule)> Groups(IReadOnlyList<(int Index, ZdoData Data)> objects, IReadOnlyList<TieRule> rules)
     {
+        var merged = new List<(List<int> Group, TieRule Rule)>();
+        foreach (var (group, rule) in RuleGroups(objects, rules))
+        {
+            var joined = merged.Where(m => group.Any(m.Group.Contains)).ToList();
+            if (joined.Count == 0)
+            {
+                merged.Add((group, rule));
+                continue;
+            }
+            var into = joined[0].Group;
+            foreach (var other in joined.Skip(1))
+            {
+                into.AddRange(other.Group.Where(i => !into.Contains(i)));
+                merged.Remove(other);
+            }
+            into.AddRange(group.Where(i => !into.Contains(i)));
+        }
+        return merged;
+    }
+
+    /// <summary>Each rule's groups on their own (an object may be in one of each rule).</summary>
+    private static List<(List<int> Group, TieRule Rule)> RuleGroups(IReadOnlyList<(int Index, ZdoData Data)> objects, IReadOnlyList<TieRule> rules)
+    {
         var groups = new List<(List<int>, TieRule)>();
-        var taken = new HashSet<int>();
         foreach (var rule in rules)
         {
+            var taken = new HashSet<int>();
             var members = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var (index, data) in objects)
             {

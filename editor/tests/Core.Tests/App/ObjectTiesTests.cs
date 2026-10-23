@@ -90,6 +90,24 @@ public sealed class ObjectTiesTests : ModManifestsTestBase
     }
 
     [Fact]
+    public void GroupsSharingAnObjectMakeOne()
+    {
+        // A train whose second wagon is a deck holding a floor: the floor goes with the train.
+        NewObject[] objects =
+        [
+            Made(Bytes("Wagons", Id(1), Id(2))),
+            Made(Bytes("Self", Id(1))),
+            Made(Bytes("Self", Id(2)), Long("DeckKey", 77)),
+            Made(Long("OnDeck", 77)),
+        ];
+
+        var (group, rule) = Assert.Single(ObjectTies.Groups([.. objects.Select((o, i) => (i, Data(o)))], [Train, Deck]));
+
+        Assert.Equal([0, 1, 2, 3], group);
+        Assert.Equal(Train, rule);
+    }
+
+    [Fact]
     public void APastedTrainKeepsItsCopiedWagonsUnderIdsOfItsOwn()
     {
         NewObject[] copy =

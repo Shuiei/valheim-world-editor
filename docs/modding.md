@@ -169,7 +169,8 @@ mod puts them together again while it runs. Tell the editor how they are tied an
 | `name` | What one group is called in the editor's messages. Default: `group`. |
 
 A member is in a root's group when its own id is one the root names. The ids are compared as the bytes they are,
-whatever they mean to your mod: the editor never looks them up in the game.
+whatever they mean to your mod: the editor never looks them up in the game. Groups that share an object are one
+group: a train whose flatbed is a deck's root takes what is built on the deck along.
 
 - **Selecting, moving and deleting.** Selecting any object of a group and moving or turning takes the whole group,
   as one block: each member keeps where it stands from the others, and is saved where it stands. Deleting the root
