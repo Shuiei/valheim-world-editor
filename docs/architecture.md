@@ -540,10 +540,12 @@ run on any thread; what is in use is swapped in whole (`State`). The SDK's sampl
 mod's `worldeditor.json` (`ModManifests`; the editor ships none for any mod, its tests give their example mod's through
 `ModManifests.Base`); it names the data keys of an object's id, of what a part hangs on, of its offset and turn in that
 one's frame, of other ids a copy rewrites and of values a copy leaves out, and whether the game saves parts at their
-root or where they are drawn. `WorldSave.Links` keeps each object's
+root or where they are drawn; its `Placements` (a `ParentPlacement` by parent key) give the parts on one parent key
+their own keys, or carry them where they are saved. `WorldSave.Links` keeps each object's
 `ObjectLink`, read by the rules in use as the world was read (the manifests are read before; its whole stored turn
 too: `Pieces` keep only the turn about y); `LinkIndex` is the groups as they are now (saved objects not deleted, and
-`NewObject`s through `ObjectLinks.LinkOf`), giving a part's `Pose` and a group's `Group`. Only the drawn place
+`NewObject`s through `ObjectLinks.LinkOf`, each with its prefab and its data read when an extension's link placer
+needs it: `ModExtensions.LinkFrameOf`, `LinkPlaceOf`), giving a part's `Pose` and a group's `Group`. Only the drawn place
 changes: `WorldScene.Placed` gives a `Thing` its pose (in `ReadThings`, `FindThings`, and `EditSession.PlaceLinked`
 after every change of things), while `ObjectRef.Position` and `NewObject.Position` stay the stored ones (live
 refinding, zones, the writer). A part never moves alone (`EditSession.WholeGroupMoves` in `Transform`;

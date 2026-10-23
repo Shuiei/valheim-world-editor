@@ -95,6 +95,7 @@ public sealed partial class WorldEditorBridgePlugin
                 {
                     move.Fallback.PutOn(zdo);
                 }
+                Announce(zdo);
                 // Players' games far from both places drop the object or show it at its new place once they have
                 // its new data: sent to every peer now, not only to those near where it stands.
                 ZDOMan.instance.ForceSendZDO(zdo.m_uid);

@@ -8,8 +8,18 @@ the plugin is unchanged in versions without that part.
 
 ### Added
 - **A ValheimRAFT add-on.** Ships and land vehicles built with ValheimRAFT are drawn whole, as the mod builds them,
-  with their sails and ropes, and move, copy and delete as one. Its own download beside the editor's: see
-  [ValheimRAFT](addons/ValheimRAFT/README.md).
+  with their swivels, sails, ropes and rope ladders and what they carry, and move, copy and delete as one, live too.
+  Its own download beside the editor's: see [ValheimRAFT](addons/ValheimRAFT/README.md).
+- **For mod authors: more ways to place linked objects.** A link rule's `placements` give the parts hanging on one of
+  its parent keys their own offset and turn keys, or let the group carry them where they were saved (a cart aboard a
+  ship). An extension's link placer (`AddLinkPlacer`) turns the frame a parent's parts hang in (a swivel the mod has
+  turned) or places a part itself, and shape hooks can read the ground's height (`IGroundView`). See
+  [For mod authors](docs/modding.md#linked-objects).
+
+### WorldEditorBridge
+- **Mods know at once what the editor pastes.** Objects the bridge makes, moves or changes go through the game's own
+  handling of objects that come from another game, so a mod that finds objects by ids it keeps (ValheimRAFT's ships
+  and ropes) finds pasted ones right away: a host's game no longer drops the ropes of a ship pasted live.
 
 ## v1.109.0 — 2026-10-22
 

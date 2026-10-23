@@ -83,6 +83,18 @@ public sealed record ObjectLink(LinkRule Rule, int Id, int[] Parents, Vector3 Of
     /// <summary>The id of what it hangs on: its first parent set; 0 for a root.</summary>
     public int Holder => Parents.FirstOrDefault(p => p != 0);
 
+    /// <summary>The index of the parent key it hangs on (its first set); -1 for a root.</summary>
+    public int HolderIndex => Array.FindIndex(Parents, p => p != 0);
+
+    /// <summary>How it is placed on what it hangs on (its parent key's placement, else its rule's).</summary>
+    public ParentPlacement Placement => Rule.PlacementAt(HolderIndex);
+
+    /// <summary>The game saves it at its group's root (as its placement says), not where it is drawn.</summary>
+    public bool StoredAtRoot => Placement.StoredAtRoot;
+
+    /// <summary>A part its group carries where the game saved it, without an offset of its own (as its placement says).</summary>
+    public bool Carried => HolderIndex >= 0 && Placement.Carried;
+
     /// <summary>Its turn in its parent's frame: the Euler one, else the quaternion, else none.</summary>
     public Quaternion Turn => Euler is { } e ? BlueprintFormats.FromEuler(e)
         : Quat is { } q && q.LengthSquared() > 1e-8f ? Quaternion.Normalize(q) : Quaternion.Identity;

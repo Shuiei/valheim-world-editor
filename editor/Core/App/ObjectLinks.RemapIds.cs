@@ -46,16 +46,21 @@ public static partial class ObjectLinks
     }
 
     /// <summary>A part pasted mirrored: its offset and turns, in its parent's frame, are mirrored too.</summary>
-    private static void MirrorPlacement(List<ObjectField> data, LinkRule rule, ObjectLink link)
+    private static void MirrorPlacement(List<ObjectField> data, ObjectLink link)
     {
-        Put(data, "vec3", rule.OffsetKey, Vec(link.Offset with { X = -link.Offset.X }));
+        // Under the keys of the parent it hangs on (a carried part has none: the paste mirrors where it stands).
+        var place = link.Placement;
+        if (place.OffsetKey != 0)
+        {
+            Put(data, "vec3", place.OffsetKey, Vec(link.Offset with { X = -link.Offset.X }));
+        }
         if (link.Euler is { } e)
         {
-            Put(data, "vec3", rule.EulerKey, Vec(new Vector3(e.X, -e.Y, -e.Z)));
+            Put(data, "vec3", place.EulerKey, Vec(new Vector3(e.X, -e.Y, -e.Z)));
         }
         if (link.Quat is { } q)
         {
-            Put(data, "quats", rule.QuatKey, string.Create(CultureInfo.InvariantCulture, $"{q.X:R} {-q.Y:R} {-q.Z:R} {q.W:R}"));
+            Put(data, "quats", place.QuatKey, string.Create(CultureInfo.InvariantCulture, $"{q.X:R} {-q.Y:R} {-q.Z:R} {q.W:R}"));
         }
     }
 }

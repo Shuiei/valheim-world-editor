@@ -54,6 +54,12 @@ public static partial class ModExtensions
         /// <summary>Its ground cutters, by prefab hash.</summary>
         public Dictionary<int, List<IGroundCutter>> Cutters { get; } = [];
 
+        /// <summary>Its link placers, by prefab hash.</summary>
+        public Dictionary<int, List<ILinkPlacer>> Placers { get; } = [];
+
+        /// <summary>The names of the prefabs it places for, by hash (as its code names them).</summary>
+        public Dictionary<int, string> PlacerPrefabs { get; } = [];
+
         /// <summary>Its scene providers.</summary>
         public List<ISceneProvider> Scenes { get; } = [];
         /// <summary>Its tools.</summary>

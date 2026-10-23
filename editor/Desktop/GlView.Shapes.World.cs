@@ -7,10 +7,19 @@ public sealed partial class GlView
 {
     /// <summary>
     /// The world around a thing as an extension's shapes see it (IWorldView): the area's things by the ids linked
-    /// objects hold (LinkIndex), each read once.
+    /// objects hold (LinkIndex), each read once, and the area's ground (IGroundView).
     /// </summary>
-    private sealed class ShapeWorld(Save.WorldSave world, EditSession session, List<WorldScene.Thing> things) : ValheimWorldEditor.Sdk.IWorldView
+    private sealed class ShapeWorld(Save.WorldSave world, EditSession session, List<WorldScene.Thing> things, WorldScene scene)
+        : ValheimWorldEditor.Sdk.IWorldView, ValheimWorldEditor.Sdk.IGroundView
     {
+        /// <inheritdoc/>
+        public bool TryGroundHeight(float x, float z, out float height)
+        {
+            // Outside the area's height map: none (Picking's -1000).
+            height = Picking.HeightAt(scene, x - scene.Cx, -(z - scene.Cz));
+            return height > -999;
+        }
+
         /// <summary>The linked objects, read when first needed.</summary>
         private LinkIndex? _links;
 
