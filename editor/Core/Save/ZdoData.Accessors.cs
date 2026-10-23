@@ -25,6 +25,9 @@ public sealed partial class ZdoData
     /// <summary>Sets a vector value, replacing one with the same key; null takes it away.</summary>
     public void SetVec3(int key, Vector3? value) => Put(Vec3List, key, value, v => v!.Value);
 
+    /// <summary>Sets a quaternion value, replacing one with the same key; null takes it away.</summary>
+    public void SetQuat(int key, Quaternion? value) => Put(QuatList, key, value, v => v!.Value);
+
     /// <summary>Sets a byte array value, replacing one with the same key; null takes it away.</summary>
     public void SetBytesOrNone(int key, byte[]? value) => Put(ByteList, key, value, v => v);
 

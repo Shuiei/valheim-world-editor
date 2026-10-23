@@ -30,6 +30,7 @@ public class CopyViewTests
         c.SetBytes("b", null);
         c.SetString("s", "hi");
         c.SetLong("l", 1L << 40);
+        c.SetQuaternion("q", new Quaternion(0, 0.5f, 0, -1));
 
         Assert.Equal("8", data.Single(f => f.Key == StableHash.Of("n")).Value);
         Assert.Equal("0.5 0 -1", data.Single(f => f.Key == StableHash.Of("w")).Value);
@@ -37,6 +38,10 @@ public class CopyViewTests
         Assert.False(c.Holds(StableHash.Of("b")));
         Assert.True(c.TryGetString("s", out string s) && s == "hi");
         Assert.True(c.TryGetLong("l", out long l) && l == 1L << 40);
+        Assert.Equal("0 0.5 0 -1", data.Single(f => f.Key == StableHash.Of("q")).Value);
+        Assert.True(c.TryGetQuaternion("q", out var q) && q == new Quaternion(0, 0.5f, 0, -1));
+        c.SetQuaternion("q", null);
+        Assert.False(c.Holds(StableHash.Of("q")));
         Assert.Equal("Cart", c.Prefab);
     }
 }

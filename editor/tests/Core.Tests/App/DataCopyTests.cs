@@ -17,6 +17,7 @@ public class DataCopyTests
         c.SetLong("l", 8);
         c.SetFloat("f", 1.5f);
         c.SetVector3("v", Vector3.One);
+        c.SetQuaternion("q", new Quaternion(0, 1, 0, 0));
         c.SetString("s", "x");
         c.SetBytes("b", [1, 2]);
         var back = ZdoData.Parse(z.Serialize());
@@ -26,14 +27,15 @@ public class DataCopyTests
         Assert.True(view.TryGetFloat("f", out float f));
         Assert.Equal(1.5f, f);
         Assert.True(view.TryGetVector3("v", out var v) && v == Vector3.One);
+        Assert.True(view.TryGetQuaternion("q", out var q) && q == new Quaternion(0, 1, 0, 0));
         Assert.True(view.TryGetString("s", out string? s) && s == "x");
         Assert.True(view.TryGetBytes("b", out byte[] b) && b.SequenceEqual(new byte[] { 1, 2 }));
-        foreach (var unset in new Action[] { () => c.SetInt("i", null), () => c.SetLong("l", null), () => c.SetFloat("f", null), () => c.SetVector3("v", null), () => c.SetString("s", null), () => c.SetBytes("b", null) })
+        foreach (var unset in new Action[] { () => c.SetInt("i", null), () => c.SetLong("l", null), () => c.SetFloat("f", null), () => c.SetVector3("v", null), () => c.SetQuaternion("q", null), () => c.SetString("s", null), () => c.SetBytes("b", null) })
         {
             unset();
         }
         var empty = new ObjectView("thing", default, default, ZdoData.Parse(z.Serialize()));
-        Assert.False(empty.TryGetInt("i", out _) || empty.TryGetLong("l", out _) || empty.TryGetFloat("f", out _) || empty.TryGetVector3("v", out _) || empty.TryGetString("s", out _) || empty.TryGetBytes("b", out _));
+        Assert.False(empty.TryGetInt("i", out _) || empty.TryGetLong("l", out _) || empty.TryGetFloat("f", out _) || empty.TryGetVector3("v", out _) || empty.TryGetQuaternion("q", out _) || empty.TryGetString("s", out _) || empty.TryGetBytes("b", out _));
         Assert.Equal(4, c.Id);
         Assert.Same(z, c.Data);
     }
