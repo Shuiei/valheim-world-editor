@@ -58,14 +58,19 @@ public static partial class ObjectLinks
                 z.IntList.Add((rule.ParentKeys[k], link.Parents[k]));
             }
         }
-        z.Vec3List.Add((rule.OffsetKey, link.Offset));
-        if (link.Euler is { } e)
+        // Under the keys of the parent it hangs on (a carried part has none).
+        var place = link.Placement;
+        if (place.OffsetKey != 0)
         {
-            z.Vec3List.Add((rule.EulerKey, e));
+            z.Vec3List.Add((place.OffsetKey, link.Offset));
         }
-        if (link.Quat is { } q)
+        if (link.Euler is { } e && place.EulerKey != 0)
         {
-            z.QuatList.Add((rule.QuatKey, q));
+            z.Vec3List.Add((place.EulerKey, e));
+        }
+        if (link.Quat is { } q && place.QuatKey != 0)
+        {
+            z.QuatList.Add((place.QuatKey, q));
         }
     }
 

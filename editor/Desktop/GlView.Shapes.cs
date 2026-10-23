@@ -60,7 +60,7 @@ public sealed partial class GlView
             SendCuts(s, wasCut);
             return;
         }
-        var around = new ShapeWorld(world, session, all);
+        var around = new ShapeWorld(world, session, all, s);
         var meshes = new Dictionary<(ObjectKind Kind, Vector4 Color, bool BothSides), (List<float> V, List<uint> I)>();
         foreach (var t in things)
         {

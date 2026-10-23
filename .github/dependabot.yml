@@ -29,6 +29,7 @@ updates:
       - /addons/Riverheim/tests/Riverheim.WorldEditor.Tests
       - /addons/ExpandWorld/tests/ExpandWorld.WorldEditor.Tests
       - /addons/Railroads/tests/Railroads.WorldEditor.Tests
+      - /addons/ValheimRAFT/tests/ValheimRAFT.WorldEditor.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3

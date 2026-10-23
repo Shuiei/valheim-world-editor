@@ -11,6 +11,7 @@ a server's `BepInEx` folder), and the add-on of the same editor release.
 | [Railroads](../../addons/Railroads/README.md) | Railroads (`Railroads.dll`) | Draws the mod's track, stations and trains from its own models; the pieces you place, paste, move or turn work in the game, live too |
 | [Riverheim](../../addons/Riverheim/README.md) | Riverheim (`Riverheim.dll`) | Opens Riverheim worlds (refused without it), drawn with your own copy of the mod; Riverheim as a New world generator |
 | [Tunnelheim](../../addons/Tunnelheim/README.md) | Tunnelheim (`ValheimTunneling.dll`) | Draws the mod's tunnels, and a **Tunnel** tool (digs, Add Earth, bores, rooms, shafts, stairs); tunnels go with copies and blueprints |
+| [ValheimRAFT](../../addons/ValheimRAFT/README.md) | ValheimRAFT (`ValheimRAFT.dll`) | Draws the mod's ships and land vehicles whole, with their sails and ropes; each moves, copies and deletes as one |
 
 1. Close the editor.
 2. From the editor's [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest) (or Nexus Mods),

@@ -71,6 +71,17 @@ public static partial class ModExtensions
         }
 
         /// <inheritdoc/>
+        public void AddLinkPlacer(ILinkPlacer placer, params string[] prefabs)
+        {
+            foreach (string p in prefabs)
+            {
+                int h = StableHash.Of(p);
+                (loaded.LinkPlacers.TryGetValue(h, out var list) ? list : loaded.LinkPlacers[h] = []).Add(placer);
+                loaded.LinkPlacerPrefabs[h] = p;
+            }
+        }
+
+        /// <inheritdoc/>
         public void AddGroundCuts(IGroundCutter cutter, params string[] prefabs)
         {
             foreach (string p in prefabs)

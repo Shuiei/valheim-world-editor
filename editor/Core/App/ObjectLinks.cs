@@ -29,12 +29,31 @@ namespace TerrainEditor.App;
 /// The game saves a part at its group's root (the mod builds it from its offset when the group loads), not where it is
 /// drawn.
 /// </param>
+/// <param name="Placements">
+/// How a part is placed when it hangs on one of the parent keys, by the parent key's index (a manifest's
+/// "placements"): null, or a null entry, for the rule's own offset and turn keys and storage.
+/// </param>
 public sealed record LinkRule(string Name, int IdKey, int[] ParentKeys, int OffsetKey, int EulerKey, int QuatKey, int[] ReferenceKeys, int[] DropKeys,
-    bool StoredAtRoot)
+    bool StoredAtRoot, ParentPlacement?[]? Placements = null)
 {
     /// <summary>The name used when a mod gives none.</summary>
     public const string DefaultName = "group";
+
+    /// <summary>How a part hanging on the parent key at this index is placed (the rule's own when none is given); -1: a root's.</summary>
+    public ParentPlacement PlacementAt(int parent) =>
+        Placements is { } p && parent >= 0 && parent < p.Length && p[parent] is { } own ? own : new ParentPlacement(OffsetKey, EulerKey, QuatKey, StoredAtRoot, false);
 }
+
+/// <summary>How a part is placed on what it hangs on, when it hangs on it through a given parent key (LinkRule).</summary>
+/// <param name="OffsetKey">Vec3 data key of its place in the parent's frame (0: none, for a carried part).</param>
+/// <param name="EulerKey">Vec3 data key of its turn there, Unity Euler degrees (0: none).</param>
+/// <param name="QuatKey">Quaternion data key of that turn, used when the Euler one is not stored (0: none).</param>
+/// <param name="StoredAtRoot">The game saves it at its group's root, not where it is drawn.</param>
+/// <param name="Carried">
+/// It has no offset of its own: the group carries it where the game saved it (a cart aboard a ship), drawn there, moved
+/// and turned with the group and saved where it stands.
+/// </param>
+public sealed record ParentPlacement(int OffsetKey, int EulerKey, int QuatKey, bool StoredAtRoot, bool Carried);
 
 /// <summary>The link rules in use and the data keys they read, swapped in whole (see ObjectLinks).</summary>
 public sealed class LinkSet
@@ -62,14 +81,20 @@ public sealed class LinkSet
         {
             IntKeys.Add(r.IdKey);
             IntKeys.UnionWith(r.ParentKeys);
-            Vec3Keys.Add(r.OffsetKey);
-            if (r.EulerKey != 0)
+            foreach (var p in (r.Placements ?? []).Append(r.PlacementAt(-1)))
             {
-                Vec3Keys.Add(r.EulerKey);
-            }
-            if (r.QuatKey != 0)
-            {
-                QuatKeys.Add(r.QuatKey);
+                if (p == null)
+                {
+                    continue;
+                }
+                foreach (int k in new[] { p.OffsetKey, p.EulerKey }.Where(k => k != 0))
+                {
+                    Vec3Keys.Add(k);
+                }
+                if (p.QuatKey != 0)
+                {
+                    QuatKeys.Add(p.QuatKey);
+                }
             }
         }
     }

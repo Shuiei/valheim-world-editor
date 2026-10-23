@@ -63,7 +63,7 @@ public class ObjectLinksRemapHelpersTests
         var rule = new LinkRule("group", 1, [2], 11, 12, 13, [], [], true);
         var link = new ObjectLink(rule, 7, [], new Vector3(1f, 2f, 3f), new Vector3(4f, 5f, 6f), new Quaternion(0.1f, 0.2f, 0.3f, 0.4f));
         var data = new List<ObjectField>();
-        PrivateMember.Call(typeof(ObjectLinks), "MirrorPlacement", null, data, rule, link);
+        PrivateMember.Call(typeof(ObjectLinks), "MirrorPlacement", null, data, link);
         Assert.Equal("-1 2 3", data.Find(f => f.Section == "vec3" && f.Key == 11)!.Value);
         Assert.Equal("4 -5 -6", data.Find(f => f.Section == "vec3" && f.Key == 12)!.Value);
         Assert.Equal("0.1 -0.2 -0.3 0.4", data.Find(f => f.Section == "quats" && f.Key == 13)!.Value);

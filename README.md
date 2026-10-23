@@ -65,7 +65,8 @@ The same documentation is in the editor (**Documentation** on the start page): s
 - **Help**: [troubleshooting](docs/help/troubleshooting.md), [questions](docs/help/faq.md),
   [shortcuts](docs/help/shortcuts.md), [glossary](docs/help/glossary.md).
 - **Mods**: [Expand World](addons/ExpandWorld/README.md), [Railroads](addons/Railroads/README.md),
-  [Riverheim](addons/Riverheim/README.md) and [Tunnelheim](addons/Tunnelheim/README.md) add-ons;
+  [Riverheim](addons/Riverheim/README.md), [Tunnelheim](addons/Tunnelheim/README.md) and
+  [ValheimRAFT](addons/ValheimRAFT/README.md) add-ons;
   [for mod authors](docs/modding.md).
 
 What changed and when: [CHANGELOG.md](CHANGELOG.md).

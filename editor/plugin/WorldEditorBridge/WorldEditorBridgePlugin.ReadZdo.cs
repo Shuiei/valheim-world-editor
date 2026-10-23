@@ -99,7 +99,10 @@ public sealed partial class WorldEditorBridgePlugin
         /// <inheritdoc cref="Floats"/>
         public List<KeyValuePair<int, byte[]>> Bytes { get; } = [];
 
-        /// <summary>Creates the object (main thread only), relinking it when it had a link, and returns it.</summary>
+        /// <summary>
+        /// Creates the object (main thread only), relinking it when it had a link, hands it to the mods (Announce) and
+        /// returns it.
+        /// </summary>
         public ZDO Make()
         {
             ZDO zdo = ZDOMan.instance.CreateNewZDO(Position, Prefab);
@@ -113,6 +116,7 @@ public sealed partial class WorldEditorBridgePlugin
             {
                 Relink(zdo, LinkType, LinkHash);
             }
+            Announce(zdo);
             return zdo;
         }
 

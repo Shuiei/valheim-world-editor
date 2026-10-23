@@ -22,7 +22,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 | `editor/plugin/WorldEditorBridge/` | `WorldEditorBridge` | The BepInEx plugin for live mode: `WorldEditorBridgePlugin.cs` (and `WorldEditorBridgePlugin.Catalogue.cs`, `.Models.cs` for `GET /catalogue`, `POST /models`), .NET Framework 4.7.2, inside the game. It shares no code with the editor, only a byte format and `VERSION`. |
 | `editor/tests/Core.Tests/` | `WorldEditor.Tests` | Core's tests (xUnit v3), laid out like `editor/Core/`. |
 | `editor/tests/Desktop.Tests/` | `TerrainEditor.Desktop.Tests` | The app's tests, xUnit v3 with Avalonia's headless mode, laid out like `editor/Desktop/`. |
-| `editor/tests/AddOns.Tests/` | `WorldEditor.Tests` | The repository's add-ons in the editor: each one installed as a player installs it, loaded by Core's own code and its hooks called (`AddOnSandbox`, `RepositoryAddOns`); with checks of an add-on's own (`Tunnelheim/`). |
+| `editor/tests/AddOns.Tests/` | `WorldEditor.Tests` | The repository's add-ons in the editor: each one installed as a player installs it, loaded by Core's own code and its hooks called (`AddOnSandbox`, `RepositoryAddOns`); with checks of an add-on's own (`Tunnelheim/`, `ValheimRAFT/`). |
 | `editor/tests/Support/` | `WorldEditor.Tests` | Helpers compiled into both test projects: the test world, the fixtures, a stand-in game. |
 | `tools/WorldCheck/` | `TerrainEditor.WorldCheck` | Developer checks of the generator and the writer against the game (see [development.md](development.md#worldcheck)). |
 | `tools/DocsScreenshots/` | `TerrainEditor.DocsScreenshots` | The pictures in `docs/images`, taken through the app's `--driver`. |
@@ -544,10 +544,12 @@ run on any thread; what is in use is swapped in whole (`State`). The SDK's sampl
 mod's `worldeditor.json` (`ModManifests`; the editor ships none for any mod, its tests give their example mod's through
 `ModManifests.Base`); it names the data keys of an object's id, of what a part hangs on, of its offset and turn in that
 one's frame, of other ids a copy rewrites and of values a copy leaves out, and whether the game saves parts at their
-root or where they are drawn. `WorldSave.Links` keeps each object's
+root or where they are drawn; its `Placements` (a `ParentPlacement` by parent key) give the parts on one parent key
+their own keys, or carry them where they are saved. `WorldSave.Links` keeps each object's
 `ObjectLink`, read by the rules in use as the world was read (the manifests are read before; its whole stored turn
 too: `Pieces` keep only the turn about y); `LinkIndex` is the groups as they are now (saved objects not deleted, and
-`NewObject`s through `ObjectLinks.LinkOf`), giving a part's `Pose` and a group's `Group`. Only the drawn place
+`NewObject`s through `ObjectLinks.LinkOf`, each with its prefab and its data read when an extension's link placer
+needs it: `ModExtensions.LinkFrameOf`, `LinkPlaceOf`), giving a part's `Pose` and a group's `Group`. Only the drawn place
 changes: `WorldScene.Placed` gives a `Thing` its pose (in `ReadThings`, `FindThings`, and `EditSession.PlaceLinked`
 after every change of things), while `ObjectRef.Position` and `NewObject.Position` stay the stored ones (live
 refinding, zones, the writer). A part never moves alone (`EditSession.WholeGroupMoves` in `Transform`;

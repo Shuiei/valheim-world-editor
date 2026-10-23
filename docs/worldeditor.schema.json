@@ -55,6 +55,21 @@
           "rotation": { "$ref": "#/$defs/text", "description": "Vec3 data key of a part's turn in that frame, Unity Euler degrees." },
           "rotationQuaternion": { "$ref": "#/$defs/text", "description": "Quaternion data key of that turn, used when rotation is not stored." },
           "storedAt": { "enum": ["root", "own"], "description": "Where the game saves a part: at its group's root (default) or where it stands." },
+          "placements": {
+            "type": "object",
+            "description": "By parent key (one of parents): how a part hanging on it is placed, when not as the rule says.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "offset": { "$ref": "#/$defs/text", "description": "Vec3 data key of its place in that parent's frame (default: the rule's offset)." },
+                "rotation": { "$ref": "#/$defs/text", "description": "Vec3 data key of its turn there, Unity Euler degrees (default: the rule's)." },
+                "rotationQuaternion": { "$ref": "#/$defs/text", "description": "Quaternion data key of that turn (default: the rule's)." },
+                "storedAt": { "enum": ["root", "own"], "description": "Where the game saves such a part (default: the rule's)." },
+                "carried": { "type": "boolean", "description": "No offset of its own: the group carries it where the game saved it (with none of the keys above)." }
+              },
+              "additionalProperties": false
+            }
+          },
           "references": { "$ref": "#/$defs/keys", "description": "Other int data keys naming an object's id: a pasted copy's follow the new ids." },
           "dropOnCopy": { "$ref": "#/$defs/keys", "description": "Data keys a pasted copy leaves out." }
         },

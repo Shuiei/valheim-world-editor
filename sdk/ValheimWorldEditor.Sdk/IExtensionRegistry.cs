@@ -58,6 +58,15 @@ public interface IExtensionRegistry
     void AddShapes(IShapeProvider provider, params string[] prefabs);
 
     /// <summary>
+    /// Places linked parts where the mod builds them when their data alone does not say it (see
+    /// <see cref="ILinkPlacer"/>): the frame the parts of an object of the prefabs hang in, and where a part of the
+    /// prefabs stands on what it hangs on.
+    /// </summary>
+    /// <param name="placer">Gives frames and places.</param>
+    /// <param name="prefabs">The prefabs it places for, as parents and as parts.</param>
+    void AddLinkPlacer(ILinkPlacer placer, params string[] prefabs);
+
+    /// <summary>
     /// Leaves the ground undrawn where an object opens it: the mouth of a tunnel or a pit the mod digs while the game
     /// runs, so that what the mod builds below (<see cref="AddShapes"/>) shows.
     /// </summary>
