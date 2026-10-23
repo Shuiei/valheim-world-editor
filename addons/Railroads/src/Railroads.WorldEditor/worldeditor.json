@@ -49,6 +49,10 @@
     "bf_paid_stone": { "label": "Paid stone", "readOnly": true, "help": "What removing this track gives back." },
     "bf_corewood": { "label": "Paid core wood", "readOnly": true, "help": "What removing this track gives back." }
   },
+  "ties": [
+    { "name": "train", "root": "bf_wagons", "member": "bf_self", "idBytes": 12 },
+    { "name": "flatbed", "root": "bf_deck_key", "member": "bf_deck" }
+  ],
   "prefabs": {
     "bf_track_straight": { "group": "Track" },
     "bf_track_straight_1": { "group": "Track" },

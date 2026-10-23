@@ -4,9 +4,10 @@ using Xunit;
 namespace Railroads.WorldEditor.Tests;
 
 /// <summary>
-/// Pasted copies of the mod's pieces made pieces of their own: a vehicle leaves the original's track, trip, wagons and
-/// driver behind and keeps its coal and signs; a station sign leaves the original's stop and keeps its name; a flatbed
-/// and what is built on its deck leave the deck's tie. (Where the copy lands sets the rest: RailPlacerTests.)
+/// Pasted copies of the mod's pieces made pieces of their own: a vehicle leaves the original's track, trip and driver
+/// behind and keeps its coal and signs; a station sign leaves the original's stop and keeps its name; the train's and
+/// the deck's ids are left to the editor's ties (the manifest's), a piece no longer on a deck leaves its place there.
+/// (Where the copy lands sets the rest: RailPlacerTests.)
 /// </summary>
 public class PastedCopiesTests
 {
@@ -14,7 +15,7 @@ public class PastedCopiesTests
     [
         new("bytes", RailroadsMod.Keys.Line), new("float", RailroadsMod.Keys.At), new("int", RailroadsMod.Keys.Dir),
         new("bytes", RailroadsMod.Keys.Trail), new("bytes", RailroadsMod.Keys.Route), new("bytes", RailroadsMod.Keys.After),
-        new("bytes", RailroadsMod.Keys.Legs), new("int", RailroadsMod.Keys.Moving), new("bytes", RailroadsMod.Keys.Wagons),
+        new("bytes", RailroadsMod.Keys.Legs), new("int", RailroadsMod.Keys.Moving),
         new("float", RailroadsMod.Keys.Speed), new("long", RailroadsMod.Keys.Driver), new("string", RailroadsMod.Keys.Destination),
         new("int", RailroadsMod.Keys.Switch), new("int", RailroadsMod.Keys.Gear), new("int", RailroadsMod.Keys.Way),
         new("float", RailroadsMod.Keys.Stop),
@@ -58,7 +59,7 @@ public class PastedCopiesTests
     }
 
     [Fact]
-    public void APastedWagonNoLongerNamesItself()
+    public void AWagonsOwnIdIsLeftToTheTrainsTie()
     {
         var copy = new FakeObject("bf_wagon");
         copy.Bytes[RailroadsMod.Keys.Self] = ObjectIds.Write([(77, 5)]);
@@ -67,7 +68,7 @@ public class PastedCopiesTests
 
         Rewrite(copy);
 
-        Assert.Equal([RailroadsMod.Keys.Sign], copy.Keys);
+        Assert.Equal(new[] { RailroadsMod.Keys.Self, RailroadsMod.Keys.Sign }.Order(StringComparer.Ordinal), copy.Keys.Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -96,7 +97,7 @@ public class PastedCopiesTests
     }
 
     [Fact]
-    public void APastedFlatbedAndItsDeckLeaveTheirTie()
+    public void APieceOnADeckKeepsItsPlaceThereWhileItsDeckWasCopied()
     {
         var flatbed = new FakeObject("bf_wagon_flat");
         flatbed.Longs[RailroadsMod.Keys.DeckKey] = 99;
@@ -104,13 +105,19 @@ public class PastedCopiesTests
         floor.Longs[RailroadsMod.Keys.Deck] = 99;
         floor.Vectors[RailroadsMod.Keys.DeckPos] = new Vector3(1, 1.5f, 0);
         floor.Quaternions[RailroadsMod.Keys.DeckRot] = Quaternion.Identity;
-        floor.Ints["health"] = 400;
+        // Its flatbed not copied: the editor's tie took its deck's id away.
+        var loose = new FakeObject("wood_floor");
+        loose.Vectors[RailroadsMod.Keys.DeckPos] = new Vector3(1, 1.5f, 0);
+        loose.Quaternions[RailroadsMod.Keys.DeckRot] = Quaternion.Identity;
+        loose.Ints["health"] = 400;
 
         Rewrite(flatbed);
         Rewrite(floor);
+        Rewrite(loose);
 
-        Assert.Empty(flatbed.Keys);
-        Assert.Equal(["health"], floor.Keys);
+        Assert.Equal([RailroadsMod.Keys.DeckKey], flatbed.Keys);
+        Assert.Equal(3, floor.Keys.Count());
+        Assert.Equal(["health"], loose.Keys);
     }
 
     [Fact]
@@ -125,8 +132,12 @@ public class PastedCopiesTests
         {
             Assert.Contains(name, PastedCopies.Keys);
         }
-        Assert.Contains(RailroadsMod.Keys.Self, PastedCopies.Keys);
         Assert.Contains(RailroadsMod.Keys.DeckRot, PastedCopies.Keys);
+        // The ties' keys are the editor's to rewrite (the manifest's "ties").
+        Assert.DoesNotContain(RailroadsMod.Keys.Self, PastedCopies.Keys);
+        Assert.DoesNotContain(RailroadsMod.Keys.Wagons, PastedCopies.Keys);
+        Assert.DoesNotContain(RailroadsMod.Keys.DeckKey, PastedCopies.Keys);
+        Assert.DoesNotContain(RailroadsMod.Keys.Deck, PastedCopies.Keys);
     }
 
     /// <summary>Some value of the key's type.</summary>

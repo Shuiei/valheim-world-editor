@@ -107,13 +107,13 @@ public class ReferenceTests
     }
 
     [Fact]
-    public void PastedCopiesNameNoOriginal()
+    public void PastedCopiesKeepNoTrackOrTripOfTheOriginals()
     {
         foreach (var o in Reference.Objects.Select(r => Copy(r.Object)))
         {
             new PastedCopies().Rewrite(o, new NoIds());
-            Assert.DoesNotContain(o.Keys, k => k is RailroadsMod.Keys.Wagons or RailroadsMod.Keys.Self or RailroadsMod.Keys.Deck or RailroadsMod.Keys.DeckKey
-                or RailroadsMod.Keys.Line or RailroadsMod.Keys.Route or RailroadsMod.Keys.Stop);
+            Assert.DoesNotContain(o.Keys, k => k is RailroadsMod.Keys.Line or RailroadsMod.Keys.Trail or RailroadsMod.Keys.Route or RailroadsMod.Keys.Stop
+                or RailroadsMod.Keys.Moving or RailroadsMod.Keys.Legs);
         }
     }
 

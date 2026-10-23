@@ -37,6 +37,14 @@ public class ManifestTests
     }
 
     [Fact]
+    public void ATrainAndAFlatbedAreTiedToWhatTheyName()
+    {
+        var ties = Manifest["ties"]!.AsArray().Select(t => ((string?)t!["root"], (string?)t["member"], (int?)t["idBytes"])).ToList();
+
+        Assert.Equal([(RailroadsMod.Keys.Wagons, RailroadsMod.Keys.Self, ObjectIds.IdBytes), (RailroadsMod.Keys.DeckKey, RailroadsMod.Keys.Deck, null)], ties);
+    }
+
+    [Fact]
     public void EveryPieceIsListedUnderItsGroupOrHiddenWhenRetired()
     {
         var prefabs = Manifest["prefabs"]!.AsObject();

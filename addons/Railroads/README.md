@@ -30,10 +30,14 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
     comes near, as a vehicle just built;
   - a station sign stops trains at the nearest point of straight track (or of a loop's circle) within 10 m, as when
     it is built, and is in the trains' station menu.
+- **Trains and flatbeds stay whole.** A locomotive and the wagons it pulls are one train, a flatbed and
+  what is built on its deck one deck: selecting any of them and moving, turning or copying takes the whole train,
+  deleting the locomotive takes its wagons, and the train goes on the track where you put it.
 - **Pasted copies are pieces of their own.** The mod names other objects by the game's ids and ids of its own, which
-  in a copy would name the originals: a pasted vehicle leaves the original's wagons, driver and trip behind (it keeps
-  its coal, sign and load), a pasted wagon no longer takes the original's place in its train, a pasted flatbed gets
-  a deck of its own, and a piece built on a deck is pasted as an ordinary piece where it lands.
+  in a copy would name the originals: a pasted train pulls the copy's own wagons (the mod couples them as it does when
+  a world loads) and leaves the original's driver and trip behind (it keeps its coal, sign and load), a pasted flatbed
+  carries the copy's own deck, a wagon pasted without its locomotive stands loose, and a piece pasted without its
+  flatbed is an ordinary piece where it lands.
 - **Groups the pieces** in the Workshop's Build panel (**Mods** tab) as Track, Stations and Trains; the pieces the mod
   retired (its first station, its 6 m switches) are not offered, those in worlds still show.
 
@@ -43,13 +47,11 @@ track and vehicles are applied in the game, keep their turn after a restart, and
 
 ## Good to know
 
-- **Move a train whole.** The game lays a train's wagons out behind its locomotive along the track: move the
-  locomotive with its wagons (and what is built on a flatbed), or the wagons go back behind it in the game. The
-  editor shows the game's places again when you reload.
-- **A coupled train is pasted loose.** Pasted wagons stand on the track uncoupled: couple them in the game.
+- **A train follows its track.** A train moved or turned as a block lands where you put it, and the game then lays
+  its wagons out behind the locomotive along the track, as it does while the train runs: put it down on track that
+  carries the whole train.
 - **Station names.** A pasted sign keeps the original's name; give it its own in the game (the mod does not let two
   stations share a name when you name them there).
-- While you paste, the preview shows the copy's outline only, not the pieces themselves.
 
 ## Install
 
