@@ -77,6 +77,25 @@ public sealed class EditSessionPlacersTests : IDisposable
     }
 
     [Fact]
+    public void ObjectsAStepsGroundPutsDownArePlaced()
+    {
+        // A paste's objects are listed by its ground step, as they stand on the ground it leaves.
+        var placer = new RockPlacer();
+        ModExtensions.UseForTests(("Rocks", placer));
+        var s = TestScenes.Flat(1);
+        var add = new List<(NewObject, bool)>();
+
+        var made = s.Commit("Paste", g =>
+        {
+            add.Add(New(Rock, new Vector3(40, 30, 5)));
+            return ([], (0, 0, 0, 0));
+        }, [], add);
+
+        Assert.Equal([new Vector3(40, 30, 5)], Assert.Single(placer.Steps));
+        Assert.Equal(40, X(s, made[0]));
+    }
+
+    [Fact]
     public void AnObjectChangedWhereItStandsIsNoPlacement()
     {
         var placer = new RockPlacer();

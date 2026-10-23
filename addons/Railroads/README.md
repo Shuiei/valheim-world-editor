@@ -2,7 +2,8 @@
 
 An add-on for the Valheim World Editor that teaches it about [Railroads](https://thunderstore.io/c/valheim/p/VladasZ/Railroads/),
 VladasZ's mod of stone track, coal trains and stations. The editor draws a world's track, stations and trains as the
-game builds them, and copies of them pasted with the editor work in the game.
+game builds them, and the track, trains and station signs you place, paste, move or turn with the editor work in the
+game as if built there, in a saved world or live.
 
 Not made by Railroads' author: the add-on reads the mod's own model files from your copy of the mod, and the data the
 mod keeps in a world, following what the mod does with them. Railroads itself is unchanged and stays in
@@ -14,38 +15,45 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
   its own, which no asset bundle holds, so the editor cannot find them by itself: the add-on reads those files from
   the `meshes` folder beside your `Railroads.dll` and draws every piece from them, in wood, stone and iron colours:
   each straight, curve, slope, switch, crossing, loop and junction, the station signs, consoles and old stations (with
-  their legs), and the locomotive, wagons, flatbed and hand cart on their wheels. The levers, rods, lamps and the
-  wagons' loads are left out.
-- **Names the mod's data** in the inspector (station name, coal, wagon sign, restaurant name and the rest), and shows
-  in words what a train keeps as bytes: the track lines it stands on and runs along, its wagons and the later legs of
-  its trip. What the mod sets itself is shown but not editable.
-- **Pasted copies work in the game.** The mod keeps world places and the game's object ids in its data, which name
-  the originals; a pasted copy is made a piece of its own:
-  - track keeps the turn it is pasted with (the mod turns each piece back to the turn it keeps as the world loads);
-  - a locomotive, wagon or hand cart leaves the original's place on the track, trip, wagons and driver behind and
-    keeps its coal, sign and load: the mod puts it on the track nearest where it stands (within 1.5 m) when a player
-    comes near, as one just built;
-  - a flatbed gets a deck of its own, and a piece built on a deck is pasted as an ordinary piece where it lands;
-  - a station sign keeps its name but not the original's stop (see below).
+  their legs), and the locomotive, wagons, flatbed and hand cart on their wheels. The levers, rods, lamps, the
+  wagons' loads and what hangs on the locomotive's item stand are left out. The pieces are picked by what is drawn.
+- **Names the mod's data** in the inspector (station name, coal, lamps' fuel, wagon sign, restaurant name and the
+  rest), and shows in words what a train keeps as bytes: the track lines it stands on and runs along, its wagons and
+  the later legs of its trip. What the mod sets itself is shown but not editable.
+- **Keeps pieces right wherever you put them.** The mod works some things out only when a player builds a piece
+  with the hammer, or as the world loads; wherever the editor places, pastes, moves or turns a piece (any tool, a
+  script or Claude), the add-on sets them as the mod would:
+  - track keeps the turn you give it (the mod gives each piece back the turn it keeps as the world loads, which would
+    turn it back);
+  - a locomotive, wagon or hand cart stands on the line of track nearest it (within 1.5 m), at that point and facing
+    its way, stopped: the game runs it from there. With no track that near, the mod puts it on track when a player
+    comes near, as a vehicle just built;
+  - a station sign stops trains at the nearest point of straight track (or of a loop's circle) within 10 m, as when
+    it is built, and is in the trains' station menu.
+- **Pasted copies are pieces of their own.** The mod names other objects by the game's ids and ids of its own, which
+  in a copy would name the originals: a pasted vehicle leaves the original's wagons, driver and trip behind (it keeps
+  its coal, sign and load), a pasted wagon no longer takes the original's place in its train, a pasted flatbed gets
+  a deck of its own, and a piece built on a deck is pasted as an ordinary piece where it lands.
 - **Groups the pieces** in the Workshop's Build panel (**Mods** tab) as Track, Stations and Trains; the pieces the mod
   retired (its first station, its 6 m switches) are not offered, those in worlds still show.
 
-## Limits
+Checked on a dedicated server running Railroads 0.2.6 and the editor's plugin, live: the add-on puts vehicles on the
+same lines and at the same points as the mod, and signs' stops at the same place; pasted, moved, turned and deleted
+track and vehicles are applied in the game, keep their turn after a restart, and leave the original train as it was.
 
-- **Station signs pasted or placed with the editor are no stop.** The mod finds a sign's stop on the track once, when
-  it is built with the hammer. Build the sign again in the game.
-- **Trains stay on their track.** A locomotive or a hand cart (and the wagons it pulls) moved with the Select tool is
-  put back where the mod's track says when the game runs it; drive it there in the game, or paste a copy and delete
-  the original.
-- **Track turned with the Select tool turns back.** The mod gives each piece back its exact turn as the world loads.
-  Moving track works; to turn it, paste a turned copy and delete the original.
-- **A coupled train is not copied as one.** Pasted wagons stand loose: couple them again in the game.
-- Each piece also shows the editor's grey box for things it has no model of (the add-on draws around it), and is
-  picked by that box.
+## Good to know
+
+- **Move a train whole.** The game lays a train's wagons out behind its locomotive along the track: move the
+  locomotive with its wagons (and what is built on a flatbed), or the wagons go back behind it in the game. The
+  editor shows the game's places again when you reload.
+- **A coupled train is pasted loose.** Pasted wagons stand on the track uncoupled: couple them in the game.
+- **Station names.** A pasted sign keeps the original's name; give it its own in the game (the mod does not let two
+  stations share a name when you name them there).
+- While you paste, the preview shows the copy's outline only, not the pieces themselves.
 
 ## Install
 
-1. The Valheim World Editor 1.110.0 or later.
+1. The Valheim World Editor 1.111.0 or later.
 2. From the editor's [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page,
    `ValheimWorldEditor-addon-Railroads-<version>.zip`: unpack it into the `addons` folder next to the editor (on
    macOS, next to `ValheimWorldEditor.app`), so that you have `addons/Railroads/worldeditor.json`.
@@ -64,5 +72,7 @@ tools/addons.sh dist                    # dist/ValheimWorldEditor-addon-Railroad
 ```
 
 Building the tests downloads Railroads 0.2.6, the version the add-on follows, from Thunderstore (never kept in the
-repository): every model of it is read and drawn. The add-on's version is `VERSION` here, its changes `CHANGELOG.md`:
-it goes out with every editor release, under its own version.
+repository): every model of it is read and drawn. The tests also replay objects the real mod made on a local server
+(`tests/Railroads.WorldEditor.Tests/fixtures/railroads-reference.txt`: track, a station sign, a train sent to it with
+a wagon and a flatbed carrying a floor, a hand cart). The add-on's version is `VERSION` here, its changes
+`CHANGELOG.md`: it goes out with every editor release, under its own version.

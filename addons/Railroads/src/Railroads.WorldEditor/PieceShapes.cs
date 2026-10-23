@@ -14,13 +14,13 @@ namespace Railroads.WorldEditor;
 public sealed class PieceShapes(RailPiece piece, ModelLibrary models) : IShapeProvider
 {
     /// <summary>Wood, as the mod's wood beams look.</summary>
-    public static readonly Vector4 Wood = new(0.52f, 0.38f, 0.25f, 1);
+    public static readonly Vector4 Wood = new(0.36f, 0.25f, 0.15f, 1);
 
     /// <summary>Stone, as the mod's stone walls look.</summary>
-    public static readonly Vector4 Stone = new(0.6f, 0.59f, 0.56f, 1);
+    public static readonly Vector4 Stone = new(0.45f, 0.44f, 0.41f, 1);
 
     /// <summary>Iron, as the mod's iron beams look.</summary>
-    public static readonly Vector4 Iron = new(0.3f, 0.3f, 0.32f, 1);
+    public static readonly Vector4 Iron = new(0.17f, 0.17f, 0.19f, 1);
 
     private readonly object _gate = new();
 

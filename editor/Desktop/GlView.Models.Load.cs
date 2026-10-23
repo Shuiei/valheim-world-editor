@@ -54,18 +54,38 @@ public sealed partial class GlView
         var meshes = new Dictionary<string, ModelStore.MeshData>();
         var mats = new Dictionary<string, ModelStore.MaterialData>();
         var (lo, hi) = model != null ? ReadParts(model, meshes, mats, images, claimed) : (new Vector3(float.MaxValue), new Vector3(float.MinValue));
+        var shapes = lo.X > hi.X ? ShapesBox(g.Key.Prefab) : null;
         if (lo.X > hi.X)
         {
-            // No model: the stand-in box.
-            (lo, hi) = StandInBox;
+            // No model: the box of what a mod's extension draws of it, else the stand-in box.
+            (lo, hi) = shapes ?? StandInBox;
         }
         lock (_groups)
         {
             g.RootScale = model?.RootScale ?? Vector3.One;
             g.HasModel = model != null;
+            g.DrawnByShapes = shapes != null;
             g.Box = (lo, hi);
         }
         _ready.Enqueue(new ReadyModel(g, model, meshes, mats, images));
+    }
+
+    /// <summary>
+    /// The box, in its own frame, of the shapes the running extensions draw for a thing of a kind with none of its data
+    /// (ModExtensions.ShapesOf); null when they draw none (or only in the world's frame, reaching other objects).
+    /// </summary>
+    private static (Vector3 Min, Vector3 Max)? ShapesBox(int prefab)
+    {
+        if (!ModExtensions.HasShapes(prefab))
+        {
+            return null;
+        }
+        var view = new ObjectView(Terrain.PrefabCatalog.NameOf(prefab) ?? "", Vector3.Zero, Vector3.Zero, new Save.ZdoData { Prefab = prefab });
+        // In the frame models are read in: z mirrored, as the game's meshes are (Unity is left-handed).
+        var corners = ModExtensions.ShapesOf(prefab, view, ModExtensions.NoWorld).Where(s => !s.WorldSpace).SelectMany(s => s.Vertices)
+            .Select(v => v with { Z = -v.Z }).ToList();
+        return corners.Count == 0 ? null
+            : (corners.Aggregate(Vector3.Min), corners.Aggregate(Vector3.Max));
     }
 
     /// <summary>

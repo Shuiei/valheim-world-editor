@@ -76,6 +76,11 @@ public sealed partial class GlView
         public bool Ready;
         /// <summary>A model was read (else the batches are the stand-in box).</summary>
         public bool HasModel;
+        /// <summary>
+        /// No model, but a mod's extension draws its things (ModExtensions.ShapesOf): no stand-in box is drawn, and its
+        /// box is that of the extension's shapes.
+        /// </summary>
+        public bool DrawnByShapes;
     }
     /// <summary>By prefab, piece or not and tamed or not: tamed creatures are their own View kind.</summary>
     private readonly Dictionary<(int, bool, bool), Group> _groups = [];

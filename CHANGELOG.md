@@ -17,6 +17,11 @@ the plugin is unchanged in versions without that part.
   rewriter or a tool's edit can now set or take away a quaternion value (`ICopy.SetQuaternion`). See
   [Hooks](docs/modding.md#hooks).
 
+### Changed
+- **Mods' objects an add-on draws show as drawn.** A mod's object the editor has no model of but an add-on or a mod's
+  extension draws no longer shows the grey stand-in box inside its drawing, and is picked and outlined by what is
+  drawn.
+
 ## v1.109.0 — 2026-10-22
 
 ### Changed

@@ -2,10 +2,10 @@ Railroads add-on for the Valheim World Editor
 =============================================
 
 Shows the track, stations and trains of Railroads in the Valheim World Editor, as the game builds them, and keeps
-copies of them pasted with the editor working in the game.
+the pieces you place, paste, move or turn with the editor working in the game, saved or live.
 
 Install: put this Railroads folder in the "addons" folder next to the editor (on macOS, next to
-ValheimWorldEditor.app), so that it holds addons/Railroads/worldeditor.json. Needs the Valheim World Editor 1.110.0
+ValheimWorldEditor.app), so that it holds addons/Railroads/worldeditor.json. Needs the Valheim World Editor 1.111.0
 or later. The add-on is used while Railroads (Railroads.dll, with its meshes folder) is in one of the BepInEx plugins
 folders the editor knows; Settings lists it under Add-ons.
 
