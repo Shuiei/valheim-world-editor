@@ -22,7 +22,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 | `editor/plugin/WorldEditorBridge/` | `WorldEditorBridge` | The BepInEx plugin for live mode: `WorldEditorBridgePlugin.cs` (and `WorldEditorBridgePlugin.Catalogue.cs`, `.Models.cs` for `GET /catalogue`, `POST /models`), .NET Framework 4.7.2, inside the game. It shares no code with the editor, only a byte format and `VERSION`. |
 | `editor/tests/Core.Tests/` | `WorldEditor.Tests` | Core's tests (xUnit v3), laid out like `editor/Core/`. |
 | `editor/tests/Desktop.Tests/` | `TerrainEditor.Desktop.Tests` | The app's tests, xUnit v3 with Avalonia's headless mode, laid out like `editor/Desktop/`. |
-| `editor/tests/AddOns.Tests/` | `WorldEditor.Tests` | The repository's add-ons in the editor: each one installed as a player installs it, loaded by Core's own code and its hooks called (`AddOnSandbox`, `RepositoryAddOns`); with checks of an add-on's own (`Tunnelheim/`). |
+| `editor/tests/AddOns.Tests/` | `WorldEditor.Tests` | The repository's add-ons in the editor: each one installed as a player installs it, loaded by Core's own code and its hooks called (`AddOnSandbox`, `RepositoryAddOns`); with checks of an add-on's own (`Tunnelheim/`, `ValheimRAFT/`). |
 | `editor/tests/Support/` | `WorldEditor.Tests` | Helpers compiled into both test projects: the test world, the fixtures, a stand-in game. |
 | `tools/WorldCheck/` | `TerrainEditor.WorldCheck` | Developer checks of the generator and the writer against the game (see [development.md](development.md#worldcheck)). |
 | `tools/DocsScreenshots/` | `TerrainEditor.DocsScreenshots` | The pictures in `docs/images`, taken through the app's `--driver`. |

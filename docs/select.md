@@ -168,8 +168,9 @@ At the top: the object's name, id, place and turn. For a spawn point or a nest, 
 ## Ships and other linked objects
 
 Some mods build objects out of others: a ship mod's vessel is a root and the pieces built on it. When the mod
-describes them (its `worldeditor.json`, see [Modding](modding.md)), the editor draws the group as the mod builds it
-and keeps it together:
+describes them (its `worldeditor.json`, see [Modding](modding.md), or an add-on such as the
+[ValheimRAFT add-on](../addons/ValheimRAFT/README.md)), the editor draws the group as the mod builds it and keeps it
+together:
 
 - **Moved whole.** Selecting any part and moving, turning or deleting takes the whole group (the status bar says so,
   in the mod's words: "a whole vehicle"). A moved group keeps its height (a ship stays afloat), does not snap and

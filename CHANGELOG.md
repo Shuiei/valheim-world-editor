@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.110.0 — 2026-10-23
+
+### Added
+- **A ValheimRAFT add-on.** Ships and land vehicles built with ValheimRAFT are drawn whole, as the mod builds them,
+  with their sails and ropes, and move, copy and delete as one. Its own download beside the editor's: see
+  [ValheimRAFT](addons/ValheimRAFT/README.md).
+
 ## v1.109.0 — 2026-10-22
 
 ### Changed
