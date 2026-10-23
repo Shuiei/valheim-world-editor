@@ -6,13 +6,22 @@ namespace ValheimRAFT.WorldEditor;
 /// <summary>One rope of an anchor: the id of what it is tied to, and which of that one's tie points.</summary>
 /// <param name="target">The id (<see cref="Keys.Id"/>) of what the rope is tied to.</param>
 /// <param name="point">Which of its tie points (0 for most: a vanilla ship has several).</param>
-internal readonly struct Rope(int target, byte point)
+internal readonly struct Rope(int target, byte point) : IEquatable<Rope>
 {
     /// <summary>The id (<see cref="Keys.Id"/>) of what the rope is tied to.</summary>
     public int Target { get; } = target;
 
     /// <summary>Which of its tie points (0 for most: a vanilla ship has several).</summary>
     public byte Point { get; } = point;
+
+    /// <inheritdoc/>
+    public bool Equals(Rope other) => Target == other.Target && Point == other.Point;
+
+    /// <inheritdoc/>
+    public override bool Equals(object? obj) => obj is Rope other && Equals(other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => (Target * 397) ^ Point;
 }
 
 /// <summary>

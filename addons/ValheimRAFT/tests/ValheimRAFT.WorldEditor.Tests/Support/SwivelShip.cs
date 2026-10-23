@@ -40,6 +40,8 @@ internal static class SwivelShip
                 case "V":
                     obj.Vectors[t[2]] = new Vector3(F(3), F(4), F(5));
                     break;
+                default:
+                    throw new InvalidDataException($"valheimraft-swivels.txt: unknown line kind '{t[0]}'.");
             }
         }
         return all;

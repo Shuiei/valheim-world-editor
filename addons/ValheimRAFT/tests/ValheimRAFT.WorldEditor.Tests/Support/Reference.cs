@@ -42,6 +42,11 @@ internal sealed class Reference
                 case "V":
                     r.Holding(t[1], Int(t[2])).Vectors[t[3]] = Vec(t, 4);
                     break;
+                case "R":
+                    // The vehicle's root: these checks place pieces from their own values.
+                    break;
+                default:
+                    throw new InvalidDataException($"valheimraft-reference.txt: unknown line kind '{t[0]}'.");
             }
         }
         return r;

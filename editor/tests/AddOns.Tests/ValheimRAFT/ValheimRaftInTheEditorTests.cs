@@ -61,6 +61,9 @@ public sealed class ValheimRaftInTheEditorTests : IDisposable
                 case "B" when t[3] == Ropes:
                     pieces.Single(p => p.Prefab == t[1] && IdOf(p.Data) == I(2)).Data.SetBytes(StableHash.Of(Ropes), Convert.FromHexString(t[4]));
                     break;
+                default:
+                    // The tie points and the other values: the add-on's own tests check those.
+                    break;
             }
         }
         return ship!;
