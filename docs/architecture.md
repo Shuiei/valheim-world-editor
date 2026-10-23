@@ -524,7 +524,11 @@ in a plugins folder, `AddOns.IsInstalled`; it runs without being allowed, and Se
 file is loaded once per run, in an `AssemblyLoadContext`
 of its own that hands it the editor's `ValheimWorldEditor.Sdk` (one set of SDK types), and registers its hooks. They are
 used through `ModExtensions` only: `Decode` (the inspector's `Decoded`), `Rewrite` (`ObjectLinks.Remap`, after the
-links, over a `CopyView`; `RewrittenKeys` are not dropped by `dropOnCopy`) and `ShapesOf` (`GlView.RebuildShapes`,
+links, over a `CopyView`; `RewrittenKeys` are not dropped by `dropOnCopy`), `Place` (`EditSession.Placed`, at the
+start of every `EditSession.Commit`: the step's new objects of a placer's prefabs, but those standing exactly where a
+thing the step takes away of their kind stood, are read as `CopyView`s from `WorldSave.NewObjectBytes`, handed over with
+a `SceneLayers.AreaView` leaving the step's taken-away things out, and what the placer changed is added to each
+`NewObject.Data`, so it is saved and applied live as any data) and `ShapesOf` (`GlView.RebuildShapes`,
 batches of their own in view space among `_batches`, made again when things or `ModExtensions.Generation` change; its
 `ShapeWorld` finds objects by a links rule's id through `LinkIndex.Holder`, for shapes reaching another object) and
 `CutsOf` (the same rebuild: each cut's outline is marked on the area's grid, `GroundCuts.Mark` into `WorldScene.Cut`,

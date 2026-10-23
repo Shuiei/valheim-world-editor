@@ -27,6 +27,7 @@ public sealed partial class EditSession
         IReadOnlyCollection<int>? removeHidden = null, IReadOnlyList<NewObject>? addHidden = null)
     {
         resets ??= [];
+        add = Placed(remove, add);
         var (points, before, after, zones) = ChangeGround(ground);
         var (indices, changes, added) = ChangeThings(remove, add);
         var (hidden, newHidden) = ChangeHidden(removeHidden ?? [], addHidden ?? []);

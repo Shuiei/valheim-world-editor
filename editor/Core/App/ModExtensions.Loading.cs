@@ -57,6 +57,10 @@ public static partial class ModExtensions
         public void AddCopyRewriter(ICopyRewriter rewriter, params string[] keys) => loaded.Rewriters.Add((rewriter, [.. keys.Select(StableHash.Of)]));
 
         /// <inheritdoc/>
+        public void AddPlacer(IObjectPlacer placer, params string[] prefabs) =>
+            loaded.Placers.Add((placer, prefabs.Distinct(StringComparer.Ordinal).ToDictionary(StableHash.Of, p => p)));
+
+        /// <inheritdoc/>
         public void AddShapes(IShapeProvider provider, params string[] prefabs)
         {
             foreach (string p in prefabs)

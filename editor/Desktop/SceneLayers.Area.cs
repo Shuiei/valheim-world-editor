@@ -22,12 +22,14 @@ public static partial class SceneLayers
 
         /// <summary>The area of a scene, as it is now.</summary>
         /// <param name="s">The scene.</param>
-        public AreaView(WorldScene s)
+        /// <param name="without">Objects left out as if deleted, by id (those a step is about to move).</param>
+        public AreaView(WorldScene s, IEnumerable<int>? without = null)
         {
             _s = s;
             var edits = s.Session?.Edits;
             _deleted = edits == null ? [] : [.. edits.Deleted];
-            _added = edits == null ? [] : [.. edits.Added];
+            _deleted.UnionWith(without ?? []);
+            _added = edits == null ? [] : [.. edits.Added.Where(n => !_deleted.Contains(n.Id))];
         }
 
         /// <inheritdoc/>

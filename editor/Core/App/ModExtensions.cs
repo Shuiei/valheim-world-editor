@@ -48,6 +48,9 @@ public static partial class ModExtensions
         /// <summary>Its copy rewriters, with the data key hashes each handles.</summary>
         public List<(ICopyRewriter Rewriter, HashSet<int> Keys)> Rewriters { get; } = [];
 
+        /// <summary>Its placers, with the prefabs each places (by hash, with their names).</summary>
+        public List<(IObjectPlacer Placer, Dictionary<int, string> Prefabs)> Placers { get; } = [];
+
         /// <summary>Its shape providers, by prefab hash.</summary>
         public Dictionary<int, List<IShapeProvider>> Shapes { get; } = [];
 

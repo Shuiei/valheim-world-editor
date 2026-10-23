@@ -31,6 +31,14 @@ public interface IExtensionRegistry
     void AddCopyRewriter(ICopyRewriter rewriter, params string[] keys);
 
     /// <summary>
+    /// Lets the extension set what its mod works out from where an object stands, each time the editor places, pastes,
+    /// moves or turns objects of the prefabs (see <see cref="IObjectPlacer"/>), offline and live.
+    /// </summary>
+    /// <param name="placer">Sets the placed objects' values.</param>
+    /// <param name="prefabs">The prefabs it places.</param>
+    void AddPlacer(IObjectPlacer placer, params string[] prefabs);
+
+    /// <summary>
     /// Keeps what the mod holds of a place with the editor's copies, and puts it down where they are pasted (see
     /// <see cref="IAreaCopier"/>): the mod's data that no copied object carries.
     /// </summary>

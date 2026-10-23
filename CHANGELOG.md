@@ -4,14 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.110.0 — 2026-10-23
+## v1.111.0 — 2026-10-23
 
 ### Added
 - **A Railroads add-on.** The track, stations and trains of the Railroads mod are drawn in the 3D view as the game
-  builds them, from the mod's own models, and copies of them pasted with the editor work in the game. It is its own
-  download beside the editor's: unpack it into the addons folder.
-- **Mods' extensions set quaternions in copies.** For mod authors: a copy rewriter (or a tool's edit) can now set or
-  take away a quaternion value (`ICopy.SetQuaternion`), such as a turn the mod keeps. See
+  builds them, from the mod's own models; track, trains and station signs you place, paste, move or turn with the
+  editor work in the game as if built there, saved or live. It is its own download beside the editor's: unpack it
+  into the addons folder.
+- **Mods' extensions follow what you place, move and turn.** For mod authors: a placer (`AddPlacer`) is handed the
+  objects of its prefabs each time the editor places, pastes, moves or turns them, by any tool, a script or Claude,
+  to set what its mod works out from where they stand (a turn it keeps, the track under a vehicle); and a copy
+  rewriter or a tool's edit can now set or take away a quaternion value (`ICopy.SetQuaternion`). See
   [Hooks](docs/modding.md#hooks).
 
 ## v1.109.0 — 2026-10-22
