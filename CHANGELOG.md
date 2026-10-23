@@ -16,11 +16,14 @@ the plugin is unchanged in versions without that part.
   to set what its mod works out from where they stand (a turn it keeps, the track under a vehicle); and a copy
   rewriter or a tool's edit can now set or take away a quaternion value (`ICopy.SetQuaternion`). See
   [Hooks](docs/modding.md#hooks).
+- **Trains and other tied objects stay together.** A mod's `worldeditor.json` can tie objects to one that names them
+  (a locomotive and its wagons, a deck and what is built on it): selecting, moving, turning, copying and deleting take
+  the whole group, and each pasted copy gets ids of its own. See [Tied objects](docs/modding.md#tied-objects).
 
 ### Changed
 - **Mods' objects an add-on draws show as drawn.** A mod's object the editor has no model of but an add-on or a mod's
-  extension draws no longer shows the grey stand-in box inside its drawing, and is picked and outlined by what is
-  drawn.
+  extension draws no longer shows the grey stand-in box inside its drawing, is picked and outlined by what is drawn,
+  and shows in the Place and Paste previews.
 
 ## v1.109.0 — 2026-10-22
 
