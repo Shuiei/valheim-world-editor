@@ -21,6 +21,9 @@ public sealed partial class CopyView
     public void SetVector3(string key, Vector3? value) => Put("vec3", key, value is { } v ? Join(v.X, v.Y, v.Z) : null);
 
     /// <inheritdoc/>
+    public void SetQuaternion(string key, Quaternion? value) => Put("quats", key, value is { } q ? Join(q.X, q.Y, q.Z, q.W) : null);
+
+    /// <inheritdoc/>
     public void SetString(string key, string? value) => Put("strings", key, value);
 
     /// <inheritdoc/>

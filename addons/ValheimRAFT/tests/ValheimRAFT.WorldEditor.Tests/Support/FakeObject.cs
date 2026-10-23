@@ -60,6 +60,8 @@ internal sealed class FakeObject(string prefab, Vector3 position = default, Quat
 
     public void SetVector3(string key, Vector3? value) => Set(Vectors, key, value);
 
+    public void SetQuaternion(string key, Quaternion? value) => throw new NotSupportedException();
+
     public void SetString(string key, string? value) => throw new NotSupportedException();
 
     public void SetBytes(string key, byte[]? value)

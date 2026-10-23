@@ -67,6 +67,12 @@ public static partial class ModManifests
         /// <summary>The link rules, with the keys they read.</summary>
         public LinkSet LinkSet { get; set; } = LinkSet.Empty;
 
+        /// <summary>How objects are tied to a root that names them (ObjectTies), by their root and member keys (in the order first read).</summary>
+        public OrderedDictionary<(int Root, int Member), TieRule> Ties { get; init; } = [];
+
+        /// <summary>The tie rules in their order, worked out once the notes are complete.</summary>
+        public IReadOnlyList<TieRule> TieList => field ??= [.. Ties.Values];
+
         /// <summary>The hashes of the prefabs whose objects only hold data, worked out once the notes are complete.</summary>
         public HashSet<int> DataPrefabs => field ??= [.. Prefabs.Where(p => p.Value.Data).Select(p => StableHash.Of(p.Key))];
 
@@ -153,7 +159,7 @@ public static partial class ModManifests
             }
             _baseNotes = once;
         }
-        var notes = new Notes(new(once.Data), new(once.Prefabs), new(once.Links), new(once.Extensions));
+        var notes = new Notes(new(once.Data), new(once.Prefabs), new(once.Links), new(once.Extensions)) { Ties = new(once.Ties) };
         notes.LinkSet = new LinkSet([.. notes.Links.Values]);
         return notes;
     }

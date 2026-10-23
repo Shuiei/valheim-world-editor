@@ -1,0 +1,742 @@
+# Railroads 0.2.6 (vladasz.railroads) reference data, recorded on a local headless Valheim dedicated server
+# Valheim l-1.0.20 (world version 42 CheatCleanSlate), BepInEx 5.4.23.5
+# Recorded 2026-10-23 12:56:30 by a throwaway harness driving the mod's own code (prefabs, Piece.SetCreator postfixes, RPCs, simulation)
+# run 6 (FreeSupports on: a station) on the world saved by run 5 (FreeSupports on: a track piece), itself on the world of run 4 (FreeSupports off); on a copy of the phase-1 world (railway, train, station sign from railroads-reference.txt are in it too). Track and stations placed by a stand-in local Player through Player.HaveRequirements / TryPlacePiece / ConsumeResources; creator 424242424242
+# ZDOIDs are live session ids (Valheim reassigns ids when a world loads); floats are written with ToString("R")
+# 83 objects
+object bf_handcart 1:8488
+pos 409.291138 79.511795 -287.59137
+rot 0 0.7351226 0 -0.67793417
+int bf_dir -1
+int creatorIndex -1
+long creator 424242424242
+float bf_at 4.9889245
+bytes bf_line nTrKQwoGn0IMXJDDaU7OQwoGn0InwI/D
+end
+object bf_locomotive 1:6912
+pos 398.488831 79.511795 -297.006958
+rot 0 0.1950901 0 0.9807853
+int bf_coal 30
+int bf_moving 0
+int bf_trips 1
+int bf_way 1
+int creatorIndex -1
+long bf_torch0_time 20400000000
+long bf_torch1_time 20400000000
+long creator 424242424242
+float bf_at 3.71559143
+float bf_odo 12.7155561
+float bf_speed 0
+float bf_stop 3.999978
+float bf_torch0 2
+float bf_torch1 2
+string bf_dest 
+string bf_horn 
+bytes bf_after 
+bytes bf_legs 
+bytes bf_line kIjGQwoGn0JIOJbDbhDIQwoGn0I7hpLD
+bytes bf_route 
+bytes bf_trail sgDFQwoGn0JV6pnDkIjGQwoGn0JIOJbD1HjDQwoGn0JinJ3DsgDFQwoGn0JV6pnD
+bytes bf_wagons AQAAAAAAAAABGwAAAQAAAAAAAAACGwAA
+end
+object bf_station 1696506470:13855
+pos 386.305328 84.55139 -261.092224
+rot 0 0.195103154 0 0.980782747
+int bf_bare 1
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195103154 0 0.980782747
+end
+object bf_station_sign 1:6910
+pos 401.831238 79.184845 -298.083527
+rot 0 0.195090324 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+vec3 bf_stop 398.597626 79.511795 -296.7442
+string bf_name Rml4dHVyZSBIYWx0
+end
+object bf_track_curve_r8_45 1:6908
+pos 400.128357 79.511795 -293.048676
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:6904
+pos 387.8825 79.511795 -322.612762
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:6905
+pos 390.94397 79.511795 -315.221741
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:6906
+pos 394.005432 79.511795 -307.830719
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:6907
+pos 397.0669 79.511795 -300.4397
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:6916
+pos 366.316254 82.25716 -309.350159
+rot 0 0.195090339 0 0.980785251
+int bf_paid 1
+int bf_paid_stone 16
+int bf_paid_wood 8
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:6925
+pos 370.908447 83.4965439 -298.2636
+rot 0 0.195090339 0 0.980785251
+int bf_corewood 8
+int bf_paid 1
+int bf_paid_stone 16
+int bf_paid_wood 8
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:8489
+pos 375.500641 82.4331 -287.177063
+rot 0 0.195090339 0 0.980785251
+int bf_paid 1
+int bf_paid_stone 16
+int bf_paid_wood 8
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:8498
+pos 380.092834 79.29613 -276.0905
+rot 0 0.195090339 0 0.980785251
+int bf_paid 1
+int bf_paid_stone 16
+int bf_paid_wood 8
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 1:8500
+pos 384.685059 84.55139 -265.003937
+rot 0 0.195090339 0 0.980785251
+int bf_paid 1
+int bf_paid_stone 16
+int bf_paid_wood 8
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_switch_right_8 1:6909
+pos 404.457916 79.511795 -288.719116
+rot 0 0.555570245 0 0.8314696
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.555570245 0 0.8314696
+end
+object bf_train_console 1:6911
+pos 400.8745 78.4053345 -300.393219
+rot 0 0.195090324 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+end
+object bf_wagon 1:6913
+pos 396.479675 79.511795 -301.8573
+rot 0 0.195090324 0 0.980785251
+int InUse 0
+int addedDefaultItems 1
+int creatorIndex -1
+long bf_torch0_time 20400000000
+long bf_torch1_time 20400000000
+long creator 424242424242
+float bf_at 6.465575
+float bf_torch0 2
+float bf_torch1 2
+bytes bf_line sgDFQwoGn0JV6pnDkIjGQwoGn0JIOJbD
+bytes bf_self AQAAAAAAAAABGwAA
+end
+object bf_wagon_flat 1:6914
+pos 394.374939 79.511795 -306.93866
+rot 0 0.195090324 0 0.980785251
+int creatorIndex -1
+long bf_deck_key 5598681266590675721
+long creator 424242424242
+float bf_at 0.9655752
+bytes bf_line sgDFQwoGn0JV6pnDkIjGQwoGn0JIOJbD
+bytes bf_self AQAAAAAAAAACGwAA
+end
+object wood_beam_45 1:6921
+pos 366.818054 81.2366 -306.309143
+rot 0 0.559193 0 -0.8290375
+int bf_leg 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_beam_45 1:6922
+pos 366.052551 81.2366 -308.15802
+rot 0 0.829037547 0 0.5591929
+int bf_leg 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_beam_45 1:6923
+pos 368.111572 81.2366 -306.844727
+rot 0 0.559193 0 -0.8290375
+int bf_leg 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_beam_45 1:6924
+pos 367.346069 81.2366 -308.6936
+rot 0 0.829037547 0 0.5591929
+int bf_leg 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_beam_45 1:8505
+pos 385.1869 83.53084 -261.962921
+rot 0 0.559193 0 -0.8290375
+int bf_leg 1
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_beam_45 1:8506
+pos 384.421326 83.53084 -263.8118
+rot 0 0.829037547 0 0.5591929
+int bf_leg 1
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_beam_45 1:8507
+pos 386.4804 83.53084 -262.4985
+rot 0 0.559193 0 -0.8290375
+int bf_leg 1
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_beam_45 1:8508
+pos 385.714844 83.53084 -264.347382
+rot 0 0.829037547 0 0.5591929
+int bf_leg 1
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_floor 1:6915
+pos 394.374939 81.011795 -306.93866
+rot 0 0.195090324 0 0.980785251
+int creatorIndex -1
+long bf_deck 5598681266590675721
+long creator 424242424242
+vec3 bf_deck_pos 0 1.5 0
+quat bf_deck_rot 0 0 0 1
+end
+object wood_log_45 1:6930
+pos 371.410278 82.47599 -295.2226
+rot 0 0.559193 0 -0.8290375
+int bf_leg 2
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_log_45 1:6931
+pos 370.6447 82.47599 -297.071472
+rot 0 0.829037547 0 0.5591929
+int bf_leg 2
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_log_45 1:6932
+pos 372.7038 82.47599 -295.758179
+rot 0 0.559193 0 -0.8290375
+int bf_leg 2
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_log_45 1:6933
+pos 371.938232 82.47599 -297.607056
+rot 0 0.829037547 0 0.5591929
+int bf_leg 2
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole2 1:6917
+pos 366.4353 81.23716 -307.233582
+rot 0 0.190809 0 0.981627166
+int bf_leg 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole2 1:6918
+pos 366.4353 79.23716 -307.233582
+rot 0 0.190809 0 0.981627166
+int bf_leg 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole2 1:6919
+pos 367.728821 81.23716 -307.769165
+rot 0 0.190809 0 0.981627166
+int bf_leg 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole2 1:6920
+pos 367.728821 79.23716 -307.769165
+rot 0 0.190809 0 0.981627166
+int bf_leg 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole2 1:8501
+pos 384.8041 83.531395 -262.88736
+rot 0 0.190809 0 0.981627166
+int bf_leg 1
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole2 1:8502
+pos 384.8041 81.531395 -262.88736
+rot 0 0.190809 0 0.981627166
+int bf_leg 1
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole2 1:8503
+pos 386.097626 83.531395 -263.422943
+rot 0 0.190809 0 0.981627166
+int bf_leg 1
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole2 1:8504
+pos 386.097626 81.531395 -263.422943
+rot 0 0.190809 0 0.981627166
+int bf_leg 1
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole_log 1:6926
+pos 371.0275 82.47655 -296.147034
+rot 0 0.190809 0 0.981627166
+int bf_leg 2
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole_log 1:6927
+pos 371.0275 80.47655 -296.147034
+rot 0 0.190809 0 0.981627166
+int bf_leg 2
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole_log 1:6928
+pos 372.321 82.47655 -296.682617
+rot 0 0.190809 0 0.981627166
+int bf_leg 2
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object wood_pole_log 1:6929
+pos 372.321 80.47655 -296.682617
+rot 0 0.190809 0 0.981627166
+int bf_leg 2
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1:8494
+pos 376.030853 81.3877945 -284.067444
+rot 0 0.559193 0 -0.8290375
+int bf_leg 3
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1:8495
+pos 375.246368 81.3877945 -285.9621
+rot 0 0.829037547 0 0.5591929
+int bf_leg 3
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1:8496
+pos 377.324371 81.3877945 -284.603027
+rot 0 0.559193 0 -0.8290375
+int bf_leg 3
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1:8497
+pos 376.5399 81.3877945 -286.497681
+rot 0 0.829037547 0 0.5591929
+int bf_leg 3
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1696506470:13862
+pos 387.711975 84.4960861 -264.164459
+rot 3.61000438E-08 0.195103124 2.854588E-08 0.980782747
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1696506470:13863
+pos 387.176147 84.4960861 -265.457855
+rot 3.61000438E-08 0.195103124 2.854588E-08 0.980782747
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1696506470:13870
+pos 387.849976 84.4960861 -264.221619
+rot 1.881123E-08 0.980782747 -6.896081E-09 -0.195103064
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1696506470:13871
+pos 387.3142 84.4960861 -265.515
+rot 1.881123E-08 0.980782747 -6.896081E-09 -0.195103064
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1696506470:13878
+pos 389.4724 84.4960861 -259.914673
+rot 3.61000438E-08 0.195103124 2.854588E-08 0.980782747
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1696506470:13879
+pos 390.008179 84.4960861 -258.621216
+rot 3.61000438E-08 0.195103124 2.854588E-08 0.980782747
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1696506470:13886
+pos 389.6104 84.4960861 -259.9718
+rot 1.881123E-08 0.980782747 -6.896081E-09 -0.195103064
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_beam_45 1696506470:13887
+pos 390.14624 84.4960861 -258.6784
+rot 1.881123E-08 0.980782747 -6.896081E-09 -0.195103064
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 5
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1:8490
+pos 375.6386 81.4131 -285.014771
+rot 0 0.190809 0 0.981627166
+int bf_leg 3
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1:8491
+pos 375.6386 79.4131 -285.014771
+rot 0 0.190809 0 0.981627166
+int bf_leg 3
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1:8492
+pos 376.932129 81.4131 -285.550354
+rot 0 0.190809 0 0.981627166
+int bf_leg 3
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1:8493
+pos 376.932129 79.4131 -285.550354
+rot 0 0.190809 0 0.981627166
+int bf_leg 3
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13856
+pos 386.76474 84.52139 -263.772064
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13857
+pos 386.76474 82.52139 -263.772064
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13858
+pos 386.76474 80.52139 -263.772064
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13859
+pos 386.2289 84.52139 -265.06546
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13860
+pos 386.2289 82.52139 -265.06546
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13861
+pos 386.2289 80.52139 -265.06546
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13864
+pos 388.7972 84.52139 -264.614
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13865
+pos 388.7972 82.52139 -264.614
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13866
+pos 388.7972 80.52139 -264.614
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13867
+pos 388.261444 84.52139 -265.9074
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13868
+pos 388.261444 82.52139 -265.9074
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13869
+pos 388.261444 80.52139 -265.9074
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13872
+pos 388.525177 84.52139 -259.522278
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13873
+pos 388.525177 82.52139 -259.522278
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13874
+pos 388.525177 80.52139 -259.522278
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13875
+pos 389.060944 84.52139 -258.228821
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13876
+pos 389.060944 82.52139 -258.228821
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13877
+pos 389.060944 80.52139 -258.228821
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13880
+pos 390.557648 84.52139 -260.3642
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13881
+pos 390.557648 82.52139 -260.3642
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13882
+pos 390.557648 80.52139 -260.3642
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13883
+pos 391.093475 84.52139 -259.0708
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13884
+pos 391.093475 82.52139 -259.0708
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end
+object woodiron_pole 1696506470:13885
+pos 391.093475 80.52139 -259.0708
+rot 0 0.831476867 0 0.555559337
+int bf_leg 3
+int bf_leg_free 1
+int bf_leg_part 0
+int creatorIndex -1
+long creator 424242424242
+end

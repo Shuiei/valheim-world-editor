@@ -28,6 +28,8 @@ public sealed partial class EditSession
     {
         resets ??= [];
         var (points, before, after, zones) = ChangeGround(ground);
+        // After the ground step, which may fill the list (a paste's objects stand on the ground it leaves).
+        add = Placed(remove, add);
         var (indices, changes, added) = ChangeThings(remove, add);
         var (hidden, newHidden) = ChangeHidden(removeHidden ?? [], addHidden ?? []);
         if (added.Count + newHidden.Count > 0)

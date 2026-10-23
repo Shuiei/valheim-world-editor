@@ -28,6 +28,9 @@ public sealed class DataCopy(string prefab, Vector3 position, Vector3 rotation, 
     public void SetVector3(string key, Vector3? value) => Data.SetVec3(StableHash.Of(key), value);
 
     /// <inheritdoc/>
+    public void SetQuaternion(string key, Quaternion? value) => Data.SetQuat(StableHash.Of(key), value);
+
+    /// <inheritdoc/>
     public void SetString(string key, string? value) => Data.SetString(StableHash.Of(key), value);
 
     /// <inheritdoc/>

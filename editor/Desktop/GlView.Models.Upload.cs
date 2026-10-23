@@ -19,22 +19,28 @@ public sealed partial class GlView
         }
     }
 
-    /// <summary>A loaded model's batches (or the stand-in box when there is no model), then its instances.</summary>
+    /// <summary>
+    /// A loaded model's batches (or the stand-in box when there is no model, unless a mod's extension draws its things),
+    /// then its instances.
+    /// </summary>
     private unsafe void UploadModel(ReadyModel r)
     {
         var g = r.Group;
         if (r.Model == null)
         {
             // No model copied for this kind: a box stands in, as in the web editor (spawn points and nests in their
-            // markers' colours).
+            // markers' colours), unless a mod's extension draws its things.
             var tint = g.Kind switch
             {
                 ObjectKind.SpawnPoints => SpawnColour(false),
                 ObjectKind.Nests => NestColour,
                 _ => new Vector4(0.35f, 0.3f, 0.25f, 1),
             };
-            AddBatch(g, BoxMesh(), 0, new ModelStore.MaterialData(tint, null, 0, false, new Vector4(1, 1, 0, 0)),
-                Matrix4x4.CreateScale(1, 2, 1) * Matrix4x4.CreateTranslation(0, 1, 0));
+            if (!g.DrawnByShapes)
+            {
+                AddBatch(g, BoxMesh(), 0, new ModelStore.MaterialData(tint, null, 0, false, new Vector4(1, 1, 0, 0)),
+                    Matrix4x4.CreateScale(1, 2, 1) * Matrix4x4.CreateTranslation(0, 1, 0));
+            }
         }
         else
         {

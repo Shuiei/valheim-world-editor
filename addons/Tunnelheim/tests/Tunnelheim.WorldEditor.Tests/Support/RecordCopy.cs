@@ -49,6 +49,10 @@ internal sealed class RecordCopy : FakeObject, ICopy
     {
     }
 
+    public void SetQuaternion(string key, Quaternion? value)
+    {
+    }
+
     public void SetString(string key, string? value)
     {
     }

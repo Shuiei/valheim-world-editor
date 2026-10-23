@@ -35,7 +35,7 @@ public sealed partial class GlView
         DrawStandItems(s);
         _drawnInstances = drawn + DrawGlass(u, seeThrough);
         DrawWater(vp, eye, time, look);
-        _ghostsDrawn = DrawGhosts(s);
+        _ghostsDrawn = DrawGhosts(s, vp);
         DrawToolMarks(s, vp, rh);
     }
 

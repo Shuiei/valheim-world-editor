@@ -132,7 +132,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoReader`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`editor/Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`editor/Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser`, `LocationPrefabs` (`editor/Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data; what the game makes of a location it spawns (for new worlds). `Dungeons.UseMod` lays the open world's Expand World Data room and dungeon files (`DungeonRules`) over the game's catalogue when an area opens; `Dungeons.Scope` does it for one flow of work (the tests). |
-| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`editor/Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `AddOns`, `ModComponents`, `ObjectView`, `CopyView`, `GroundCuts` (`editor/Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
+| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`editor/Core/App/ObjectLinks.cs`), `ObjectTies`, `TieRule` (objects tied to a root naming them: groups, and ids made new in pasted copies; `EditSession.Ties.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `AddOns`, `ModComponents`, `ObjectView`, `CopyView`, `GroundCuts` (`editor/Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
 | Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `Crunch`, `GameShader`, `TerrainShader` (`editor/Core/App/`) | Below. |
 | Live | `LiveBridge`, `LiveSync` (`editor/Core/Save/`), `Tunnel`, `ServerConfig`, `LocalGame` (`editor/Core/App/`) | Below. |
 | Claude, scripts | `ClaudeServer`, `ClaudeTools`, `ClaudeBuilder`, `ClaudeGuide`, `ClaudeRelay`, `ScriptHost`, `ScriptApi.csx` (`editor/Desktop/`) | Below. |
@@ -524,7 +524,11 @@ in a plugins folder, `AddOns.IsInstalled`; it runs without being allowed, and Se
 file is loaded once per run, in an `AssemblyLoadContext`
 of its own that hands it the editor's `ValheimWorldEditor.Sdk` (one set of SDK types), and registers its hooks. They are
 used through `ModExtensions` only: `Decode` (the inspector's `Decoded`), `Rewrite` (`ObjectLinks.Remap`, after the
-links, over a `CopyView`; `RewrittenKeys` are not dropped by `dropOnCopy`) and `ShapesOf` (`GlView.RebuildShapes`,
+links, over a `CopyView`; `RewrittenKeys` are not dropped by `dropOnCopy`), `Place` (`EditSession.Placed`, at the
+start of every `EditSession.Commit`: the step's new objects of a placer's prefabs, but those standing exactly where a
+thing the step takes away of their kind stood, are read as `CopyView`s from `WorldSave.NewObjectBytes`, handed over with
+a `SceneLayers.AreaView` leaving the step's taken-away things out, and what the placer changed is added to each
+`NewObject.Data`, so it is saved and applied live as any data) and `ShapesOf` (`GlView.RebuildShapes`,
 batches of their own in view space among `_batches`, made again when things or `ModExtensions.Generation` change; its
 `ShapeWorld` finds objects by a links rule's id through `LinkIndex.Holder`, for shapes reaching another object) and
 `CutsOf` (the same rebuild: each cut's outline is marked on the area's grid, `GroundCuts.Mark` into `WorldScene.Cut`,

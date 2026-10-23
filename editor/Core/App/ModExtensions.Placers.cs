@@ -1,77 +1,47 @@
-using System.Numerics;
 using ValheimWorldEditor.Sdk;
 
 namespace TerrainEditor.App;
 
 /// <summary>
-/// The link placers running extensions give for their prefabs (ILinkPlacer): the frame a linked object's parts hang in,
-/// and where a part stands on what it hangs on, when the data alone does not say it.
+/// The running extensions' placers (IObjectPlacer): what a mod works out from where its objects stand, set on the
+/// objects a step of the editor places, pastes, moves or turns.
 /// </summary>
 public static partial class ModExtensions
 {
-    /// <summary>Whether a running extension places linked parts for a prefab (as a parent or as a part).</summary>
-    public static bool HasLinkPlacer(int prefab) => _state.Hooks.Any(l => l.Placers.ContainsKey(prefab));
+    /// <summary>Whether a running extension places objects of a prefab.</summary>
+    /// <param name="prefab">The prefab's hash.</param>
+    public static bool HasPlacer(int prefab) => _state.Hooks.Any(l => l.Fault == null && l.Placers.Any(p => p.Prefabs.ContainsKey(prefab)));
 
     /// <summary>
-    /// A prefab's name as an extension placing for it named it (null when none does): what its placer is shown, where
-    /// the game's catalogue does not name it (a world opened before the game's data is read).
+    /// The name a running placer knows a prefab by (null when none places it), for the views of objects whose prefab
+    /// the editor cannot name otherwise.
     /// </summary>
-    public static string? LinkPlacerPrefabName(int prefab) =>
-        _state.Hooks.Select(l => l.PlacerPrefabs.GetValueOrDefault(prefab)).FirstOrDefault(n => n != null);
+    /// <param name="prefab">The prefab's hash.</param>
+    public static string? PlacedName(int prefab) =>
+        _state.Hooks.SelectMany(l => l.Placers).Select(p => p.Prefabs.GetValueOrDefault(prefab)).FirstOrDefault(n => n != null);
 
     /// <summary>
-    /// The frame the parts of an object of a prefab hang in, in its own frame (the first a running extension gives);
-    /// null: its own frame.
+    /// Hands one step's placed objects to each running placer, those of its prefabs only, all at once; changed in
+    /// place. A placer that throws turns its extension off (the others go on).
     /// </summary>
-    /// <param name="prefab">The object's prefab hash.</param>
-    /// <param name="obj">The object, as drawn.</param>
-    public static (Vector3 Offset, Quaternion Turn)? LinkFrameOf(int prefab, IObjectView obj)
+    /// <param name="placed">The step's placed objects, each with its prefab's hash.</param>
+    /// <param name="area">The area as it stands before the step, without the objects it moves.</param>
+    public static void Place(IReadOnlyList<(int Prefab, ICopy Copy)> placed, IAreaView area)
     {
         foreach (var l in _state.Hooks)
         {
-            foreach (var p in l.Placers.GetValueOrDefault(prefab) ?? [])
+            foreach (var (placer, prefabs) in l.Placers)
             {
-                if (Usable(Guard(l, () => p.FrameOf(obj), null)) is { } frame)
+                var mine = placed.Where(p => prefabs.ContainsKey(p.Prefab)).Select(p => p.Copy).ToList();
+                if (mine.Count > 0)
                 {
-                    return frame;
+                    Guard(l, () =>
+                    {
+                        placer.Place(mine, area);
+                        return true;
+                    }, false);
                 }
             }
         }
-        return null;
-    }
-
-    /// <summary>
-    /// Where a part of a prefab stands in the frame of what it hangs on (the first a running extension gives); null: as
-    /// its data says.
-    /// </summary>
-    /// <param name="prefab">The part's prefab hash.</param>
-    /// <param name="part">The part, at its saved place and turn.</param>
-    /// <param name="parent">What it hangs on, as drawn.</param>
-    public static (Vector3 Offset, Quaternion Turn)? LinkPlaceOf(int prefab, IObjectView part, IObjectView parent)
-    {
-        foreach (var l in _state.Hooks)
-        {
-            foreach (var p in l.Placers.GetValueOrDefault(prefab) ?? [])
-            {
-                if (Usable(Guard(l, () => p.PlaceOf(part, parent), null)) is { } place)
-                {
-                    return place;
-                }
-            }
-        }
-        return null;
-    }
-
-    /// <summary>A frame's place and turn, its turn normalized; null for none, or numbers that are not (NaN, infinite, no turn).</summary>
-    private static (Vector3 Offset, Quaternion Turn)? Usable(LinkFrame? f)
-    {
-        if (f == null)
-        {
-            return null;
-        }
-        var (o, q) = (f.Offset, f.Turn);
-        bool finite = float.IsFinite(o.X) && float.IsFinite(o.Y) && float.IsFinite(o.Z)
-            && float.IsFinite(q.X) && float.IsFinite(q.Y) && float.IsFinite(q.Z) && float.IsFinite(q.W);
-        return finite && q.LengthSquared() > 1e-8f ? (o, Quaternion.Normalize(q)) : null;
     }
 }

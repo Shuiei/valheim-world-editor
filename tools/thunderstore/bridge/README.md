@@ -70,7 +70,8 @@ console and crossplay players included.
 
 Open a modded game live and the pieces and objects its mods add get their names, are drawn with the mods' own models,
 and can be placed or built from the Workshop's **Mods** tab. Worlds made with **Expand World**, **Riverheim** or
-**Tunnelheim** open with the editor's add-ons, separate downloads on its releases page. Mod authors can teach the
+**Tunnelheim** open with the editor's add-ons, separate downloads on its releases page; another draws **Railroads**'
+track, stations and trains. Mod authors can teach the
 editor their own mod: see [For mod authors](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/modding.md).
 
 ## Help inside the editor

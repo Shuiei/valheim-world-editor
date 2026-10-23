@@ -4,6 +4,27 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.111.0 — 2026-10-23
+
+### Added
+- **A Railroads add-on.** The track, stations and trains of the Railroads mod are drawn in the 3D view as the game
+  builds them, from the mod's own models; track, trains and station signs you place, paste, move or turn with the
+  editor work in the game as if built there, saved or live. It is its own download beside the editor's: unpack it
+  into the addons folder.
+- **Mods' extensions follow what you place, move and turn.** For mod authors: a placer (`AddPlacer`) is handed the
+  objects of its prefabs each time the editor places, pastes, moves or turns them, by any tool, a script or Claude,
+  to set what its mod works out from where they stand (a turn it keeps, the track under a vehicle); and a copy
+  rewriter or a tool's edit can now set or take away a quaternion value (`ICopy.SetQuaternion`). See
+  [Hooks](docs/modding.md#hooks).
+- **Trains and other tied objects stay together.** A mod's `worldeditor.json` can tie objects to one that names them
+  (a locomotive and its wagons, a deck and what is built on it): selecting, moving, turning, copying and deleting take
+  the whole group, and each pasted copy gets ids of its own. See [Tied objects](docs/modding.md#tied-objects).
+
+### Changed
+- **Mods' objects an add-on draws show as drawn.** A mod's object the editor has no model of but an add-on or a mod's
+  extension draws no longer shows the grey stand-in box inside its drawing, is picked and outlined by what is drawn,
+  and shows in the Place and Paste previews.
+
 ## v1.110.0 — 2026-10-23
 
 ### Added

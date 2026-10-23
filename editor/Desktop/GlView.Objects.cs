@@ -15,9 +15,11 @@ public sealed partial class GlView
     /// <summary>
     /// The Place tool's preview, or the Paste tool's (the building where it would land), drawn with the
     /// models, see-through. Kinds whose model is not there yet keep their posts (DrawPlace, the paste's
-    /// outline). Returns the prefabs drawn.
+    /// outline). Kinds no model draws but a mod's extension does are drawn by its shapes. Returns the prefabs drawn.
     /// </summary>
-    private unsafe HashSet<int> DrawGhosts(WorldScene s)
+    /// <param name="s">The scene.</param>
+    /// <param name="vp">The camera's view × projection of the frame.</param>
+    private unsafe HashSet<int> DrawGhosts(WorldScene s, Matrix4x4 vp)
     {
         var drawn = new HashSet<int>();
         List<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown;
@@ -36,6 +38,10 @@ public sealed partial class GlView
         }
         _pasteGhosts = Mode == ToolMode.Paste ? drawn : null;
         DrawGhostInstances(s, shown, drawn);
+        if (TerrainEditor.App.ModExtensions.AnyShapes)
+        {
+            DrawShapeGhosts(s, shown, vp, drawn);
+        }
         return drawn;
     }
 

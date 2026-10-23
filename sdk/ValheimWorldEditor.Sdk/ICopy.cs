@@ -21,6 +21,9 @@ public interface ICopy : IObjectView
     /// <summary>Sets a vector value (null: takes it away).</summary>
     void SetVector3(string key, Vector3? value);
 
+    /// <summary>Sets a quaternion value (null: takes it away).</summary>
+    void SetQuaternion(string key, Quaternion? value);
+
     /// <summary>Sets a string value (null: takes it away).</summary>
     void SetString(string key, string? value);
 

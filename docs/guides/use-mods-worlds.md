@@ -8,6 +8,7 @@ a server's `BepInEx` folder), and the add-on of the same editor release.
 | Add-on | For | What it adds |
 |---|---|---|
 | [Expand World](../../addons/ExpandWorld/README.md) | Expand World Size, Rivers and Data | Ground, map, biomes, water, locations, vegetation and New world predictions as the mods make them |
+| [Railroads](../../addons/Railroads/README.md) | Railroads (`Railroads.dll`) | Draws the mod's track, stations and trains from its own models; the pieces you place, paste, move or turn work in the game, live too |
 | [Riverheim](../../addons/Riverheim/README.md) | Riverheim (`Riverheim.dll`) | Opens Riverheim worlds (refused without it), drawn with your own copy of the mod; Riverheim as a New world generator |
 | [Tunnelheim](../../addons/Tunnelheim/README.md) | Tunnelheim (`ValheimTunneling.dll`) | Draws the mod's tunnels, and a **Tunnel** tool (digs, Add Earth, bores, rooms, shafts, stairs); tunnels go with copies and blueprints |
 | [ValheimRAFT](../../addons/ValheimRAFT/README.md) | ValheimRAFT (`ValheimRAFT.dll`) | Draws the mod's ships and land vehicles whole, with their sails and ropes; each moves, copies and deletes as one |
@@ -43,6 +44,8 @@ generated as the game does without the mods, and Riverheim worlds are refused.
 
 - An add-on is used only while its mod's DLL is in a plugins folder the editor knows; a mod a mod manager turned off,
   or settings a removed mod left behind, do not count.
+- Railroads' pieces are drawn from the model files the mod keeps in its `meshes` folder: keep that folder beside
+  `Railroads.dll`, as the mod installs it.
 - Expand World's data files need the YamlDotNet library the mod installs under `BepInEx/plugins`; without it they
   are not read, and the log says so.
 - Your Riverheim must know the world's preset (update it if it is older than the one that made the world). Worlds

@@ -59,6 +59,7 @@ Vehicles' file:
 | `data` | By data key, as your code names it (the name whose hash the game saves; a key named here is known by its name even when your DLL does not hold it as text): `label`, how the [inspector](select.md#inspector) names the value (else its key; the editor's own names for the game's keys come first); `readOnly`, the inspector shows the value but does not let it be changed (values your mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
 | `prefabs` | By prefab name: `hidden`, not offered in the [Place](place.md) list or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading your piece is listed under in the Build panel's **Mods** tab, after the mod's name ("*mod name* · Hulls"). Without a group, a piece is listed under its crafting station, else under "No station needed". `group` counts only for the mods' own pieces. `data`: objects of it only hold your mod's data (a register, what was dug in an area) and have nothing to see: the editor never draws, picks or lists them in an area (your extension still reads them), and a [zone reset](area.md) keeps them when it keeps the buildings, removing them with everything else otherwise. |
 | `links` | How your objects link into one: see [Linked objects](#linked-objects). |
+| `ties` | How your objects are tied to one that names them (a train's wagons): see [Tied objects](#tied-objects). |
 | `extension` | Your editor extension's DLL, relative to the file's folder and inside it: see [Extensions](#extensions). |
 | `gameComponents` | Class names of the game's own scripts whose fields your extension needs (`"TerrainOp"`, `"Ship"`; 32 at most): while your extension runs, the editor reads every component of them in the game's prefabs from the player's Valheim (once, then kept until the game changes) and hands them to it as `Host.Game` (see [Hooks](#hooks)). |
 | `settingsFiles` | File names of your mod's BepInEx settings files your extension reads (`"author.mod.cfg"`, in `BepInEx/config`; 8 at most): as a world opens, the editor reads them from the first of the player's BepInEx folders that has each and, live, from the connected game's own through its bridge (a server's, whose synced settings its players get). Your extension reads one setting with `Host.Setting(file, section, key)` (see [Hooks](#hooks)). |
@@ -147,6 +148,43 @@ offset and turn in that one's frame.
   turns too. Values in `dropOnCopy` go, unless an extension's copy rewriter handles them.
 - Data keys are named as your code names them, as in `data`.
 
+## Tied objects
+
+Some mods tie objects together without keeping where each stands from the other: a train names the wagons it pulls,
+a deck names nothing but what is built on it names the deck. The game saves each object where it stands, and your
+mod puts them together again while it runs. Tell the editor how they are tied and it keeps them one group:
+
+```json
+{
+  "version": 1,
+  "ties": [
+    { "name": "train", "root": "ExampleVehicles_Wagons", "member": "ExampleVehicles_Self", "idBytes": 12 },
+    { "name": "deck", "root": "ExampleVehicles_DeckId", "member": "ExampleVehicles_OnDeck" }
+  ]
+}
+```
+
+| Key | |
+|---|---|
+| `root` | Data key of the ids a root names: an int, a long, or a byte array holding several ids one after the other. Required. |
+| `member` | Data key of a member's own id, of the same kind (an int, a long, or a byte array). Required. |
+| `idBytes` | For a byte array, how many bytes one id is (1 to 64; 12 for the game's object ids). Without it, the whole value is one id. |
+| `name` | What one group is called in the editor's messages. Default: `group`. |
+
+A member is in a root's group when its own id is one the root names. The ids are compared as the bytes they are,
+whatever they mean to your mod: the editor never looks them up in the game. Groups that share an object are one
+group: a train whose flatbed is a deck's root takes what is built on the deck along.
+
+- **Selecting, moving and deleting.** Selecting any object of a group and moving or turning takes the whole group,
+  as one block: each member keeps where it stands from the others, and is saved where it stands. Deleting the root
+  takes its members; deleting a member takes only it.
+- **Copying.** A copy takes the whole group. Each paste (and each of its repeats) gets new ids of the same kind and
+  size, random, in the root and in the members it names, so a copy never takes the original's members: a list keeps
+  the ids of the members copied, a single id is always new, and a member whose root was not copied loses its id.
+- **Live and saved.** The new ids are your mod's to resolve: it finds a pasted root's members by the ids they hold, as
+  it does after the game loads a world (the game gives every object a new object id at each load).
+- A rule with the same `root` and `member` keys in a newer file replaces an older one's, in its place in the order.
+
 ## Extensions
 
 What a file cannot say, code can. A mod can ship an **editor extension**: a small DLL, built
@@ -156,6 +194,8 @@ it. It can:
 
 - show a byte-array value in words in the inspector;
 - rewrite ids your mod packs in its own form in pasted copies;
+- set what your mod works out from where an object stands whenever the editor places, pastes, moves or turns it (the
+  track under a vehicle, a turn your mod keeps);
 - draw what your mod builds in code while the game runs (a sail from its corners, a cable from post
   to post);
 - place the parts of your linked objects where your mod builds them when their data alone does not
@@ -238,9 +278,10 @@ offers one."
 | Hook | What the editor does with it |
 |---|---|
 | `AddDecoder(key, IDataDecoder)` | The inspector shows a byte-array value in your words, under the value (instead of only its size). `Describe` returns a few short lines, or `null` when the bytes are not in a form it reads. When two extensions read one key, the first that gives text wins. |
-| `AddCopyRewriter(ICopyRewriter, keys)` | Each object of a pasted copy holding one of the keys is handed to you (`ICopy`), after the editor's own linking (`links`), with the copy's new ids for the originals' (`IIdMap.TryGetNew`; false when the object holding the old id was not copied). Change its values in place (`SetInt`, `SetBytes`…; `null` takes a value away). The keys are yours: `dropOnCopy` no longer takes them out. |
+| `AddCopyRewriter(ICopyRewriter, keys)` | Each object of a pasted copy holding one of the keys is handed to you (`ICopy`), after the editor's own linking (`links`), with the copy's new ids for the originals' (`IIdMap.TryGetNew`; false when the object holding the old id was not copied). Change its values in place (`SetInt`, `SetQuaternion`, `SetBytes`…; `null` takes a value away). The keys are yours: `dropOnCopy` no longer takes them out. |
 | `AddAreaCopier(id, IAreaCopier)` | What your mod holds of a place that no copied object carries (a record of rock dug out, in data holders the editor never copies) goes with the editor's copies. When the player copies (an area, or the Select tool's objects), `Copy(area, region)` gets the area and what is copied (`CopyRegion`: its `Outline` and `Contains(x, z)`, world metres, and its `Middle`) and returns bytes of your own (or `null`): keep places as offsets from the middle, since the copy may be pasted anywhere, turned and mirrored, in another world too. The bytes go with the copy and into blueprint files, under your mod's name and the `id` (letters, digits, dots, dashes and underscores). When it is pasted, `Paste(area, bytes, copies)` is called once with every copy the paste lands (`CopyPlacement`: its `Middle`, `Turn` and `Mirror`; `Place(offset)` turns an offset from the old middle into the world point where it lands, `Yaw(yaw)` a turn), and the area as the paste leaves its ground; the `ToolEdit` you return is part of the paste's undo step. Bytes whose copier is not running (your extension not installed) are left out of the paste. |
-| `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: `Shape`s, triangles in the object's frame (metres; x right, y up, z forward; the object's place, turn and size applied) or in the world's (`WorldSpace = true`), one colour each (red, green, blue, alpha from 0 to 1; alpha below 1: see-through), wound clockwise seen from the front as in Unity, or seen from both sides (`BothSides = true`, for a sail or a cloth). They are drawn with the object's kind (hidden when the View panel hides it). A shape with a triangle naming a corner it lacks, or a corner that is not a number, is not drawn. |
+| `AddPlacer(IObjectPlacer, prefabs)` | Objects of the prefabs the editor puts at a place of its own (placed, pasted, moved or turned, by any tool, a script or Claude) are handed to you once a step, all together (`ICopy`, each in its new place, its values as they will be made, a pasted copy's after the copy rewriters), with the area as it stands before the step without the objects it moves: set what your mod works out from where an object stands (a turn it keeps apart from the object's, the track a vehicle stands on, the stop a sign names), as your mod would when a player builds it. What you set is saved with the step and applied live with it. Objects changed where they stand (the inspector, a tool's edit) are no placement. |
+| `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: `Shape`s, triangles in the object's frame (metres; x right, y up, z forward; the object's place, turn and size applied) or in the world's (`WorldSpace = true`), one colour each (red, green, blue, alpha from 0 to 1; alpha below 1: see-through), wound clockwise seen from the front as in Unity, or seen from both sides (`BothSides = true`, for a sail or a cloth). They are drawn with the object's kind (hidden when the View panel hides it). An object the editor has no model of is drawn by your shapes alone (no stand-in box), and picked and outlined by the box of the shapes you give for one of its prefab with no data (those in its own frame). A shape with a triangle naming a corner it lacks, or a corner that is not a number, is not drawn. |
 | `AddLinkPlacer(ILinkPlacer, prefabs)` | Linked parts (your manifest's `links`) placed where your mod builds them when their data alone does not say it. `FrameOf(obj)`, for an object of the prefabs that has parts: the frame they hang in, in its own frame (`LinkFrame`: an offset and a turn; a swivel's platform as your mod turned or moved it), or `null` for its own frame. `PlaceOf(part, parent)`, for a part of the prefabs: where it stands in the frame of what it hangs on, in place of its offset and turn (the part at the place and turn the game saved it, its parent as drawn; the parent's frame is not applied then), or `null` for its links' place. Moving, copying and deleting still follow the links. |
 | `AddGroundCuts(IGroundCutter, prefabs)` | The ground is not drawn inside the outlines (`GroundCut`) you give for objects of the prefabs: points on the ground (x, z) in the object's frame, or in the world's (`WorldSpace = true`); at least three, in any direction round (a self-crossing outline cuts by the even-odd rule). A click there goes through the hole. The editor's ground is a height map with a point every metre: the cut leaves out the ground between the points inside the outline, so its edge follows that 1 m grid, and what shows through is what you draw below (shapes) and the underside of the ground. |
 | `AddScene(ISceneProvider)` | What your mod makes of an area as a whole, drawn in it: `Build(area)` is called on a worker each time an area opens and again whenever its objects, its ground or the game change (or you call `Host.Redraw()`), and returns a `SceneLayer` (or `null`). Its `Meshes` (`SceneMesh`: corners and their normals in the world's frame, metres, triangles wound clockwise seen from the front as in Unity) are drawn with the game's ground look when they have `BiomeColors` (each corner's terrain colour, as `area.BiomeColor` gives it) and painted from their `Mask` (a small texture of the terrain's paint mask, `MaskTexture`) at `MaskUvs`; without biome colours, in `Color`. Clicks land on them (unless `Pickable = false`). Its `Holes` (`GroundHole`: rectangles in whole metres) leave the editor's ground undrawn, cell by cell, exactly to their edges: draw what replaces it. The `area` (`IAreaView`) gives its bounds, its objects of a prefab as they are with the changes not saved yet (`ObjectsOf`, your data holders included), the ground's height as the game shows it (`GroundHeight`, between the points a metre apart along the game's own triangles), the biome, whether a point is in the Deep North or the Ashlands, and the terrain's colour and paint at a whole metre (`BiomeColor`, `GroundMask`). Work everything out from the area each time; keep nothing between calls. |
