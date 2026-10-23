@@ -184,7 +184,7 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
      plugin, and only the plugin, on Thunderstore and Hexium (team `Tie`); on the Nexus Mods page, a
      new version of each of its three files (the plugin, the Windows and the Linux editor, repacked as
      a zip: Nexus takes no `.tar.gz`), with the notes as the mod's changelog, and every add-on's zip as
-     a file of its own (`Valheim World Editor add-on: <Name>`, made at the add-on's first release, a
+     a file of its own (`Valheim World Editor add-on - <Name>`, made at the add-on's first release, a
      new version when the add-on's own version changed, not downloadable by mod managers: it goes in
      the editor's addons folder, not the game's).
 

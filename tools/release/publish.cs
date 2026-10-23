@@ -4,6 +4,10 @@
 //   notes <CHANGELOG.md> <version> <last tag, or -> <out.md> [<notes.md>]
 //       The release notes: notes.md (docs/releases/v<version>.md) when it is there, else the CHANGELOG's
 //       sections newer than the last released tag, up to version.
+//   check
+//       Checks the sites' settings without the network (the release job runs it before the GitHub release): every Nexus Mods
+//       file name a release would give, the editor's, the plugin's and each add-on's (addons/<Name>), is one
+//       Nexus takes (letters, digits, spaces and _'().- only), so a release is not refused half published.
 //   thunderstore|hexium|nexus <dist> [--notes <notes.md>] [--dry-run]
 //       Publishes the packages in dist to one site: Thunderstore and Hexium take the plugin only,
 //       WorldEditorBridge-<version>.zip (made by tools/thunderstore.sh; the version is its manifest's);
@@ -34,6 +38,12 @@ try
         case "notes" when args.Length is 5 or 6:
             File.WriteAllText(args[4], Notes(File.ReadAllText(args[1]), args[2], args[3], args.ElementAtOrDefault(5)), new UTF8Encoding(false));
             return 0;
+        case "check" when args.Length == 1:
+            var nexusSite = JsonNode.Parse(File.ReadAllText(SitesFile))!["nexus"]!;
+            var addOnNames = Directory.Exists("addons") ? Directory.GetDirectories("addons").Select(Path.GetFileName).OfType<string>() : [];
+            NexusNamesOrThrow(nexusSite, "1.234.5", addOnNames.Select(n => (n, "0.12.3")));
+            Console.WriteLine("Nexus Mods: every file name a release gives is one Nexus takes.");
+            return 0;
         case "thunderstore" or "hexium" or "nexus" when args.Length >= 2:
             string[] options = args[2..];
             bool dryRun = options.Contains("--dry-run");
@@ -61,6 +71,7 @@ try
             return 0;
         default:
             Console.Error.WriteLine("usage: publish.cs notes <CHANGELOG.md> <version> <last tag|-> <out.md> [notes.md]");
+            Console.Error.WriteLine("       publish.cs check");
             Console.Error.WriteLine("       publish.cs thunderstore|hexium|nexus <dist> [--notes <notes.md>] [--dry-run]");
             return 2;
     }
@@ -448,6 +459,26 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
     Console.WriteLine($"{Name}: https://www.nexusmods.com/{game}/mods/{modId}?tab=files");
 }
 
+// What Nexus takes in a file's name (its API: CreateModFileRequest.name).
+static Regex NexusName() => new("^[a-zA-Z0-9 _'().-]+$");
+
+// Every file name a Nexus release would give (the editor's and the plugin's files, each add-on's file and its
+// version) checked against what Nexus takes; throws with each name it would refuse (check, before the release).
+static void NexusNamesOrThrow(JsonNode site, string version, IEnumerable<(string Name, string Version)> addOns)
+{
+    var names = site["files"]!.AsArray().OfType<JsonNode>().Select(f => Template(f, "name", version)).ToList();
+    foreach (var (addOn, addOnVersion) in addOns)
+    {
+        names.Add(Text(site["addOns"]!, "fileName").Replace("{addon}", addOn, StringComparison.Ordinal));
+        names.Add(Template(site["addOns"]!, "name", addOnVersion).Replace("{addon}", addOn, StringComparison.Ordinal));
+    }
+    var refused = names.Where(n => !NexusName().IsMatch(n)).ToList();
+    if (refused.Count > 0)
+    {
+        throw new InvalidDataException($"{SitesFile}: Nexus Mods takes only letters, digits, spaces and _'().- in a file's name: {string.Join("; ", refused.Select(n => $"\"{n}\""))}.");
+    }
+}
+
 // Whether a Nexus file has this version already (not removed or archived).
 static async Task<bool> HasVersion(HttpClient http, string url, (string, string)[] auth, string modFile, string version)
 {
@@ -456,7 +487,7 @@ static async Task<bool> HasVersion(HttpClient http, string url, (string, string)
 }
 
 // The add-ons' uploads: each add-on is a file of its own on the mod page, found by the file's name ("Valheim World
-// Editor add-on: Riverheim", its versions named with their version); a new version of it unless it has the add-on's
+// Editor add-on - Riverheim", its versions named with their version); a new version of it unless it has the add-on's
 // version already (an add-on unchanged since its last release), or a new file at its first release.
 static async Task<List<NexusFile>> NexusAddOns(HttpClient http, string url, (string, string)[] auth, string modUid, JsonNode settings, IReadOnlyList<AddOn> addOns)
 {
