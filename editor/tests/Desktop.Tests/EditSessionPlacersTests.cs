@@ -41,6 +41,20 @@ public sealed class EditSessionPlacersTests : IDisposable
         }
     }
 
+    /// <summary>Places rocks by taking their x value away (a value the mod clears when the object moves).</summary>
+    private sealed class XClearer : IWorldEditorExtension, IObjectPlacer
+    {
+        public void Register(IExtensionRegistry registry) => registry.AddPlacer(this, "Rock_4");
+
+        public void Place(IReadOnlyList<ICopy> placed, IAreaView area)
+        {
+            foreach (var p in placed)
+            {
+                p.SetInt("x", null);
+            }
+        }
+    }
+
     private static (NewObject, bool) New(int prefab, Vector3 at) => (new NewObject(0, prefab, at, Vector3.Zero, 0), false);
 
     private static int? X(EditSession s, int index) =>
@@ -74,6 +88,20 @@ public sealed class EditSessionPlacersTests : IDisposable
         Assert.Equal([new Vector3(30, 30, 5)], placer.Steps[1]);
         Assert.Equal(0, placer.AreaRocks[1]);
         Assert.Equal(30, X(s, moved));
+    }
+
+    [Fact]
+    public void AValueAPlacerTakesAwayIsGoneFromTheMovedObject()
+    {
+        var s = TestScenes.Flat(1);
+        var x = new ObjectField("ints", StableHash.Of("x"), "5");
+        int rock = s.Commit("Put", null, [], [(new NewObject(0, Rock, new Vector3(10, 30, 5), Vector3.Zero, 0, Data: [x]), false)])[0];
+        Assert.Equal(5, X(s, rock));
+        ModExtensions.UseForTests(("Rocks", new XClearer()));
+
+        int moved = s.Move([(rock, new Vector3(30, 30, 5), Vector3.Zero)])[0];
+
+        Assert.Null(X(s, moved));
     }
 
     [Fact]
