@@ -420,7 +420,8 @@ BepInEx's own pack for the BepInEx and Harmony assemblies Riverheim names, at th
 never kept in the repository: building a test project downloads them from Thunderstore (`editor/tests/TestMods.targets`) into
 the system's temporary folder (`vwe-test-mods/<project>`), and the test run deletes them when it ends
 (`editor/tests/Support/TestMods.cs`; CI deletes them after its last test process). Building the tests needs the network for
-them. Unity's classes Riverheim's plugin derives from come from a stand-in the Riverheim add-on's tests write (`addons/Riverheim/tests/Riverheim.WorldEditor.Tests/Support/UnityStandIn.cs`); those tests link `editor/tests/Support/TestMods.cs` and import `editor/tests/TestMods.targets`; the Expand World add-on's link all of `editor/tests/Support`, with a copy of YamlDotNet standing in for the one Expand World Data installs (`YamlStandIn`).
+them. An add-on's tests may download only its own mod (`TestModsOwnList`, their own `TestMod` items: the Railroads
+add-on's, Railroads itself, whose model files they read). Unity's classes Riverheim's plugin derives from come from a stand-in the Riverheim add-on's tests write (`addons/Riverheim/tests/Riverheim.WorldEditor.Tests/Support/UnityStandIn.cs`); those tests link `editor/tests/Support/TestMods.cs` and import `editor/tests/TestMods.targets`; the Expand World add-on's link all of `editor/tests/Support`, with a copy of YamlDotNet standing in for the one Expand World Data installs (`YamlStandIn`).
 
 CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
 `windows-smoke` on main only: they are slow, and the packaging they check seldom changes; `windows-tests` on main

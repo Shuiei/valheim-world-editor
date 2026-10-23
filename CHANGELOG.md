@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.110.0 — 2026-10-23
+
+### Added
+- **A Railroads add-on.** The track, stations and trains of the Railroads mod are drawn in the 3D view as the game
+  builds them, from the mod's own models, and copies of them pasted with the editor work in the game. It is its own
+  download beside the editor's: unpack it into the addons folder.
+- **Mods' extensions set quaternions in copies.** For mod authors: a copy rewriter (or a tool's edit) can now set or
+  take away a quaternion value (`ICopy.SetQuaternion`), such as a turn the mod keeps. See
+  [Hooks](docs/modding.md#hooks).
+
 ## v1.109.0 — 2026-10-22
 
 ### Changed
