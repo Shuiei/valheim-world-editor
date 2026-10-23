@@ -25,6 +25,7 @@ public sealed class Extension : IWorldEditorExtension
         registry.AddDecoder(RailroadsMod.Keys.Self, ids);
         registry.AddDecoder(RailroadsMod.Keys.Legs, new TripLegs());
         registry.AddCopyRewriter(new PastedCopies(), PastedCopies.Keys);
+        registry.AddPlacer(new RailPlacer(models), RailPlacer.Prefabs);
         registry.Log($"ready (editor {registry.EditorVersion}, API {registry.ApiVersion})");
     }
 }

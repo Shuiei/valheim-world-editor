@@ -21,6 +21,9 @@ public static class RailroadsMod
     /// <summary>The prefab of the hand cart.</summary>
     public const string Handcart = "bf_handcart";
 
+    /// <summary>The prefab of a station sign, a named stop for trains.</summary>
+    public const string Sign = "bf_station_sign";
+
     /// <summary>The prefab of the station of the mod's first versions (no longer on the hammer; still in worlds).</summary>
     public const string OldStation = "bf_station";
 
@@ -57,7 +60,7 @@ public static class RailroadsMod
         Track("bf_track_junction_t", "track_junction_t"),
         Track("bf_track_junction_x", "track_junction_x"),
         new(OldStation, "station", RailKind.Station, Retired: true),
-        new("bf_station_sign", "station_sign", RailKind.Station),
+        new(Sign, "station_sign", RailKind.Station),
         new("bf_train_console", "train_console", RailKind.Station),
         new(Locomotive, "locomotive", RailKind.Vehicle),
         new("bf_wagon", "wagon", RailKind.Vehicle),
@@ -189,6 +192,18 @@ public static class RailroadsMod
 
         /// <summary>A piece's turn on its flatbed's deck, in the flatbed's frame (quaternion).</summary>
         public const string DeckRot = "bf_deck_rot";
+
+        /// <summary>The fuel left in a vehicle's first lamp (float; the mod names its lamps' keys by number).</summary>
+        public const string Torch0 = "bf_torch0";
+
+        /// <summary>The fuel left in a vehicle's second lamp (float).</summary>
+        public const string Torch1 = "bf_torch1";
+
+        /// <summary>When the first lamp's fuel was last counted (long, the game's ticks).</summary>
+        public const string Torch0Time = "bf_torch0_time";
+
+        /// <summary>When the second lamp's fuel was last counted (long, the game's ticks).</summary>
+        public const string Torch1Time = "bf_torch1_time";
 
         /// <summary>A wagon's sign (string).</summary>
         public const string Sign = "bf_sign";

@@ -11,11 +11,11 @@ internal sealed class FakeObject(string prefab) : ICopy
 {
     public string Prefab => prefab;
 
-    public Vector3 Position { get; init; }
+    public Vector3 Position { get; set; }
 
     public Vector3 Rotation { get; init; }
 
-    public Quaternion Orientation { get; init; } = Quaternion.Identity;
+    public Quaternion Orientation { get; set; } = Quaternion.Identity;
 
     public float Scale => 1;
 

@@ -1,13 +1,12 @@
 using System.Numerics;
-using ValheimWorldEditor.Sdk;
 using Xunit;
 
 namespace Railroads.WorldEditor.Tests;
 
 /// <summary>
-/// Pasted copies of the mod's pieces made pieces of their own, where they are pasted: track keeps the turn it is pasted
-/// with; a vehicle leaves the original's track, trip, wagons and driver behind and keeps its coal and signs; a station
-/// sign leaves the original's stop and keeps its name; a flatbed and what is built on its deck leave the deck's tie.
+/// Pasted copies of the mod's pieces made pieces of their own: a vehicle leaves the original's track, trip, wagons and
+/// driver behind and keeps its coal and signs; a station sign leaves the original's stop and keeps its name; a flatbed
+/// and what is built on its deck leave the deck's tie. (Where the copy lands sets the rest: RailPlacerTests.)
 /// </summary>
 public class PastedCopiesTests
 {
@@ -25,31 +24,6 @@ public class PastedCopiesTests
     private sealed record Key(string Type, string Name);
 
     private static void Rewrite(FakeObject copy) => new PastedCopies().Rewrite(copy, new NoIds());
-
-    [Fact]
-    public void PastedTrackKeepsTheTurnItIsPastedWith()
-    {
-        var turned = Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)Math.PI / 8);
-        var copy = new FakeObject("bf_track_straight_8") { Orientation = turned };
-        copy.Quaternions[RailroadsMod.Keys.Turn] = Quaternion.Identity;
-        copy.Ints[RailroadsMod.Keys.PaidWood] = 8;
-
-        Rewrite(copy);
-
-        Assert.Equal(turned, copy.Quaternions[RailroadsMod.Keys.Turn]);
-        Assert.Equal(8, copy.Ints[RailroadsMod.Keys.PaidWood]);
-    }
-
-    [Fact]
-    public void TrackThatHadNoExactTurnGetsNone()
-    {
-        var copy = new FakeObject("bf_track_straight_8") { Orientation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 1) };
-        copy.Ints[RailroadsMod.Keys.Paid] = 1;
-
-        Rewrite(copy);
-
-        Assert.DoesNotContain(RailroadsMod.Keys.Turn, copy.Keys);
-    }
 
     [Fact]
     public void APastedTrainLeavesTheOriginalsTrackTripAndWagons()
@@ -151,7 +125,6 @@ public class PastedCopiesTests
         {
             Assert.Contains(name, PastedCopies.Keys);
         }
-        Assert.Contains(RailroadsMod.Keys.Turn, PastedCopies.Keys);
         Assert.Contains(RailroadsMod.Keys.Self, PastedCopies.Keys);
         Assert.Contains(RailroadsMod.Keys.DeckRot, PastedCopies.Keys);
     }
@@ -166,16 +139,6 @@ public class PastedCopiesTests
             case "float": o.Floats[key.Name] = 3; break;
             case "string": o.Strings[key.Name] = "Riverside"; break;
             default: o.Bytes[key.Name] = new byte[24]; break;
-        }
-    }
-
-    /// <summary>No object of the copy holds an id the editor links.</summary>
-    private sealed class NoIds : IIdMap
-    {
-        public bool TryGetNew(int oldId, out int newId)
-        {
-            newId = 0;
-            return false;
         }
     }
 }
