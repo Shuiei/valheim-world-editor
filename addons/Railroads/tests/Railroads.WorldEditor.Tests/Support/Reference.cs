@@ -13,6 +13,12 @@ internal static class Reference
     /// <summary>The recorded objects, in the file's order.</summary>
     public static IReadOnlyList<Recorded> Objects { get; } = Read(Path.Combine(AppContext.BaseDirectory, "fixtures", "railroads-reference.txt"));
 
+    /// <summary>
+    /// The objects of a second record (fixtures/railroads-supports.txt): the same railway, then track and an old station
+    /// built by a player's placement, with their prices and the support poles the mod built under them.
+    /// </summary>
+    public static IReadOnlyList<Recorded> Supports { get; } = Read(Path.Combine(AppContext.BaseDirectory, "fixtures", "railroads-supports.txt"));
+
     /// <summary>The recorded objects of a prefab.</summary>
     public static IEnumerable<Recorded> Of(string prefab) => Objects.Where(o => o.Object.Prefab == prefab);
 

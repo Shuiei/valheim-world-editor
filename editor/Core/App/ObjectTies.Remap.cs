@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.App;
@@ -24,19 +25,18 @@ public static partial class ObjectTies
     /// </summary>
     /// <param name="copy">The copy's objects, each with all its data.</param>
     /// <param name="rules">The rules.</param>
-    /// <param name="random">Draws the new ids.</param>
-    public static NewObject[] Remap(IReadOnlyList<NewObject> copy, IReadOnlyList<TieRule> rules, Random random)
+    public static NewObject[] Remap(IReadOnlyList<NewObject> copy, IReadOnlyList<TieRule> rules)
     {
         var data = copy.Select(o => o.Data?.ToList()).ToArray();
         foreach (var rule in rules)
         {
-            RemapRule(data, rule, random);
+            RemapRule(data, rule);
         }
         return [.. copy.Select((o, i) => data[i] is { } d && o.Data != null && !d.SequenceEqual(o.Data) ? o with { Data = d } : o)];
     }
 
     /// <summary>One rule's ids made the copy's own, in place.</summary>
-    private static void RemapRule(List<ObjectField>?[] data, TieRule rule, Random random)
+    private static void RemapRule(List<ObjectField>?[] data, TieRule rule)
     {
         // Each member's id, by its value.
         var members = new Dictionary<string, List<(int Object, int Field)>>(StringComparer.Ordinal);
@@ -57,7 +57,7 @@ public static partial class ObjectTies
                 id = new byte[old.Length];
                 do
                 {
-                    random.NextBytes(id);
+                    RandomNumberGenerator.Fill(id);
                 }
                 while (id.All(b => b == 0));
                 made[k] = id;

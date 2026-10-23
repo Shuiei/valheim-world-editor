@@ -50,6 +50,10 @@ track and vehicles are applied in the game, keep their turn after a restart, and
 - **A train follows its track.** A train moved or turned as a block lands where you put it, and the game then lays
   its wagons out behind the locomotive along the track, as it does while the train runs: put it down on track that
   carries the whole train.
+- **Supports are pieces of their own.** The poles and knees the mod builds under track and stations are the game's
+  own pole pieces (the inspector says what they are made of and which part they are). The mod keeps no tie between
+  them and the track, and leaves them standing when track is removed: the editor does the same. Select them with the
+  track to move or copy them along (a box over both).
 - **Station names.** A pasted sign keeps the original's name; give it its own in the game (the mod does not let two
   stations share a name when you name them there).
 
@@ -76,5 +80,6 @@ tools/addons.sh dist                    # dist/ValheimWorldEditor-addon-Railroad
 Building the tests downloads Railroads 0.2.6, the version the add-on follows, from Thunderstore (never kept in the
 repository): every model of it is read and drawn. The tests also replay objects the real mod made on a local server
 (`tests/Railroads.WorldEditor.Tests/fixtures/railroads-reference.txt`: track, a station sign, a train sent to it with
-a wagon and a flatbed carrying a floor, a hand cart). The add-on's version is `VERSION` here, its changes
+a wagon and a flatbed carrying a floor, a hand cart), and track and an old station a player built, with their prices
+and the supports the mod built under them (`railroads-supports.txt`). The add-on's version is `VERSION` here, its changes
 `CHANGELOG.md`: it goes out with every editor release, under its own version.

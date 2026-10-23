@@ -83,8 +83,10 @@ public sealed class ObjectTiesTests : ModManifestsTestBase
         // The train's wagons in its order (the one it names that is not there left out), the deck's piece; a wagon
         // and a piece no root names stand alone.
         Assert.Equal(2, groups.Count);
-        Assert.Equal(([0, 2, 1], Train), (groups[0].Group, groups[0].Rule));
-        Assert.Equal(([4, 5], Deck), (groups[1].Group, groups[1].Rule));
+        Assert.Equal([0, 2, 1], groups[0].Group);
+        Assert.Equal(Train, groups[0].Rule);
+        Assert.Equal([4, 5], groups[1].Group);
+        Assert.Equal(Deck, groups[1].Rule);
     }
 
     [Fact]
@@ -98,7 +100,7 @@ public sealed class ObjectTiesTests : ModManifestsTestBase
             Made(Bytes("Self", Id(8))),
         ];
 
-        var made = ObjectTies.Remap(copy, [Train], new Random(3));
+        var made = ObjectTies.Remap(copy, [Train]);
 
         byte[] wagons = Convert.FromBase64String(Value(made[0], "Wagons")!);
         // The copy's two wagons, in the train's order; the third was not copied.
@@ -116,8 +118,8 @@ public sealed class ObjectTiesTests : ModManifestsTestBase
     {
         NewObject[] copy = [Made(Long("DeckKey", 77)), Made(Long("OnDeck", 77))];
 
-        var first = ObjectTies.Remap(copy, [Deck], new Random(1));
-        var second = ObjectTies.Remap(copy, [Deck], new Random(2));
+        var first = ObjectTies.Remap(copy, [Deck]);
+        var second = ObjectTies.Remap(copy, [Deck]);
 
         Assert.Equal(Value(first[0], "DeckKey"), Value(first[1], "OnDeck"));
         Assert.NotEqual("77", Value(first[0], "DeckKey"));
@@ -127,7 +129,7 @@ public sealed class ObjectTiesTests : ModManifestsTestBase
     [Fact]
     public void ARootAloneStillGetsANewSingleId()
     {
-        var made = ObjectTies.Remap([Made(Long("DeckKey", 77)), Made(Long("OnDeck", 70))], [Deck], new Random(4));
+        var made = ObjectTies.Remap([Made(Long("DeckKey", 77)), Made(Long("OnDeck", 70))], [Deck]);
 
         Assert.NotEqual("77", Value(made[0], "DeckKey"));
         Assert.Null(Value(made[1], "OnDeck"));
@@ -138,7 +140,7 @@ public sealed class ObjectTiesTests : ModManifestsTestBase
     {
         NewObject[] copy = [Made(new ObjectField("ints", StableHash.Of("Coal"), "5")), new(0, 1, Vector3.Zero, Vector3.Zero, 0)];
 
-        var made = ObjectTies.Remap(copy, [Train, Deck], new Random(5));
+        var made = ObjectTies.Remap(copy, [Train, Deck]);
 
         Assert.Same(copy[0], made[0]);
         Assert.Same(copy[1], made[1]);

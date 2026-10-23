@@ -35,7 +35,7 @@ public static partial class ObjectLinks
         var tieRules = ObjectTies.Current;
         if (ObjectTies.AnyIn(copy, tieRules))
         {
-            copy = ObjectTies.Remap(copy, tieRules, random);
+            copy = ObjectTies.Remap(copy, tieRules);
         }
         if (links.All(l => l == null) && !rewrite)
         {

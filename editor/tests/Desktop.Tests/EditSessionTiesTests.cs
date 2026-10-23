@@ -17,7 +17,8 @@ public sealed class EditSessionTiesTests : IDisposable
 {
     private const string Ties = """{ "version": 1, "ties": [ { "name": "train", "root": "Wagons", "member": "Self", "idBytes": 4 } ] }""";
 
-    private static readonly int Car = StableHash.Of("car");
+    // A prefab the test world can make objects of (its data holding the ties).
+    private static readonly int Car = StableHash.Of("Rock_4");
 
     public EditSessionTiesTests() => ModManifests.Base = [ExampleMod.Manifest, Ties];
 
