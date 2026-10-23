@@ -15,7 +15,11 @@ public sealed partial class LinkIndex
     /// <param name="Position">Its position as stored, in metres.</param>
     /// <param name="Rotation">Its turn as stored, Unity Euler degrees.</param>
     /// <param name="Link">What its data says.</param>
-    public sealed record Member(int Id, Vector3 Position, Vector3 Rotation, ObjectLink Link);
+    public sealed record Member(int Id, Vector3 Position, Vector3 Rotation, ObjectLink Link)
+    {
+        /// <summary>Its prefab's hash (0: not known, an index of members alone): an extension may place it (ILinkPlacer).</summary>
+        public int Prefab { get; init; }
+    }
 
     /// <summary>The objects with a link, by id.</summary>
     private readonly Dictionary<int, Member> _members = [];
@@ -42,6 +46,8 @@ public sealed partial class LinkIndex
     public static LinkIndex Of(WorldSave world, ICollection<int> deleted, IEnumerable<NewObject> added)
     {
         var ix = new LinkIndex();
+        var made = new Dictionary<int, NewObject>();
+        ix._read = id => ObjectData.Bytes(world, made.GetValueOrDefault, id, WorldSave.Builder) is { } bytes ? ZdoData.Parse(bytes) : null;
         foreach (var (id, (link, rotation)) in world.Links)
         {
             if (link.Id != 0)
@@ -50,18 +56,19 @@ public sealed partial class LinkIndex
             }
             if (!deleted.Contains(id))
             {
-                ix.Add(new Member(id, world.ObjectRefs[id].Position, rotation, link));
+                ix.Add(new Member(id, world.ObjectRefs[id].Position, rotation, link) { Prefab = world.ObjectRefs[id].Prefab });
             }
         }
         foreach (var n in added)
         {
+            made[n.Id] = n;
             if (ObjectLinks.LinkOf(world, n) is { } link)
             {
                 if (link.Id != 0)
                 {
                     ix.Ids.Add(link.Id);
                 }
-                ix.Add(new Member(n.Id, n.Position, n.Rotation, link));
+                ix.Add(new Member(n.Id, n.Position, n.Rotation, link) { Prefab = n.Prefab });
             }
         }
         ix.Join();
@@ -69,9 +76,11 @@ public sealed partial class LinkIndex
     }
 
     /// <summary>The links of these objects alone (tests, and objects that are no world's).</summary>
-    public static LinkIndex Of(IEnumerable<Member> members)
+    /// <param name="members">The objects.</param>
+    /// <param name="data">Each object's data by id, for the extensions' link placers (null: none is read).</param>
+    public static LinkIndex Of(IEnumerable<Member> members, Func<int, ZdoData?>? data = null)
     {
-        var ix = new LinkIndex();
+        var ix = new LinkIndex { _read = data };
         foreach (var m in members)
         {
             if (m.Link.Id != 0)

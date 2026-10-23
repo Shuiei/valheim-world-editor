@@ -39,13 +39,14 @@ public static partial class ObjectLinks
         var position = o.Position;
         if (attached)
         {
-            if (rule.StoredAtRoot)
+            // A carried part stays where it was pasted, with the rest of the copy.
+            if (link.StoredAtRoot && !link.Carried)
             {
                 position = copy[TopOfPart(links, at, i)].Position;
             }
             if (mirror)
             {
-                MirrorPlacement(data, rule, link);
+                MirrorPlacement(data, link);
             }
         }
         else
@@ -56,16 +57,22 @@ public static partial class ObjectLinks
         return o with { Position = position, Data = data };
     }
 
-    /// <summary>A part whose parent was not copied is no part any more: its parent and placement values are taken away.</summary>
+    /// <summary>
+    /// A part whose parent was not copied is no part any more: its parent and placement values are taken away (those of
+    /// every parent key's placement).
+    /// </summary>
     private static void ClearPlacement(List<ObjectField> data, LinkRule rule)
     {
         foreach (int key in rule.ParentKeys)
         {
             Put(data, "ints", key, null);
         }
-        Put(data, "vec3", rule.OffsetKey, null);
-        Put(data, "vec3", rule.EulerKey, null);
-        Put(data, "quats", rule.QuatKey, null);
+        foreach (var place in Enumerable.Range(-1, rule.ParentKeys.Length + 1).Select(rule.PlacementAt).Distinct())
+        {
+            Put(data, "vec3", place.OffsetKey, null);
+            Put(data, "vec3", place.EulerKey, null);
+            Put(data, "quats", place.QuatKey, null);
+        }
     }
 
     /// <summary>Takes away the values the rule leaves out of copies (unless an extension rewrites them).</summary>

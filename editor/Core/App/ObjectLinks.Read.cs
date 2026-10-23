@@ -33,14 +33,16 @@ public static partial class ObjectLinks
             {
                 continue;
             }
+            // The keys of the parent it hangs on (a manifest's placements), else the rule's.
+            var place = rule.PlacementAt(Array.FindIndex(parents, p => p != 0));
             Vector3? offset = null, euler = null;
             foreach (var (k, v) in vec3s ?? [])
             {
-                if (k == rule.OffsetKey)
+                if (k == place.OffsetKey && k != 0)
                 {
                     offset ??= v;
                 }
-                else if (k == rule.EulerKey && k != 0)
+                else if (k == place.EulerKey && k != 0)
                 {
                     euler ??= v;
                 }
@@ -48,7 +50,7 @@ public static partial class ObjectLinks
             Quaternion? quat = null;
             foreach (var (k, v) in quats ?? [])
             {
-                if (k == rule.QuatKey && k != 0)
+                if (k == place.QuatKey && k != 0)
                 {
                     quat ??= v;
                 }

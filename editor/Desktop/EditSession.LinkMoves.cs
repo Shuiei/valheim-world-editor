@@ -78,7 +78,7 @@ public sealed partial class EditSession
                 }
                 var part = links.Get(id)!;
                 float own = slot.TryGetValue(i, out int j) ? result[j].Scale : things[i].Scale;
-                if (part.Link.Rule.StoredAtRoot)
+                if (part.Link.StoredAtRoot)
                 {
                     Set(i, position, part.Rotation, own);
                 }
