@@ -117,7 +117,7 @@ dungeons, for example after a Valheim update, in places nobody built. To reset t
 
 The next time a player comes near a reset zone, the game generates it again from the seed, its location (ruin,
 dungeon, altar) included. Live, that happens at once where players are; after a live reset the editor reads the world
-again and the history starts over.
+again, and the history comes along without what it did in the reset zones.
 
 ## Edited zones
 

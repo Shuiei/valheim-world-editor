@@ -110,6 +110,7 @@ public sealed partial class WorldSession
         LiveSync.Reset();
         _digests.Clear();
         History = null;
+        _discZones = [];
     }
 
     /// <summary>
@@ -131,6 +132,7 @@ public sealed partial class WorldSession
         LiveSync.Reset();
         _digests.Clear();
         History = null;
+        _discZones = [];
         Area = null;
         // Offline the world is as it was last saved: so is the history kept then.
         if (!IsLive)

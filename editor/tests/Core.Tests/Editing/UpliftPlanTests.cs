@@ -71,4 +71,35 @@ public class UpliftPlanTests
         Assert.Equal(plan.Zones.Count, plan.Zones.Select(e => (e.ZoneX, e.ZoneZ)).Distinct().Count());
         Assert.Equal(alone.Max(p => p.Worst), plan.Worst);
     }
+
+    [Fact]
+    public void AGroupStillAsItsDiscsWereWorkedOutIsNotPlannedAgain()
+    {
+        using var w = new TempWorld();
+        var (a, b) = ((X: 40f, Z: 30f), (X: 13 * 64f, Z: 13 * 64f));
+        var both = Of(w.Load());
+        both.Lift(a.X, a.Z, Bell(a.X, a.Z, 20, 40));
+        both.Lift(b.X, b.Z, Bell(b.X, b.Z, 20, 40));
+        var near = Uplift.WorkingZones([((int)MathF.Floor((b.X + 32) / 64), (int)MathF.Floor((b.Z + 32) / 64))]).ToHashSet();
+        var plan = Uplift.Make(both.World, both.Terrain, both.Edits, both.NextId, asPlanned: (x, z) => near.Contains((x, z)))!;
+        Assert.True(plan.Discs > 0, plan.Describe().English);
+        Assert.All(plan.Add, n => Assert.True(Vector2.Distance(new(n.Position.X, n.Position.Z), new(a.X, a.Z)) < 100));
+        Assert.DoesNotContain(plan.Zones, e => near.Contains((e.ZoneX, e.ZoneZ)));
+        // Both groups as planned: nothing to do.
+        Assert.Null(Uplift.Make(both.World, both.Terrain, both.Edits, both.NextId, asPlanned: (_, _) => true));
+    }
+
+    [Fact]
+    public void TreesAlreadyOnTheGroundAskedForStay()
+    {
+        // The hill of UpliftSaveTests, over the edge of the test world's trees: saved, the tree under it goes.
+        using var w = new TempWorld();
+        const float Cx = 40, Cz = 30;
+        var o = Of(w.Load());
+        o.Lift(Cx, Cz, Bell(Cx, Cz, 30, 60));
+        Assert.True(Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId)!.Cleared > 0);
+        // The world's objects already standing on that ground (the lift only makes up for discs under it): none goes.
+        var stay = Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId, standing: o.Edits.Get)!;
+        Assert.Equal(0, stay.Cleared);
+    }
 }

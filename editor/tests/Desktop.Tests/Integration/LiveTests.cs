@@ -69,7 +69,8 @@ public class LiveTests
         // The game regenerates the zones: the world is read again from it.
         Assert.Equal(2, game.Snapshots);
         Assert.Equal((0, 0, 0, 0), world.Pending);
-        Assert.Null(world.History);
+        // The history comes along: the raise, outside the reset zone, applied.
+        Assert.True(Assert.Single(world.History!.Undo).Applied);
     }
 
     [Fact]

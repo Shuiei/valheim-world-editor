@@ -12,7 +12,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class HistoryFileResetsTests
 {
-    // Saving a reset reads the area again and clears the history: the step is kept on disk while it is pending.
+    // A reset step is kept on disk while it is pending; once the reset is saved it cannot be undone, and the step goes.
     [AvaloniaFact]
     public void AZoneResetStepIsWrittenAndReadBack()
     {

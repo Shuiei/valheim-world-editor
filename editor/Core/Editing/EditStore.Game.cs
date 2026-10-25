@@ -42,6 +42,8 @@ public sealed partial class EditStore
     {
         _baseline[key] = fresh.Clone();
         _gameChanged.Remove(key);
+        // The game's ground in place of No limit ground over discs (players dug there): not that ground any more.
+        _planned.Remove(key);
         if (exists)
         {
             _zones[key] = fresh;

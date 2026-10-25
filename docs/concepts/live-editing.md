@@ -57,8 +57,8 @@ this order:
 
 1. **The ground** of every zone you changed, No limit ground included (see [No limit](ground-limits.md#no-limit)).
 2. **The objects** you deleted, placed, pasted, replaced, changed or moved.
-3. **Zone resets**, last. The game makes those zones again, so the editor then reads the world again and the history
-   starts over.
+3. **Zone resets**, last. The game makes those zones again, so the editor then reads the world again; the history
+   comes along without what it did in those zones.
 
 The game shares each change with every player connected, as it does with what players build, and saves it with the
 world. Objects placed live are made by the server, so players see them like something just built or planted.

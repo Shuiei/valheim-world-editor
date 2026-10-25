@@ -9,8 +9,8 @@ public sealed partial class EditSession
 {
     /// <summary>
     /// Writes the changes into the world's files (WorldSession.Save); the history stays, its steps saved (an undo is
-    /// then pending, saved by the next save), as with Apply live. After zone resets or No limit ground the area is read
-    /// again and the history cleared.
+    /// then pending, saved by the next save), as with Apply live, No limit ground included. After zone resets the area
+    /// is read again, and its history with it.
     /// </summary>
     /// <returns>What the writer did.</returns>
     public WorldWriter.Result Save() => SaveOutcome().Saved!;
@@ -32,8 +32,8 @@ public sealed partial class EditSession
             var owner = Scene.Owner ?? throw new InvalidOperationException("This area is not part of an open world, so it cannot be saved.");
             o = owner.Save();
             result = o.Saved!;
-            // Read again only when the world was (zone resets) or No limit ground became ground discs
-            // (a failed save puts it back): the ground under the area is not the same any more.
+            // Read again only when the world was (zone resets) or No limit ground stayed ground discs in the
+            // session (a failed save, or edits changed while saving): the ground under the area is not the same.
             // Otherwise, as after Apply live, the area and its history stay; the steps are saved.
             reread = o.Reloaded || o.Lifted;
             if (reread)

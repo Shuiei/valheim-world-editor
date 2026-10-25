@@ -76,26 +76,32 @@ public static partial class HistoryFile
     }
 
     /// <summary>
-    /// Takes what the history file of the world will hold, cheaply: each step's fields as they are now, and what
-    /// finding its objects needs (<see cref="Sources"/>; the world is held from here until they are read).
+    /// Takes what the history file of the world will hold, cheaply: each step's fields as they are now, the generated
+    /// ground at its points (which its ground values are on), and what finding its objects needs (<see cref="Sources"/>;
+    /// the world is held from here until they are read).
     /// </summary>
-    private static Snapshot Take(WorldSession w, EditSession.Kept k)
+    /// <param name="w">The world.</param>
+    /// <param name="k">The history.</param>
+    /// <param name="bases">The generated ground the steps are on; null: as the world's generator makes it now.</param>
+    private static Snapshot Take(WorldSession w, EditSession.Kept k, Func<int, int, float>? bases = null)
     {
         string key = KeyOf(w);
         string path = PathOf(key);
         var all = k.Undo.Concat(k.Redo).ToList();
         if (all.Count == 0)
         {
-            return new Snapshot(path, key, null, 0, null, [], 0, 0);
+            return new Snapshot(path, key, null, 0, null, [], 0, 0, []);
         }
         var order = all.Select((c, i) => (c, i)).ToDictionary(p => p.c, p => p.i);
         var steps = new List<KeptStep>(all.Count);
+        var baseAt = bases ?? BaseHeights(w);
         foreach (var c in all)
         {
             int[] cids = k.Ids[c];
             (int, bool, bool)[] things = [.. cids.Select((id, n) => (id, c.Things[n].Before, c.Things[n].After))];
-            steps.Add(new KeptStep(c.Label, c.Time.Ticks, c.Removed, c.Applied, c.RevertOf != null && order.TryGetValue(c.RevertOf, out int r) ? r : -1,
-                k.FrameOf(c), c.Points, c.Before, c.After, [.. c.Zones], things, c.Resets, c.Hidden));
+            var f = k.FrameOf(c);
+            steps.Add(new KeptStep(c.Label, c.Time.Ticks, c.Removed, c.Applied, c.Earlier, c.RevertOf != null && order.TryGetValue(c.RevertOf, out int r) ? r : -1,
+                f, c.Points, [.. c.Points.Select(p => baseAt(p % f.W + f.Ox, p / f.W + f.Oz))], c.Before, c.After, [.. c.Zones], things, c.Resets, c.Hidden));
         }
         string? stamp = Stamp(w);
         long savedAt = DateTime.UtcNow.Ticks;
@@ -114,7 +120,7 @@ public static partial class HistoryFile
         var world = w.World;
         // Last, once nothing can fail: the hold is let go by whoever writes the snapshot.
         var sources = new Sources(world, world.Hold(), ids, edits.Deleted, edits.Added, addedById, WorldSave.Builder);
-        return new Snapshot(path, key, stamp, savedAt, sources, steps, k.Undo.Count, k.Redo.Count);
+        return new Snapshot(path, key, stamp, savedAt, sources, steps, k.Undo.Count, k.Redo.Count, TakeLifted(w));
     }
 
     /// <summary>
@@ -170,7 +176,10 @@ public static partial class HistoryFile
         string temp = s.Path + ".new";
         try
         {
-            WriteFile(s, things, index, temp);
+            using (var file = File.Create(temp))
+            {
+                WriteTo(s, things, index, file);
+            }
             File.Move(temp, s.Path, overwrite: true);
         }
         catch (Exception) when (File.Exists(temp))

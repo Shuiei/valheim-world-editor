@@ -21,6 +21,7 @@ public sealed partial class EditStore
             _addedTrash.Clear();
             _resets.Clear();
             _gameChanged.Clear();
+            _planned.Clear();
             Load(world);
             Version++;
             ObjectsVersion++;

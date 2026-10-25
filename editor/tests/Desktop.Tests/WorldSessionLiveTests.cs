@@ -102,12 +102,22 @@ public sealed class WorldSessionLiveTests
         Assert.Equal(added, world.Edits.AddedCount);
         Assert.Equal(deleted, world.Edits.DeletedCount);
         Assert.Same(modifiers, world.Modifiers);
-        // Once the game answers, the lift goes in as ground discs.
+        // Once the game answers, the lift goes in as ground discs; the session keeps its No limit ground over them,
+        // nothing left to apply.
         game.Fail.Remove("/terrain");
         o = await world.ApplyLive();
         Assert.True(o.Done, o.Message);
         Assert.True(o.Lifted);
-        Assert.False(world.Edits.Get(0, 0)!.HasLift);
+        Assert.True(world.Edits.Get(0, 0)!.HasLift);
+        Assert.True(world.Edits.AsPlanned(0, 0));
+        Assert.True(world.Edits.AddedCount > added);
+        Assert.Equal(0, world.Pending.Zones);
+        // Applied again unchanged, the discs are not worked out again.
+        int sent = game.Terrain.Count, discs = world.Edits.AddedCount;
+        o = await world.ApplyLive();
+        Assert.False(o.Lifted, o.Message);
+        Assert.Equal(sent, game.Terrain.Count);
+        Assert.Equal(discs, world.Edits.AddedCount);
     }
 
     [Fact]

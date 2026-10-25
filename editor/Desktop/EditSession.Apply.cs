@@ -8,8 +8,8 @@ public sealed partial class EditSession
 {
     /// <summary>
     /// Live: applies everything to the running game. After zone resets the world is read again from the game (like a
-    /// save), and after No limit ground became ground discs the area is (the ground under it changed); otherwise the
-    /// history stays.
+    /// save), and after No limit ground became ground discs the area is (the ground under it changed), its history read
+    /// again with it; otherwise the history stays.
     /// </summary>
     /// <param name="confirm">See WorldSession.ApplyLive (asked before writing over ground the game changed).</param>
     public async Task<WorldSession.Outcome> ApplyLive(Func<IReadOnlyList<(int X, int Z)>, Task<bool>>? confirm = null)

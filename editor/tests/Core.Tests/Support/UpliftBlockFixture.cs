@@ -17,10 +17,14 @@ internal static class UpliftBlockFixture
     /// <summary>An array with the same value at every point of the block.</summary>
     public static bool[] Flags(Uplift.Block block, bool value) => [.. Enumerable.Repeat(value, block.N)];
 
-    /// <summary>Targets asking for the same ground at every point, with no lift and every point open to edits.</summary>
+    /// <summary>
+    /// Targets asking for the same ground at every point, with no lift, the world's objects standing on the ground asked
+    /// for, and every point open to edits.
+    /// </summary>
     public static Uplift.BlockTargets Targets(Uplift.Block block, float want, float[]? wantArray = null) => new(
         wantArray ?? [.. Enumerable.Repeat(want, block.N)],
         new float[block.N],
+        wantArray ?? [.. Enumerable.Repeat(want, block.N)],
         [],
         Flags(block, true),
         []);

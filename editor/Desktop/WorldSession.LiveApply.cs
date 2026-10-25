@@ -7,7 +7,8 @@ public sealed partial class WorldSession
 {
     /// <summary>
     /// Live: the changed zones' ground and the object changes go into the running game; zone resets last
-    /// (the game regenerates them), after which the world is read again from the game.
+    /// (the game regenerates them), after which the world is read again from the game. The history goes across
+    /// that, and across No limit ground made into ground discs (<see cref="TakeBackHistory"/>).
     /// </summary>
     /// <param name="confirm">Asked, with the zones, when applying would write over ground the game changed under
     /// the editor's changes (asked here, while no follow can come in between); null applies without asking.</param>
@@ -21,7 +22,24 @@ public sealed partial class WorldSession
             {
                 return new Outcome(false, Said.Of("save.msg.declined"), false) { Declined = true };
             }
-            return await ApplyLiveOnce();
+            // Zone resets: the world is read again from the game, from which the history's objects cannot be read; it is
+            // taken now. With only ground discs, it is taken once they are in (steps made meanwhile with it), on the
+            // generated ground as it was before them.
+            var resets = Edits.Resets;
+            var carried = resets.Count > 0 ? CarryHistory() : null;
+            _applyLift = null;
+            var o = await ApplyLiveOnce();
+            if (!o.Reloaded && o.Lifted && _applyLift is { } lift)
+            {
+                carried = CarryHistory(lift);
+            }
+            if (o.Reloaded || o.Lifted)
+            {
+                // The resets the game made: those not waiting any more.
+                var waiting = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
+                TakeBackHistory(carried, [.. resets.Where(r => !waiting.Contains((r.X, r.Z)))], o.Done, o.Unsent == LiveParts.None ? null : o.Sent, later: true);
+            }
+            return o;
         }
         finally
         {

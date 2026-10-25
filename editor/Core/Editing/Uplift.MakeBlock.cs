@@ -8,17 +8,18 @@ public static partial class Uplift
     /// <summary>The ground asked for at each point of a block, the lift there, the zones' edits and which points are open to edits.</summary>
     /// <param name="Want">The ground asked for, per block point.</param>
     /// <param name="Lift">The lift, per block point.</param>
+    /// <param name="Stand">The ground the world's objects stand on now, per block point.</param>
     /// <param name="Zones">The block's zones' edits, by zone.</param>
     /// <param name="Open">Whether a point belongs to a generated zone (so edits can be saved there).</param>
     /// <param name="Ungenerated">The lifted zones not generated yet (their lift is dropped).</param>
-    internal sealed record BlockTargets(float[] Want, float[] Lift, Dictionary<(int, int), ZoneEdit> Zones, bool[] Open, HashSet<(int, int)> Ungenerated);
+    internal sealed record BlockTargets(float[] Want, float[] Lift, float[] Stand, Dictionary<(int, int), ZoneEdit> Zones, bool[] Open, HashSet<(int, int)> Ungenerated);
 
     /// <summary>The plan for a group of lifted zones, worked on one block: them and the zones the discs reach from them.</summary>
     private static Plan MakeBlock(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId, List<ZoneEdit> lifted, Shared shared)
     {
         // The block of zones worked on: the lifted ones and those the discs reach from them.
         var block = new Block(WorkingZones(lifted.Select(e => (e.ZoneX, e.ZoneZ))));
-        var targets = ReadBlockTargets(world, block, terrain, edits, lifted);
+        var targets = ReadBlockTargets(world, block, terrain, edits, lifted, shared.Standing);
 
         // Old discs near the lift are worked out again with the new ones.
         bool[] liftMask = Dilate(block, targets.Lift, l => l != 0, (int)DiscRadius + Spacing);
@@ -38,9 +39,10 @@ public static partial class Uplift
         var (final, ground) = new BlockFit(block, terrain, targets, keep, region).Run();
         var (zones, worst) = BuildZoneEdits(world, terrain, block, targets, region, final, ground);
 
-        // Natural objects on the ground where the lift moved it far (not those of a dungeon high above).
-        var clear = shared.Natural.Where(o => block.At(o.Position) is int p && MathF.Abs(targets.Lift[p]) > ClearHeight
-            && OnTheGround(o.Position.Y, targets.Want[p] - MathF.Min(0, targets.Lift[p]))).Select(o => o.Id).ToList();
+        // Natural objects on the ground where the lift moves it far from the ground they stand on (not those of a
+        // dungeon high above). A lift that only makes up for discs under it (the history put back onto them) moves none.
+        var clear = shared.Natural.Where(o => block.At(o.Position) is int p && MathF.Abs(targets.Lift[p]) >= EditStore.LeastLift && MathF.Abs(targets.Want[p] - targets.Stand[p]) > ClearHeight
+            && OnTheGround(o.Position.Y, MathF.Max(targets.Want[p], targets.Stand[p]))).Select(o => o.Id).ToList();
         var add = final.Select(d => new NewObject(nextId(), WorldSave.LocationProxyPrefab, d, Vector3.Zero, 0f, Fresh: false, Raw: DiscBytes(d))).ToList();
         return new Plan(zones, [.. old.Select(d => d.Id), .. clear], add, final.Count, old.Count, clear.Count, worst) { Ungenerated = targets.Ungenerated.Count };
     }
@@ -51,20 +53,24 @@ public static partial class Uplift
     /// <param name="terrain">The terrain service (the base ground and masks).</param>
     /// <param name="edits">The edits so far.</param>
     /// <param name="lifted">The lifted zones.</param>
-    private static BlockTargets ReadBlockTargets(WorldSave world, Block block, ValheimGen.TerrainService terrain, EditStore edits, List<ZoneEdit> lifted)
+    /// <param name="standing">A zone's edits as the ground the world's objects stand on now has them.</param>
+    private static BlockTargets ReadBlockTargets(WorldSave world, Block block, ValheimGen.TerrainService terrain, EditStore edits, List<ZoneEdit> lifted, Func<int, int, ZoneEdit?> standing)
     {
-        // The ground asked for, as it shows in the editor now (old discs, edits, lift), and the lift.
-        float[] want = new float[block.N], lift = new float[block.N];
+        // The ground asked for, as it shows in the editor now (old discs, edits, lift), the lift, and the ground the
+        // world's objects stand on now.
+        float[] want = new float[block.N], lift = new float[block.N], stand = new float[block.N];
         var zones = new Dictionary<(int, int), ZoneEdit>();
         foreach (var (zx, zz) in block.Zones)
         {
             float[] b = terrain.BaseZone(zx, zz);
             ZoneEdit e = edits.Get(zx, zz) ?? new ZoneEdit(zx, zz);
+            ZoneEdit now = standing(zx, zz) ?? new ZoneEdit(zx, zz);
             zones[(zx, zz)] = e;
             block.Each(zx, zz, (i, p) =>
             {
                 want[p] = e.HeightAt(i, b[i]);
                 lift[p] = e.Lift[i];
+                stand[p] = now.HeightAt(i, b[i]);
             });
         }
 
@@ -91,7 +97,7 @@ public static partial class Uplift
                 }
             });
         }
-        return new BlockTargets(want, lift, zones, open, ungenerated);
+        return new BlockTargets(want, lift, stand, zones, open, ungenerated);
     }
 
     /// <summary>Applies a plan to the edits (the zones, the objects taken away and added).</summary>

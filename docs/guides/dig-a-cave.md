@@ -35,10 +35,11 @@ The game's ground cannot overhang, so a cave is a dug trench with boulders laid 
 The whole cave, trench, boulders and clearing, is one undo step: `Ctrl+Z` takes it back. **Randomize** then gives new
 sizes and boulders for the next try.
 
-After saving, undo it and save again (see [Undo a step, take back one change, or discard everything](undo-changes.md)).
-A cave saved with No limit on starts the History over (see
-[When the history starts over](../concepts/saving-and-history.md#when-the-history-starts-over)): put the place back with
-[Restore one area from a backup](restore-from-backup.md) instead.
+After saving, undo it and save again (see [Undo a step, take back one change, or discard everything](undo-changes.md)),
+No limit ground included. Trees and rocks the cave's No limit ground took away do not come back that way once the
+world is opened again (see
+[What a step cannot take back](../concepts/saving-and-history.md#what-a-step-cannot-take-back)): regrow them, or put the
+place back with [Restore one area from a backup](restore-from-backup.md).
 
 ## Related
 

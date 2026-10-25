@@ -109,7 +109,8 @@ public class SculptHistoryTests
             int g = 96 * scene.W + 96;
             float before = scene.Heights[g];
             Stroke(s, BrushTool.Raise, 96, 96, 300);
-            Assert.InRange(scene.Heights[g] - before, 7.9f, 8.1f);
+            float limited = scene.Heights[g];
+            Assert.InRange(limited - before, 7.9f, 8.1f);
             s.Ground.NoLimit = true;
             Stroke(s, BrushTool.Raise, 96, 96, 300);
             float after = scene.Heights[g];
@@ -119,14 +120,26 @@ public class SculptHistoryTests
             Assert.True(res.Saved, res.Message);
             Assert.Contains("ground disc", res.Message);
             Assert.Equal(0, s.Pending.Zones);
-            // The area shows the saved ground at once (the ground discs under it, no lift left).
-            Assert.Equal(after, scene.Heights[g], 0.5f);
-            Assert.Equal(0, s.Ground.Lift[g]);
+            // The discs are in the files only: the area keeps its No limit ground, and its history.
+            Assert.Equal(after, scene.Heights[g], 0.01f);
+            Assert.True(s.Ground.Lift[g] > 20);
+            Assert.Equal(2, s.UndoList.Count);
             var again = WorldScene.Load(dir, 2, 2, 3);
             Assert.Equal(after, again.Heights[g], 0.5f);
             Assert.NotEmpty(again.World.Discs);
             // Not things of the area: they are just the ground.
             Assert.DoesNotContain(again.Things, t => t.Prefab == WorldSave.LocationProxyPrefab);
+            again.Owner!.Dispose();
+            // The No limit stroke undone and saved again: its discs go, the ground is as the first stroke left it.
+            Assert.True(s.Undo());
+            Assert.Equal(limited, scene.Heights[g], 0.01f);
+            var back = s.Save();
+            Assert.True(back.Saved, back.Message);
+            Assert.DoesNotContain("ground disc", back.Message);
+            var third = WorldScene.Load(dir, 2, 2, 3);
+            Assert.Empty(third.World.Discs);
+            Assert.Equal(limited, third.Heights[g], 0.1f);
+            third.Owner!.Dispose();
         }
         finally
         {
