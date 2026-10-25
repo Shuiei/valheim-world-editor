@@ -55,20 +55,22 @@ public static partial class HistoryFile
         for (int n = 0; n < count; n++)
         {
             int prefab = i.ReadInt32();
-            i.ReadBoolean();
+            bool piece = i.ReadBoolean();
             var position = ReadVector(i);
             var rotation = ReadVector(i);
             float scale = i.ReadSingle();
             int length = i.ReadInt32();
             byte[]? bytes = length >= 0 ? i.ReadExactBytes(length) : null;
-            if (world.Take(prefab, position) is int found)
+            if (fit.Reset.TryGetValue(ChunkMath.SectorOf(position.X, position.Z), out var reset)
+                && !(reset.KeepBuildings && (piece || TerrainEditor.App.ModManifests.IsData(prefab))))
+            {
+                // Its zone was made again (the game may have put the same kind back at the same place): what the steps
+                // did to it is left out. Buildings the reset kept are still theirs.
+                ids.Add(Dropped);
+            }
+            else if (world.Take(prefab, position) is int found)
             {
                 ids.Add(found);
-            }
-            else if (fit.Reset.ContainsKey(ChunkMath.SectorOf(position.X, position.Z)))
-            {
-                // Its zone was made again: what the steps did to it is left out.
-                ids.Add(Dropped);
             }
             else
             {

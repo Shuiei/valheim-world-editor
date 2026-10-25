@@ -45,6 +45,33 @@ public class HistoryCarryTests
     }
 
     [Fact]
+    public void AnObjectOfAZoneResetIsLeftOutEvenWhereTheGameMadeTheSameAgain()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            // A tree deleted, then its zone reset: live, the game may grow the same tree at the same place at once.
+            // Here it is still there, as such a tree would be: the step must not take it as its own.
+            var scene = WorldScene.Load(dir, 0, 0, 1);
+            var s = scene.Session!;
+            int tree = s.Scene.Things.FindIndex(t => !t.Piece && t.Id >= 0);
+            var (zx, zz) = Save.ChunkMath.SectorOf(s.Scene.Things[tree].Position.X, s.Scene.Things[tree].Position.Z);
+            s.Delete([tree]);
+            var owner = scene.Owner!;
+            byte[] carried = HistoryFile.Carry(owner, s.Export())!;
+            Assert.Null(HistoryFile.TakeBack(owner, carried, [new Editing.ZoneReset(zx, zz, KeepBuildings: true, Ground: false)]));
+            // Without the reset, the step comes back with the tree.
+            var back = HistoryFile.TakeBack(owner, carried, [])!;
+            Assert.Single(back.Kept.Undo);
+            owner.Dispose();
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [Fact]
     public void OpenedAgainNoLimitGroundComesBackOverItsDiscs()
     {
         string dir = Fixtures.CopyFixture();
