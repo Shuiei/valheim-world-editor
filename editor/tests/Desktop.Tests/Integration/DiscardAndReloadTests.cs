@@ -157,6 +157,65 @@ public class DiscardAndReloadTests
     }
 
     [AvaloniaFact]
+    public async Task ReloadKeepsTheStepsTheGameHas()
+    {
+        using var r = new WorldWindowRun();
+        await r.OpenLive();
+        r.Raise(20, 20, "applied");
+        await r.W.ApplyNow();
+        r.Raise(40, 40, "not yet");
+        r.Answers.Enqueue(true);
+        await r.W.ReloadHere();
+        // Read again from the game: the step it has stays, applied, and still undoes; the one it has not goes.
+        var step = Assert.Single(r.W.Session!.UndoList);
+        Assert.Equal("applied", step.Label);
+        Assert.True(step.Applied);
+        Assert.Empty(r.W.Session.RedoList);
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        Assert.True(r.W.Session.Undo());
+    }
+
+    [AvaloniaFact]
+    public async Task LiveDiscardReadingTheGameAgainKeepsTheStepsItHas()
+    {
+        using var r = new WorldWindowRun();
+        await r.OpenLive();
+        int snapshots = r.Game!.Snapshots;
+        r.Raise(20, 20, "applied");
+        await r.W.ApplyNow();
+        // A change made in another area: it has no step here, so discarding it reads the game again.
+        await r.W.EditArea(4, 0, 1);
+        r.Raise(20, 20, "elsewhere");
+        await r.W.EditArea(0, 0, 1);
+        r.Answers.Enqueue(true);
+        r.Answers.Enqueue(true);
+        await r.W.DiscardHere();
+        Assert.Contains("can only be discarded by reading the world again", r.Asked[1]);
+        Assert.Equal(snapshots + 1, r.Game.Snapshots);
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        Assert.Equal("Discarded: the world was read again.", r.W.MessageText.Text);
+        Assert.Equal("applied", Assert.Single(r.W.Session!.UndoList).Label);
+    }
+
+    [Fact]
+    public void AHistoryAsTheWorldHoldsItDropsWhatWaitsAndRedoesWhatTheWorldHas()
+    {
+        var s = TestScenes.Flat(2);
+        s.Shape(20, 20, Two, 3, 0, "a");
+        s.Shape(40, 40, Two, 3, 0, "b");
+        s.Shape(60, 60, Two, 3, 0, "c");
+        s.Shape(80, 80, Two, 3, 0, "d");
+        // a and c applied; c then undone (the world still has it), d undone before it was applied.
+        s.UndoList[0].Applied = true;
+        s.UndoList[2].Applied = true;
+        s.Undo();
+        s.Undo();
+        var k = s.Export().AsApplied();
+        Assert.Equal(["a", "c"], k.Undo.Select(c => c.Label));
+        Assert.Empty(k.Redo);
+    }
+
+    [AvaloniaFact]
     public async Task AGameThatDoesNotAnswerTheReloadIsReported()
     {
         using var r = new WorldWindowRun();

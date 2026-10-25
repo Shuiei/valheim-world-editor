@@ -75,12 +75,17 @@ public sealed partial class WorldSession
     /// (<see cref="TakeBackHistory"/> fits it to what was read); null when there is no step.
     /// </summary>
     /// <param name="lift">No limit ground made into discs already: the steps are on the ground as it was before it.</param>
-    private CarriedHistory? CarryHistory(Lifting? lift = null)
+    private CarriedHistory? CarryHistory(Lifting? lift = null) => CarryHistory(Area?.Export() ?? History, lift);
+
+    /// <summary>As <see cref="CarryHistory(Lifting?)"/>, for a history given (null: none).</summary>
+    /// <param name="history">The history to take.</param>
+    /// <param name="lift">No limit ground made into discs already: the steps are on the ground as it was before it.</param>
+    private CarriedHistory? CarryHistory(EditSession.Kept? history, Lifting? lift)
     {
         // As for the history file (KeepHistory): the save or apply itself goes on, the history starting over.
         try
         {
-            return HistoryFile.Carry(this, Area?.Export() ?? History, lift == null ? null : BasesBefore(lift)) is { } data ? new(data, Restored) : null;
+            return HistoryFile.Carry(this, history, lift == null ? null : BasesBefore(lift)) is { } data ? new(data, Restored) : null;
         }
         catch (Exception ex)
         {
@@ -95,7 +100,7 @@ public sealed partial class WorldSession
     /// can still be undone: objects found again, ground values onto the generated ground as it is now, what they did in
     /// the zones reset left out. The open area takes it as it is read again (EditSession.Reread).
     /// </summary>
-    /// <param name="carried">The history as carried (<see cref="CarryHistory"/>); null: there was none.</param>
+    /// <param name="carried">The history as carried (<see cref="CarryHistory(Lifting?)"/>); null: there was none.</param>
     /// <param name="reset">The zones reset meanwhile.</param>
     /// <param name="done">Saved or applied: the steps are marked so (as <paramref name="sent"/> says) and kept on disk.</param>
     /// <param name="sent">After a partial Apply live, whether the game has all a step did (null: every step).</param>

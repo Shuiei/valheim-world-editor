@@ -38,6 +38,9 @@ Some pending changes have no step in the open area's history (made in another ar
 again). Those can only go by reading the whole world again from its files or from the game, which drops every pending
 change, so Discard asks a second time before it does that.
 
+Read again, the history stays as the world has it: from the files, the history kept at the last save; live (**Discard**
+or **Reload**), every step the game has, applied and still undoable, while the steps not applied go with their changes.
+
 ## Saving a world
 
 The game keeps a world as a folder of **numbered saves**: each save is a set of files (`_main.<n>.chunks`, `.db2`,

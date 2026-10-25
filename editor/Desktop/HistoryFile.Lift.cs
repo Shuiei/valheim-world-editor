@@ -39,9 +39,13 @@ public static partial class HistoryFile
         return BitConverter.ToInt64(SHA256.HashData(o.ToArray()), 0);
     }
 
-    /// <summary>The No limit ground of the zones the world holds as ground discs, taken with the steps.</summary>
+    /// <summary>
+    /// The No limit ground of the zones the world holds as ground discs, taken with the steps: as the world holds it
+    /// (EditStore.PlannedOf; changes made since are the steps'), else as the session has it (offline, just saved).
+    /// </summary>
     private static List<KeptLift> TakeLifted(WorldSession w) =>
-        [.. w.DiscZones.Select(z => new KeptLift(w.Edits.Get(z.Key.X, z.Key.Z) ?? new ZoneEdit(z.Key.X, z.Key.Z), [.. w.Terrain.BaseZone(z.Key.X, z.Key.Z)], z.Value))];
+        [.. w.DiscZones.Select(z => new KeptLift(w.Edits.PlannedOf(z.Key.X, z.Key.Z) ?? w.Edits.Get(z.Key.X, z.Key.Z) ?? new ZoneEdit(z.Key.X, z.Key.Z),
+            [.. w.Terrain.BaseZone(z.Key.X, z.Key.Z)], z.Value))];
 
     /// <summary>Writes the kept zones after the steps.</summary>
     private static void WriteLifted(BinaryWriter o, List<KeptLift> lifted)

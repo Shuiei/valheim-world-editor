@@ -41,6 +41,20 @@ public sealed partial class MainWindow
         {
             return;
         }
+        // Live, what the game has is read from it (the history comes along).
+        if (w.IsLive)
+        {
+            if (await ReloadFromGame(w) is { } failed)
+            {
+                Msg(failed);
+                return;
+            }
+            if (await ReopenArea(s.Scene))
+            {
+                Msg("top.msg.discardedReadAgain");
+            }
+            return;
+        }
         Busy(Lang.T("save.msg.reading"));
         try
         {

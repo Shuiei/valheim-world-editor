@@ -25,6 +25,27 @@ public sealed partial class EditSession
     {
         /// <summary>The frame a change's points and zones are in: its own when it has one, else the kept one.</summary>
         public Frame FrameOf(Change c) => Frames != null && Frames.TryGetValue(c, out var f) ? f : new Frame(Ox, Oz, W, X0, Z0);
+
+        /// <summary>
+        /// The history as the world holds it once the changes not saved or applied are dropped (the world read again:
+        /// live Reload or Discard), as <see cref="UndoUnapplied"/> leaves an area's: the steps not applied at its end
+        /// go, undone steps the world still has (applied, then undone) are done again, and nothing is left to redo.
+        /// </summary>
+        public Kept AsApplied()
+        {
+            var undo = new List<Change>(Undo);
+            var redo = new List<Change>(Redo);
+            while (undo.Count > 0 && !undo[^1].Applied)
+            {
+                undo.RemoveAt(undo.Count - 1);
+            }
+            while (redo.Count > 0 && redo[^1].Applied)
+            {
+                undo.Add(redo[^1]);
+                redo.RemoveAt(redo.Count - 1);
+            }
+            return this with { Undo = undo, Redo = [] };
+        }
     }
 
     /// <summary>The area a kept change's points and zones are indices in.</summary>

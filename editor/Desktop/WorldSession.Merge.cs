@@ -101,32 +101,40 @@ public sealed partial class WorldSession
     /// <summary>The zone a world position is in (zones are 64 m, centred on multiples of 64).</summary>
     private static (int, int) Zone(System.Numerics.Vector3 p) => ChunkMath.SectorOf(p.X, p.Z);
 
-    /// <summary>Live: the world read again from the game (what players changed since); pending edits are dropped.</summary>
+    /// <summary>
+    /// Live: the world read again from the game (what players changed since); the changes not applied yet are
+    /// dropped (Discard too). The history comes along as the game has it (<see cref="EditSession.Kept.AsApplied"/>):
+    /// taken from the world as it is now, fitted to the world read (<see cref="TakeBackHistory"/>), with the No limit
+    /// ground the game holds as discs.
+    /// </summary>
     public async Task Reload()
     {
+        var carried = CarryHistory((Area?.Export() ?? History)?.AsApplied(), null);
         World = await Live!.LoadWorld();
         Edits.ResetFrom(World);
         UseModifiers(new TerrainModifiers(World));
         LiveSync.Reset();
         _digests.Clear();
-        History = null;
-        _discZones = [];
+        ForgetHistory();
+        TakeBackHistory(carried, [], done: true, later: true);
     }
 
     /// <summary>
-    /// Drops every pending change (offline: the world is read again from its files, and the history kept at the
-    /// last save comes back).
+    /// Offline: drops every pending change, the world read again from its files, and the history kept at the last
+    /// save comes back. Live, Discard is <see cref="Reload"/>: what the game has is read from it.
     /// </summary>
+    /// <exception cref="InvalidOperationException">The world is live.</exception>
     public void Discard()
     {
-        if (!IsLive)
+        if (IsLive)
         {
-            // Read first: a folder that cannot be read leaves the session as it was, its own saves still known.
-            var saved = WorldSave.Load(World.Directory);
-            saved.Rules = World.Rules;
-            PruneSaves();
-            World = saved;
+            throw new InvalidOperationException("A live world is discarded by reading it again from the game (Reload).");
         }
+        // Read first: a folder that cannot be read leaves the session as it was, its own saves still known.
+        var saved = WorldSave.Load(World.Directory);
+        saved.Rules = World.Rules;
+        PruneSaves();
+        World = saved;
         Edits.ResetFrom(World);
         UseModifiers(new TerrainModifiers(World));
         LiveSync.Reset();
@@ -134,11 +142,8 @@ public sealed partial class WorldSession
         History = null;
         _discZones = [];
         Area = null;
-        // Offline the world is as it was last saved: so is the history kept then.
-        if (!IsLive)
-        {
-            _nextId = -1;
-            RestoreHistory();
-        }
+        // The world is as it was last saved: so is the history kept then.
+        _nextId = -1;
+        RestoreHistory();
     }
 }

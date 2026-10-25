@@ -77,7 +77,7 @@ formula, Select's options, which Place categories are open, the right-hand panel
 | **Area** ◀ ▲ ▼ ▶, size list, **Follow** | Move the area, change its size, let it grow as you look around. See [The area](#the-area). |
 | Undo, redo (the curved arrows) | Undo the last change (`Ctrl+Z`); redo it (`Ctrl+Y` or `Ctrl+Shift+Z`). Their hover text names the step, e.g. "Undo Raise (Ctrl+Z)". A step from an earlier session may ask first. |
 | **LIVE** (live) | Shows you are connected to the running game through the WorldEditorBridge plugin. |
-| **Reload** (live) | Loads the world again from the game, after asking when changes are not applied yet (they are dropped). You stay where you are. |
+| **Reload** (live) | Loads the world again from the game, after asking when changes are not applied yet (they are dropped, with their steps). The steps the game has stay in History. You stay where you are. |
 | **Auto** (live) | Applies every change to the game as soon as it is done: each stroke when you let go, each tool, undo and redo. Switching it on sends what is waiting at once. Remembered. |
 | Pending line | "Unsaved: 3 zones, 1 deleted, 12 added, 1 reset" (offline) or "Not applied: …" (live), in amber; "All saved" or "All applied" in grey when nothing waits. What it counts: see [Pending changes](concepts/saving-and-history.md#pending-changes). |
 | **Discard** | Throws away what is not saved or applied yet, after asking. See [Discard](#discard). |
@@ -202,7 +202,8 @@ tool.
 
 Some pending changes may have no step in this area's History (made in another area, or before the world was read
 again). Discard then asks a second time: **Read it again** reads the world from its files (or from the game, live)
-and drops every pending change of the whole world.
+and drops every pending change of the whole world. History keeps what the world has: the history kept at the last
+save, or live every step the game has.
 
 ### Leaving and closing
 
