@@ -22,8 +22,8 @@ public static partial class Uplift
     /// as the world's files hold them.
     /// </param>
     /// <param name="asPlanned">
-    /// Live: whether a lifted zone is still as the discs the game has were worked out from (EditStore.AsPlanned); null:
-    /// every group is planned (a save is made from the save the world was opened from, without the session's discs).
+    /// Whether a lifted zone is still as the discs the world holds were worked out from (EditStore.AsPlanned): applied
+    /// live, or in the save the world was read from; null: every group is planned.
     /// </param>
     public static Plan? Make(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId, Func<int, int, ZoneEdit?>? standing = null,
         Func<int, int, bool>? asPlanned = null)
@@ -64,15 +64,16 @@ public static partial class Uplift
         var deleted = edits.Deleted;
         if (standing == null)
         {
-            var saved = new Dictionary<(int, int), ZoneEdit>();
-            foreach (TerrainZone z in world.TerrainZones)
+            // The world's zones by place (the first whole one of two in one zone, as the edit store takes it), each made
+            // an edit only when a block asks for it: a block needs a few, the world may hold thousands.
+            var saved = new Dictionary<(int, int), TerrainZone>();
+            foreach (TerrainZone z in world.TerrainZones.Where(z => z.ModifiedHeight.Length == EditStore.Cells && z.ModifiedPaint.Length == EditStore.Cells))
             {
-                if (EditStore.Of(z) is { } e)
-                {
-                    saved.TryAdd((z.ZoneX, z.ZoneZ), e);
-                }
+                saved.TryAdd((z.ZoneX, z.ZoneZ), z);
             }
-            standing = (zx, zz) => saved.GetValueOrDefault((zx, zz));
+            var made = new Dictionary<(int, int), ZoneEdit?>();
+            standing = (zx, zz) => made.TryGetValue((zx, zz), out var e) ? e
+                : made[(zx, zz)] = saved.TryGetValue((zx, zz), out var z) ? EditStore.Of(z) : null;
         }
         return new Shared(CurrentDiscs(world, edits), [.. world.Placed.Where(p => !IsDisc(p.Location))],
             [.. world.Objects.Where(o => !deleted.Contains(o.Id)

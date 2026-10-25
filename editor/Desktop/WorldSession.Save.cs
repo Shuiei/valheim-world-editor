@@ -23,9 +23,10 @@ public sealed partial class WorldSession
         {
             return new Outcome(false, newer, false, new WorldWriter.Result(false, newer.Shown, null, 0, 0, []) { Report = newer });
         }
-        // Taken before the ground discs change the generated ground the steps are on.
+        // Zone resets: the world is read again after the save, from which the history's objects cannot be read; it is
+        // taken now (No limit ground going back to the session after the save needs none, see below).
         var resets = Edits.Resets;
-        var carried = resets.Count > 0 || Edits.AnyLift ? CarryHistory() : null;
+        var carried = resets.Count > 0 ? CarryHistory() : null;
         var lift = LiftToDiscs();
         // The changed zones and those the last save wrote (each copied once).
         var changed = Edits.Copies(e => e.Changed || _savedZones.Contains((e.ZoneX, e.ZoneZ)));
@@ -62,19 +63,29 @@ public sealed partial class WorldSession
         bool unlifted = result.Saved && !reread && lift != null && Unlift(lift);
         reread |= result.Saved && lift != null && !unlifted;
         bool lifted = lift != null && !unlifted;
+        // The discs stay: the history is taken now, from the ground as it was before them (the world is not read yet).
+        if (lifted && carried == null)
+        {
+            carried = CarryHistory(lift);
+        }
         Said unread = Said.Empty;
         if (result.Saved && reread)
         {
             unread = ReadBackSave(result);
             if (lift != null)
             {
-                KeepLiftForm(lift, resets);
+                KeepLiftForm(lift, resets, read: true);
             }
         }
         else if (result.Saved)
         {
-            // What the files hold where the discs are: the history file keeps the No limit ground there.
-            _discZones = lift == null ? [] : lift.Plan.Zones.ToDictionary(z => (z.ZoneX, z.ZoneZ), HistoryFile.Written);
+            // What the files hold where the discs are, which the history file keeps the No limit ground of: the zones
+            // just worked out, and those still as the save the world was read from holds them.
+            _discZones = _discZones.Where(z => Edits.AsPlanned(z.Key.X, z.Key.Z)).ToDictionary();
+            foreach (var z in lift?.Plan.Zones ?? [])
+            {
+                _discZones[(z.ZoneX, z.ZoneZ)] = HistoryFile.Written(z);
+            }
             _lastSave = result.Files;
             _lastNumber = result.Number;
             _savedZones = zones;

@@ -41,21 +41,6 @@ public sealed partial class EditStore
         }
     }
 
-    /// <summary>
-    /// Whether a zone has No limit ground the world does not hold as ground discs yet (live: what the next Apply live
-    /// works out again).
-    /// </summary>
-    public bool LiftToPlan
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _zones.Any(z => z.Value.HasLift && !AsPlannedLocked(z.Key, z.Value));
-            }
-        }
-    }
-
     /// <summary><see cref="AsPlanned"/> for an edit, under the lock.</summary>
     private bool AsPlannedLocked((int, int) key, ZoneEdit? e) => e != null && _planned.TryGetValue(key, out long f) && e.Fingerprint() == f;
 

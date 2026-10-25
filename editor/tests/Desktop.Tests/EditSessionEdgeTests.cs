@@ -216,6 +216,37 @@ public class EditSessionEdgeTests
         Assert.Equal(before, s.Ground.HeightOf(p), 3);
     }
 
+    // Live: a stroke ended while No limit ground goes out as ground discs keeps its change, to apply next: its zone is not
+    // put back to the No limit ground over the discs.
+    [Fact]
+    public async Task AStrokeEndedWhileDiscsGoOutIsKept()
+    {
+        using var game = new FakeGame();
+        var (world, s) = await TestScenes.LiveArea(game);
+        s.Ground.NoLimit = true;
+        s.Shape(32, 32, Formula.Compile("20", []), 6, 0, "hill");
+        s.Ground.NoLimit = false;
+        Assert.True(world.Edits.Get(0, 0)!.HasLift);
+        game.HoldTerrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var applying = s.ApplyLive();
+        if (await Task.WhenAny(game.TerrainArrived.Task, applying) == applying)
+        {
+            Assert.Fail("The Apply ended before the ground reached the game: " + (await applying).Message);
+        }
+        s.Brush.Radius = 3;
+        s.Brush.Strength = 0.5f;
+        s.BeginStroke(BrushTool.Raise, 50, 50);
+        Assert.True(s.StrokeStep(50, 50, 0.1f));
+        Assert.Equal("", s.EndStroke().Shown);
+        game.HoldTerrain.SetResult();
+        var o = await applying;
+        Assert.True(o.Done, o.Message);
+        Assert.True(o.Lifted);
+        Assert.True(world.Pending.Zones > 0);
+        Assert.False(world.Edits.AsPlanned(0, 0));
+        Assert.Equal(["hill", "Raise"], s.UndoList.Select(c => c.Label));
+    }
+
     // Live: an Apply that reads the area again (zone resets) during a stroke drops the stroke, and says so when it ends.
     [Fact]
     public async Task AnApplyLiveReadingTheAreaAgainDropsAStroke()

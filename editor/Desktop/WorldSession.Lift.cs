@@ -30,18 +30,22 @@ public sealed partial class WorldSession
     /// </summary>
     /// <param name="lift">The No limit ground made into discs.</param>
     /// <param name="reset">Zones reset meanwhile: one whose ground went with it keeps what the game has.</param>
-    private void KeepLiftForm(Lifting lift, IReadOnlyCollection<ZoneReset> reset)
+    /// <param name="read">
+    /// The edits were read again from the world (zone resets); otherwise a zone changed while the discs went out (a
+    /// stroke ended meanwhile) keeps that change, over the discs, to send next.
+    /// </param>
+    private void KeepLiftForm(Lifting lift, IReadOnlyCollection<ZoneReset> reset, bool read)
     {
         var groundReset = reset.Where(r => r.Ground).Select(r => (r.X, r.Z)).ToHashSet();
         foreach (var z in lift.Plan.Zones.Where(z => !groundReset.Contains((z.ZoneX, z.ZoneZ))))
         {
             var key = (z.ZoneX, z.ZoneZ);
-            var e = lift.Before.Zones.TryGetValue(key, out var was) ? was.Clone() : new ZoneEdit(z.ZoneX, z.ZoneZ);
-            float[] before = lift.Bases[key], now = Terrain.BaseZone(z.ZoneX, z.ZoneZ);
-            for (int k = 0; k < EditStore.Cells; k++)
+            if (!read && Edits.Get(z.ZoneX, z.ZoneZ)?.Fingerprint() != z.Fingerprint())
             {
-                e.Lift[k] = EditStore.KeepLift(e.Lift[k] + before[k] - now[k]);
+                continue;
             }
+            var e = lift.Before.Zones.TryGetValue(key, out var was) ? was.Clone() : new ZoneEdit(z.ZoneX, z.ZoneZ);
+            e.Rebase(lift.Bases[key], Terrain.BaseZone(z.ZoneX, z.ZoneZ));
             Edits.PutPlanned(e);
             _discZones[key] = HistoryFile.Written(z);
         }
@@ -60,9 +64,10 @@ public sealed partial class WorldSession
     /// </summary>
     private Lifting? LiftToDiscs()
     {
-        // Live, the world's objects stand on the ground as last sent to the game (the world is not read again after it),
-        // and No limit ground the game has as discs already is not worked out again.
-        var plan = IsLive ? Uplift.Make(World, Terrain, Edits, NextId, Edits.BaselineOf, Edits.AsPlanned) : Uplift.Make(World, Terrain, Edits, NextId);
+        // Live, the world's objects stand on the ground as last sent to the game (the world is not read again after it).
+        // No limit ground the world holds as discs already (applied live, or in the save it was read from) is not worked
+        // out again.
+        var plan = Uplift.Make(World, Terrain, Edits, NextId, IsLive ? Edits.BaselineOf : null, Edits.AsPlanned);
         if (plan == null)
         {
             return null;
@@ -74,4 +79,10 @@ public sealed partial class WorldSession
         UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
         return new Lifting(plan, before, modifiers, Edits.Version, bases);
     }
+
+    /// <summary>
+    /// The generated ground at a ground point (world metres) as it was before No limit ground became discs: the
+    /// plan's zones as they were, the others as they are (the discs reach no further).
+    /// </summary>
+    private Func<int, int, float> BasesBefore(Lifting lift) => HistoryFile.BaseHeights(this, lift.Bases);
 }

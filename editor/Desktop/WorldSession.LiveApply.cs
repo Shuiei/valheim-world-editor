@@ -22,11 +22,17 @@ public sealed partial class WorldSession
             {
                 return new Outcome(false, Said.Of("save.msg.declined"), false) { Declined = true };
             }
-            // Taken before the ground discs change the generated ground the steps are on (No limit ground the game has as
-            // discs already is not worked out again).
+            // Zone resets: the world is read again from the game, from which the history's objects cannot be read; it is
+            // taken now. With only ground discs, it is taken once they are in (steps made meanwhile with it), on the
+            // generated ground as it was before them.
             var resets = Edits.Resets;
-            var carried = resets.Count > 0 || Edits.LiftToPlan ? CarryHistory() : null;
+            var carried = resets.Count > 0 ? CarryHistory() : null;
+            _applyLift = null;
             var o = await ApplyLiveOnce();
+            if (!o.Reloaded && o.Lifted && _applyLift is { } lift)
+            {
+                carried = CarryHistory(lift);
+            }
             if (o.Reloaded || o.Lifted)
             {
                 // The resets the game made: those not waiting any more.

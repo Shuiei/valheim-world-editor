@@ -1,5 +1,6 @@
 using TerrainEditor.App;
 using TerrainEditor.Editing;
+using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
@@ -59,7 +60,7 @@ public static partial class HistoryFile
         /// <summary>The zones a ground point (world metres) belongs to: two or four on their shared edges.</summary>
         private static IEnumerable<(int X, int Z)> ZonesAt(int x, int z)
         {
-            int zx = ZoneOf(x), zz = ZoneOf(z);
+            var (zx, zz) = ChunkMath.SectorOf(x, z);
             bool edgeX = x + 32 == zx * 64, edgeZ = z + 32 == zz * 64;
             yield return (zx, zz);
             if (edgeX)
@@ -82,19 +83,16 @@ public static partial class HistoryFile
             [.. keep.SelectMany(k => s.Paint.Skip(k * 4).Take(4))], [.. keep.Select(k => s.PMod[k])], [.. keep.Select(k => s.Lift[k])]);
     }
 
-    /// <summary>The zone (column or row) holding a ground point at world metres <paramref name="m"/>: zones are 64 m, centred on multiples of 64.</summary>
-    private static int ZoneOf(int m) => (int)Math.Floor((m + 32) / 64.0);
-
     /// <summary>
     /// The generated ground at a ground point (world metres x, z), as the world's generator makes it now (with the
-    /// world's ground discs), each zone read once.
+    /// world's ground discs), each zone read once; <paramref name="was"/> gives some zones' as they were instead.
     /// </summary>
-    internal static Func<int, int, float> BaseHeights(WorldSession w)
+    internal static Func<int, int, float> BaseHeights(WorldSession w, IReadOnlyDictionary<(int X, int Z), float[]>? was = null)
     {
-        var zones = new Dictionary<(int, int), float[]>();
+        var zones = was == null ? [] : new Dictionary<(int X, int Z), float[]>(was);
         return (x, z) =>
         {
-            int zx = ZoneOf(x), zz = ZoneOf(z);
+            var (zx, zz) = ChunkMath.SectorOf(x, z);
             if (!zones.TryGetValue((zx, zz), out float[]? b))
             {
                 zones[(zx, zz)] = b = w.Terrain.BaseZone(zx, zz);
@@ -108,13 +106,16 @@ public static partial class HistoryFile
     /// which the world, or the ground under the area, is read again): its steps with the generated ground they are on,
     /// and their objects' data read from the world as it is now. Null when there is no step.
     /// </summary>
-    public static byte[]? Carry(WorldSession w, EditSession.Kept? k)
+    /// <param name="w">The world.</param>
+    /// <param name="k">The history.</param>
+    /// <param name="bases">The generated ground the steps are on, when it changed already (see <see cref="BaseHeights"/>); null: as it is now.</param>
+    public static byte[]? Carry(WorldSession w, EditSession.Kept? k, Func<int, int, float>? bases = null)
     {
         if (k == null || k.Undo.Count + k.Redo.Count == 0)
         {
             return null;
         }
-        var snapshot = Take(w, k);
+        var snapshot = Take(w, k, bases);
         try
         {
             var (things, index) = Find(snapshot.Objects!);

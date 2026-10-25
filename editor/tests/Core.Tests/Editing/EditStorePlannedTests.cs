@@ -54,6 +54,16 @@ public class EditStorePlannedTests
         b.Modified[7] = true;
         b.Level[7] = 1f;
         Assert.NotEqual(f, b.Fingerprint());
+        // What the ground does not show (paint where not painted, an edit's split into level and smoothing) is not in it.
+        var c = Lifted(3f);
+        c.Paint[40] = 0.7f;
+        Assert.Equal(f, c.Fingerprint());
+        b.Level[7] = 0.25f;
+        b.Smooth[7] = 0.75f;
+        var d = Lifted(3f);
+        d.Modified[7] = true;
+        d.Level[7] = 1f;
+        Assert.Equal(d.Fingerprint(), b.Fingerprint());
     }
 
     [Fact]

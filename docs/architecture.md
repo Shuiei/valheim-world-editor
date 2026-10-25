@@ -112,7 +112,8 @@ flowchart LR
    calls `WorldWriter.Save` (`editor/Core/Save/WorldWriter.cs`), which writes the next save and reads it
    back (below). The discs are in the files only: the session goes back to its No limit ground
    (`WorldSession.Unlift`), so the next save works them out again from the save the world was opened
-   from. After zone resets the world is read again, and the history goes across it: taken before the
+   from (unless that save holds them already: a group still as planned, `EditStore.AsPlanned`, is not
+   worked out again). After zone resets the world is read again, and the history goes across it: taken before the
    save (`HistoryFile.Carry`) and fitted to the world read again (`HistoryFile.TakeBack`: objects found
    again by kind and place, ground values put onto the generated ground as it is now, what the steps did
    in the reset zones left out); the area takes it as it is read again (`EditSession.Reread`). Otherwise
@@ -518,9 +519,12 @@ either breaks it, the user's own scripts and the docs.
   and older editors' backups, to restore an area from one.
 - Ground edits are clamped as the game clamps them (`EditStore.MaxLevel`, ±8 m); beyond that only
   through `Uplift`'s ground discs (`EditStore.MaxLift`). Live, after the discs are applied, the session
-  goes back to its No limit ground over them (`WorldSession.KeepLiftForm`, `EditStore.PutPlanned`):
-  not a change while it stays so, and `Uplift.Make` does not work out again a group whose lifted zones
-  are all as planned (`EditStore.AsPlanned`). Natural objects go where the ground asked for is more
+  goes back to its No limit ground over them (`WorldSession.KeepLiftForm`, `EditStore.PutPlanned`; a
+  zone changed while they went out keeps that change): not a change while it stays so, and
+  `Uplift.Make` does not work out again a group whose lifted zones are all as planned
+  (`EditStore.AsPlanned`); the history is taken once the discs are in (`WorldSession.ApplyLive`), on the
+  generated ground as it was before them. The game's ground taken in place of a planned zone (players
+  dug there) is no longer planned. Natural objects go where the ground asked for is more
   than 2 m from the ground they stand on now (the files', or live the ground last sent), not wherever
   there is lift: a lift that only makes up for discs under it moves no ground.
 - Settings and servers are written through `editor/Core/App/SafeFile.cs` (temporary file, then moved over).

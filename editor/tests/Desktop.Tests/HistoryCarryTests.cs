@@ -1,3 +1,5 @@
+using System.Numerics;
+using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.StrokeRun;
@@ -55,7 +57,7 @@ public class HistoryCarryTests
             var scene = WorldScene.Load(dir, 0, 0, 1);
             var s = scene.Session!;
             int tree = s.Scene.Things.FindIndex(t => !t.Piece && t.Id >= 0);
-            var (zx, zz) = Save.ChunkMath.SectorOf(s.Scene.Things[tree].Position.X, s.Scene.Things[tree].Position.Z);
+            var (zx, zz) = ChunkMath.SectorOf(s.Scene.Things[tree].Position.X, s.Scene.Things[tree].Position.Z);
             s.Delete([tree]);
             var owner = scene.Owner!;
             byte[] carried = HistoryFile.Carry(owner, s.Export())!;
@@ -97,6 +99,15 @@ public class HistoryCarryTests
             Assert.Equal(after, again.Heights[g], 0.01f);
             Assert.True(a.Ground.Lift[g] != 0);
             Assert.Equal((0, 0, 0, 0), a.Pending);
+            // Saving something else leaves the discs as they are: they are not worked out again.
+            int discs = again.World.Discs.Count;
+            // A rock in zone 3, 3, away from the stroke (world x and z 200: grid point 168 of the area from zone 1).
+            a.Commit("Place", null, [], [(new Editing.NewObject(0, StableHash.Of("Rock_4"), new Vector3(200, again.Heights[168 * again.W + 168], 200), Vector3.Zero, 0f), false)]);
+            var other = a.Save();
+            Assert.True(other.Saved, other.Message);
+            Assert.DoesNotContain("ground disc", other.Message);
+            Assert.Equal(discs, WorldSave.Load(dir).Discs.Count);
+            Assert.True(a.Undo());
             // The stroke undone puts back exactly the ground it changed, and saved, the discs go.
             Assert.True(a.Undo());
             Assert.Equal(before, again.Heights[g], 0.01f);

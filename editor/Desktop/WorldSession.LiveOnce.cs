@@ -12,7 +12,7 @@ public sealed partial class WorldSession
         var live = Live!;
         var done = new List<Said>();
         bool reloaded = false;
-        var lift = LiftToDiscs();
+        var lift = _applyLift = LiftToDiscs();
         var plan = lift?.Plan;
         if (plan != null)
         {
@@ -76,18 +76,22 @@ public sealed partial class WorldSession
                 ForgetHistory();
                 if (lift != null)
                 {
-                    KeepLiftForm(lift, resets);
+                    KeepLiftForm(lift, resets, read: true);
                 }
                 reloaded = true;
             }
             else if (done.Count > 0)
             {
+                MarkHistoryApplied();
+                // With discs, the history goes across the area read again and is kept then (ApplyLive).
                 if (lift != null)
                 {
-                    KeepLiftForm(lift, []);
+                    KeepLiftForm(lift, [], read: false);
                 }
-                MarkHistoryApplied();
-                KeepHistory(later: true);
+                else
+                {
+                    KeepHistory(later: true);
+                }
             }
             return new Outcome(done.Count > 0, done.Count > 0 ? Said.Of("save.msg.applied", Said.Join("; ", done)) : Said.Of("save.msg.nothingToApply"), reloaded) { Lifted = plan != null };
         }

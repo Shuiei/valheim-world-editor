@@ -80,7 +80,10 @@ public static partial class HistoryFile
     /// ground at its points (which its ground values are on), and what finding its objects needs (<see cref="Sources"/>;
     /// the world is held from here until they are read).
     /// </summary>
-    private static Snapshot Take(WorldSession w, EditSession.Kept k)
+    /// <param name="w">The world.</param>
+    /// <param name="k">The history.</param>
+    /// <param name="bases">The generated ground the steps are on; null: as the world's generator makes it now.</param>
+    private static Snapshot Take(WorldSession w, EditSession.Kept k, Func<int, int, float>? bases = null)
     {
         string key = KeyOf(w);
         string path = PathOf(key);
@@ -91,7 +94,7 @@ public static partial class HistoryFile
         }
         var order = all.Select((c, i) => (c, i)).ToDictionary(p => p.c, p => p.i);
         var steps = new List<KeptStep>(all.Count);
-        var baseAt = BaseHeights(w);
+        var baseAt = bases ?? BaseHeights(w);
         foreach (var c in all)
         {
             int[] cids = k.Ids[c];

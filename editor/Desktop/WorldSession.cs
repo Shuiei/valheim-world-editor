@@ -54,9 +54,12 @@ public sealed partial class WorldSession : IDisposable
     public bool RestoredSaid { get; set; }
 
     /// <summary>
-    /// Offline: the zones the world's files hold as ground discs that the session has as No limit ground (saved by it,
-    /// or taken back from the history file), with what the files hold there (<see cref="HistoryFile.Written"/>). The
-    /// history file keeps their No limit ground, which comes back with it while the files still hold that.
+    /// The zones the world (its files, or the game) holds as ground discs that the session has as No limit ground:
+    /// saved or applied by it, or taken back from the history file. With what the world holds there
+    /// (<see cref="HistoryFile.Written"/>): the history file keeps their No limit ground, which comes back with it while
+    /// the world still holds that. Offline, a zone the session saved stays No limit ground there without being planned
+    /// (EditStore.PutPlanned), since each save is made from the save the world was read from, without those discs.
+    /// Forgotten whenever the edits are read again from the world.
     /// </summary>
     private Dictionary<(int X, int Z), long> _discZones = [];
 
@@ -259,6 +262,9 @@ public sealed partial class WorldSession : IDisposable
     /// <param name="Version">The edits' version just after: changed since, they are not put back.</param>
     /// <param name="Bases">The generated ground of the plan's zones as it was, before the discs.</param>
     private sealed record Lifting(Uplift.Plan Plan, EditStore.Checkpoint Before, TerrainModifiers Modifiers, int Version, Dictionary<(int X, int Z), float[]> Bases);
+
+    /// <summary>The No limit ground the Apply live under way made into discs (ApplyLiveOnce), for ApplyLive to take the history on.</summary>
+    private Lifting? _applyLift;
 
     /// <summary>
     /// Apply live's lock. One apply at a time: a second one (a double click) waits and sends only what is

@@ -109,11 +109,7 @@ public static partial class HistoryFile
             {
                 continue;
             }
-            float[] b = w.Terrain.BaseZone(e.ZoneX, e.ZoneZ);
-            for (int k = 0; k < EditStore.Cells; k++)
-            {
-                e.Lift[k] = EditStore.KeepLift(e.Lift[k] + l.Bases[k] - b[k]);
-            }
+            e.Rebase(l.Bases, w.Terrain.BaseZone(e.ZoneX, e.ZoneZ));
             w.Edits.PutPlanned(e);
             w.KeepDiscZone((e.ZoneX, e.ZoneZ), l.Written);
         }

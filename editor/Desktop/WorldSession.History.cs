@@ -74,7 +74,20 @@ public sealed partial class WorldSession
     /// The history as it is now, taken before the world, or the ground under the area, is read again
     /// (<see cref="TakeBackHistory"/> fits it to what was read); null when there is no step.
     /// </summary>
-    private CarriedHistory? CarryHistory() => HistoryFile.Carry(this, Area?.Export() ?? History) is { } data ? new(data, Restored) : null;
+    /// <param name="lift">No limit ground made into discs already: the steps are on the ground as it was before it.</param>
+    private CarriedHistory? CarryHistory(Lifting? lift = null)
+    {
+        // As for the history file (KeepHistory): the save or apply itself goes on, the history starting over.
+        try
+        {
+            return HistoryFile.Carry(this, Area?.Export() ?? History, lift == null ? null : BasesBefore(lift)) is { } data ? new(data, Restored) : null;
+        }
+        catch (Exception ex)
+        {
+            Log.Caught(ex, "taking the history across the world read again (it starts over)");
+            return null;
+        }
+    }
 
     /// <summary>
     /// After the world, or the ground under the area, was read again (zone resets, No limit ground made into ground
@@ -92,7 +105,7 @@ public sealed partial class WorldSession
         var back = carried == null ? null : HistoryFile.TakeBack(this, carried.Data, reset);
         History = back?.Kept;
         // The earlier session's steps among them are still asked about as before.
-        Restored = carried?.Earlier is { } earlier && back != null ? earlier with { Kept = back.Kept } : null;
+        Restored = carried?.Earlier is { } earlier && back != null ? earlier with { Kept = back.Kept, Steps = back.Steps } : null;
         if (!done)
         {
             return;
