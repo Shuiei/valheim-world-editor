@@ -62,11 +62,11 @@ public sealed partial class WorldScene
                     found[id] = Placed(new Thing(id, prefab, p, r, sc.X, false) { Gone = deleted.Contains(id), Tamed = world.Tamed.Contains(id) }, links);
                 }
             }
-            foreach (var (id, prefab, p, ry) in world.Pieces)
+            foreach (var (id, prefab, p, r) in world.Pieces)
             {
                 if (want.Contains(id))
                 {
-                    found[id] = Placed(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true) { Gone = deleted.Contains(id) }, links);
+                    found[id] = Placed(new Thing(id, prefab, p, r, 0, true) { Gone = deleted.Contains(id) }, links);
                 }
             }
             // Live: removed in the game since (gone for good, but still in the history).

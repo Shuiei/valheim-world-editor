@@ -16,17 +16,20 @@ public class WorldSceneThingsTests
 {
     private static readonly int Wall = StableHash.Of("wood_wall_half"), Beech = StableHash.Of("Beech1");
 
+    /// <summary>Piece 2's rotation: turned 90° and leaning, as a piece pasted from a blueprint may be.</summary>
+    private static readonly Vector3 Leaning = new(11.5f, 90, 348);
+
     /// <summary>
-    /// A save with a tree at 5, 5 (id 1), pieces in zone 0, 0 (id 2, turned 90°, and id 4) and out of it (id 3), and
+    /// A save with a tree at 5, 5 (id 1), pieces in zone 0, 0 (id 2, turned 90° and leaning, and id 4) and out of it (id 3), and
     /// object 5 removed in the game since (live).
     /// </summary>
     private static WorldSave World()
     {
         var world = new WorldSave { Directory = "none", SaveNumber = 1 };
         world.Objects.Add((1, Beech, new Vector3(5, 30, 5), Vector3.Zero, Vector3.One));
-        world.Pieces.Add((2, Wall, new Vector3(10, 31, -10), 90));
-        world.Pieces.Add((3, Wall, new Vector3(100, 31, 0), 0));
-        world.Pieces.Add((4, Wall, new Vector3(0, 31, 0), 0));
+        world.Pieces.Add((2, Wall, new Vector3(10, 31, -10), Leaning));
+        world.Pieces.Add((3, Wall, new Vector3(100, 31, 0), Vector3.Zero));
+        world.Pieces.Add((4, Wall, new Vector3(0, 31, 0), Vector3.Zero));
         for (int i = 0; i < 6; i++)
         {
             world.ObjectRefs.Add(new ObjectRef { File = new ChunkFile(), Start = 0, Prefab = Beech, Position = new Vector3(7, 30, 7), IsPiece = i == 5 });
@@ -48,7 +51,8 @@ public class WorldSceneThingsTests
         Assert.Equal([1, 2, -1], things.Select(t => t.Id));
         Assert.False(things[0].Piece);
         Assert.True(things[1].Piece);
-        Assert.Equal(new Vector3(0, 90, 0), things[1].Rotation);
+        // A building piece keeps its pitch and roll as stored, not only its turn about y.
+        Assert.Equal(Leaning, things[1].Rotation);
         Assert.Equal(new Vector3(-5, 30, 5), things[2].Position);
         Assert.False(things[2].Piece);
     }
@@ -74,7 +78,7 @@ public class WorldSceneThingsTests
         world.Objects.Add((6, stone, new Vector3(10, 31, -6), Vector3.Zero, Vector3.One));
         world.Objects.Add((7, stone, new Vector3(-20, 31, 20), Vector3.Zero, Vector3.One));
         world.Objects.Add((8, stone, new Vector3(31, 31, 0), Vector3.Zero, Vector3.One));
-        world.Pieces.Add((9, Wall, new Vector3(34, 31, 0), 0));
+        world.Pieces.Add((9, Wall, new Vector3(34, 31, 0), Vector3.Zero));
         world.Objects.Add((10, stone, new Vector3(-28, 31, -28), Vector3.Zero, Vector3.One));
         var added = new List<NewObject> { new(-1, Wall, new Vector3(-30, 31, -30), Vector3.Zero, 1) };
         var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>(), added);
@@ -100,6 +104,7 @@ public class WorldSceneThingsTests
         Assert.False(found[1].Gone);
         Assert.True(found[2].Gone);
         Assert.True(found[2].Piece);
+        Assert.Equal(Leaning, found[2].Rotation);
         // Removed in the game: gone for good, where it was.
         Assert.True(found[5].Gone);
         Assert.True(found[5].Piece);
@@ -107,15 +112,15 @@ public class WorldSceneThingsTests
     }
 
     // A ship (the example vehicle mod's)'s part, stored at its root, is drawn at its offset in the root's frame, the root leaning as
-    // stored (a building piece read keeps only its turn about y); found by id the same way; with its root deleted,
+    // its link stores; found by id the same way; with its root deleted,
     // where it is stored.
     [Fact]
     public void AShipsPartIsDrawnWhereTheModBuildsIt()
     {
         var world = World();
         var at = new Vector3(10, 30, 10);
-        world.Pieces.Add((6, Wall, at, 90));
-        world.Pieces.Add((7, Wall, at, 0));
+        world.Pieces.Add((6, Wall, at, new Vector3(0, 90, 0)));
+        world.Pieces.Add((7, Wall, at, Vector3.Zero));
         for (int i = 6; i < 8; i++)
         {
             world.ObjectRefs.Add(new ObjectRef { File = new ChunkFile(), Start = 0, Prefab = Wall, Position = at, IsPiece = true });

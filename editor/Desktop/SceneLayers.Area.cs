@@ -68,7 +68,7 @@ public static partial class SceneLayers
             lock (world.Sync)
             {
                 saved = [.. world.Objects.Where(o => o.Prefab == hash && !_deleted.Contains(o.Id) && Inside(o.Position)).Select(o => (o.Id, o.Position, o.Rotation, o.Scale.X))
-                    .Concat(world.Pieces.Where(p => p.Prefab == hash && !_deleted.Contains(p.Id) && Inside(p.Position)).Select(p => (p.Id, p.Position, new Vector3(0, p.RotationY, 0), 1f)))];
+                    .Concat(world.Pieces.Where(p => p.Prefab == hash && !_deleted.Contains(p.Id) && Inside(p.Position)).Select(p => (p.Id, p.Position, p.Rotation, 1f)))];
             }
             var source = world.SourceReader();
             foreach (var (id, position, rotation, scale) in saved)
