@@ -53,6 +53,21 @@ public sealed partial class EditStore
         }
     }
 
+    /// <summary>
+    /// Zones whose discs were worked out again from the session's No limit ground (an offline save): the world's files
+    /// hold those now, for the ground as it is, not the one planned before.
+    /// </summary>
+    public void ForgetPlanned(IEnumerable<(int X, int Z)> zones)
+    {
+        lock (_lock)
+        {
+            foreach (var key in zones)
+            {
+                _planned.Remove(key);
+            }
+        }
+    }
+
     /// <summary><see cref="AsPlanned"/> for an edit, under the lock.</summary>
     private bool AsPlannedLocked((int, int) key, ZoneEdit? e) => e != null && _planned.TryGetValue(key, out var p) && e.Fingerprint() == p.Fingerprint;
 

@@ -86,6 +86,8 @@ public sealed partial class WorldSession
             {
                 _discZones[(z.ZoneX, z.ZoneZ)] = HistoryFile.Written(z);
             }
+            // Those worked out again hold discs for the session's ground as it is now, not for one planned before.
+            Edits.ForgetPlanned(lift?.Plan.Zones.Select(z => (z.ZoneX, z.ZoneZ)) ?? []);
             _lastSave = result.Files;
             _lastNumber = result.Number;
             _savedZones = zones;
