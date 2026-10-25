@@ -59,6 +59,9 @@ public sealed partial class EditStore
     /// <summary><see cref="AsPlanned"/> for an edit, under the lock.</summary>
     private bool AsPlannedLocked((int, int) key, ZoneEdit? e) => e != null && _planned.TryGetValue(key, out long f) && e.Fingerprint() == f;
 
-    /// <summary>A lift as the ground keeps it: within the editor's reach, and none under a millimetre (as Ground.SetHeight drops it).</summary>
-    public static float KeepLift(float lift) => MathF.Abs(lift) < 1e-3f ? 0 : Math.Clamp(lift, -MaxLift, MaxLift);
+    /// <summary>The least lift the ground keeps: one under a millimetre is none (as Ground.SetHeight drops it).</summary>
+    public const float LeastLift = 1e-3f;
+
+    /// <summary>A lift as the ground keeps it: within the editor's reach, and none under <see cref="LeastLift"/>.</summary>
+    public static float KeepLift(float lift) => MathF.Abs(lift) < LeastLift ? 0 : Math.Clamp(lift, -MaxLift, MaxLift);
 }

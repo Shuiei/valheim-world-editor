@@ -41,7 +41,7 @@ public static partial class Uplift
 
         // Natural objects on the ground where the lift moves it far from the ground they stand on (not those of a
         // dungeon high above). A lift that only makes up for discs under it (the history put back onto them) moves none.
-        var clear = shared.Natural.Where(o => block.At(o.Position) is int p && targets.Lift[p] != 0 && MathF.Abs(targets.Want[p] - targets.Stand[p]) > ClearHeight
+        var clear = shared.Natural.Where(o => block.At(o.Position) is int p && MathF.Abs(targets.Lift[p]) >= EditStore.LeastLift && MathF.Abs(targets.Want[p] - targets.Stand[p]) > ClearHeight
             && OnTheGround(o.Position.Y, MathF.Max(targets.Want[p], targets.Stand[p]))).Select(o => o.Id).ToList();
         var add = final.Select(d => new NewObject(nextId(), WorldSave.LocationProxyPrefab, d, Vector3.Zero, 0f, Fresh: false, Raw: DiscBytes(d))).ToList();
         return new Plan(zones, [.. old.Select(d => d.Id), .. clear], add, final.Count, old.Count, clear.Count, worst) { Ungenerated = targets.Ungenerated.Count };

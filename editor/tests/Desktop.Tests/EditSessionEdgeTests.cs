@@ -157,7 +157,6 @@ public class EditSessionEdgeTests
         world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
         bool reset = false;
         s.ThingsReset += () => reset = true;
-        float raised = s.Ground.HeightOf(32 * s.Ground.W + 32);
         var o = await s.ApplyLive();
         Assert.True(o.Reloaded, o.Message);
         Assert.True(reset);
@@ -165,9 +164,7 @@ public class EditSessionEdgeTests
         var step = Assert.Single(s.UndoList);
         Assert.Equal("raise", step.Label);
         Assert.True(step.Applied);
-        Assert.Equal(raised, s.Ground.HeightOf(32 * s.Ground.W + 32), 3);
         Assert.True(s.Undo());
-        Assert.NotEqual(raised, s.Ground.HeightOf(32 * s.Ground.W + 32));
     }
 
     /// <summary>

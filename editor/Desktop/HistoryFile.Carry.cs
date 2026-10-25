@@ -26,8 +26,9 @@ public static partial class HistoryFile
         {
             for (int k = 0; k < points.Count; k++)
             {
+                // Where it did not change (to well under a millimetre), the values stay as they are.
                 float d = bases[k] - BaseNow(points[k].X, points[k].Z);
-                if (d != 0)
+                if (MathF.Abs(d) >= 1e-5f)
                 {
                     before.Lift[k] = EditStore.KeepLift(before.Lift[k] + d);
                     after.Lift[k] = EditStore.KeepLift(after.Lift[k] + d);

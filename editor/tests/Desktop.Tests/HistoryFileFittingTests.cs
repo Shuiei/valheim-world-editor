@@ -21,11 +21,13 @@ public sealed class HistoryFileFittingTests
     {
         // Kept on ground at 30 m; discs have raised it to 42 m since: the lift makes up for them, before and after.
         var before = State(0f, 5f);
-        var after = State(10f, 0.0004f);
-        Fit(42f).Rebase([(0, 0), (1, 0)], [30f, 42f], before, after);
-        Assert.Equal([-12f, 5f], before.Lift);
+        var after = State(10f, -0.0004f);
+        Fit(42f).Rebase([(0, 0), (1, 0)], [30f, 42.001f], before, after);
+        Assert.Equal(-12f, before.Lift[0]);
+        Assert.Equal(-2f, after.Lift[0]);
+        Assert.Equal(5.001f, before.Lift[1], 0.0001f);
         // Under a millimetre a lift is none, as the ground keeps it.
-        Assert.Equal([-2f, 0f], after.Lift);
+        Assert.Equal(0f, after.Lift[1]);
     }
 
     [Fact]
