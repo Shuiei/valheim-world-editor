@@ -101,5 +101,5 @@ A zone counts as selected when the selection's outline takes in at least one of 
 edge, so a selection that crosses into a zone at all resets it.
 
 A reset cannot be undone once it is saved or applied; until then, cancel or undo the marking. After a reset is
-written the editor reads the world again, so the history starts over (see
-[When the history starts over](saving-and-history.md#when-the-history-starts-over)).
+written the editor reads the world again, and the history comes along without what it did in the reset zones (see
+[What a step cannot take back](saving-and-history.md#what-a-step-cannot-take-back)).

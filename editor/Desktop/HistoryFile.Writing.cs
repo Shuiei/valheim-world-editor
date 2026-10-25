@@ -3,21 +3,21 @@ using System.IO.Compression;
 using System.Numerics;
 using System.Text;
 using TerrainEditor.App;
+using TerrainEditor.Editing;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
 public static partial class HistoryFile
 {
-    /// <summary>Writes a snapshot to a file (the temporary one Save then moves in place).</summary>
+    /// <summary>Writes a snapshot to a file (the temporary one Save then moves in place), or to memory (<see cref="Carry"/>).</summary>
     /// <param name="s">The snapshot.</param>
     /// <param name="things">The steps' objects, found (<see cref="Find"/>).</param>
     /// <param name="index">Each found object's place among <paramref name="things"/>, by id.</param>
-    /// <param name="temp">The file.</param>
-    private static void WriteFile(Snapshot s, List<KeptThing> things, Dictionary<int, int> index, string temp)
+    /// <param name="to">Where it goes; left open.</param>
+    private static void WriteTo(Snapshot s, List<KeptThing> things, Dictionary<int, int> index, Stream to)
     {
-        using var file = File.Create(temp);
-        using var gz = new GZipStream(file, CompressionLevel.Fastest);
+        using var gz = new GZipStream(to, CompressionLevel.Fastest, leaveOpen: true);
         using var o = new BinaryWriter(gz, Encoding.UTF8);
         o.Write(Magic);
         o.Write(Version);
@@ -48,6 +48,8 @@ public static partial class HistoryFile
             o.Write(c.Removed);
             o.Write(c.Applied);
             o.Write(c.RevertOf);
+            // Version 3: whether the step came from an earlier session.
+            o.Write(c.Earlier);
             // Each step's points and zones are in the frame of the area it was made in.
             var f = c.Frame;
             o.Write(c.Points.Length);
@@ -55,6 +57,11 @@ public static partial class HistoryFile
             {
                 o.Write(p % f.W + f.Ox);
                 o.Write(p / f.W + f.Oz);
+            }
+            // Version 3: the generated ground at each point, which the ground values are on.
+            foreach (float b in c.Bases)
+            {
+                o.Write(b);
             }
             WriteState(o, c.Before);
             WriteState(o, c.After);
@@ -92,6 +99,8 @@ public static partial class HistoryFile
                 o.Write(after);
             }
         }
+        // Version 3: the No limit ground of the zones the files hold as ground discs.
+        WriteLifted(o, s.Lifted);
     }
 
     /// <summary>Writes a vector as three floats.</summary>
@@ -136,25 +145,28 @@ public static partial class HistoryFile
     /// <summary>Reads ground values written by <c>WriteState</c> for <paramref name="n"/> points.</summary>
     private static Ground.State ReadState(BinaryReader i, int n)
     {
-        // Each array is made once its bytes are read: a damaged count is refused at the end of the file, not
-        // allocated first.
-        float[] Floats(int count)
-        {
-            byte[] raw = i.ReadExactBytes(checked(count * 4));
-            float[] a = new float[count];
-            for (int k = 0; k < count; k++)
-            {
-                a[k] = BinaryPrimitives.ReadSingleLittleEndian(raw.AsSpan(k * 4));
-            }
-            return a;
-        }
-        float[] level = Floats(n);
-        float[] smooth = Floats(n);
+        float[] level = ReadFloats(i, n);
+        float[] smooth = ReadFloats(i, n);
         byte[] mod = i.ReadExactBytes(n);
-        float[] paint = Floats(checked(n * 4));
+        float[] paint = ReadFloats(i, checked(n * 4));
         byte[] pmod = i.ReadExactBytes(n);
-        float[] lift = Floats(n);
+        float[] lift = ReadFloats(i, n);
         return new Ground.State(level, smooth, mod, paint, pmod, lift);
+    }
+
+    /// <summary>
+    /// Reads <paramref name="count"/> floats. The array is made once their bytes are read: a damaged count is refused
+    /// at the end of the file, not allocated first.
+    /// </summary>
+    private static float[] ReadFloats(BinaryReader i, int count)
+    {
+        byte[] raw = i.ReadExactBytes(checked(count * 4));
+        float[] a = new float[count];
+        for (int k = 0; k < count; k++)
+        {
+            a[k] = BinaryPrimitives.ReadSingleLittleEndian(raw.AsSpan(k * 4));
+        }
+        return a;
     }
 
     /// <summary>A count from the file: never negative.</summary>
@@ -199,7 +211,8 @@ public static partial class HistoryFile
         }
         try
         {
-            return ReadFile(w, path);
+            using var file = File.OpenRead(path);
+            return ReadFrom(w, file, new Fitting(BaseHeights(w), new Dictionary<(int, int), ZoneReset>(), Carried: false));
         }
         // A damaged file (cut, or changed by hand: counts, ticks or indices out of range) is left out:
         // the world still opens, without the earlier history.

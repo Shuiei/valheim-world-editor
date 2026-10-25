@@ -157,10 +157,17 @@ public class EditSessionEdgeTests
         world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
         bool reset = false;
         s.ThingsReset += () => reset = true;
+        float raised = s.Ground.HeightOf(32 * s.Ground.W + 32);
         var o = await s.ApplyLive();
         Assert.True(o.Reloaded, o.Message);
         Assert.True(reset);
-        Assert.Empty(s.UndoList);
+        // The history comes along, applied, and still undoes.
+        var step = Assert.Single(s.UndoList);
+        Assert.Equal("raise", step.Label);
+        Assert.True(step.Applied);
+        Assert.Equal(raised, s.Ground.HeightOf(32 * s.Ground.W + 32), 3);
+        Assert.True(s.Undo());
+        Assert.NotEqual(raised, s.Ground.HeightOf(32 * s.Ground.W + 32));
     }
 
     /// <summary>
@@ -223,7 +230,8 @@ public class EditSessionEdgeTests
         Assert.Equal(before, s.Ground.HeightOf(p), 3);
         Assert.False(s.StrokeStep(40, 40, 0.1f));
         Assert.Contains("stroke was dropped", s.EndStroke().Shown);
-        Assert.Empty(s.UndoList);
+        // The history taken before the Apply comes along; the dropped stroke is not in it.
+        Assert.Equal(["raise"], s.UndoList.Select(c => c.Label));
         Assert.Equal("", s.EndStroke().Shown);
     }
 

@@ -7,27 +7,35 @@ namespace TerrainEditor.Desktop;
 
 public static partial class HistoryFile
 {
+    /// <summary>The id of an object of the file left out: it was in a zone reset since (see <see cref="Fitting.Reset"/>).</summary>
+    internal const int Dropped = int.MinValue;
+
     /// <summary>
     /// Reads a history file and fits it to the world: objects found again by kind and place (to the centimetre),
-    /// the others kept as gone objects an undo or redo brings back, and the points on one grid holding them all.
+    /// the others kept as gone objects an undo or redo brings back, the ground values onto the generated ground as it
+    /// is now, and the points on one grid holding them all.
     /// </summary>
+    /// <param name="w">The world.</param>
+    /// <param name="from">The file's contents; left open.</param>
+    /// <param name="fit">How the steps are fitted to the world as it is now.</param>
     /// <returns>Null when the file is for another world or layout version, or holds no steps.</returns>
-    private static Restored? ReadFile(WorldSession w, string path)
+    private static Restored? ReadFrom(WorldSession w, Stream from, Fitting fit)
     {
-        using var file = File.OpenRead(path);
-        using var gz = new GZipStream(file, CompressionMode.Decompress);
+        using var gz = new GZipStream(from, CompressionMode.Decompress, leaveOpen: true);
         using var i = new BinaryReader(gz, Encoding.UTF8);
         int magic = i.ReadInt32(), version = i.ReadInt32();
-        // Format 1 (before mods' hidden objects) is read too.
-        if (magic != Magic || version is not (1 or Version) || i.ReadString() != KeyOf(w))
+        // Formats 1 (before mods' hidden objects) and 2 (before the generated ground) are read too.
+        if (magic != Magic || version is not (1 or 2 or Version) || i.ReadString() != KeyOf(w))
         {
             return null;
         }
         bool hasStamp = i.ReadBoolean();
         string stamp = i.ReadString();
         var savedAt = new DateTime(i.ReadInt64(), DateTimeKind.Utc);
-        bool changed = !hasStamp || stamp != Stamp(w);
-        // The world's objects by kind and place (to the centimetre: a save keeps them exactly).
+        // Carried across a re-read, the steps match the world: the session itself changed it.
+        bool changed = !fit.Carried && (!hasStamp || stamp != Stamp(w));
+        // The world's objects by kind and place (to the centimetre: a save keeps them exactly), and those added and
+        // not saved yet (a history carried across an Apply live).
         var world = new ObjectPlaces();
         foreach (var (id, prefab, p, _, _) in w.World.Objects)
         {
@@ -36,6 +44,10 @@ public static partial class HistoryFile
         foreach (var (id, prefab, p, _) in w.World.Pieces)
         {
             world.Add(id, prefab, p);
+        }
+        foreach (var o in w.Edits.Added)
+        {
+            world.Add(o.Id, o.Prefab, o.Position);
         }
         int count = ReadCount(i);
         var ids = new List<int>(Capacity(count));
@@ -53,6 +65,11 @@ public static partial class HistoryFile
             {
                 ids.Add(found);
             }
+            else if (fit.Reset.ContainsKey(ChunkMath.SectorOf(position.X, position.Z)))
+            {
+                // Its zone was made again: what the steps did to it is left out.
+                ids.Add(Dropped);
+            }
             else
             {
                 // Not in the world now (deleted, or added and undone): an undo or redo brings it back.
@@ -62,29 +79,37 @@ public static partial class HistoryFile
             }
         }
         int undoCount = ReadCount(i), redoCount = ReadCount(i);
-        var (changes, points, thingIds) = ReadChanges(i, undoCount, redoCount, ids, version);
-        if (changes.Count == 0)
+        var (read, readPoints, readIds) = ReadChanges(i, undoCount, redoCount, ids, version, fit);
+        var lifted = version >= 3 ? ReadLifted(i) : [];
+        // A step left with nothing to do (all of it in zones reset since) is left out.
+        var keep = Enumerable.Range(0, read.Count)
+            .Where(n => readPoints[n].Length > 0 || read[n].C.Things.Length > 0 || read[n].C.Hidden.Length > 0 || read[n].C.Resets.Length > 0).ToList();
+        if (keep.Count == 0)
         {
             return null;
         }
-        var all = points.SelectMany(p => p).ToList();
+        var all = keep.SelectMany(n => readPoints[n]).ToList();
         int ox = all.Count > 0 ? all.Min(p => p.X) : 0, oz = all.Count > 0 ? all.Min(p => p.Z) : 0;
         int width = all.Count > 0 ? all.Max(p => p.X) - ox + 1 : 1;
         var fitted = new List<EditSession.Change>();
+        var at = new Dictionary<int, EditSession.Change>();
         var keptIds = new Dictionary<EditSession.Change, int[]>();
-        for (int n = 0; n < changes.Count; n++)
+        foreach (int n in keep)
         {
-            var (c, revertOf) = changes[n];
+            var (c, revertOf) = read[n];
             var f = c with
             {
-                Points = [.. points[n].Select(p => (p.Z - oz) * width + (p.X - ox))],
-                RevertOf = revertOf >= 0 && revertOf < n ? fitted[revertOf] : null,
+                Points = [.. readPoints[n].Select(p => (p.Z - oz) * width + (p.X - ox))],
+                RevertOf = revertOf >= 0 && revertOf < n && at.TryGetValue(revertOf, out var reverted) ? reverted : null,
             };
             fitted.Add(f);
-            keptIds[f] = thingIds[n];
+            at[n] = f;
+            keptIds[f] = readIds[n];
         }
+        int undoKept = keep.Count(n => n < undoCount);
         w.Edits.KeepGone(gone);
-        var kept = new EditSession.Kept([.. fitted.Take(undoCount)], [.. fitted.Skip(undoCount)], ox, oz, width, 0, 0, keptIds);
-        return new Restored(kept, changes.Count, changed, savedAt.ToLocalTime());
+        TakeLiftedBack(w, lifted);
+        var kept = new EditSession.Kept([.. fitted.Take(undoKept)], [.. fitted.Skip(undoKept)], ox, oz, width, 0, 0, keptIds);
+        return new Restored(kept, fitted.Count, changed, savedAt.ToLocalTime());
     }
 }

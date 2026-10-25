@@ -54,7 +54,8 @@ public sealed partial class EditSession
     }
 
     /// <summary>
-    /// The world was read again (saved, reloaded): the ground and the objects from it, no history.
+    /// The world was read again (saved, reloaded): the ground and the objects from it, and the history the world
+    /// carried across it (WorldSession.TakeBackHistory) fitted to them.
     /// </summary>
     private void Reread(WorldSave fresh)
     {
@@ -75,5 +76,9 @@ public sealed partial class EditSession
             Scene.Reads++;
         }
         _nextId = -1;
+        if (Scene.Owner?.History is { } kept)
+        {
+            Import(kept, ids => WorldScene.FindThings(fresh, Edits, ids));
+        }
     }
 }

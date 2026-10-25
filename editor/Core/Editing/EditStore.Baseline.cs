@@ -49,6 +49,18 @@ public sealed partial class EditStore
         }
     }
 
+    /// <summary>Whether a zone's ground has No limit lift waiting (which a save or an apply turns into ground discs).</summary>
+    public bool AnyLift
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _zones.Values.Any(e => e.HasLift);
+            }
+        }
+    }
+
     /// <summary>
     /// Where the zones with height or paint changes, or changed since the last save or apply, are, and which of them
     /// changed: what the map outlines, read without copying the edits (it is drawn often).

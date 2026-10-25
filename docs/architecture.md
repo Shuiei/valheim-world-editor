@@ -110,9 +110,16 @@ flowchart LR
    (`WorldWriter.Newer`; the window then offers `WorldSession.PrepareReplay` / `Replay`, below), turns No limit
    ground into ground discs (`editor/Core/Editing/Uplift.cs`), then
    calls `WorldWriter.Save` (`editor/Core/Save/WorldWriter.cs`), which writes the next save and reads it
-   back (below). After zone resets or new discs the world is read again and the history starts over;
-   otherwise the world stays open, the changes are marked applied and the history goes to disk
-   (`editor/Desktop/HistoryFile.cs`, in `history/` of the data folder).
+   back (below). The discs are in the files only: the session goes back to its No limit ground
+   (`WorldSession.Unlift`), so the next save works them out again from the save the world was opened
+   from. After zone resets the world is read again, and the history goes across it: taken before the
+   save (`HistoryFile.Carry`) and fitted to the world read again (`HistoryFile.TakeBack`: objects found
+   again by kind and place, ground values put onto the generated ground as it is now, what the steps did
+   in the reset zones left out); the area takes it as it is read again (`EditSession.Reread`). Otherwise
+   the world stays open and the changes are marked applied. Either way the history goes to disk
+   (`editor/Desktop/HistoryFile.cs`, in `history/` of the data folder), with the No limit ground of the
+   zones saved as discs (`WorldSession.DiscZones`), which comes back when the world is opened again while
+   the files still hold what was written there (`EditStore.PutPlanned`).
 6. **Leave.** `WorldSession.Dispose` prunes the folder down to the latest save (`WorldWriter.Prune`)
    and closes the live connection.
 
@@ -510,7 +517,12 @@ either breaks it, the user's own scripts and the docs.
 - The writer makes no backup folder. `editor/Core/App/Backups.cs` only finds the game's (`_backup_auto-…`)
   and older editors' backups, to restore an area from one.
 - Ground edits are clamped as the game clamps them (`EditStore.MaxLevel`, ±8 m); beyond that only
-  through `Uplift`'s ground discs (`EditStore.MaxLift`).
+  through `Uplift`'s ground discs (`EditStore.MaxLift`). Live, after the discs are applied, the session
+  goes back to its No limit ground over them (`WorldSession.KeepLiftForm`, `EditStore.PutPlanned`):
+  not a change while it stays so, and `Uplift.Make` does not work out again a group whose lifted zones
+  are all as planned (`EditStore.AsPlanned`). Natural objects go where the ground asked for is more
+  than 2 m from the ground they stand on now (the files', or live the ground last sent), not wherever
+  there is lift: a lift that only makes up for discs under it moves no ground.
 - Settings and servers are written through `editor/Core/App/SafeFile.cs` (temporary file, then moved over).
 
 **Mods' editor extensions** (`editor/Core/App/ModExtensions.cs`, mod authors' docs in

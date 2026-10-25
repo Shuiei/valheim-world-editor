@@ -34,9 +34,9 @@ public sealed partial class WorldSession : IDisposable
     public string Label { get; init; } = "";
 
     /// <summary>
-    /// The history while no area is open, or another one (see EditSession.Export); gone when the world
-    /// is read again (zone resets, No limit ground). It is kept on disk after each save or Apply live
-    /// (HistoryFile) and comes back when the world is opened again.
+    /// The history while no area is open, or another one (see EditSession.Export); carried across a
+    /// re-read of the world (zone resets, No limit ground: TakeBackHistory). It is kept on disk after
+    /// each save or Apply live (HistoryFile) and comes back when the world is opened again.
     /// </summary>
     public EditSession.Kept? History { get; set; }
     /// <summary>The open area's session, whose history is the world's while it is open.</summary>
@@ -52,6 +52,19 @@ public sealed partial class WorldSession : IDisposable
     public bool EarlierAllowed { get; set; }
     /// <summary>The window said so already (that a history from an earlier session came back).</summary>
     public bool RestoredSaid { get; set; }
+
+    /// <summary>
+    /// Offline: the zones the world's files hold as ground discs that the session has as No limit ground (saved by it,
+    /// or taken back from the history file), with what the files hold there (<see cref="HistoryFile.Written"/>). The
+    /// history file keeps their No limit ground, which comes back with it while the files still hold that.
+    /// </summary>
+    private Dictionary<(int X, int Z), long> _discZones = [];
+
+    /// <summary>The zones <see cref="_discZones"/> holds, with what the files hold there.</summary>
+    internal IReadOnlyDictionary<(int X, int Z), long> DiscZones => _discZones;
+
+    /// <summary>A zone the files hold as ground discs, its No limit ground taken back from the history file.</summary>
+    internal void KeepDiscZone((int X, int Z) zone, long written) => _discZones[zone] = written;
 
     /// <summary>Ids for objects added in this session: negative, like the web editor's, unique across every area.</summary>
     private int _nextId = -1;
@@ -75,9 +88,13 @@ public sealed partial class WorldSession : IDisposable
         return s;
     }
 
-    /// <summary>The history kept on disk for this world, if any (the first area opened takes it).</summary>
+    /// <summary>
+    /// The history kept on disk for this world, if any (the first area opened takes it), with the No limit ground of
+    /// the zones the files hold as ground discs.
+    /// </summary>
     private void RestoreHistory()
     {
+        _discZones = [];
         Restored = HistoryFile.Read(this);
         History = Restored?.Kept;
     }
@@ -85,6 +102,7 @@ public sealed partial class WorldSession : IDisposable
     /// <summary>The world was read again: the steps do not match it any more (the kept file is deleted too).</summary>
     private void ForgetHistory()
     {
+        _discZones = [];
         History = null;
         Restored = null;
         HistoryFile.Delete(this);
@@ -239,7 +257,8 @@ public sealed partial class WorldSession : IDisposable
     /// <param name="Before">The edits as they were.</param>
     /// <param name="Modifiers">The flattening modifiers as they were.</param>
     /// <param name="Version">The edits' version just after: changed since, they are not put back.</param>
-    private sealed record Lifting(Uplift.Plan Plan, EditStore.Checkpoint Before, TerrainModifiers Modifiers, int Version);
+    /// <param name="Bases">The generated ground of the plan's zones as it was, before the discs.</param>
+    private sealed record Lifting(Uplift.Plan Plan, EditStore.Checkpoint Before, TerrainModifiers Modifiers, int Version, Dictionary<(int X, int Z), float[]> Bases);
 
     /// <summary>
     /// Apply live's lock. One apply at a time: a second one (a double click) waits and sends only what is

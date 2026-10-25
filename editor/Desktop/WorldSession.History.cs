@@ -11,11 +11,12 @@ public sealed partial class WorldSession
     /// </summary>
     /// <param name="later">Apply live: taken now, written in the background (<see cref="HistoryFile.WriteLater"/>),
     /// since it can come at every edit.</param>
-    private void KeepHistory(bool later = false)
+    /// <param name="history">The history to keep; null: the open area's, or the world's.</param>
+    private void KeepHistory(bool later = false, EditSession.Kept? history = null)
     {
         try
         {
-            if ((Area?.Export() ?? History) is { } kept)
+            if ((history ?? Area?.Export() ?? History) is { } kept)
             {
                 if (later)
                 {
@@ -44,15 +45,66 @@ public sealed partial class WorldSession
     {
         if (Area == null && History != null)
         {
-            EditSession.MarkSent(History.Undo, sent ?? (static _ => true));
-            // The undone steps are not in the world now (see EditSession.MarkApplied).
-            if (sent == null)
+            MarkApplied(History, sent);
+        }
+    }
+
+    /// <summary>A history's steps saved or applied: the undo steps the world has, and the undone ones not.</summary>
+    /// <param name="k">The history.</param>
+    /// <param name="sent">After a partial Apply live, whether the game has all a step did (null: every step).</param>
+    private static void MarkApplied(EditSession.Kept k, Func<EditSession.Change, bool>? sent)
+    {
+        EditSession.MarkSent(k.Undo, sent ?? (static _ => true));
+        // The undone steps are not in the world now (see EditSession.MarkApplied).
+        if (sent == null)
+        {
+            foreach (var c in k.Redo)
             {
-                foreach (var c in History.Redo)
-                {
-                    c.Applied = false;
-                }
+                c.Applied = false;
             }
+        }
+    }
+
+    /// <summary>The history taken before the world is read again, with the earlier session it may hold steps of.</summary>
+    /// <param name="Data">The history as <see cref="HistoryFile.Carry"/> took it.</param>
+    /// <param name="Earlier">The earlier session's history the world was opened with, if any (<see cref="Restored"/>).</param>
+    private sealed record CarriedHistory(byte[] Data, HistoryFile.Restored? Earlier);
+
+    /// <summary>
+    /// The history as it is now, taken before the world, or the ground under the area, is read again
+    /// (<see cref="TakeBackHistory"/> fits it to what was read); null when there is no step.
+    /// </summary>
+    private CarriedHistory? CarryHistory() => HistoryFile.Carry(this, Area?.Export() ?? History) is { } data ? new(data, Restored) : null;
+
+    /// <summary>
+    /// After the world, or the ground under the area, was read again (zone resets, No limit ground made into ground
+    /// discs): the history carried across it (<see cref="HistoryFile.Carry"/>, taken before) fitted to it, so its steps
+    /// can still be undone: objects found again, ground values onto the generated ground as it is now, what they did in
+    /// the zones reset left out. The open area takes it as it is read again (EditSession.Reread).
+    /// </summary>
+    /// <param name="carried">The history as carried (<see cref="CarryHistory"/>); null: there was none.</param>
+    /// <param name="reset">The zones reset meanwhile.</param>
+    /// <param name="done">Saved or applied: the steps are marked so (as <paramref name="sent"/> says) and kept on disk.</param>
+    /// <param name="sent">After a partial Apply live, whether the game has all a step did (null: every step).</param>
+    /// <param name="later">Apply live: the history file is written in the background.</param>
+    private void TakeBackHistory(CarriedHistory? carried, IReadOnlyCollection<Editing.ZoneReset> reset, bool done, Func<EditSession.Change, bool>? sent = null, bool later = false)
+    {
+        var back = carried == null ? null : HistoryFile.TakeBack(this, carried.Data, reset);
+        History = back?.Kept;
+        // The earlier session's steps among them are still asked about as before.
+        Restored = carried?.Earlier is { } earlier && back != null ? earlier with { Kept = back.Kept } : null;
+        if (!done)
+        {
+            return;
+        }
+        if (History is { } k)
+        {
+            MarkApplied(k, sent);
+            KeepHistory(later, k);
+        }
+        else
+        {
+            HistoryFile.Delete(this);
         }
     }
 

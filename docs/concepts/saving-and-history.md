@@ -129,20 +129,25 @@ here, nor can the steps before it. Saving or applying from any area marks the st
 
 After each **Save to world** or **Apply live**, the history is written to the editor's data folder (`history/`, one
 file per world folder; live, one per connection and world). Open the world again, even days later, and the steps are
-back, tagged **earlier session** (unless a save started the history over, [below](#when-the-history-starts-over)).
-Undo puts the ground back, a deleted object back with its contents, a placed one away. Changes you neither saved nor
+back, tagged **earlier session**. Undo puts the ground back, a deleted object back with its contents, a placed one away. Changes you neither saved nor
 applied are not kept.
 
 The world may have changed since (players built and dug, or the game saved it again), so the editor asks once before
 the first step from an earlier session is undone or redone: doing it puts things back as they were, over what changed
 since. A world only the editor saved since is not asked about.
 
-### When the history starts over
+### What a step cannot take back
 
-Some saves change the ground under the area so much that the editor reads the world again from what was written:
-saving or applying **zone resets**, and saving **No limit** ground (it becomes ground discs, see
-[No limit](ground-limits.md#no-limit)). The history then starts over and its file is removed. Check the result before
-you save those.
+The history is kept through every save and apply, zone resets and [No limit](ground-limits.md#no-limit) ground made
+into ground discs included. A few things are past its reach:
+
+- **A zone reset, once saved or applied.** The game makes the zone again: what the steps did there is left out of them
+  (a step that was all there goes), and so is the step that marked the reset. Steps elsewhere stay.
+- **Trees and rocks taken away under No limit ground**, once applied live or once the world is opened again: an undo
+  does not bring them back. Use [Regrow nature](../area.md#regrow-nature).
+- **Ground players changed since.** Opened again, the No limit ground of a zone saved as ground discs comes back with
+  the history, so an undo puts back all the ground it changed, round the discs too. Where players dug in that zone
+  since, the zone keeps what the game has: an undo puts back the step's own ground only.
 
 ## Backups
 

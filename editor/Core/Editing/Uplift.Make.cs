@@ -10,21 +10,32 @@ public static partial class Uplift
     /// <summary>
     /// The plan for every lift waiting in the edits, or null when there is none. Each group of lifts near one another
     /// (<see cref="Clusters"/>) is planned alone, on only the zones near its lifts (<see cref="WorkingZones"/>), never
-    /// on the box round them.
+    /// on the box round them; a group whose lifted zones are all as their discs were worked out
+    /// (<paramref name="asPlanned"/>) is not planned again.
     /// </summary>
     /// <param name="world">The world, for its discs, objects and generated zones.</param>
     /// <param name="terrain">The generated ground the discs are fitted on.</param>
     /// <param name="edits">The edits with the lift; not changed (see <see cref="Apply"/>).</param>
     /// <param name="nextId">Gives each new disc object its (negative) id.</param>
-    public static Plan? Make(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId)
+    /// <param name="standing">
+    /// A zone's edits as the ground the world's objects stand on now has them (live: as last sent to the game); null:
+    /// as the world's files hold them.
+    /// </param>
+    /// <param name="asPlanned">
+    /// Live: whether a lifted zone is still as the discs the game has were worked out from (EditStore.AsPlanned); null:
+    /// every group is planned (a save is made from the save the world was opened from, without the session's discs).
+    /// </param>
+    public static Plan? Make(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId, Func<int, int, ZoneEdit?>? standing = null,
+        Func<int, int, bool>? asPlanned = null)
     {
         var lifted = edits.Copies(e => e.HasLift);
-        if (lifted.Count == 0)
+        var groups = Clusters(lifted.Select(e => (e.ZoneX, e.ZoneZ))).Where(c => asPlanned == null || !c.All(z => asPlanned(z.X, z.Z))).ToList();
+        if (groups.Count == 0)
         {
             return null;
         }
-        var shared = Gather(world, edits);
-        var plans = Clusters(lifted.Select(e => (e.ZoneX, e.ZoneZ)))
+        var shared = Gather(world, edits, standing);
+        var plans = groups
             .Select(c => c.ToHashSet())
             .Select(c => MakeBlock(world, terrain, edits, nextId, [.. lifted.Where(e => c.Contains((e.ZoneX, e.ZoneZ)))], shared))
             .ToList();
@@ -41,18 +52,32 @@ public static partial class Uplift
     /// <param name="Discs">The discs as they are now.</param>
     /// <param name="Placed">The placed objects with modifiers that are not discs.</param>
     /// <param name="Natural">The natural objects a lift may take away.</param>
-    private sealed record Shared(List<(int Id, Vector3 Position)> Discs, List<PlacedObject> Placed, List<(int Id, Vector3 Position)> Natural);
+    /// <param name="Standing">A zone's edits as the ground the natural objects stand on now has them.</param>
+    private sealed record Shared(List<(int Id, Vector3 Position)> Discs, List<PlacedObject> Placed, List<(int Id, Vector3 Position)> Natural, Func<int, int, ZoneEdit?> Standing);
 
     /// <summary>Gathers <see cref="Shared"/> from the world and the edits.</summary>
     /// <param name="world">The world.</param>
     /// <param name="edits">The edits, for the discs added and the objects deleted.</param>
-    private static Shared Gather(WorldSave world, EditStore edits)
+    /// <param name="standing">See <see cref="Make"/>; null: the world's files.</param>
+    private static Shared Gather(WorldSave world, EditStore edits, Func<int, int, ZoneEdit?>? standing)
     {
         var deleted = edits.Deleted;
+        if (standing == null)
+        {
+            var saved = new Dictionary<(int, int), ZoneEdit>();
+            foreach (TerrainZone z in world.TerrainZones)
+            {
+                if (EditStore.Of(z) is { } e)
+                {
+                    saved.TryAdd((z.ZoneX, z.ZoneZ), e);
+                }
+            }
+            standing = (zx, zz) => saved.GetValueOrDefault((zx, zz));
+        }
         return new Shared(CurrentDiscs(world, edits), [.. world.Placed.Where(p => !IsDisc(p.Location))],
             [.. world.Objects.Where(o => !deleted.Contains(o.Id)
                 && ObjectKinds.Of(PrefabCatalog.NameOf(o.Prefab), false) is ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Ore or ObjectKind.Bushes or ObjectKind.Pickables)
-                .Select(o => (o.Id, o.Position))]);
+                .Select(o => (o.Id, o.Position))], standing);
     }
 
     /// <summary>

@@ -74,10 +74,18 @@ public sealed partial class WorldSession
                 _digests.Clear();
                 _nextId = -1;
                 ForgetHistory();
+                if (lift != null)
+                {
+                    KeepLiftForm(lift, resets);
+                }
                 reloaded = true;
             }
             else if (done.Count > 0)
             {
+                if (lift != null)
+                {
+                    KeepLiftForm(lift, []);
+                }
                 MarkHistoryApplied();
                 KeepHistory(later: true);
             }

@@ -12,14 +12,20 @@ namespace TerrainEditor.Desktop;
 /// (history/ of the data folder, one file per world). It is written after each save or Apply live, so its
 /// steps are what the world holds. Ground points and zones are kept by world position; objects by their
 /// kind and exact place (their ids change at every save), each with its full data, so one that is gone
-/// when the world is opened again can be brought back by an undo or redo, chest contents and all.
+/// when the world is opened again can be brought back by an undo or redo, chest contents and all. Each
+/// point keeps the generated ground it was edited on, so a step still gives the same ground when that
+/// changed under it (No limit ground saved as ground discs). The same layout carries the history across
+/// a re-read of the open world (<see cref="Carry"/>, <see cref="TakeBack"/>).
 /// </summary>
 public static partial class HistoryFile
 {
     /// <summary>The first four bytes of the file's (gzipped) contents ("VWEH").</summary>
     private const int Magic = 0x48455756; // "VWEH"
-    /// <summary>The file layout's version (2: with mods' hidden objects); 1 is read too, a file of another version is not.</summary>
-    private const int Version = 2;
+    /// <summary>
+    /// The file layout's version (2: with mods' hidden objects; 3: with each step's generated ground and whether it came
+    /// from an earlier session); 1 and 2 are read too, a file of another version is not.
+    /// </summary>
+    private const int Version = 3;
 
     /// <summary>Where the history files are: history/ of the data folder.</summary>
     public static string Folder => Path.Combine(AppSettings.DataDir, "history");
@@ -96,10 +102,11 @@ public static partial class HistoryFile
 
     /// <summary>
     /// One step as written: its fields at the time it was taken (its flags change later), with its points and zones
-    /// already in world positions' frame and its objects by id (those not found are left out when written).
+    /// already in world positions' frame, the generated ground at its points then, and its objects by id (those not
+    /// found are left out when written).
     /// </summary>
-    private sealed record KeptStep(string Label, long Ticks, bool Removed, bool Applied, int RevertOf, EditSession.Frame Frame, int[] Points,
-        Ground.State Before, Ground.State After, (int X, int Z)[] Zones, (int Id, bool Before, bool After)[] Things,
+    private sealed record KeptStep(string Label, long Ticks, bool Removed, bool Applied, bool Earlier, int RevertOf, EditSession.Frame Frame, int[] Points,
+        float[] Bases, Ground.State Before, Ground.State After, (int X, int Z)[] Zones, (int Id, bool Before, bool After)[] Things,
         (ZoneReset Reset, bool Before, bool After)[] Resets, (int Id, bool Before, bool After)[] Hidden);
 
     /// <summary>
@@ -121,7 +128,7 @@ public static partial class HistoryFile
     /// Everything a history file holds, taken from the world and the steps at one time, so it can be written later
     /// on another thread. No steps: the file is removed instead (and nothing is held).
     /// </summary>
-    private sealed record Snapshot(string Path, string Key, string? Stamp, long SavedAt, Sources? Objects, List<KeptStep> Steps, int UndoCount, int RedoCount)
+    private sealed record Snapshot(string Path, string Key, string? Stamp, long SavedAt, Sources? Objects, List<KeptStep> Steps, int UndoCount, int RedoCount, List<KeptLift> Lifted)
     {
         /// <summary>Lets the world go (again: only the first time counts).</summary>
         public void Release() => Objects?.Held.Dispose();

@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.112.0 — unreleased
+
+### Changed
+- **History is kept whatever you save or apply.** Pasting a blueprint or a building, or shaping ground past the
+  game's ±8 m, then saving or applying live, no longer empties History: undo it and save or apply again, and the
+  ground comes back exactly as it was. Zone resets keep it too (only what the reset made again is left out), and it
+  is all there when you open the world again.
+
 ## v1.111.1 — unreleased
 
 ### Fixed

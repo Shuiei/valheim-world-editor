@@ -72,8 +72,8 @@ make up the rest, within ±8 m of the disc ground. Where the hill is under 5 m u
 | | |
 |---|---|
 | **The save message** | Says how many discs were made (and how many old ones they replace), how many trees and rocks were taken away, and how far off the steepest ground still is: "No limit ground: 312 ground disc(s), 40 tree(s)/rock(s) taken away; some ground is up to 2.5 m off (too steep)". |
-| **History starts over** | The editor reads the world again from the new save, because the ground under the area is no longer the same. Check the shape before you save. |
-| **The new ground counts as generated** | After saving, the status bar's "original" height is the disc ground. The hoe, the pickaxe and the editor's tools work ±8 m from it, and **Restore** brings ground back to it, not to the world's first ground. To take a saved shape away, work it down again with No limit on: the discs are worked out again at the next save. |
+| **History stays** | The editor keeps your No limit ground and works the discs out from it: undo a paste or a stroke, save or apply again, and its discs go, the ground round them back as it was too. That holds after opening the world again (see [What a step cannot take back](saving-and-history.md#what-a-step-cannot-take-back)). |
+| **The new ground counts as generated** | In game, the hoe and the pickaxe work ±8 m from the disc ground. Once the world is opened again, the status bar's "original" height is the disc ground too, and **Restore** brings ground back to it, not to the world's first ground. To take a saved shape away, undo it in History, or work it down again with No limit on: the discs are worked out again at the next save. |
 | **Trees and rocks are taken away** | Trees, rocks, ore, bushes and pickables where the ground moved more than 2 m would be buried or float, so they go. Building pieces stay. |
 | **Very steep walls come out softer** | A disc cannot follow a cut narrower than itself. |
 | **Zones nobody has visited** | Keep their old ground: their lift is dropped, and the message says how many. Visit them in game first. |

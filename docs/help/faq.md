@@ -13,9 +13,9 @@ and [What the editor writes](../concepts/safety.md#what-the-editor-writes).
 
 Yes. The history is kept with the world after each save or apply, even after you close the editor: undo a step (or
 **Remove** it in History) and save again. See
-[Undo a step, take back one change, or discard everything](../guides/undo-changes.md). Saving zone resets or No limit
-ground starts the history over (see
-[When the history starts over](../concepts/saving-and-history.md#when-the-history-starts-over)).
+[Undo a step, take back one change, or discard everything](../guides/undo-changes.md). Zone resets and No limit ground
+keep it too; what a reset made again is past its reach (see
+[What a step cannot take back](../concepts/saving-and-history.md#what-a-step-cannot-take-back)).
 
 For damage found later, [Restore one area from a backup](../guides/restore-from-backup.md).
 

@@ -88,7 +88,9 @@ public sealed partial class EditStore
         {
             bool exists = _zones.TryGetValue((incoming.ZoneX, incoming.ZoneZ), out ZoneEdit? old);
             incoming.ExistsInWorld = exists && old!.ExistsInWorld;
-            incoming.Changed = !_baseline.TryGetValue((incoming.ZoneX, incoming.ZoneZ), out ZoneEdit? baseline) ? !incoming.IsEmpty : !incoming.SameGround(baseline);
+            // No limit ground still the one the world holds as ground discs is not a change either.
+            incoming.Changed = !AsPlannedLocked((incoming.ZoneX, incoming.ZoneZ), incoming)
+                && (!_baseline.TryGetValue((incoming.ZoneX, incoming.ZoneZ), out ZoneEdit? baseline) ? !incoming.IsEmpty : !incoming.SameGround(baseline));
             _zones[(incoming.ZoneX, incoming.ZoneZ)] = incoming;
             Version++;
         }
