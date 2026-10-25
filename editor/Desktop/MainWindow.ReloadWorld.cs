@@ -14,12 +14,25 @@ public sealed partial class MainWindow
         {
             return;
         }
+        // Live, what the game has is read from it (the history comes along).
+        if (w.IsLive)
+        {
+            if (await ReloadFromGame(w) is { } failed)
+            {
+                Say(failed);
+            }
+            else
+            {
+                Msg(Said.Empty);
+            }
+            MapPage?.Show(w);
+            return;
+        }
         Busy(Lang.T("save.msg.reading"));
         try
         {
             await Task.Run(w.Discard);
-            // What the status bar said was about the changes dropped (live, the history kept from earlier too): not
-            // shown again in the next area.
+            // What the status bar said was about the changes dropped: not shown again in the next area.
             Msg(Said.Empty);
         }
         catch (Exception ex)

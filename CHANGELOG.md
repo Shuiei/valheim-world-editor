@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.112.1 — unreleased
+
+### Fixed
+- **Reload and Discard keep the History in a live world.** Reading the world again from the game emptied History:
+  now every step the game has stays there, applied and still undoable; only the steps not applied yet go, with their
+  changes. Discard reads the world from the game when it has to, as it says it does.
+
 ## v1.112.0 — unreleased
 
 ### Changed
