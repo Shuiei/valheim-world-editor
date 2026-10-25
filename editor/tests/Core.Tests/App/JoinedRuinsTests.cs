@@ -32,7 +32,7 @@ public class JoinedRuinsTests
     {
         var world = new TerrainEditor.Save.WorldSave { Directory = "none", SaveNumber = 1 };
         int stone = TerrainEditor.Save.StableHash.Of("stone_wall_2x1"), beech = TerrainEditor.Save.StableHash.Of("Beech1");
-        world.Pieces.Add((1, TerrainEditor.Save.StableHash.Of("wood_wall_half"), new Vector3(0, 30, 0), 0f));
+        world.Pieces.Add((1, TerrainEditor.Save.StableHash.Of("wood_wall_half"), new Vector3(0, 30, 0), Vector3.Zero));
         world.Objects.Add((2, stone, new Vector3(2, 30, 0), Vector3.Zero, Vector3.One));
         world.Objects.Add((3, beech, new Vector3(1, 30, 0), Vector3.Zero, Vector3.One));
         world.Objects.Add((4, stone, new Vector3(100, 30, 0), Vector3.Zero, Vector3.One));

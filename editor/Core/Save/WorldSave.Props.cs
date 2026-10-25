@@ -25,13 +25,15 @@ public sealed partial class WorldSave
 
     /// <summary>
     /// The objects mods link into one (by id; App.ObjectLinks, by the rules in use as the world was read): what their
-    /// data says of their place in their group, and their turn as stored (Pieces keep only the turn about y; a group's
-    /// root may lean).
+    /// data says of their place in their group, and their turn as stored (a group's root may lean).
     /// </summary>
     public Dictionary<int, (ObjectLink Link, Vector3 Rotation)> Links { get; } = [];
 
-    /// <summary>Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.</summary>
-    public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = [];
+    /// <summary>
+    /// Player-built pieces (objects with a creator): prefab, position and rotation (Unity Euler angles in degrees, as
+    /// stored: a piece turned by a mod or pasted from a blueprint may lean, not only turn about y).
+    /// </summary>
+    public List<(int Id, int Prefab, Vector3 Position, Vector3 Rotation)> Pieces { get; } = [];
 
     /// <summary>Pieces per builder (the "creator" player id).</summary>
     public Dictionary<long, int> Creators { get; } = [];

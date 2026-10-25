@@ -96,12 +96,12 @@ public static class PieceCatalog
     public static float[] Encode(WorldSave world, ICollection<int> deleted)
     {
         List<float> data = new(world.Pieces.Count * Stride);
-        List<(int Id, int Prefab, System.Numerics.Vector3 Position, float RotationY)> pieces;
+        List<(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> pieces;
         lock (world.Sync)
         {
             pieces = [.. world.Pieces];
         }
-        foreach (var (id, prefab, pos, rotY) in pieces)
+        foreach (var (id, prefab, pos, rot) in pieces)
         {
             if (deleted.Contains(id))
             {
@@ -109,7 +109,8 @@ public static class PieceCatalog
             }
             if (Get(prefab) is { } info)
             {
-                Pack(data, info, pos, rotY, id);
+                // The map draws a piece's footprint from above: its turn about y.
+                Pack(data, info, pos, rot.Y, id);
             }
         }
         return [.. data];

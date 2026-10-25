@@ -12,7 +12,7 @@ public sealed partial class WorldSave
         if (f.Creator != 0)
         {
             Creators[f.Creator] = Creators.GetValueOrDefault(f.Creator) + 1;
-            Pieces.Add((site.Id, site.Prefab, site.Position, site.Rotation.Y));
+            Pieces.Add((site.Id, site.Prefab, site.Position, site.Rotation));
         }
         else if (site.Shown && !terrain)
         {

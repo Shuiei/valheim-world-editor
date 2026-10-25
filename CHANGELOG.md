@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.111.1 — unreleased
+
+### Fixed
+- **Leaning building pieces keep their lean when a world is opened.** A player-built piece that leans (pitched or
+  rolled, as a blueprint built in the Workshop or a mod can place it) was read with only its turn about y: the 3D
+  view, Claude and scripts showed it upright, and moving, turning or copying it (into a blueprint too) then saved it
+  upright. It now keeps its pitch and roll as the world stores them.
+
 ## v1.111.0 — 2026-10-23
 
 ### Added

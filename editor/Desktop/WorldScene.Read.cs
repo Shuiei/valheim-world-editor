@@ -42,11 +42,11 @@ public sealed partial class WorldScene
                 things.Add(Placed(new Thing(id, prefab, p, r, sc.X, false) { Tamed = world.Tamed.Contains(id) }, links));
             }
         }
-        foreach (var (id, prefab, p, ry) in world.Pieces)
+        foreach (var (id, prefab, p, r) in world.Pieces)
         {
             if (Inside(p) && !deleted.Contains(id))
             {
-                things.Add(Placed(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true), links));
+                things.Add(Placed(new Thing(id, prefab, p, r, 0, true), links));
             }
         }
         // Not the ground discs for No limit ground (invisible: they are just the ground).

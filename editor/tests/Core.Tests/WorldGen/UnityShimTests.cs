@@ -163,10 +163,10 @@ public class UnityShimTests
         var world = new TerrainEditor.Save.WorldSave { Directory = "none", SaveNumber = 1 };
         Assert.True(TerrainEditor.Terrain.PieceCatalog.Count > 100);
         int wall = TerrainEditor.Save.StableHash.Of("wood_wall_half");
-        world.Pieces.Add((5, wall, new System.Numerics.Vector3(10, 30, 20), 90f));
-        world.Pieces.Add((6, wall, new System.Numerics.Vector3(12, 30, 20), 0f));
+        world.Pieces.Add((5, wall, new System.Numerics.Vector3(10, 30, 20), new System.Numerics.Vector3(0, 90, 0)));
+        world.Pieces.Add((6, wall, new System.Numerics.Vector3(12, 30, 20), System.Numerics.Vector3.Zero));
         // A piece the catalogue does not know is left out.
-        world.Pieces.Add((7, TerrainEditor.Save.StableHash.Of("not_a_piece"), new System.Numerics.Vector3(1, 2, 3), 0f));
+        world.Pieces.Add((7, TerrainEditor.Save.StableHash.Of("not_a_piece"), new System.Numerics.Vector3(1, 2, 3), System.Numerics.Vector3.Zero));
         const int S = TerrainEditor.Terrain.PieceCatalog.Stride;
         float[] all = TerrainEditor.Terrain.PieceCatalog.Encode(world, Array.Empty<int>());
         Assert.Equal(2 * S, all.Length);
@@ -187,7 +187,7 @@ public class UnityShimTests
     {
         var world = new TerrainEditor.Save.WorldSave { Directory = "none", SaveNumber = 1 };
         int wall = TerrainEditor.Save.StableHash.Of("stone_wall_2x1"), beech = TerrainEditor.Save.StableHash.Of("Beech1");
-        world.Pieces.Add((1, TerrainEditor.Save.StableHash.Of("wood_wall_half"), new System.Numerics.Vector3(0, 30, 0), 0f));
+        world.Pieces.Add((1, TerrainEditor.Save.StableHash.Of("wood_wall_half"), new System.Numerics.Vector3(0, 30, 0), System.Numerics.Vector3.Zero));
         world.Objects.Add((2, wall, new System.Numerics.Vector3(2, 30, 0), new System.Numerics.Vector3(0, 90, 0), System.Numerics.Vector3.One));
         world.Objects.Add((3, wall, new System.Numerics.Vector3(100, 30, 0), System.Numerics.Vector3.Zero, System.Numerics.Vector3.One));
         world.Objects.Add((4, wall, new System.Numerics.Vector3(102, 30, 0), System.Numerics.Vector3.Zero, System.Numerics.Vector3.One));
