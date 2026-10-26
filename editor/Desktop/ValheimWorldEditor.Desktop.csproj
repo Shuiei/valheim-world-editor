@@ -46,7 +46,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
     <!-- The Help window reads the documentation's Markdown (HelpDocs, HelpView). -->
-    <PackageReference Include="Markdig" Version="1.4.2" />
+    <PackageReference Include="Markdig" Version="1.5.0" />
     <!-- The Script tool: C# scripts compiled in the app (Roslyn), against .NET's reference assemblies
          carried inside (a single-file app has no assembly files to point the compiler at). -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />

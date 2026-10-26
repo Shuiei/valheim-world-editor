@@ -2,6 +2,8 @@
 # dedicated server). The mod's own code built the ship and the pieces on it, a swivel with a wall on it, two rope
 # anchors (one tied to the chest, the other to the first anchor) and a four-cornered sail; the world was saved, and
 # loaded again: where the mod drew each piece then, against the ship's saved place (tilted: it had sunk).
+# ValheimRAFT 5.1.1 builds the same pieces from the same values to within 0.04 mm (the same build, saved and loaded
+# again on a 5.1.1 server; 5.1 no longer ties these two ropes, but loads them as saved here).
 # R <PersistentID> <x y z> <qx qy qz qw>  the ship (the root), as saved
 # P <prefab> <parent key> <parent id> <PersistentID or 0> <MBPosition x y z> <MBRotationVec x y z> <drawn x y z> <drawn qx qy qz qw>
 # T <prefab> <x y z>  a rope anchor's tie point ("attachpoint") in its frame
