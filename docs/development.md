@@ -171,8 +171,9 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
 3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then
    **packages** builds the editor packages and **windows-smoke** tries the Windows one, as on every
    push to main, and:
-   - **github-release** signs the Windows program (`tools/sign-windows.sh`: Authenticode, with the
-     maintainer's Certum code-signing certificate through SimplySign's cloud, timestamped by Certum),
+   - **github-release** signs the Windows program and `spirv-cross.dll` (`tools/sign-windows.sh`:
+     Authenticode, with the maintainer's Certum code-signing certificate through SimplySign's cloud,
+     timestamped by Certum),
      builds the plugin's zip (against a Valheim dedicated server downloaded with SteamCMD and the
      BepInExPack its manifest names), tags the commit `v<version>` and publishes the GitHub release
      with the two editor packages the pipeline tested (the Windows one signed), the plugin, the SDK's zip
