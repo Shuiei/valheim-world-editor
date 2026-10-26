@@ -440,11 +440,18 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
         else
         {
             body["mod_id"] = modUid;
-            var made = await V3(http, Post($"{url}/v3/mod-files", body, auth));
+            await V3(http, Post($"{url}/v3/mod-files", body, auth));
             // The new file's own name, without the version its first version's name has: later releases find it by it.
-            string madeId = (string?)made?["id"] ?? (string?)made?["file"]?["id"]
-                ?? throw new InvalidOperationException($"Nexus Mods: {upload.Name} was published, but Nexus did not say the new file's id: rename it \"{upload.FileName}\" on the site.");
-            await V3(http, Request(HttpMethod.Put, $"{url}/v3/mod-files/{madeId}", new JsonObject { ["name"] = upload.FileName }, auth));
+            // Nexus answers with the new version (its id is the version's), so the file is found among the mod's, where
+            // it is named as its first version.
+            var made = (await V3(http, Get($"{url}/v3/mods/{modUid}/files", auth)))!["mod_files"]!.AsArray().OfType<JsonNode>()
+                .Where(f => f["is_active"]?.GetValue<bool>() != false && (string?)f["name"] == upload.Name).Select(f => (string)f["id"]!).ToList();
+            if (made.Count != 1)
+            {
+                throw new InvalidOperationException($"Nexus Mods: {upload.Name} was published, but {made.Count} of the mod's files have that name: rename the new one \"{upload.FileName}\" on the site.");
+            }
+
+            await V3(http, Request(HttpMethod.Put, $"{url}/v3/mod-files/{made[0]}", new JsonObject { ["name"] = upload.FileName }, auth));
         }
 
         Console.WriteLine($"{Name}: published {upload.Name}.");
