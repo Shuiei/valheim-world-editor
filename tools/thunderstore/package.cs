@@ -20,6 +20,9 @@ const string Repo = "https://github.com/Shuiei/valheim-world-editor";
 // The most characters Thunderstore takes in a package's README.md or CHANGELOG.md.
 const int MaxMarkdown = 100_000;
 
+// How long a regular expression may run on the changelog's text before it stops with an error (milliseconds).
+const int RegexTimeout = 1000;
+
 try
 {
     switch (args.FirstOrDefault())
@@ -60,7 +63,7 @@ static string Changelog(string text, string notesDir, string version)
     {
         string number = v.ToString(3);
         // The heading's title after the version: its date, and a word on the version for the first ones.
-        string title = Regex.Match(text, $@"^## v{Regex.Escape(number)}\b(.*)$", RegexOptions.Multiline).Groups[1].Value.TrimEnd();
+        string title = Regex.Match(text, $@"^## v{Regex.Escape(number)}\b(.*)$", RegexOptions.Multiline, TimeSpan.FromMilliseconds(RegexTimeout)).Groups[1].Value.TrimEnd();
         List<string> block =
         [
             $"## {number}{title}", "",
@@ -115,12 +118,13 @@ static string ReleaseNotes(string notes)
             continue;
         }
 
-        kept.Add(code ? line : Regex.Replace(line, "^(#{1,5}) ", "#$1 "));
+        kept.Add(code ? line : Regex.Replace(line, "^(#{1,5}) ", "#$1 ", RegexOptions.None, TimeSpan.FromMilliseconds(RegexTimeout)));
     }
 
     string text = string.Join("\n", kept).Trim('\n');
     // A link to a file of the repository (docs/README.md, not https:, # or mailto:) goes to it on GitHub.
-    return Regex.Replace(text, @"\]\((?![a-z]+:|#)([^)\s]+)\)", m => $"]({Repo}/blob/main/{m.Groups[1].Value})");
+    return Regex.Replace(text, @"\]\((?![a-z]+:|#)([^)\s]+)\)", m => $"]({Repo}/blob/main/{m.Groups[1].Value})",
+        RegexOptions.None, TimeSpan.FromMilliseconds(RegexTimeout));
 }
 
 // The check command: throws InvalidDataException naming the first rule the package folder breaks (a missing
