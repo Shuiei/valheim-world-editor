@@ -8,7 +8,7 @@ namespace ValheimRAFT.WorldEditor;
 /// game runs, from the anchor's tie point to what it names (its <see cref="Keys.Ropes"/>), found here through the world
 /// by its id. Drawn as a straight rope, as the mod draws it, in the world's frame (it reaches another object). A rope
 /// to something not in the area is not drawn. The tie points were measured on the mod's and the game's prefabs
-/// (ValheimRAFT 5.0.9, Valheim 1.0.20).
+/// (ValheimRAFT 5.0.9 and 5.1.1, Valheim 1.0.20).
 /// </summary>
 internal sealed class RopeLines : IShapeProvider
 {
