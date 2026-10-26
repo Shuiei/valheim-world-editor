@@ -35,7 +35,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- The version of the mod the add-on follows, as Thunderstore has it. -->
-    <TestMod Include="VladasZ-Railroads" Owner="VladasZ" Package="Railroads" Version="0.2.6" Dll="plugins/Railroads/Railroads.dll" />
+    <TestMod Include="VladasZ-Railroads" Owner="VladasZ" Package="Railroads" Version="0.2.9" Dll="plugins/Railroads/Railroads.dll" />
   </ItemGroup>
   <Import Project="../../../../editor/tests/TestMods.targets" />
 </Project>

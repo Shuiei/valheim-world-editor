@@ -3,6 +3,17 @@
 Changes to the Railroads add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.2.0 — 2026-10-26
+
+### Added
+- **Train names.** Follows Railroads 0.2.9, whose trains have names (since 0.2.7): the inspector names a train's
+  name, which you can change, and the number the server gave it. A pasted train keeps its name and gets a number of
+  its own from the server, as a train just built. The locomotive is drawn with the name boards on its boiler.
+
+### Changed
+- **Railroads 0.2.9.** The portal wagon is drawn as the mod now builds it, without posts on its open side. Both
+  models come from your copy of the mod, so an older Railroads still shows its own.
+
 ## v0.1.0 — 2026-10-23
 
 ### Added
