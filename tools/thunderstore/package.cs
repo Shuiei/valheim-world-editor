@@ -1,11 +1,12 @@
 // The plugin package's helpers for tools/thunderstore.sh (a .NET file-based app: dotnet run package.cs).
-//   changelog <CHANGELOG.md> <out.md> <version> [released tags...]
-//       The plugin's changelog for its mod pages (Thunderstore, Hexium: the same text for both), made
-//       from the editor's CHANGELOG.md (the editor and the plugin share one version and one changelog).
-//       Each version is split in two: what changed in the plugin (the "### WorldEditorBridge" part of
-//       the version, or "unchanged") and what changed in the editor, with a link to that editor on
-//       GitHub (mod sites do not host programs). Only versioned sections are kept, newest first, as many
-//       as fit in Thunderstore's 100,000 characters; the older history is in the full changelog on GitHub.
+//   changelog <CHANGELOG.md> <notes folder> <out.md> <version>
+//       The plugin's changelog for its mod pages (Thunderstore, Hexium: the same text for both): one part
+//       for each release, with its notes as its GitHub release has them (the editor and the plugin share one
+//       version and one release), from the notes folder (v<version>.md each, made by tools/release/publish.cs
+//       notes-all), dated as CHANGELOG.md's heading of that version, with a link to that editor on GitHub (mod
+//       sites do not host programs). The notes' Downloads part (the release page's files) is left out and
+//       their links to the repository's files made whole. Newest first, as many releases as fit in
+//       Thunderstore's 100,000 characters; the older history is in the full changelog on GitHub.
 //   check <folder>
 //       The package folder follows Thunderstore's rules: name a-z A-Z 0-9 _, description up to 250
 //       characters, a Major.Minor.Patch version, dependencies as Team-Name-1.2.3, a 256x256 PNG icon
@@ -16,9 +17,6 @@ using System.Text.RegularExpressions;
 
 const string Repo = "https://github.com/Shuiei/valheim-world-editor";
 
-// The heading of the plugin's part of a version in CHANGELOG.md.
-const string PluginHeading = "### WorldEditorBridge";
-
 // The most characters Thunderstore takes in a package's README.md or CHANGELOG.md.
 const int MaxMarkdown = 100_000;
 
@@ -26,14 +24,14 @@ try
 {
     switch (args.FirstOrDefault())
     {
-        case "changelog" when args.Length >= 4:
-            File.WriteAllText(args[2], Changelog(File.ReadAllText(args[1]), args[3], [.. args[4..]]), new UTF8Encoding(false));
+        case "changelog" when args.Length == 5:
+            File.WriteAllText(args[3], Changelog(File.ReadAllText(args[1]), args[2], args[4]), new UTF8Encoding(false));
             return 0;
         case "check" when args.Length == 2:
             Check(args[1]);
             return 0;
         default:
-            Console.Error.WriteLine("usage: package.cs changelog <CHANGELOG.md> <out.md> <version> [tags...] | check <folder>");
+            Console.Error.WriteLine("usage: package.cs changelog <CHANGELOG.md> <notes folder> <out.md> <version> | check <folder>");
             return 2;
     }
 }
@@ -43,24 +41,33 @@ catch (InvalidDataException ex)
     return 1;
 }
 
-// The changelog command: the mod pages' changelog from CHANGELOG.md's text. version gets a download link, and so
-// does each older version whose tag (v1.2.3) is in tags.
-static string Changelog(string text, string version, HashSet<string> tags)
+// The changelog command: the mod pages' changelog, one part for each release whose notes are in notesDir (v1.2.3.md),
+// newest first, dated as text's (CHANGELOG.md's) heading of that version. version's notes must be there.
+static string Changelog(string text, string notesDir, string version)
 {
     var lines = ChangelogHeader(version);
     string older = $"Older history: [the full changelog]({Repo}/blob/main/CHANGELOG.md).";
     int length = Length(lines) + Length([older]);
-    // The version's own tag counts as released too, so its download link is always there.
-    HashSet<string> released = [.. tags, $"v{version}"];
-    foreach (string sec in Regex.Split(text, "^(?=## )", RegexOptions.Multiline))
+    var releases = Directory.GetFiles(notesDir, "v*.md")
+        .Select(f => (File: f, Version: Version.Parse(Path.GetFileNameWithoutExtension(f)[1..])))
+        .OrderByDescending(r => r.Version).ToList();
+    if (!releases.Any(r => r.Version.ToString(3) == version))
     {
-        var m = Regex.Match(sec, @"^## v([0-9]+\.[0-9]+\.[0-9]+)\b(.*)");
-        if (!m.Success)
-        {
-            continue;
-        }
-        List<string> block = VersionBlock(sec, m.Groups[1].Value, m.Groups[2].Value, released);
-        // Versions are newest first: once one does not fit, the rest is left to the full changelog.
+        throw new InvalidDataException($"no release notes for v{version} (v{version}.md)");
+    }
+
+    foreach (var (file, v) in releases)
+    {
+        string number = v.ToString(3);
+        // The heading's title after the version: its date, and a word on the version for the first ones.
+        string title = Regex.Match(text, $@"^## v{Regex.Escape(number)}\b(.*)$", RegexOptions.Multiline).Groups[1].Value.TrimEnd();
+        List<string> block =
+        [
+            $"## {number}{title}", "",
+            $"Download the editor: [Valheim World Editor v{number}]({Repo}/releases/tag/v{number})", "",
+            ReleaseNotes(File.ReadAllText(file)), "",
+        ];
+        // Releases are newest first: once one does not fit, the rest is left to the full changelog.
         length += Length(block);
         if (length > MaxMarkdown)
         {
@@ -72,7 +79,7 @@ static string Changelog(string text, string version, HashSet<string> tags)
     return string.Join("\n", lines).TrimEnd('\n') + "\n";
 }
 
-// The first lines of the mod pages' changelog, before its versions.
+// The first lines of the mod pages' changelog, before its releases.
 static List<string> ChangelogHeader(string version) =>
 [
     "# Changelog", "",
@@ -80,31 +87,40 @@ static List<string> ChangelogHeader(string version) =>
     "**Download the editor that goes with this plugin from GitHub:**",
     $"[Valheim World Editor v{version}]({Repo}/releases/tag/v{version}) (every version: the",
     $"[releases page]({Repo}/releases)). This mod page only hosts the plugin.", "",
-    "Each version below says what changed in this plugin, then what changed in the editor.", "",
+    "Each release below as its GitHub release page tells it: what it brings to the editor, and under",
+    "**WorldEditorBridge** what changed in this plugin (a release without that part left the plugin as it was).", "",
 ];
 
-// The lines of one version of the changelog: v and title come from its "## vX.Y.Z title" heading, sec is its whole
-// section, and released holds the tags (vX.Y.Z) that have a download link.
-static List<string> VersionBlock(string sec, string v, string title, HashSet<string> released)
+// One release's notes for the changelog: without their Downloads part (the release page's files), their headings one
+// level down under the release's own, and their links to the repository's files made whole (the mod pages are
+// elsewhere).
+static string ReleaseNotes(string notes)
 {
-    // The version's parts ("### Added", "### WorldEditorBridge"...), split apart by whether they are the plugin's part.
-    string[] parts = Regex.Split(sec.Split('\n', 2).ElementAtOrDefault(1) ?? "", "^(?=### )", RegexOptions.Multiline);
-    var byPlugin = parts.Where(p => p.StartsWith("### ", StringComparison.Ordinal)).ToLookup(p => p.StartsWith(PluginHeading, StringComparison.Ordinal));
-    // A version without a plugin part says so; one without an editor part reads "No change.".
-    string pluginText = byPlugin[true].Select(p => p[(p.IndexOf('\n') + 1)..].Trim('\n')).DefaultIfEmpty("Unchanged: only the version number follows the editor's.").First();
-    string editorText = string.Join("\n\n", byPlugin[false].Select(p => ("#" + p).Trim('\n')).DefaultIfEmpty("No change."));
-    List<string> block =
-    [
-        $"## {v}{title}", "", "### WorldEditorBridge (this plugin)", "", pluginText,
-        "", "### Valheim World Editor", "",
-    ];
-    if (released.Contains($"v{v}"))
+    var kept = new List<string>();
+    bool downloads = false, code = false;
+    foreach (string line in notes.Replace("\r\n", "\n").Split('\n'))
     {
-        block.AddRange([$"Download: [Valheim World Editor v{v}]({Repo}/releases/tag/v{v})", ""]);
+        if (line.StartsWith("```", StringComparison.Ordinal))
+        {
+            code = !code;
+        }
+
+        if (!code && line.StartsWith("## ", StringComparison.Ordinal))
+        {
+            downloads = line.TrimEnd() == "## Downloads";
+        }
+
+        if (downloads)
+        {
+            continue;
+        }
+
+        kept.Add(code ? line : Regex.Replace(line, "^(#{1,5}) ", "#$1 "));
     }
-    block.Add(editorText);
-    block.Add("");
-    return block;
+
+    string text = string.Join("\n", kept).Trim('\n');
+    // A link to a file of the repository (docs/README.md, not https:, # or mailto:) goes to it on GitHub.
+    return Regex.Replace(text, @"\]\((?![a-z]+:|#)([^)\s]+)\)", m => $"]({Repo}/blob/main/{m.Groups[1].Value})");
 }
 
 // The check command: throws InvalidDataException naming the first rule the package folder breaks (a missing
