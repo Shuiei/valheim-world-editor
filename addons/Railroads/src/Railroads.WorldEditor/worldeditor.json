@@ -41,6 +41,9 @@
     "bf_torch1_time": { "label": "Second lamp counted at", "readOnly": true, "help": "When the second lamp's fuel was last counted, in the game's ticks." },
     "bf_sign": { "label": "Wagon sign" },
     "bf_cafe": { "label": "Restaurant name" },
+    "bf_train_name": { "label": "Train name", "help": "On the boards on the boiler, the map and the train console. Empty: the train goes by its number. The game takes up to 30 characters." },
+    "bf_train_number": { "label": "Train number", "readOnly": true, "help": "The number the server gave this train, which it goes by while it has no name." },
+    "bf_train_count": { "label": "Trains numbered", "readOnly": true, "help": "The last number the server gave a train: the next train gets the one after." },
     "bf_leg": { "label": "Support", "readOnly": true, "help": "A support pole under track or a station, of: 1 wood, 2 core wood, 3 iron." },
     "bf_leg_part": { "label": "Support part", "readOnly": true, "help": "0 a post, 5 a knee (a 45° beam along the rails)." },
     "bf_leg_free": { "label": "Free support", "readOnly": true, "help": "Built for nothing: gives nothing back when removed." },
@@ -88,6 +91,7 @@
     "bf_wagon_restaurant": { "group": "Trains" },
     "bf_wagon_portal": { "group": "Trains" },
     "bf_wagon_flat": { "group": "Trains" },
-    "bf_handcart": { "group": "Trains" }
+    "bf_handcart": { "group": "Trains" },
+    "bf_rail_world": { "hidden": true, "data": true }
   }
 }

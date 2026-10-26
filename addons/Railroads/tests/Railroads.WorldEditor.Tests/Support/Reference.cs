@@ -19,6 +19,13 @@ internal static class Reference
     /// </summary>
     public static IReadOnlyList<Recorded> Supports { get; } = Read(Path.Combine(AppContext.BaseDirectory, "fixtures", "railroads-supports.txt"));
 
+    /// <summary>
+    /// The objects of a record of train names (fixtures/railroads-names.txt, Railroads 0.2.9): the same world's train,
+    /// named and numbered by the server, three locomotives made as copies are, the register of train numbers and the
+    /// hand cart, after a restart.
+    /// </summary>
+    public static IReadOnlyList<Recorded> Names { get; } = Read(Path.Combine(AppContext.BaseDirectory, "fixtures", "railroads-names.txt"));
+
     /// <summary>The recorded objects of a prefab.</summary>
     public static IEnumerable<Recorded> Of(string prefab) => Objects.Where(o => o.Object.Prefab == prefab);
 

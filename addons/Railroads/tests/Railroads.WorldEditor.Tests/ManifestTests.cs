@@ -7,7 +7,7 @@ namespace Railroads.WorldEditor.Tests;
 /// <summary>
 /// The add-on's worldeditor.json and its code tell the same mod: it serves the mod's plugin and names the add-on's DLL;
 /// every data key the code knows is labelled there, and only those; every piece is listed in the Build panel under its
-/// group, a retired one hidden.
+/// group, a retired one hidden; the register the mod numbers trains on is data, never drawn or offered.
 /// </summary>
 public class ManifestTests
 {
@@ -49,7 +49,8 @@ public class ManifestTests
     {
         var prefabs = Manifest["prefabs"]!.AsObject();
 
-        Assert.Equal(RailroadsMod.Pieces.Select(p => p.Prefab).Order(StringComparer.Ordinal), prefabs.Select(p => p.Key).Order(StringComparer.Ordinal));
+        Assert.Equal(RailroadsMod.Pieces.Select(p => p.Prefab).Append(RailroadsMod.Register).Order(StringComparer.Ordinal),
+            prefabs.Select(p => p.Key).Order(StringComparer.Ordinal));
         foreach (var piece in RailroadsMod.Pieces)
         {
             var entry = prefabs[piece.Prefab]!;
@@ -59,7 +60,16 @@ public class ManifestTests
                 RailKind.Station => "Stations",
                 _ => "Trains",
             };
-            Assert.Equal((group, piece.Retired), ((string?)entry["group"], (bool?)entry["hidden"] == true));
+            Assert.Equal((group, piece.Retired, false), ((string?)entry["group"], (bool?)entry["hidden"] == true, (bool?)entry["data"] == true));
         }
+    }
+
+    [Fact]
+    public void TheRegisterOfTrainNumbersIsDataNeverOffered()
+    {
+        var register = Manifest["prefabs"]![RailroadsMod.Register]!;
+
+        Assert.Null(register["group"]);
+        Assert.Equal((true, true), ((bool?)register["hidden"] == true, (bool?)register["data"] == true));
     }
 }
