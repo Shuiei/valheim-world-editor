@@ -1,0 +1,34 @@
+# A ValheimRAFT ship as the real mod saved it and built it again (ValheimRAFT 5.0.9, Valheim l-1.0.20, a local
+# dedicated server). The mod's own code built the ship and the pieces on it, a swivel with a wall on it, two rope
+# anchors (one tied to the chest, the other to the first anchor) and a four-cornered sail; the world was saved, and
+# loaded again: where the mod drew each piece then, against the ship's saved place (tilted: it had sunk).
+# ValheimRAFT 5.1.1 builds the same pieces from the same values to within 0.04 mm (the same build, saved and loaded
+# again on a 5.1.1 server; 5.1 no longer ties these two ropes, but loads them as saved here).
+# R <PersistentID> <x y z> <qx qy qz qw>  the ship (the root), as saved
+# P <prefab> <parent key> <parent id> <PersistentID or 0> <MBPosition x y z> <MBRotationVec x y z> <drawn x y z> <drawn qx qy qz qw>
+# T <prefab> <x y z>  a rope anchor's tie point ("attachpoint") in its frame
+# B|I|V <prefab> <PersistentID or 0> <key> <value>  a value the mod saved (bytes in hex, an int, a vector)
+R 1654749300 285.736084 0.0263565779 195.810562 0.296805859 0.45669353 0.443490148 0.7117962
+T MBRopeAnchor 0 0.1435 0
+T ValheimVehicles_DockAttachpoint 1.018 0.1875 1
+P wood_wall_half SwivelParentId 1654752422 0 0.499999732 1 0.249985173 0 19.9999924 0 284.431519 -0.263789058 198.293518 0.0120364279 0.7676193 0.533509433 0.354941577
+P piece_chest_wood MBParentId 1654749300 1654752419 -8.821487E-06 1.59999847 -2.00001144 0 180 0 283.332855 0.749965847 196.321381 -0.443490148 0.7117962 0.296805829 -0.45669356
+P wood_pole2 MBParentId 1654749300 0 1.99999309 1.5 -0.9999962 0 30.0000019 15.000001 284.6613 2.49436665 195.871536 0.252063721 0.5975699 0.575189531 0.498529077
+P wood_floor MBParentId 1654749300 0 8.821487E-06 1.20000076 2.00001144 0 90 0 287.1306 0.507994533 197.61705 -0.103721455 0.8262471 0.5234684 0.180384874
+P MBRopeLadder MBParentId 1654749300 0 1.99999 1.20000076 -5.7965517E-06 0 90 0 285.68277 2.34777832 196.029922 -0.103721455 0.8262471 0.5234684 0.180384874
+P ValheimVehicles_ShipSteeringWheel MBParentId 1654749300 0 4.76837158E-07 1.20000076 -3.50000286 0 0 0 282.106873 0.603975534 195.380325 0.296805859 0.45669353 0.443490148 0.7117962
+P ValheimVehicles_Ship_Hull_Wood MBParentId 1654749300 0 0 0 0 0 0 0 285.736084 0.0263565779 195.810562 0.296805859 0.45669353 0.443490148 0.7117962
+P MBRopeAnchor MBParentId 1654749300 0 -1.00000811 1.5 -3.00001383 0 45.0000038 0 282.266 -0.178072751 196.218826 0.104496494 0.694322467 0.5233141 0.4828449
+P ValheimVehicles_Swivel MBParentId 1654749300 1654752422 -1.99999 1.40000153 5.7965517E-06 0 45.0000038 0 284.852753 -1.1759057 197.742981 0.104496494 0.694322467 0.5233141 0.4828449
+P MBSail MBParentId 1654749300 0 0 2.5 0 0 9.999998 0 284.835449 1.10247052 197.879578 0.257023752 0.5169928 0.467670858 0.6692842
+P MBRaftMast MBParentId 1654749300 0 -3.1888485E-06 1.20000076 0.9999904 0 0 0 286.2172 0.525436461 197.210358 0.296805859 0.45669353 0.443490148 0.7117962
+P MBRopeAnchor MBParentId 1654749300 1654752420 1.00000811 1.5 3.00001383 0 0 0 288.125427 1.5221225 197.885117 0.296805859 0.45669353 0.443490148 0.7117962
+P ValheimVehicles_ShipRudderBasic MBParentId 1654749300 0 9.775162E-06 0 -4.99999475 0 0 0 281.169067 0.113627404 193.777191 0.296805859 0.45669353 0.443490148 0.7117962
+B MBRopeAnchor 1654752420 MBRopeAnchor_Ropes 02A384A16200
+B MBRopeAnchor 0 MBRopeAnchor_Ropes 02A484A16200
+I MBSail 0 m_sailCornersCountHash 4
+V MBSail 0 m_sailCorner1Hash 0 0 0
+V MBSail 0 m_sailCorner2Hash 0 -3 0
+V MBSail 0 m_sailCorner3Hash -4 -3 0.5
+V MBSail 0 m_sailCorner4Hash -4 0 0.5
+B MBSail 0 m_mainColor FFFFFFFF

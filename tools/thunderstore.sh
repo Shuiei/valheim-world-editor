@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the plugin's package into <dist>: WorldEditorBridge-<version>.zip, from
 # tools/thunderstore/bridge/ (manifest.json and the mod page's README.md), the editor's CHANGELOG.md
-# (through tools/thunderstore/package.cs), Desktop/Assets/icon.png, the plugin built here
+# (through tools/thunderstore/package.cs), editor/Desktop/Assets/icon.png, the plugin built here
 # (plugins/WorldEditorBridge.dll, with plugins/WorldEditorBridge.Api.dll, what mods' plugins register with:
 # docs/modding.md#live-mode), tools/plugin-readme.txt (README.txt, for installing by hand) and the
 # repository's LICENSE (MIT).
@@ -27,7 +27,7 @@ pkg() { "${DOTNET:-dotnet}" run "$ts/package.cs" -- "$@"; }
 package() {   # $1 package name, $2 its folder in tools/thunderstore; the files are already in $work/$1
   local name=$1 dir="$work/$1"
   sed "s/@VERSION@/$version/g" "$ts/$2/manifest.json" > "$dir/manifest.json"
-  cp "$ts/$2/README.md" "$repo/Desktop/Assets/icon.png" "$repo/LICENSE" "$dir/"
+  cp "$ts/$2/README.md" "$repo/editor/Desktop/Assets/icon.png" "$repo/LICENSE" "$dir/"
   # The editor's changelog, with links to the matching editor on GitHub (versions with a release tag).
   pkg changelog "$repo/CHANGELOG.md" "$dir/CHANGELOG.md" "$version" $(git -C "$repo" tag -l 'v*' 2>/dev/null)
   pkg check "$dir"
@@ -37,9 +37,9 @@ package() {   # $1 package name, $2 its folder in tools/thunderstore; the files 
 }
 
 mkdir -p "$work/WorldEditorBridge/plugins"
-"${DOTNET:-dotnet}" build "$repo/plugin/WorldEditorBridge/WorldEditorBridge.csproj" -c Release -p:DebugType=none -o "$work/build" >/dev/null
+"${DOTNET:-dotnet}" build "$repo/editor/plugin/WorldEditorBridge/WorldEditorBridge.csproj" -c Release -p:DebugType=none -o "$work/build" >/dev/null
 cp "$work/build/WorldEditorBridge.dll" "$work/build/WorldEditorBridge.Api.dll" "$work/WorldEditorBridge/plugins/"
 sed "s/@VERSION@/$version/g" "$repo/tools/plugin-readme.txt" > "$work/WorldEditorBridge/README.txt"
-rm -rf "$repo/plugin/WorldEditorBridge/bin" "$repo/plugin/WorldEditorBridge/obj"
+rm -rf "$repo/editor/plugin/WorldEditorBridge/bin" "$repo/editor/plugin/WorldEditorBridge/obj"
 package WorldEditorBridge bridge
 

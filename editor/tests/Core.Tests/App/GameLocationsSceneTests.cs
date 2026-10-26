@@ -1,0 +1,83 @@
+using TerrainEditor.App;
+using Xunit;
+
+namespace WorldEditor.Tests;
+
+/// <summary>
+/// The main scene's scan (GameLocations.FindScene) and the rule set made of its parts (RuleSetOf), on a made-up game's
+/// scene (SceneGame): ZoneSystem with the most locations, every LocationList of the order's counts, the alt biomes, and
+/// the rule set's locations in the order of the zone, the lists and the alt biomes.
+/// </summary>
+public class GameLocationsSceneTests
+{
+    /// <summary>
+    /// The scene's bundles, the main one first (as the scene's manifest lists them).
+    /// </summary>
+    private static readonly List<string> Scanned = [SceneGame.Main, SceneGame.Shared];
+
+    [Fact]
+    public void TheZoneSystemWithTheMostLocationsIsTakenWhateverTheBundlesOrder()
+    {
+        // The main ZoneSystem has two locations, the shared one (in the other bundle) one.
+        using var game = SceneGame.Make([]);
+        game.Save();
+        var bundles = game.Bundles();
+        Assert.Equal(2, GameLocations.FindScene(bundles, Scanned, []).Zone!["Array"].Children.Count);
+        Assert.Equal(2, GameLocations.FindScene(bundles, [SceneGame.Shared, SceneGame.Main], []).Zone!["Array"].Children.Count);
+    }
+
+    [Fact]
+    public void EveryListOfTheSameCountsIsKept()
+    {
+        // Two lists of one pair of counts are both kept, as two lists.
+        using var game = SceneGame.Make([(2, 1), (2, 1)]);
+        game.Save();
+        var scene = GameLocations.FindScene(game.Bundles(), Scanned, [(2, 1)]);
+        Assert.Equal(2, scene.Lists[(2, 1)].Count);
+    }
+
+    [Fact]
+    public void AListTheOrderDoesNotNameIsLeftOut()
+    {
+        // A list of (3, 0) locations, with the order naming only (2, 1): not kept.
+        using var game = SceneGame.Make([(3, 0)]);
+        game.Save();
+        var scene = GameLocations.FindScene(game.Bundles(), Scanned, [(2, 1)]);
+        Assert.False(scene.Lists.ContainsKey((3, 0)));
+    }
+
+    [Fact]
+    public void TheAltBiomesOfTheWorldGeneratorAreFound()
+    {
+        using var game = SceneGame.Make([]);
+        game.Save();
+        var scene = GameLocations.FindScene(game.Bundles(), Scanned, []);
+        var alt = Assert.Single(scene.Alts!["Array"].Children);
+        Assert.Equal("DeepNorth_Ice", alt["m_name"].AsString);
+    }
+
+    [Fact]
+    public void TheRuleSetIsTheZoneThenEachListInTheOrderThenTheAltBiomes()
+    {
+        // The zone's two locations, the (2, 1) list's two, the (1, 0) list's one, then the alt biome's one: six.
+        var order = new[] { (2, 1), (1, 0) };
+        using var game = SceneGame.Make([(1, 0), (2, 1)]);
+        game.Save();
+        var bundles = game.Bundles();
+        var rules = GameLocations.RuleSetOf(GameLocations.FindScene(bundles, Scanned, order), GameLocations.Manifest.Read(bundles.Folder), order);
+        Assert.Equal(6, rules.Locations.Count);
+        Assert.Equal(["StartTemple", "Crypt_old"], rules.Locations.Take(2).Select(l => l.Prefab));
+        Assert.Equal(["L2x1_0", "L2x1_1", "L1x0_0", "IceCave"], rules.Locations.Skip(2).Select(l => l.Name));
+        Assert.Equal("DeepNorth_Ice", rules.Locations[5].AltBiome);
+        var alt = Assert.Single(rules.AltBiomes);
+        Assert.Equal("DeepNorth_Ice", alt.Name);
+        Assert.Equal(["Crypt"], alt.BlockLocationNames);
+        // Every field the layout reads, by its name in the game; one the asset lacks keeps the game's default.
+        Assert.True(alt.Enabled);
+        Assert.Equal((int)ValheimGen.Heightmap.Biome.DeepNorth, alt.Biome);
+        Assert.Equal((2000f, 2, 5, 0.25f), (alt.MinDistanceFromCenter, alt.MinAmountSpawned, alt.MaxAmountSpawned, alt.Chance));
+        Assert.Equal(["Bones"], alt.IncompatibleAltBiomes);
+        Assert.Equal(["Bushes"], alt.BlockVegetationNames);
+        Assert.Equal((50, 1500, 30f), (alt.MinEdgeSize, alt.MaxEdgeSize, alt.MinAvgHeight));
+    }
+}

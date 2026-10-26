@@ -11,7 +11,10 @@ reviews:
   high_level_summary: true
   poem: false
   auto_review:
-    enabled: true
+    # Off while the review-fix stacks (PRs #223 onwards) go in: each branch gets the CodeRabbit CLI
+    # review before it is pushed, and main's rules ask for no approving review meanwhile. To be
+    # turned back on once they are merged.
+    enabled: false
     drafts: false
     # Every push reviewed, however many commits (else it pauses after 5, and the latest commit, so
     # the approval, waits).
@@ -26,15 +29,15 @@ reviews:
       mode: "off"
   path_filters:
     # The tests' copies of the game's data and the documentation's pictures: data, not code.
-    - "!tests/fixtures/**"
+    - "!editor/tests/fixtures/**"
     - "!docs/images/**"
   path_instructions:
-    - path: "Core/WorldGen/**"
+    - path: "editor/Core/WorldGen/**"
       instructions: >-
         The world generator follows the game's formulas bit for bit (WorldCheck checks it against
         values recorded in the game): flag any change to arithmetic, casts or the order of random
         draws.
-    - path: "plugin/**"
+    - path: "editor/plugin/**"
       instructions: >-
         A BepInEx plugin for Valheim (Unity, .NET Framework 4.7.2): Unity calls Awake, Update and
         OnDestroy by name, Unity's == null also catches destroyed objects, and Harmony finds patch

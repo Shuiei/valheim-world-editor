@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/worldeditor.schema.json",
+  "version": 1,
+  "serves": "ValheimTunneling.dll",
+  "extension": "Tunnelheim.WorldEditor.dll",
+  "gameComponents": ["TerrainOp"],
+  "settingsFiles": ["sam.valheim.tunneling.cfg"],
+  "data": {
+    "Tunneling_Digs": { "label": "Tunnel record", "readOnly": true, "help": "What was dug, filled and painted in this 16 m column, replayed in order." },
+    "Tunneling_SnapData": { "label": "Tunnel checkpoint", "readOnly": true, "help": "The column's rock as it was after the edits baked out of its record." },
+    "Tunneling_SnapId": { "label": "Checkpoint id", "readOnly": true }
+  },
+  "prefabs": {
+    "TunnelColumnData": { "hidden": true, "data": true },
+    "TunnelColumnSnapshot": { "hidden": true, "data": true }
+  }
+}

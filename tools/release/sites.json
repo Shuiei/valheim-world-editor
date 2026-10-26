@@ -41,6 +41,12 @@
         "allowModManagerDownload": false,
         "updateModVersion": false
       }
-    ]
+    ],
+    "addOns": {
+      "fileName": "Valheim World Editor add-on - {addon}",
+      "name": "Valheim World Editor add-on - {addon} {version}",
+      "description": "The {addon} add-on {version} for the Valheim World Editor: editor support for that mod. Unpack it into the addons folder next to the editor (on macOS, next to ValheimWorldEditor.app). Not a game mod: download it by hand.",
+      "allowModManagerDownload": false
+    }
   }
 }

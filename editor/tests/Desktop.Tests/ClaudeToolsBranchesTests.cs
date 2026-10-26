@@ -1,0 +1,205 @@
+using System.Numerics;
+using System.Text.Json.Nodes;
+using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using ModelContextProtocol.Protocol;
+using SkiaSharp;
+using TerrainEditor.App;
+using TerrainEditor.Save;
+using Xunit;
+
+namespace TerrainEditor.Desktop.Tests;
+
+/// <summary>
+/// The less trodden ways through Claude's tools (ClaudeTools): four views of a point given and over the map,
+/// screenshots asked at once from the cameras they set, roads painted dirt on the ground's own heights, a dungeon over the view's middle, the
+/// Workshop refused over an unsaved world, stands given items and armour, a chest given what is no item, a creature's
+/// stars, a blueprint's chest filled on the plot, and a piece with no recipe.
+/// </summary>
+[Collection("World files")]
+public class ClaudeToolsBranchesTests
+{
+    /// <summary>A plain PNG of the given size, written to <paramref name="path"/>.</summary>
+    private static Task Png(string path, int w, int h)
+    {
+        using var bitmap = new SKBitmap(w, h);
+        bitmap.Erase(SKColors.SkyBlue);
+        using var image = SKImage.FromBitmap(bitmap);
+        File.WriteAllBytes(path, image.Encode(SKEncodedImageFormat.Png, 100).ToArray());
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The new id a set_contents answer gives ("…; its id is now 12.").</summary>
+    private static int NewId(string said) => int.Parse(said[(said.LastIndexOf(' ') + 1)..].TrimEnd('.'), System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The id of the one piece a place_pieces answer put down.</summary>
+    private static int Placed(string json) => ClaudeRun.J(json).GetProperty("placed")[0].GetProperty("id").GetInt32();
+
+    // Four views of a point given (each 640 wide, two by two); with the map shown over an open area, four views are
+    // refused and the state says the map.
+    [AvaloniaFact]
+    public async Task FourViewsOfAPointAndNoneOverTheMap()
+    {
+        using var r = new ClaudeRun();
+        r.T.ViewPicture = path => Png(path, 640, 480);
+        r.T.MapPicture = path => Png(path, 320, 240);
+        await r.OpenArea();
+        var four = await r.T.Screenshot(x: 5, z: -5, distance: 60, height: 40, views: 4);
+        Assert.NotEqual(true, four.IsError);
+        var block = Assert.Single(four.Content.OfType<ImageContentBlock>());
+        using (var sheet = SKBitmap.Decode(block.DecodedData.ToArray()))
+        {
+            Assert.Equal((1280, 960), (sheet.Width, sheet.Height));
+        }
+
+        r.W.ShowMap();
+        Assert.True(r.W.MapShown);
+        Assert.Null(r.W.Session);
+        var refused = await r.T.Screenshot(views: 4);
+        Assert.True(refused.IsError);
+        Assert.StartsWith("Four views need", Assert.IsType<TextContentBlock>(Assert.Single(refused.Content)).Text);
+        var state = ClaudeRun.J(await r.T.EditorState());
+        Assert.Equal("map", state.GetProperty("page").GetString());
+    }
+
+    // Three screenshots asked at once (one of four views) take turns with the camera: one picture is taken at a time,
+    // each from the camera its call set, still so when the picture ends (they ran side by side, each picture from the
+    // other's camera).
+    [AvaloniaFact]
+    public async Task ScreenshotsAskedAtOnceTakeTurnsWithTheCamera()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var (yaw0, pitch0, distance0, target0) = r.W.View.Camera;
+        int taking = 0, most = 0;
+        var cameras = new List<(int Yaw, float X, float Z)>();
+        r.T.ViewPicture = async path =>
+        {
+            most = Math.Max(most, ++taking);
+            await Task.Delay(30);
+            taking--;
+            var (yaw, _, _, target) = r.W.View.Camera;
+            cameras.Add(((int)MathF.Round(yaw * 180f / MathF.PI), target.X, target.Z));
+            await Png(path, 64, 48);
+        };
+        var shots = await Task.WhenAll(r.T.Screenshot(x: 0, z: 0, yaw: 10), r.T.Screenshot(x: 5, z: 5, yaw: 200), r.T.Screenshot(views: 4));
+        Assert.All(shots, s => Assert.NotEqual(true, s.IsError));
+        Assert.Equal(1, most);
+        // The view's camera holds the target relative to the area's middle, z flipped.
+        var scene = r.W.Session!.Scene;
+        (int, float, float)[] expected = [(0, 0f, 0f), (10, -scene.Cx, scene.Cz), (90, 0f, 0f), (200, 5 - scene.Cx, scene.Cz - 5), (225, 0f, 0f), (315, 0f, 0f)];
+        Assert.Equal(expected, cameras.OrderBy(c => c.Yaw).ToArray());
+        // Read-only looks: the user's camera is back as it was.
+        var (yaw1, pitch1, distance1, target1) = r.W.View.Camera;
+        Assert.Equal((yaw0, pitch0, distance0), (yaw1, pitch1, distance1));
+        Assert.True(Vector3.Distance(target0, target1) < 1e-3f, $"{target0} {target1}");
+    }
+
+    // A road painted dirt on the ground's heights (none given, or not one per point): one pending step each.
+    [AvaloniaFact]
+    public async Task RoadsOnTheGroundsOwnHeights()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        Assert.StartsWith("road of 1 segment(s)", await r.T.Road([[-20f, 0f], [20f, 0f]], paint: "dirt"));
+        Assert.Equal("Claude: road", r.W.Session!.UndoLabel);
+        Assert.StartsWith("road of 1 segment(s)", await r.T.Road([[-20f, 10f], [20f, 10f]], heights: [40f]));
+        Assert.True(r.W.World!.Pending.Zones > 0);
+    }
+
+    // With no point given, the dungeon goes over the view's middle.
+    [AvaloniaFact]
+    public async Task ADungeonGoesOverTheViewsMiddle()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        string made = await r.T.GenerateDungeon(size: 1, levels: 1, seed: 5);
+        Assert.Contains("Now pending:", made);
+        Assert.True(r.W.World!.Pending.Added > 0, made);
+    }
+
+    // The map shown while the dungeon is made: it is placed nowhere.
+    [AvaloniaFact]
+    public async Task ADungeonMadeWhileTheMapWasShownGoesNowhere()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var made = r.T.GenerateDungeon(size: 1, levels: 1, seed: 5, x: 5, z: 5);
+        // Lets the tool's first step (its check of the open area) run before the map is shown.
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        r.W.ShowMap();
+        Assert.Equal("The area was closed (or another opened) while the dungeon was made: nothing was placed.", await made);
+        Assert.Equal(0, r.W.World!.Pending.Added);
+    }
+
+    // A world with changes not saved: the Workshop is not opened over it.
+    [AvaloniaFact]
+    public async Task TheWorkshopWaitsForAnUnsavedWorld()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        string refused = await r.T.OpenWorkshop();
+        Assert.StartsWith("The open world has changes not saved (", refused);
+        Assert.EndsWith("ask the user to save or discard them first.", refused);
+        Assert.False(r.W.InWorkshop);
+    }
+
+    // An item stand takes one item it can hold (or none: emptied); an armour stand what it can wear, with a pose; what
+    // they cannot take is said. A chest given what is no item of the game is not changed.
+    [AvaloniaFact]
+    public async Task StandsTakeWhatTheyCanHold()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int stand = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "itemstand", X = -12, Z = -10 }]));
+        int armour = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "ArmorStand", X = -14, Z = -10 }]));
+        int chest = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -16, Z = -10 }]));
+
+        Assert.Contains("holds one item, not 2", await r.T.SetContents(stand, [new ClaudeTools.ItemSpec { Item = "SwordIron" }, new ClaudeTools.ItemSpec { Item = "Wood" }]));
+        Assert.DoesNotContain("Changed", await r.T.SetContents(stand, [new ClaudeTools.ItemSpec { Item = "Wood" }]));
+        string sword = await r.T.SetContents(stand, [new ClaudeTools.ItemSpec { Item = "SwordIron", Quality = 3 }], orientation: 1);
+        Assert.StartsWith("Changed", sword);
+        Assert.StartsWith("Changed", await r.T.SetContents(NewId(sword), []));
+
+        Assert.DoesNotContain("Changed", await r.T.SetContents(armour, [new ClaudeTools.ItemSpec { Item = "CookedMeat" }]));
+        Assert.StartsWith("Changed", await r.T.SetContents(armour, [new ClaudeTools.ItemSpec { Item = "HelmetBronze" }], pose: 2));
+
+        Assert.StartsWith("Could not change it: ", await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "NoSuchItem" }]));
+        // A chest's item keeps its style (it was always 0).
+        string styled = await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "SwordIron", Variant = 2 }]);
+        Assert.StartsWith("Changed", styled);
+        Assert.Equal(2, ClaudeRun.J(await r.T.GetObject(NewId(styled))).GetProperty("contents")[0].GetProperty("variant").GetInt32());
+    }
+
+    // On the plot: a creature's stars (clamped to 2: level 3), stars refused for a chest, a blueprint's chest filled,
+    // the blueprint added again at the plot's middle; a piece with no recipe has no station.
+    [AvaloniaFact]
+    public async Task StarsAndABlueprintsChestOnThePlot()
+    {
+        using var r = new ClaudeRun();
+        Directory.CreateDirectory(r.Homestead);
+        var piece = new JsonObject { ["name"] = "piece_chest_wood", ["dx"] = 0, ["dy"] = 0, ["dz"] = 0, ["rx"] = 0, ["ry"] = 0, ["rz"] = 0, ["scale"] = 0 };
+        var clip = new JsonObject { ["objects"] = new JsonArray(piece) };
+        File.WriteAllText(Path.Combine(r.Homestead, Homestead.FileName("Store")), Homestead.Write(clip, "Store", "Tester", null, DateTime.Now, "A chest", ["chest"]));
+        Assert.Equal("workshop", ClaudeRun.J(await r.T.OpenWorkshop("Store")).GetProperty("page").GetString());
+
+        int chest = ClaudeRun.J(await r.T.ListObjects(name: "piece_chest_wood"))[0].GetProperty("id").GetInt32();
+        Assert.StartsWith("Changed piece_chest_wood", await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "Coins", Stack = 5 }]));
+        chest = ClaudeRun.J(await r.T.ListObjects(name: "piece_chest_wood"))[0].GetProperty("id").GetInt32();
+        Assert.Contains("is not a creature: only creatures have stars", await r.T.SetContents(chest, stars: 1));
+
+        var s = r.W.Session!;
+        int boar = s.Commit("a boar", null, [], [(new Editing.NewObject(0, StableHash.Of("Boar"), new Vector3(10, 34, 10), Vector3.Zero, 0), false)])[0];
+        string starred = await r.T.SetContents(boar, stars: 5);
+        Assert.StartsWith("Changed", starred);
+        var data = s.Edits.FindAdded(s.Scene.Things[NewId(starred)].Id)!.Data!;
+        Assert.Contains(data, f => f.Key == StableHash.Of("level") && f.Value == "3");
+
+        Assert.Contains("Now pending:", await r.T.AddBlueprint("Store"));
+
+        // A piece the game asks no station for (the bonfire; the wooden gate, once the example, has its real cost in the fixtures now).
+        var gate = Assert.Single(ClaudeRun.J(await ClaudeTools.PieceInfo(["bonfire"])).EnumerateArray());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, gate.GetProperty("station").ValueKind);
+    }
+}

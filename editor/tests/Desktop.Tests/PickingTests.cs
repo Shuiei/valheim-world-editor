@@ -1,0 +1,168 @@
+using System.Numerics;
+using Xunit;
+
+namespace TerrainEditor.Desktop.Tests;
+
+/// <summary>
+/// Picking: the ray through the mouse, against boxes and the ground.
+/// </summary>
+public class PickingTests
+{
+    /// <summary>
+    /// The view-projection of a camera at <c>eye</c> looking at <c>target</c> (60° field of view, 1.5 aspect).
+    /// </summary>
+    private static Matrix4x4 Camera(Vector3 eye, Vector3 target)
+    {
+        return Matrix4x4.CreateLookAt(eye, target, Vector3.UnitY) * GlView.Perspective(MathF.PI / 3, 1.5f, 0.5f, 6000);
+    }
+
+    [Fact]
+    public void TheRayThroughTheMiddleGoesToTheTarget()
+    {
+        var (o, d) = Picking.Ray(Camera(new Vector3(0, 10, 10), Vector3.Zero), 0, 0);
+        var toTarget = Vector3.Normalize(Vector3.Zero - new Vector3(0, 10, 10));
+        Assert.True(Vector3.Distance(d, toTarget) < 1e-3f, $"{d}");
+        // It starts on the near plane, half a metre in front of the camera.
+        Assert.True(MathF.Abs(Vector3.Distance(o, new Vector3(0, 10, 10)) - 0.5f) < 0.01f, $"{o}");
+    }
+
+    [Fact]
+    public void BoxesAreHitWhereTheRayEnters()
+    {
+        var o = new Vector3(0, 0, 10);
+        var d = new Vector3(0, 0, -1);
+        Assert.Equal(9f, Picking.HitBox(o, d, new Vector3(-1, -1, -1), new Vector3(1, 1, 1))!.Value, 4);
+        Assert.Null(Picking.HitBox(o, d, new Vector3(2, -1, -1), new Vector3(3, 1, 1)));
+        Assert.Null(Picking.HitBox(o, -d, new Vector3(-1, -1, -1), new Vector3(1, 1, 1)));
+    }
+
+    [Fact]
+    public void ABoxIsNotMetAboveTheCut()
+    {
+        // A 2 m box cut at 1 m: a ray going down into its open top meets nothing (the cut is not a face), one from
+        // the side under the cut meets its side, one from the side above the cut nothing.
+        Vector3 lo = new(-1, -1, -1), hi = new(1, 1, 1);
+        var down = new Vector3(0, -1, 0);
+        Assert.Equal(4f, Picking.HitBox(new Vector3(0, 5, 0), down, lo, hi)!.Value, 4);
+        Assert.Null(Picking.HitBox(new Vector3(0, 5, 0), down, lo, hi, 0));
+        var side = new Vector3(0, 0, -1);
+        Assert.Equal(9f, Picking.HitBox(new Vector3(0, -0.5f, 10), side, lo, hi, 0)!.Value, 4);
+        Assert.Null(Picking.HitBox(new Vector3(0, 0.5f, 10), side, lo, hi, 0));
+    }
+
+    [Fact]
+    public void ATurnedBoxGetsTheBoxAroundIt()
+    {
+        var (lo, hi) = Picking.Transform(new Vector3(-1, 0, -1), new Vector3(1, 2, 1), Matrix4x4.CreateRotationY(MathF.PI / 4) * Matrix4x4.CreateTranslation(10, 0, 0));
+        Assert.Equal(10 - MathF.Sqrt(2), lo.X, 3);
+        Assert.Equal(10 + MathF.Sqrt(2), hi.X, 3);
+        Assert.Equal(2, hi.Y, 3);
+    }
+
+    [Fact]
+    public void TheGroundIsHitWhereTheRayMeetsIt()
+    {
+        // A flat ground at 5 m, 65 × 65 points around 0.
+        var s = new WorldScene
+        {
+            World = null!,
+            Name = "test",
+            W = 65,
+            H = 65,
+            ZonesX = 1,
+            ZonesZ = 1,
+            Heights = [.. Enumerable.Repeat(5f, 65 * 65)],
+            Biomes = new int[65 * 65],
+            Things = [],
+            BiomeColor = new byte[65 * 65 * 4],
+            Mask = new byte[65 * 65 * 4],
+            OceanDepth = new float[65 * 65],
+            Limit = new float[65 * 65],
+        };
+        Assert.Equal(5f, Picking.HeightAt(s, 3.3f, -7.1f), 4);
+        float t = Picking.HitGround(s, new Vector3(0, 25, 0), new Vector3(0, -1, 0))!.Value;
+        Assert.Equal(20f, t, 2);
+        Assert.Null(Picking.HitGround(s, new Vector3(0, 25, 0), new Vector3(0, 1, 0)));
+        // A ray that leaves the area above the ground hits nothing (it hit 1000 m down past the edge).
+        Assert.Null(Picking.HitGround(s, new Vector3(0, 25, 0), Vector3.Normalize(new Vector3(1, -0.3f, 0))));
+    }
+
+    // A ray straight down on flat ground hits it; where a mod's extension cuts the ground (WorldScene.Cut), it goes
+    // through: no ground is hit there (nor past the area).
+    [Fact]
+    public void ARayGoesThroughCutGround()
+    {
+        var s = TestScenes.Flat(2).Scene;
+        var down = new Vector3(0, -1, 0);
+        Assert.Equal(70, Picking.HitGround(s, new Vector3(0, 100, 0), down)!.Value, 1);
+        Assert.False(Picking.CutAt(s, 0, 0));
+
+        s.Cut = new float[s.W * s.H];
+        s.Cut[((s.H - 1) / 2 * s.W) + ((s.W - 1) / 2)] = 1;
+
+        Assert.True(Picking.CutAt(s, 0, 0));
+        // Between a cut point and uncut ones, as the shader blends over the triangle: cut up to half way along an
+        // edge, ground past it; and 0.25 east, 0.3 south of the cut point is ground (0.45 on its triangle, though
+        // a blend over the whole cell would say 0.525).
+        Assert.True(Picking.CutAt(s, 0.4f, 0));
+        Assert.False(Picking.CutAt(s, 0.6f, 0));
+        Assert.False(Picking.CutAt(s, 0.25f, -0.3f));
+        Assert.False(Picking.CutAt(s, 3, 3));
+        Assert.Null(Picking.HitGround(s, new Vector3(0, 100, 0), down));
+        Assert.Equal(70, Picking.HitGround(s, new Vector3(3, 100, 3), down)!.Value, 1);
+        // A slanting ray into the hole and out of it below the ground: no ground met on the hole's far side; one
+        // that reaches the ground just past the hole's edge, after passing over the cut, meets it there.
+        Assert.Null(Picking.HitGround(s, new Vector3(-0.2f, 30.2f, 0), Vector3.Normalize(new Vector3(1, -1, 0)), 20));
+        float? past = Picking.HitGround(s, new Vector3(-0.4f, 30.1f, 0), Vector3.Normalize(new Vector3(10, -1, 0)), 20);
+        Assert.NotNull(past);
+        float x = -0.4f + past.Value * 10 / MathF.Sqrt(101);
+        Assert.InRange(x, 0.5f, 0.7f);
+    }
+
+    [Fact]
+    public void TrianglesAreHitFromBothSidesAndMissedBesideThem()
+    {
+        Vector3 a = new(0, 0, 0), b = new(2, 0, 0), c = new(0, 2, 0);
+        Assert.Equal(5, Picking.HitTriangle(new Vector3(0.5f, 0.5f, 5), -Vector3.UnitZ, a, b, c)!.Value, 4);
+        Assert.Equal(5, Picking.HitTriangle(new Vector3(0.5f, 0.5f, -5), Vector3.UnitZ, a, b, c)!.Value, 4);
+        Assert.Null(Picking.HitTriangle(new Vector3(1.5f, 1.5f, 5), -Vector3.UnitZ, a, b, c));
+        // Behind the ray's start, or along its plane: no hit.
+        Assert.Null(Picking.HitTriangle(new Vector3(0.5f, 0.5f, 5), Vector3.UnitZ, a, b, c));
+        Assert.Null(Picking.HitTriangle(new Vector3(-1, 0.5f, 0), Vector3.UnitX, a, b, c));
+    }
+
+    [Fact]
+    public void AMeshIsHitWhereItsPlacedTrianglesAre()
+    {
+        // A unit square in the x, y plane (two triangles), placed twice as big and 10 m up the ray's z.
+        float[] positions = [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0];
+        uint[] tris = [0, 1, 2, 0, 2, 3];
+        var bounds = (Vector3.Zero, new Vector3(1, 1, 0));
+        var m = Matrix4x4.CreateScale(2) * Matrix4x4.CreateTranslation(0, 0, -10);
+        var o = new Vector3(1.5f, 1.5f, 5);
+        // Inside the doubled square: 15 m along the ray, in the ray's frame; beside it (over 2): nothing.
+        Assert.Equal(15, Picking.HitMesh(o, -Vector3.UnitZ, positions, tris, bounds, m)!.Value, 3);
+        Assert.Null(Picking.HitMesh(new Vector3(2.5f, 0.5f, 5), -Vector3.UnitZ, positions, tris, bounds, m));
+        // Through the square's box but between no triangles: a box alone is not a hit.
+        uint[] oneCorner = [0, 1, 3];
+        Assert.Null(Picking.HitMesh(new Vector3(1.9f, 1.9f, 5), -Vector3.UnitZ, positions, oneCorner, bounds, m));
+        Assert.NotNull(Picking.HitMesh(new Vector3(0.1f, 0.1f, 5), -Vector3.UnitZ, positions, oneCorner, bounds, m));
+    }
+
+    [Fact]
+    public void AMeshIsNotMetAboveTheCut()
+    {
+        // A wall (x, y plane at z 0, 4 m tall) and a floor behind it (x, z plane at y 0, z -1 to -5), one mesh; a ray
+        // going down and forward meets the wall at 3.5 m up, then the floor.
+        float[] positions = [0, 0, 0, 1, 0, 0, 1, 4, 0, 0, 4, 0, 0, 0, -1, 1, 0, -1, 1, 0, -5, 0, 0, -5];
+        uint[] tris = [0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7];
+        var bounds = (new Vector3(0, 0, -5), new Vector3(1, 4, 0));
+        var o = new Vector3(0.5f, 4.5f, 1);
+        var d = Vector3.Normalize(new Vector3(0, -1, -1));
+        Assert.Equal(MathF.Sqrt(2), Picking.HitMesh(o, d, positions, tris, bounds, Matrix4x4.Identity)!.Value, 3);
+        // Cut at 3 m: the wall above it is not there, the floor is met.
+        Assert.Equal(4.5f * MathF.Sqrt(2), Picking.HitMesh(o, d, positions, tris, bounds, Matrix4x4.Identity, 3)!.Value, 3);
+        // Cut under the floor: nothing.
+        Assert.Null(Picking.HitMesh(o, d, positions, tris, bounds, Matrix4x4.Identity, -1));
+    }
+}

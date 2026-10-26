@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build the release packages (no source code, no game files) into <dist>, one per system:
-#   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (one program file, Desktop/) and its
-#   ValheimWorldEditor-<version>-win-x64.zip        README (on Windows with its four native DLLs);
+#   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (one program file, editor/Desktop/), its README and
+#   ValheimWorldEditor-<version>-win-x64.zip        the empty addons folder with its own README (on Windows
+#                                                   with its four native DLLs);
 #                                                   it reads the game's look from Valheim itself
 #   ValheimWorldEditor-<version>-macos-arm64-experimental.zip
 #                                                   ValheimWorldEditor.app (Apple silicon) and its README;
@@ -23,7 +24,7 @@ mkdir -p "$dist"
 publish() {   # $1 runtime id, $2 output folder, then more dotnet publish options
   local rid=$1 out=$2; shift 2
   # Quiet when it works; when it fails, what dotnet said (its errors and warnings) is shown.
-  if ! "$dotnet" publish "$repo/Desktop/ValheimWorldEditor.Desktop.csproj" -c Release -r "$rid" --self-contained \
+  if ! "$dotnet" publish "$repo/editor/Desktop/ValheimWorldEditor.Desktop.csproj" -c Release -r "$rid" --self-contained \
     -p:DebugType=none -p:DebugSymbols=false "$@" -o "$out" > "$work/publish-$rid.log" 2>&1; then
     echo "Publishing for $rid failed:" >&2
     grep -E ": (error|warning) " "$work/publish-$rid.log" | sort -u >&2 || true
@@ -49,6 +50,9 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
   cp "$work/$rid/publish/$exe" "$dir/"
   if [ "$rid" = win-x64 ]; then cp "$work/$rid/publish/"*.dll "$dir/"; fi
   readme "$3" "$dir/README.txt"
+  # The add-ons' folder, next to the program (AddOns), with what to put there.
+  mkdir -p "$dir/addons"
+  readme release-readme-addons.txt "$dir/addons/README.txt"
   # Windows readers get Windows line ends.
   if [ "$rid" = win-x64 ]; then find "$dir" -maxdepth 2 -name README.txt -exec sed -i 's/$/\r/' {} \;; fi
 }
@@ -61,15 +65,18 @@ package win-x64 ValheimWorldEditor.exe release-readme-windows.txt
 # macOS: ValheimWorldEditor.app, the program published as a folder inside it (Contents/MacOS), not one file: on Apple
 # silicon every library must carry a signature, so they stay in the signed bundle instead of being unpacked to a
 # temporary folder at start. Signed ad hoc with rcodesign (no Apple Developer certificate: macOS asks once, see the
-# README); the icon is Desktop/Assets/icon.icns (icon.png at 128 and 256 pixels).
+# README); the icon is editor/Desktop/Assets/icon.icns (icon.png at 128 and 256 pixels).
 package_mac() {   # $1 runtime id, $2 the package's name for it
   local rid=$1 name=$2
   local app="$work/$rid/ValheimWorldEditor/ValheimWorldEditor.app"
   publish "$rid" "$app/Contents/MacOS" -p:PublishSingleFile=false -p:SatelliteResourceLanguages=en
   mkdir -p "$app/Contents/Resources"
   sed -e "s/@NUMBER@/${version#v}/g" "$repo/tools/release-macos-Info.plist" > "$app/Contents/Info.plist"
-  cp "$repo/Desktop/Assets/icon.icns" "$app/Contents/Resources/"
+  cp "$repo/editor/Desktop/Assets/icon.icns" "$app/Contents/Resources/"
   readme release-readme-macos.txt "$work/$rid/ValheimWorldEditor/README.txt"
+  # The add-ons' folder next to the app (not inside its signed bundle).
+  mkdir -p "$work/$rid/ValheimWorldEditor/addons"
+  readme release-readme-addons.txt "$work/$rid/ValheimWorldEditor/addons/README.txt"
   if ! "$rcodesign" sign "$app" > "$work/sign-$rid.log" 2>&1; then
     echo "Signing the $rid app failed:" >&2
     tail -30 "$work/sign-$rid.log" >&2

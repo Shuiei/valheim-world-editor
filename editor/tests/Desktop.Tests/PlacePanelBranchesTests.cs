@@ -1,0 +1,99 @@
+using System.Numerics;
+using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using TerrainEditor.Terrain;
+using Xunit;
+using Run = TerrainEditor.Desktop.Tests.SharedPlaceWindow.PanelRun;
+
+namespace TerrainEditor.Desktop.Tests;
+
+/// <summary>
+/// The Place panel's less common paths on the test world (zone 0, 0): Delete on a built-in preset, declined, or on one
+/// gone from the memory; the note for kinds that need cultivated ground; the info line's end-to-end gap and the turned
+/// grid; and a panel of its own with no one listening.
+/// </summary>
+[Collection("World files")]
+public class PlacePanelBranchesTests
+{
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
+    private static void Click(Button b)
+    {
+        b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    [AvaloniaFact]
+    public void DeleteLeavesBuiltInDeclinedAndVanishedPresetsAlone()
+    {
+        using var r = new Run();
+        int entries = r.P.PresetBox.ItemCount;
+        // A built-in preset: not yours to delete.
+        r.P.PresetBox.SelectedIndex = 1;
+        Click(r.P.DeletePresetButton);
+        Assert.Equal(entries, r.P.PresetBox.ItemCount);
+        // One of yours, the question declined.
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
+        r.P.AskName = () => Task.FromResult<string?>("Mine");
+        Click(r.P.SavePresetButton);
+        Assert.Single(r.P.Memory.Presets);
+        r.P.Confirm = _ => Task.FromResult(false);
+        Click(r.P.DeletePresetButton);
+        Assert.Single(r.P.Memory.Presets);
+        // Gone from the memory meanwhile: the entry points past the end, nothing is deleted.
+        r.P.Memory.Presets.Clear();
+        r.P.Confirm = _ => Task.FromResult(true);
+        Click(r.P.DeletePresetButton);
+        Assert.Equal(entries + 1, r.P.PresetBox.ItemCount);
+    }
+
+    [AvaloniaFact]
+    public void TheNoteNamesEveryKindThatNeedsCultivatedGround()
+    {
+        using var r = new Run();
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
+        Assert.Equal("", r.P.Note.Text);
+        Assert.False(r.P.Note.IsVisible);
+        SharedPlaceWindow.ChoosePanelKinds(r, "sapling_carrot", "sapling_turnip");
+        Assert.Contains("sapling_carrot, sapling_turnip only grow on cultivated ground", r.P.Note.Text);
+    }
+
+    [AvaloniaFact]
+    public void TheInfoTellsTheGapLeftEndToEndAndTheShapesTurn()
+    {
+        using var r = new Run();
+        Click(r.P.ModeButtons[PlaceTool.Modes.Line]);
+        SharedPlaceWindow.ChoosePanelKinds(r, "woodwall");
+        Assert.True(r.T.EndToEnd);
+        r.T.SnapTo = false;
+        // 5 m: two 2 m walls, 1 m left.
+        r.T.Points.Add(new Vector2(20, 32));
+        r.T.Points.Add(new Vector2(25, 32));
+        r.T.Notify();
+        Assert.Contains("end to end (1.0 m of the line left at the end", r.P.Info.Text);
+        Click(r.P.ModeButtons[PlaceTool.Modes.Grid]);
+        r.T.GridA = new Vector2(10, 10);
+        r.T.GridB = new Vector2(30, 30);
+        Assert.True(r.T.TurnShape(90));
+        Assert.Contains("turn the grid (now 90°)", r.P.Info.Text);
+        Click(r.P.ModeButtons[PlaceTool.Modes.Zone]);
+        Assert.Contains("turn the zone", r.P.Info.Text);
+    }
+
+    [AvaloniaFact]
+    public void APanelOfItsOwnSaysNothingAndTellsNoOneOfOpenedGroups()
+    {
+        using var r = new Run();
+        var input = new PlaceInput(r.W.View, new PlaceTool { Scene = () => r.Scene });
+        var p = new PlacePanel(input, () => r.Scene, PrefabCatalog.NameOf, new PlaceMemory());
+        Click(p.PickButton);
+        Assert.NotNull(input.PickOnce);
+        Click(p.KindsButton);
+        var (kind, group) = p.Groups.First(g => !g.Value.IsExpanded);
+        group.IsExpanded = true;
+        Assert.Contains(kind, p.OpenKinds);
+    }
+}

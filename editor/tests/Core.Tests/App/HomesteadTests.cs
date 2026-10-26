@@ -1,0 +1,269 @@
+using System.Numerics;
+using System.Text.Json.Nodes;
+using TerrainEditor.App;
+using Xunit;
+
+namespace WorldEditor.Tests;
+
+/// <summary>
+/// Homestead's blueprints, the editor's building library: finding Homestead in a BepInEx folder (with its version),
+/// writing a blueprint the way Homestead writes them (its headers, pieces measured from the anchor, rotations as
+/// quaternions) that reads back the same, and listing a folder of them.
+/// </summary>
+public class HomesteadTests : IDisposable
+{
+    private static readonly string[] Expected2 = ["house", "wood"];
+    private static readonly string[] Expected1 = ["house", "Viking", "stone"];
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-hs-" + Guid.NewGuid().ToString("N")[..8]);
+
+    /// <summary>
+    /// Deletes the temporary folder.
+    /// </summary>
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        GC.SuppressFinalize(this);
+    }
+
+    [Fact]
+    public void HomesteadIsFoundInABepInExFolderWithItsVersion()
+    {
+        var settings = new AppSettings();
+        string bep = Path.Combine(_dir, "BepInEx");
+        Directory.CreateDirectory(Path.Combine(bep, "plugins"));
+        settings.BepInExFolders.Add(bep);
+        Assert.False(Homestead.Find(settings).Installed);
+        // As a mod manager installs it: its own folder with the package's manifest.
+        string mod = Path.Combine(bep, "plugins", "sighsorry-Homestead");
+        Directory.CreateDirectory(mod);
+        File.WriteAllText(Path.Combine(mod, "Homestead.dll"), "");
+        File.WriteAllText(Path.Combine(mod, "manifest.json"), """{ "name": "Homestead", "version_number": "1.3.2" }""");
+        var found = Homestead.Find(settings);
+        Assert.True(found.Installed);
+        Assert.Equal("1.3.2", found.Version);
+        Assert.Single(found.Where);
+        // The tests never use the game's own folder.
+        Assert.Equal(Homestead.FolderOverride, found.Folder);
+    }
+
+    // A manifest without a version number: the DLL's own (none in an empty file); a manifest that is not JSON: unknown.
+    [Fact]
+    public void TheVersionFallsBackToTheDllsAndIsUnknownWhenTheManifestCannotBeRead()
+    {
+        var settings = new AppSettings();
+        string bep = Path.Combine(_dir, "BepInEx");
+        string mod = Path.Combine(bep, "plugins", "Homestead");
+        Directory.CreateDirectory(mod);
+        settings.BepInExFolders.Add(bep);
+        File.WriteAllText(Path.Combine(mod, "Homestead.dll"), "");
+        File.WriteAllText(Path.Combine(mod, "manifest.json"), """{ "name": "Homestead" }""");
+        var found = Homestead.Find(settings);
+        Assert.True(found.Installed);
+        Assert.Null(found.Version);
+        File.WriteAllText(Path.Combine(mod, "manifest.json"), "{ not json");
+        Assert.Null(Homestead.Find(settings).Version);
+    }
+
+    // A plugins folder that cannot be read is passed over: Homestead is not found there, and nothing throws.
+    [Fact]
+    public void APluginsFolderThatCannotBeReadIsPassedOver()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        var settings = new AppSettings();
+        string bep = Path.Combine(_dir, "BepInEx");
+        string plugins = Path.Combine(bep, "plugins");
+        Directory.CreateDirectory(Path.Combine(plugins, "sighsorry-Homestead"));
+        File.WriteAllText(Path.Combine(plugins, "sighsorry-Homestead", "Homestead.dll"), "");
+        settings.BepInExFolders.Add(bep);
+        File.SetUnixFileMode(plugins, UnixFileMode.None);
+        try
+        {
+            Assert.False(Homestead.Find(settings).Installed);
+        }
+        finally
+        {
+            File.SetUnixFileMode(plugins, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
+    /// <summary>
+    /// A one-cell clipboard copy with no ground holding these pieces (name, position and yaw).
+    /// </summary>
+    private static JsonObject Clip(params (string Name, float X, float Y, float Z, float Yaw)[] pieces)
+    {
+        JsonArray objects = [.. pieces.Select(p => (JsonNode)new JsonObject
+        {
+            ["name"] = p.Name,
+            ["dx"] = p.X,
+            ["dy"] = p.Y,
+            ["dz"] = p.Z,
+            ["rx"] = 0,
+            ["ry"] = p.Yaw,
+            ["rz"] = 0,
+            ["scale"] = 0,
+        })];
+        return BlueprintFormats.OneCellClip(objects, []);
+    }
+
+    [Fact]
+    public void ABlueprintIsWrittenAsHomesteadWritesThemAndReadsBack()
+    {
+        string text = Homestead.Write(Clip(("wood_floor", -1, 0, 1, 0), ("woodwall", 2, 1, 0, 90)), "Hut", "Tester", "Midgard", new DateTime(2026, 10, 8, 17, 0, 0));
+        Assert.StartsWith("#Name:Hut\n#Creator:Tester\n#Description:\n#Category:Blueprints\n#HomesteadVersion:1\n#HomesteadWorld:Midgard\n#HomesteadSavedAt:2026-10-08 17:00:00 ", text);
+        Assert.Contains("#HomesteadRadius:", text);
+        Assert.Contains("\n#Pieces\nwood_floor;Building;-1;0;1;0;0;0;1;\"\";1;1;1\n", text);
+        // A quarter turn: Homestead's quaternion (Unity's).
+        Assert.Contains("woodwall;Building;2;1;0;0;0.707;0;0.707;\"\";1;1;1", text);
+        var parsed = BlueprintFormats.Parse("Hut.blueprint", text);
+        Assert.Equal("Hut", parsed.Name);
+        Assert.Equal(2, parsed.Pieces.Count);
+        Assert.Equal(new Vector3(2, 1, 0), parsed.Pieces[1].Position);
+        Assert.Equal(90, parsed.Pieces[1].Euler.Y, 1);
+    }
+
+    [Fact]
+    public void AFolderListsItsBlueprintsWithTheirPictures()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(Path.Combine(_dir, "Hut.blueprint"), Homestead.Write(Clip(("wood_floor", 0, 0, 0, 0), ("woodwall", 0, 1, 1, 0)), "Hut", "Tester", null, DateTime.Now));
+        File.WriteAllBytes(Path.Combine(_dir, "Hut.png"), [1]);
+        File.WriteAllText(Path.Combine(_dir, "Old.blueprint"), "#Name:Old one\n#Pieces\nwood_floor;Misc;0;0;0;0;0;0;1;\"\";1;1;1\n");
+        File.WriteAllText(Path.Combine(_dir, "notes.txt"), "not a blueprint");
+        var list = Homestead.List(_dir);
+        Assert.Equal(["Hut", "Old one"], list.Select(e => e.Name));
+        Assert.Equal(2, list[0].Pieces);
+        Assert.Equal("Tester", list[0].Creator);
+        Assert.NotNull(list[0].Picture);
+        Assert.Null(list[1].Picture);
+        Assert.Empty(Homestead.List(Path.Combine(_dir, "missing")));
+        Assert.Equal("a_b.blueprint", Homestead.FileName("a/b"));
+    }
+
+    // Names Windows keeps for devices get a "_" (saving "con" failed there), and a cut ending in a dot drops it (Windows
+    // drops it itself, so the picture's name no longer matched).
+    [Fact]
+    public void FileNamesAvoidWindowsDeviceNamesAndATrailingDot()
+    {
+        Assert.Equal("_con.blueprint", Homestead.FileName("con"));
+        Assert.Equal("_LPT1.old.blueprint", Homestead.FileName("LPT1.old"));
+        Assert.Equal("console.blueprint", Homestead.FileName("console"));
+        Assert.Equal(new string('h', 63) + ".blueprint", Homestead.FileName(new string('h', 63) + ".more"));
+    }
+
+    // FreeName: the name when free, else numbered from 2; a name at the file-name limit is cut so the number stays
+    // in the file name (every numbered name mapped to the same file before, and the search never ended).
+    [Fact]
+    public void FreeNamesAreNumberedWithinTheFileNameLimit()
+    {
+        Assert.Equal("Hut", Homestead.FreeName("Hut ", _ => false));
+        Assert.Equal("Hut (3)", Homestead.FreeName("Hut", n => n is "Hut" or "Hut (2)"));
+        string longName = new('h', 64);
+        var files = new HashSet<string> { Homestead.FileName(longName), Homestead.FileName(longName[..60] + " (2)") };
+        string free = Homestead.FreeName(longName, n => files.Contains(Homestead.FileName(n)));
+        Assert.Equal(longName[..60] + " (3)", free);
+        Assert.Equal(64 + ".blueprint".Length, Homestead.FileName(free).Length);
+    }
+
+    [Fact]
+    public void DescriptionAndTagsAreWrittenReadAndChangedBeforeThePieces()
+    {
+        Directory.CreateDirectory(_dir);
+        string file = Path.Combine(_dir, "Hut.blueprint");
+        string text = Homestead.Write(Clip(("wood_floor", 0, 0, 0, 0), ("wood_floor", 2, 0, 0, 0)), "Hut", "Tester", null, DateTime.Now, "A small\nhut", ["house", "wood"]);
+        // Homestead skips header lines it does not know, as long as they come before "#Pieces".
+        Assert.True(text.IndexOf("#Tags:house, wood\n", StringComparison.Ordinal) < text.IndexOf("#Pieces", StringComparison.Ordinal));
+        Assert.Contains("#Description:A small hut\n", text);
+        File.WriteAllText(file, text);
+        var e = Homestead.Read(file)!;
+        Assert.Equal(("A small hut", 2), (e.Description, e.Kinds["wood_floor"]));
+        Assert.Equal(Expected2, e.Tags);
+        string changed = Homestead.WithDetails(text, new Homestead.Details("Big hut", "Bigger", ["house"]));
+        Assert.StartsWith("#Name:Big hut\n#Creator:Tester\n#Description:Bigger\n#Tags:house\n#Category:Blueprints\n", changed);
+        Assert.EndsWith(text[text.IndexOf("#Pieces", StringComparison.Ordinal)..], changed);
+        Assert.DoesNotContain("#Tags:", Homestead.WithDetails(text, new Homestead.Details("Hut", "", [])));
+        Assert.Equal(Expected1, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
+    }
+
+    [Fact]
+    public void TagsAreCutToTwelve()
+    {
+        // Semicolons split as commas do, duplicates do not count toward the twelve, and the first twelve stay.
+        string text = string.Join(";", Enumerable.Range(1, 15).Select(i => $" t{i} ")) + ",T1,t2";
+        Assert.Equal(Enumerable.Range(1, 12).Select(i => $"t{i}"), Homestead.Details.ParseTags(text));
+        Assert.Empty(Homestead.Details.ParseTags(null));
+    }
+
+    // A hand-edited header with spaces before its lines: the old name, description and tags go, as Read reads them
+    // (the old lines stayed, and Read kept the last name: the rename showed the old one).
+    [Fact]
+    public void ChangedDetailsReplaceIndentedHeaderLines()
+    {
+        string text = "  #Name:Old\n #Creator:Tester\n\t#Description:Old one\n #Tags:old\n#Pieces\nwood_floor;Misc;0;0;0;0;0;0;1;\"\";1;1;1\n";
+
+        string changed = Homestead.WithDetails(text, new Homestead.Details("New", "New one", ["new"]));
+
+        var e = Homestead.Read("x.blueprint", changed.Split('\n'));
+        Assert.Equal(("New", "New one"), (e.Name, e.Description));
+        Assert.Equal(["new"], e.Tags);
+        Assert.StartsWith("#Name:New\n #Creator:Tester\n#Description:New one\n#Tags:new\n#Pieces", changed);
+    }
+
+    // A copy's numbers written as strings are read as numbers (they threw).
+    [Fact]
+    public void NumbersWrittenAsStringsAreRead()
+    {
+        var clip = Clip(("wood_floor", 0, 0, 0, 0));
+        clip["objects"]![0]!["dx"] = "1.5";
+
+        string text = Homestead.Write(clip, "Hut", "Tester", null, DateTime.Now);
+
+        Assert.Contains("\nwood_floor;Building;1.5;0;0;", text);
+    }
+
+    [Fact]
+    public void TheDungeonTagIsReadInAnyCaseSetOnceAndTakenAway()
+    {
+        var hut = new Homestead.Details("Hut", "", ["house"]);
+        Assert.False(hut.Dungeon);
+        var crypt = hut.WithDungeon(true);
+        Assert.True(crypt.Dungeon);
+        Assert.Equal(["house", "dungeon"], crypt.Tags);
+        Assert.Same(crypt, crypt.WithDungeon(true));
+        Assert.True(new Homestead.Details("Crypt", "", ["DUNGEON"]).Dungeon);
+        Assert.Equal(["house"], new Homestead.Details("Crypt", "", ["Dungeon", "house"]).WithDungeon(false).Tags);
+    }
+
+    [Fact]
+    public void TheLibraryReadsHeadersAsAPasteDoes()
+    {
+        // The list trimmed every quote off a description (and a paste only whole surrounding ones, undoing \" and \n),
+        // and matched field names ignoring case where a paste did not: the two showed the same file differently.
+        string[] lines = ["#name:Hut", "#Description:\"Big\" house", "#Pieces", "wood_floor;Building;0;0;0;0;0;0;1;\"\";1;1;1"];
+        var listed = Homestead.Read("hut.blueprint", lines);
+        var pasted = BlueprintFormats.Parse("hut.blueprint", string.Join('\n', lines));
+        Assert.Equal(("Hut", "\"Big\" house"), (listed.Name, listed.Description));
+        Assert.Equal((listed.Name, listed.Description), (pasted.Name, pasted.Description));
+        string[] quoted = ["#Description:\"Say \\\"hi\\\"\"", "#Pieces"];
+        Assert.Equal("Say \"hi\"", Homestead.Read("x.blueprint", quoted).Description);
+        Assert.Equal("Say \"hi\"", BlueprintFormats.Parse("x.blueprint", string.Join('\n', quoted)).Description);
+    }
+
+    [Fact]
+    public void ASearchFindsEveryWordInNameCreatorDescriptionOrTags()
+    {
+        // The Blueprints panel, the Workshop's library and Claude's list each filtered their own way (only one
+        // looked at the creator).
+        var e = new Homestead.Entry("hut.blueprint", "Small hut", "Astrid", null, 3, null, default) { Description = "By the lake", Tags = ["viking", "wood"] };
+        Assert.True(e.Matches(null));
+        Assert.True(e.Matches("  "));
+        Assert.True(e.Matches("HUT astrid"));
+        Assert.True(e.Matches("lake Vik"));
+        Assert.False(e.Matches("hut stone"));
+    }
+}
