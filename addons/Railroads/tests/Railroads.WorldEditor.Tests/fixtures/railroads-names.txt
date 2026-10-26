@@ -1,0 +1,75 @@
+# Railroads 0.2.9 (vladasz.railroads) train names, recorded on a local headless Valheim dedicated server
+# Valheim l-1.0.20 (world version 42 CheatCleanSlate), BepInEx 5.4.23.5
+# Recorded 2026-10-26 02:53 by a throwaway harness, on the world railroads-reference.txt was recorded on (made with 0.2.6: its train unnumbered, no register)
+# loaded under 0.2.9, the server numbered the train 1 and made its register of train numbers (bf_rail_world, at the world's centre); the harness then named the train 'Fixture Express' and made 3 locomotives:
+#   at +20 m x, as the add-on pastes the train (its name kept, its number taken away): the server numbered it 2
+#   at +30 m x, a copy keeping the name and the number: the server left it at 1, the original's
+#   at +40 m x, a new one with neither: the server numbered it 3
+# the world was saved and the server started again on it: below, 20 s after the restart (the numbers and the count kept, none given again)
+# ZDOIDs are live session ids (Valheim reassigns ids when a world loads); floats are written with ToString("R")
+# 6 objects
+object bf_locomotive 1:6909
+pos 398.488831 79.511795 -297.006958
+int bf_coal 30
+int bf_moving 0
+int bf_train_number 1
+int bf_trips 1
+int bf_way 1
+int creatorIndex -1
+long bf_torch0_time 20400000000
+long bf_torch1_time 20400000000
+long creator 424242424242
+float bf_at 3.71559143
+float bf_odo 12.7155561
+float bf_speed 0
+float bf_stop 3.999978
+float bf_torch0 2
+float bf_torch1 2
+string bf_dest 
+string bf_horn 
+string bf_train_name Rml4dHVyZSBFeHByZXNz
+bytes bf_after 
+bytes bf_legs 
+bytes bf_line kIjGQwoGn0JIOJbDbhDIQwoGn0I7hpLD
+bytes bf_route 
+bytes bf_trail sgDFQwoGn0JV6pnDkIjGQwoGn0JIOJbD1HjDQwoGn0JinJ3DsgDFQwoGn0JV6pnD
+bytes bf_wagons AQAAAAAAAAD+GgAAAQAAAAAAAAD/GgAA
+end
+object bf_locomotive 1:7174
+pos 418.488831 79.511795 -297.006958
+int bf_coal 30
+int bf_train_number 2
+int bf_trips 1
+long creator 424242424242
+float bf_odo 12.7155561
+string bf_train_name Rml4dHVyZSBFeHByZXNz
+end
+object bf_locomotive 1:7175
+pos 428.488831 79.511795 -297.006958
+int bf_coal 30
+int bf_train_number 1
+int bf_trips 1
+long creator 424242424242
+float bf_odo 12.7155561
+string bf_train_name Rml4dHVyZSBFeHByZXNz
+end
+object bf_locomotive 1:7176
+pos 438.488831 79.511795 -297.006958
+int bf_coal 30
+int bf_train_number 3
+int bf_trips 1
+long creator 424242424242
+float bf_odo 12.7155561
+end
+object bf_rail_world 1:13815
+pos 0 0 0
+int bf_train_count 3
+end
+object bf_handcart 1:8469
+pos 409.291138 79.511795 -287.59137
+int bf_dir -1
+int creatorIndex -1
+long creator 424242424242
+float bf_at 4.9889245
+bytes bf_line nTrKQwoGn0IMXJDDaU7OQwoGn0InwI/D
+end

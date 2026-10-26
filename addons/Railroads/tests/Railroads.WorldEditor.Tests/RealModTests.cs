@@ -7,7 +7,7 @@ namespace Railroads.WorldEditor.Tests;
 /// <summary>
 /// The real Railroads (the version the add-on follows, downloaded for the tests): every piece's model is in its folder
 /// and read whole, in the mod's materials; its track's lines run as its pieces are named; each piece is drawn, a vehicle
-/// on its wheels.
+/// on its wheels, the locomotive with its name boards (0.2.7), the portal wagon without posts on its open side (0.2.8).
 /// </summary>
 public class RealModTests
 {
@@ -64,6 +64,34 @@ public class RealModTests
             Assert.True((piece.Kind == RailKind.Vehicle) == (model.Axles.Count > 0), piece.Prefab);
         }
     }
+
+    [Fact]
+    public void TheLocomotiveHasANameBoardOnEachSideOfItsBoiler()
+    {
+        var wood = Wood("locomotive");
+
+        foreach (int side in (int[])[1, -1])
+        {
+            // Beside the boiler, its middle 3.18 m up and 0.45 m forward: 1.2 m long.
+            var board = wood.Where(c => c.X * side is > 0.6f and < 0.7f && c.Y is > 2.9f and < 3.45f && c.Z is > -0.25f and < 1.15f).ToList();
+            Assert.NotEmpty(board);
+            Assert.Equal(1.2f, board.Max(c => c.Z) - board.Min(c => c.Z), 2);
+        }
+    }
+
+    [Fact]
+    public void ThePortalWagonHasPostsOnlyOnItsClosedSide()
+    {
+        var wood = Wood("portal");
+
+        // A post at an end of the portal, 0.7 m to the side and 2 m along.
+        int Post(int side, int end) => wood.Count(c => c.X * side is > 0.45f and < 0.95f && c.Z * end is > 1.75f and < 2.25f && c.Y > 1.3f);
+        Assert.Equal((0, 0), (Post(1, 1), Post(1, -1)));
+        Assert.True(Post(-1, 1) > 0 && Post(-1, -1) > 0);
+    }
+
+    /// <summary>The corners of a model's wood.</summary>
+    private static List<Vector3> Wood(string name) => [.. Model(name).Parts.Where(p => p.Slot == "wood").SelectMany(p => p.Positions)];
 
     [Fact]
     public void EveryPieceIsDrawnFromTheModsFolder()
