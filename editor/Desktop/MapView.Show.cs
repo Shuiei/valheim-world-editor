@@ -16,6 +16,9 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     public void Show(WorldSession session)
     {
         _session = session;
+        // The last world's portals are not this one's: none until this world's are read.
+        _portals = null;
+        PortalsError = null;
         // The last world's map is no longer wanted: its build stops, and gives its threads back.
         StopBuild();
         var build = _build = new CancellationTokenSource();

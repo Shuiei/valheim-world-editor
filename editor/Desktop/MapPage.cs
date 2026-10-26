@@ -69,9 +69,9 @@ public sealed partial class MapPage : IDisposable
     /// </summary>
     private readonly DispatcherTimer _players = new() { Interval = TimeSpan.FromSeconds(5) };
     /// <summary>
-    /// The players' name labels over the map.
+    /// The labels over the map: the players' names and, zoomed in, the portals' tags.
     /// </summary>
-    private readonly Canvas _labels = new() { IsHitTestVisible = false };
+    internal Canvas Labels { get; } = new() { IsHitTestVisible = false };
     /// <summary>
     /// The side panel's background and border brushes.
     /// </summary>
@@ -127,7 +127,7 @@ public sealed partial class MapPage : IDisposable
         Map.Status += t => status.IsVisible = !string.IsNullOrEmpty(t);
         cursor.IsVisible = false;
         Cursor.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) { cursor.IsVisible = !string.IsNullOrEmpty(Cursor.Text); } };
-        View = new Grid { Background = new SolidColorBrush(Color.FromRgb(20, 23, 28)), Children = { Map, surface, _labels, side, cursor, status } };
+        View = new Grid { Background = new SolidColorBrush(Color.FromRgb(20, 23, 28)), Children = { Map, surface, Labels, side, cursor, status } };
         _players.Tick += async (_, _) => await PollPlayers();
     }
 }

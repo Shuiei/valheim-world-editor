@@ -1,4 +1,7 @@
+using System.Numerics;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -7,7 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The map page: the messages it gives (the pending line for each count and for a live world, and the found line for
-/// each kind of search), the biomes, the cursor line, the search and the zone filter.
+/// each kind of search), the biomes, the cursor line, the search, the zone filter, Show ruins and Show portals.
 /// </summary>
 [Collection("World files")]
 public class MapPageTests
@@ -45,6 +48,74 @@ public class MapPageTests
         Assert.True(m.Map.ShowRuins);
         m.RuinsBox.IsChecked = false;
         Assert.False(m.Map.ShowRuins);
+    }
+
+    // Show portals: off at first; it switches the map's portals on and off, and its text counts them once read.
+    [AvaloniaFact]
+    public async Task ShowPortalsSwitchesTheMapsPortalsAndCountsThem()
+    {
+        var m = new MapPage();
+        Assert.False(m.PortalsBox.IsChecked);
+        Assert.False(m.Map.ShowPortals);
+        Assert.Equal("Show portals and their links", m.PortalsBox.Content);
+        m.PortalsBox.IsChecked = true;
+        Assert.True(m.Map.ShowPortals);
+        m.PortalsBox.IsChecked = false;
+        Assert.False(m.Map.ShowPortals);
+        Assert.Equal("Show portals and their links (none)", MapPage.PortalsLabel(new PortalMap.Result([], [])));
+        var two = new PortalMap.Result([new(1, "portal_wood", 0, 0, 0, "a", null), new(2, "portal_wood", 1, 0, 0, "a", null), new(3, "portal_wood", 2, 0, 0, "b", null)], [(0, 1)]);
+        Assert.Equal("Show portals and their links (3: 1 linked pair(s), 1 alone)", MapPage.PortalsLabel(two));
+        Assert.Equal("Show portals and their links (not read: locked)", MapPage.PortalsLabel(null, "locked"));
+
+        using var r = new MapPageRun();
+        await r.Open();
+        for (int i = 0; i < 100 && r.M.Map.Portals == null; i++)
+        {
+            await Task.Delay(50);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+        Assert.NotNull(r.M.Map.Portals);
+        Assert.Null(r.M.Map.PortalsError);
+        Assert.Equal(MapPage.PortalsLabel(r.M.Map.Portals), r.M.PortalsBox.Content);
+
+        // Another world: the last one's portals and their counts go at once, before its own are read.
+        using var other = WorldSession.Open(r.Dir);
+        r.M.Show(other);
+        Assert.Null(r.M.Map.Portals);
+        Assert.Equal("Show portals and their links", r.M.PortalsBox.Content);
+        for (int i = 0; i < 100 && r.M.Map.Portals == null; i++)
+        {
+            await Task.Delay(50);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+        Assert.NotNull(r.M.Map.Portals);
+    }
+
+    // Show portals: a portal's tag is written over the map from PortalTagZoom metres a pixel in, not further out, and
+    // only while the portal is on the map.
+    [AvaloniaFact]
+    public async Task PortalTagsAreWrittenOnlyZoomedInAndOnTheMap()
+    {
+        using var r = new MapPageRun();
+        await r.Open();
+        var zdo = new ZdoData { Prefab = StableHash.Of("portal_wood"), Position = new Vector3(123, 30, 456) };
+        zdo.Set("strings", StableHash.Of("tag"), "home");
+        r.W.World!.Edits.AddObjects([new NewObject(-1, zdo.Prefab, zdo.Position, Vector3.Zero, 0f, null, false, zdo.Serialize())]);
+        r.M.Map.Refresh();
+        for (int i = 0; i < 100 && r.M.Map.Portals?.Portals.Any(p => p.Id == -1) != true; i++)
+        {
+            await Task.Delay(50);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+        Assert.Contains(r.M.Map.Portals!.Portals, p => p.Id == -1);
+        r.M.PortalsBox.IsChecked = true;
+        r.M.Map.LookAt(123, 456, MapPage.PortalTagZoom);
+        Assert.Contains(r.M.Labels.Children.OfType<TextBlock>(), t => t.Text == "home");
+        r.M.Map.LookAt(123, 456, MapPage.PortalTagZoom * 2);
+        Assert.DoesNotContain(r.M.Labels.Children.OfType<TextBlock>(), t => t.Text == "home");
+        // Close in, but far from it: off the map, no label.
+        r.M.Map.LookAt(123 + 50_000 * MapPage.PortalTagZoom, 456, MapPage.PortalTagZoom);
+        Assert.DoesNotContain(r.M.Labels.Children.OfType<TextBlock>(), t => t.Text == "home");
     }
 
     [AvaloniaFact]

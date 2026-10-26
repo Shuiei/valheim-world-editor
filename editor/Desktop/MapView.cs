@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
 using Silk.NET.OpenGL;
+using TerrainEditor.App;
 using TerrainEditor.Terrain;
 using MapData = ValheimGen.MapData;
 using Vector2 = System.Numerics.Vector2;
@@ -126,6 +127,27 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     /// For each ruin piece, whether it is joined to a player's building (JoinedRuins).
     /// </summary>
     private bool[] _ruinJoined = [];
+    /// <summary>
+    /// Draw the world's portals (violet discs) and the links between portals of one tag, with their tags when zoomed
+    /// in (off at first: it shows where every portal is).
+    /// </summary>
+    public bool ShowPortals { get; set; }
+    /// <summary>
+    /// The world's portals and their links (PortalMap.Find), read with the pieces; null until read.
+    /// </summary>
+    public PortalMap.Result? Portals => _portals;
+    /// <summary>
+    /// <see cref="Portals"/>' store, set on the UI thread once read.
+    /// </summary>
+    private volatile PortalMap.Result? _portals;
+    /// <summary>
+    /// Why the portals could not be read (a chunk file missing or locked), or null; set with <see cref="Portals"/>.
+    /// </summary>
+    public string? PortalsError { get; private set; }
+    /// <summary>
+    /// Raised on the UI thread when the portals have been read (with <c>PiecesRead</c>).
+    /// </summary>
+    public event Action? PortalsRead;
     /// <summary>
     /// Player-built and ruin piece indices, lowest top first, so roofs are drawn over what is under them.
     /// </summary>

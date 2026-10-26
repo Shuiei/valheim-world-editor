@@ -40,6 +40,7 @@ page: with changes pending it asks first, and **Leave anyway** loses them.
 |---|---|
 | **Show buildings (N player-built pieces)** | Draws every player-built piece: footprints close up, dots further out, nothing zoomed far out. Ruins players built onto are drawn with the building. On at first. |
 | **Show ruins (spoilers)** | Also draws the world's ruins (stone towers, ruined houses, Mistlands and Ashlands ruins), fainter. Off at first, because it shows where they are. |
+| **Show portals and their links (N: P linked pairs, A alone)** | Draws every portal as a violet dot, with a line between the two that share a tag (the pair the game joins); a portal with no partner is hollow. Zoomed in (8 m a pixel or closer) each tag is written beside its portal ("no tag" for an empty one). N counts the portals, P the linked pairs, A the portals with no partner. Portals added or deleted in the editor count once the map is shown again. Off at first, because it shows where every portal is. |
 | **Outline edited zones** | Outlines zones whose ground was changed: a thin yellow line for changes already in the world, a thicker orange line for changes not saved or applied yet. On at first. |
 | **Show painted ground (dirt, paved, fields) when zoomed in** | Close up, the map is drawn at 1 m detail with your pending ground changes; this also shows dirt, paved and cultivated ground. On at first. |
 | **Zone grid** | Draws the lines between the 64 m [zones](concepts/areas-and-zones.md#zones), when zoomed in enough. |

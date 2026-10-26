@@ -21,6 +21,8 @@ public sealed partial class MapPage
         BuildingsBox.IsCheckedChanged += (_, _) => { Map.ShowBuildings = BuildingsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         RuinsBox.Tip("map.ruins");
         RuinsBox.IsCheckedChanged += (_, _) => { Map.ShowRuins = RuinsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
+        PortalsBox.Tip("map.portals");
+        PortalsBox.IsCheckedChanged += (_, _) => { Map.ShowPortals = PortalsBox.IsChecked == true; PlaceLabels(); Map.RequestNextFrameRendering(); };
         GridBox.IsCheckedChanged += (_, _) => { Map.ShowGrid = GridBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         EditedBox.IsCheckedChanged += (_, _) => { Map.ShowEdited = EditedBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         PaintBox.IsCheckedChanged += (_, _) => { Map.ShowPaint = PaintBox.IsChecked == true; Map.RequestNextFrameRendering(); };
@@ -37,6 +39,7 @@ public sealed partial class MapPage
         Map.Hovered += Hover;
         Map.Status += t => _status.Text = t;
         Map.PiecesRead += () => BuildingsBox.Content = Lang.T("map.label.buildingsCount", Map.PieceCount);
+        Map.PortalsRead += () => { PortalsBox.Content = PortalsLabel(Map.Portals, Map.PortalsError); PlaceLabels(); };
         Map.ViewChanged += PlaceLabels;
         Map.SizeChanged += (_, _) => PlaceLabels();
     }

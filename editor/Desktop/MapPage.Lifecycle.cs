@@ -25,6 +25,8 @@ public sealed partial class MapPage
         if (!same)
         {
             Map.Show(session);
+            // The last world's portal counts go with it (its portals did, in Map.Show).
+            PortalsBox.Content = PortalsLabel(Map.Portals, Map.PortalsError);
             _hovered = null;
             // The pointer's line was the last world's.
             Cursor.Text = "";

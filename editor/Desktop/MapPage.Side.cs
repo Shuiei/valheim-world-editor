@@ -43,7 +43,7 @@ public sealed partial class MapPage
                         _liveBox,
                         _changesBox,
                         H2(Lang.T("top.label.map")),
-                        new StackPanel { Children = { BuildingsBox, RuinsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
+                        new StackPanel { Children = { BuildingsBox, RuinsBox, PortalsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
                         _pickBox,
                         new TextBlock { Text = Lang.T("map.hint.click"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                         search,

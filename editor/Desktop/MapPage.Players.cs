@@ -57,18 +57,32 @@ public sealed partial class MapPage
     private readonly HashSet<WorldSession> _polling = [];
 
     /// <summary>
-    /// The players' names next to their dots.
+    /// The players' names next to their dots and, zoomed in, the portals' tags (PlacePortalTags).
     /// </summary>
     private void PlaceLabels()
     {
-        _labels.Children.Clear();
+        Labels.Children.Clear();
+        PlacePortalTags();
         foreach (var (name, x, z) in Map.Players)
         {
-            var at = Map.ScreenOf(x, z);
-            var t = new TextBlock { Text = name, FontSize = 12, Foreground = Brushes.White, FontWeight = FontWeight.SemiBold, Effect = new DropShadowEffect { BlurRadius = 3, OffsetX = 0, OffsetY = 0, Color = Colors.Black, Opacity = 1 } };
-            Canvas.SetLeft(t, at.X + 10);
-            Canvas.SetTop(t, at.Y - 8);
-            _labels.Children.Add(t);
+            Label(name, x, z, Brushes.White);
         }
+    }
+
+    /// <summary>
+    /// Writes a label over the map just right of a world position.
+    /// </summary>
+    /// <param name="text">The label's text.</param>
+    /// <param name="x">World x (metres).</param>
+    /// <param name="z">World z (metres).</param>
+    /// <param name="colour">The text's colour.</param>
+    /// <param name="style">The text's style.</param>
+    private void Label(string text, float x, float z, IBrush colour, FontStyle style = FontStyle.Normal)
+    {
+        var at = Map.ScreenOf(x, z);
+        var t = new TextBlock { Text = text, FontSize = 12, Foreground = colour, FontStyle = style, FontWeight = FontWeight.SemiBold, Effect = new DropShadowEffect { BlurRadius = 3, OffsetX = 0, OffsetY = 0, Color = Colors.Black, Opacity = 1 } };
+        Canvas.SetLeft(t, at.X + 10);
+        Canvas.SetTop(t, at.Y - 8);
+        Labels.Children.Add(t);
     }
 }

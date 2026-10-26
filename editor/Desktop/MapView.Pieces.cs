@@ -6,7 +6,7 @@ using TerrainEditor.Terrain;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The world's player-built pieces and ruins, read in the background and kept for the map's buildings.
+/// The world's player-built pieces, ruins and portals, read in the background and kept for the map's buildings.
 /// </summary>
 public sealed partial class MapView : OpenGlControlBase, IDisposable
 {
@@ -50,6 +50,18 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
                 Log.Caught(ex, "reading the buildings shown on the map");
                 return;
             }
+            // A portal read that fails (a chunk file missing or locked) keeps the pieces read, and says why.
+            PortalMap.Result? portals = null;
+            string? portalsError = null;
+            try
+            {
+                portals = PortalMap.Find(world, s.Edits);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log.Caught(ex, "reading the portals shown on the map");
+                portalsError = ex.Message;
+            }
             Dispatcher.UIThread.Post(() =>
             {
                 if (_session != s || _piecesTurn != turn)
@@ -61,7 +73,10 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
                 _ruinJoined = joined;
                 _pieces = data;
                 _buildingsKey = default;
+                _portals = portals;
+                PortalsError = portalsError;
                 PiecesRead?.Invoke();
+                PortalsRead?.Invoke();
                 RequestNextFrameRendering();
             });
         });

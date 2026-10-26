@@ -46,6 +46,10 @@ public sealed partial class MapPage
     /// </summary>
     internal CheckBox RuinsBox { get; } = new() { Content = Lang.T("map.label.ruins"), IsChecked = false, FontSize = 12 };
     /// <summary>
+    /// Show the world's portals and the links between them; its text gets their counts once read.
+    /// </summary>
+    internal CheckBox PortalsBox { get; } = new() { Content = Lang.T("map.label.portals"), IsChecked = false, FontSize = 12 };
+    /// <summary>
     /// Show the zone grid.
     /// </summary>
     internal CheckBox GridBox { get; } = new() { Content = Lang.T("map.label.grid"), FontSize = 12 };
