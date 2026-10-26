@@ -131,9 +131,10 @@ Thunderstore (team `Tie`): only the plugin, `WorldEditorBridge`. Thunderstore do
 programs (it rejected the editor packages of 0.3.3), so the editor is only on the GitHub releases
 page, which the plugin's mod page points to. `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` from `tools/thunderstore/bridge/` (`manifest.json` and the mod
-page `README.md`), the editor's `CHANGELOG.md` (made into the plugin's changelog by
-`tools/thunderstore/package.cs`, a .NET file-based app, with links to the matching editor on GitHub)
-and the icon, with
+page `README.md`), the plugin's changelog (`tools/thunderstore/package.cs`, a .NET file-based app: one
+part per release, newest first, with its notes as its GitHub release has them, made from `CHANGELOG.md` and
+`docs/releases/` by `tools/release/publish.cs notes-all`, without their Downloads part and with a link to that
+editor on GitHub) and the icon, with
 the DLL of the release packages (reused when that version is already in the folder). It checks
 Thunderstore's rules (name, 250-character description, 256x256 icon). Upload the zip at
 https://thunderstore.io/c/valheim/create/.
@@ -157,7 +158,8 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
    `CHANGELOG.md` headings to release (`## v1.25.1 — 2026-10-12` instead of `— unreleased`), when
    they are not dated yet. Optionally, write the GitHub release's notes in
    `docs/releases/v<version>.md`; without it the notes are the CHANGELOG's sections since the last
-   release. Make its branch from main and name it `release/v<version>`: when it changes only
+   release (after "This release covers <first> to <version>" when there are several). The plugin's changelog on
+   Thunderstore and Hexium is every release's notes, so write them for players. Make its branch from main and name it `release/v<version>`: when it changes only
    `CHANGELOG.md` and `docs/releases/`, its pipeline runs no tests (its code is main's, tested as each
    pull request merged) and the checks main's ruleset requires pass at once.
 2. Merge it (squash: main's commit is then `Release v<version> (#<number>)`). On main, that commit,
