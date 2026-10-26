@@ -12,6 +12,12 @@ the plugin is unchanged in versions without that part.
   together), and the tags beside them when zoomed in. The switch's text counts the portals, the linked pairs and the
   portals alone. Off at first (spoiler). Portals a mod adds count too, by their name.
 
+## v1.112.2 — unreleased
+
+### Fixed
+- **Fewer antivirus warnings on Windows.** Every library that comes with the editor is now signed, and a web-server
+  file the editor never used is no longer in the download.
+
 ## v1.112.1 — 2026-10-26
 
 ### Fixed

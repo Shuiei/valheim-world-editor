@@ -46,9 +46,12 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
   publish "$rid" "$work/$rid/publish" -p:PublishSingleFile=true
   mkdir -p "$dir"
   # The program, and on Windows its native libraries beside it (ANGLE, Skia, HarfBuzz, SPIRV-Cross: not
-  # unpacked to a temporary folder at start, see the project file); on Linux they are inside it.
+  # unpacked to a temporary folder at start, see the project file); on Linux they are inside it. Not ASP.NET Core's
+  # module for IIS (aspnetcorev2_inprocess.dll), which the publish brings along: the editor's server is Kestrel's.
   cp "$work/$rid/publish/$exe" "$dir/"
-  if [ "$rid" = win-x64 ]; then cp "$work/$rid/publish/"*.dll "$dir/"; fi
+  if [ "$rid" = win-x64 ]; then
+    find "$work/$rid/publish" -maxdepth 1 -name '*.dll' ! -name aspnetcorev2_inprocess.dll -exec cp {} "$dir/" \;
+  fi
   readme "$3" "$dir/README.txt"
   # The add-ons' folder, next to the program (AddOns), with what to put there.
   mkdir -p "$dir/addons"

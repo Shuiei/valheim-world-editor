@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the plugin's package into <dist>: WorldEditorBridge-<version>.zip, from
-# tools/thunderstore/bridge/ (manifest.json and the mod page's README.md), the editor's CHANGELOG.md
-# (through tools/thunderstore/package.cs), editor/Desktop/Assets/icon.png, the plugin built here
+# tools/thunderstore/bridge/ (manifest.json and the mod page's README.md), every release's notes as its GitHub
+# release has them (through tools/thunderstore/package.cs), editor/Desktop/Assets/icon.png, the plugin built here
 # (plugins/WorldEditorBridge.dll, with plugins/WorldEditorBridge.Api.dll, what mods' plugins register with:
 # docs/modding.md#live-mode), tools/plugin-readme.txt (README.txt, for installing by hand) and the
 # repository's LICENSE (MIT).
@@ -28,8 +28,12 @@ package() {   # $1 package name, $2 its folder in tools/thunderstore; the files 
   local name=$1 dir="$work/$1"
   sed "s/@VERSION@/$version/g" "$ts/$2/manifest.json" > "$dir/manifest.json"
   cp "$ts/$2/README.md" "$repo/editor/Desktop/Assets/icon.png" "$repo/LICENSE" "$dir/"
-  # The editor's changelog, with links to the matching editor on GitHub (versions with a release tag).
-  pkg changelog "$repo/CHANGELOG.md" "$dir/CHANGELOG.md" "$version" $(git -C "$repo" tag -l 'v*' 2>/dev/null)
+  # The plugin's changelog: every release's notes as its GitHub release has them (each tag's, and this version's),
+  # with links to the matching editor on GitHub.
+  local tags
+  tags=$(git -C "$repo" tag -l 'v*')
+  (cd "$repo" && "${DOTNET:-dotnet}" run tools/release/publish.cs -- notes-all CHANGELOG.md docs/releases "$work/notes" "$version" $tags)
+  pkg changelog "$repo/CHANGELOG.md" "$work/notes" "$dir/CHANGELOG.md" "$version"
   pkg check "$dir"
   rm -f "$dist/$name-$version.zip"
   (cd "$dir" && zip -qrX "$dist/$name-$version.zip" .)

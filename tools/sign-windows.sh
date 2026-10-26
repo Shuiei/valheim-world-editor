@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Signs the program of the Windows package (Authenticode) with the maintainer's Certum code-signing
+# Signs the program of the Windows package and spirv-cross.dll, the one native library beside it that comes
+# unsigned (Authenticode: an unsigned DLL is what antivirus rules flag), with the maintainer's Certum code-signing
 # certificate, through SimplySign's cloud: the private key never leaves Certum, ssign
 # (https://github.com/Le-Syl21/ssign) logs in with the account's e-mail and a one-time code and gets
 # the signature over HTTPS, with Certum's RFC 3161 timestamp (the signature outlives the certificate).
-# The zip is rewritten in place with the signed ValheimWorldEditor.exe; nothing else in it changes.
+# The zip is rewritten in place with the signed ValheimWorldEditor.exe and spirv-cross.dll; nothing else in it changes.
 # Usage: tools/sign-windows.sh <ValheimWorldEditor-v<version>-win-x64.zip>
 #   needs ssign, unzip and zip, and in the environment CERTUM_EMAIL with either CERTUM_OTP (the TOTP
 #   seed: CI) or CERTUM_TOKEN (the current six-digit code from the SimplySign app: by hand).
@@ -16,13 +17,16 @@ if [ -z "${CERTUM_OTP:-}" ] && [ -z "${CERTUM_TOKEN:-}" ]; then
 fi
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 unzip -q "$zip" -d "$work"
-exe=$work/ValheimWorldEditor/ValheimWorldEditor.exe
-[ -f "$exe" ] || { echo "No ValheimWorldEditor/ValheimWorldEditor.exe in $zip" >&2; exit 1; }
-ssign -n "Valheim World Editor" -u https://github.com/Shuiei/valheim-world-editor "$exe"
+files=("$work/ValheimWorldEditor/ValheimWorldEditor.exe" "$work/ValheimWorldEditor/spirv-cross.dll")
+for f in "${files[@]}"; do
+  [ -f "$f" ] || { echo "No ValheimWorldEditor/$(basename "$f") in $zip" >&2; exit 1; }
+done
+# One login signs both.
+ssign -n "Valheim World Editor" -u https://github.com/Shuiei/valheim-world-editor "${files[@]}"
 if command -v osslsigncode > /dev/null; then
-  osslsigncode verify -in "$exe"
+  for f in "${files[@]}"; do osslsigncode verify -in "$f"; done
 else
-  echo "osslsigncode is not installed: the signature was not checked."
+  echo "osslsigncode is not installed: the signatures were not checked."
 fi
 # The package is replaced only once the new zip is complete.
 (cd "$work" && zip -qr "$zip.signed" ValheimWorldEditor)

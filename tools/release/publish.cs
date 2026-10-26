@@ -4,6 +4,10 @@
 //   notes <CHANGELOG.md> <version> <last tag, or -> <out.md> [<notes.md>]
 //       The release notes: notes.md (docs/releases/v<version>.md) when it is there, else the CHANGELOG's
 //       sections newer than the last released tag, up to version.
+//   notes-all <CHANGELOG.md> <docs/releases> <out folder> <version> [released tags...]
+//       Every release's notes as the notes command made them for its GitHub release, one v<version>.md each in the out
+//       folder: each tag's (after the tag before it) and version's (after the newest tag before it), for the plugin's
+//       changelog on its mod pages (tools/thunderstore/package.cs).
 //   check
 //       Checks the sites' settings without the network (the release job runs it before the GitHub release): every Nexus Mods
 //       file name a release would give, the editor's, the plugin's and each add-on's (addons/<Name>), is one
@@ -38,6 +42,9 @@ try
         case "notes" when args.Length is 5 or 6:
             File.WriteAllText(args[4], Notes(File.ReadAllText(args[1]), args[2], args[3], args.ElementAtOrDefault(5)), new UTF8Encoding(false));
             return 0;
+        case "notes-all" when args.Length >= 5:
+            NotesAll(File.ReadAllText(args[1]), args[2], args[3], args[4], args[5..]);
+            return 0;
         case "check" when args.Length == 1:
             var nexusSite = JsonNode.Parse(File.ReadAllText(SitesFile))!["nexus"]!;
             var addOnNames = Directory.Exists("addons") ? Directory.GetDirectories("addons").Select(Path.GetFileName).OfType<string>() : [];
@@ -71,6 +78,7 @@ try
             return 0;
         default:
             Console.Error.WriteLine("usage: publish.cs notes <CHANGELOG.md> <version> <last tag|-> <out.md> [notes.md]");
+            Console.Error.WriteLine("       publish.cs notes-all <CHANGELOG.md> <docs/releases> <out folder> <version> [tags...]");
             Console.Error.WriteLine("       publish.cs check");
             Console.Error.WriteLine("       publish.cs thunderstore|hexium|nexus <dist> [--notes <notes.md>] [--dry-run]");
             return 2;
@@ -114,7 +122,27 @@ static string Notes(string changelog, string version, string lastTag, string? no
         throw new InvalidDataException($"CHANGELOG.md has no section for v{version}.");
     }
 
+    // Newest first: the last kept section is the oldest version the release brings.
+    if (kept.Count > 1)
+    {
+        string oldest = Regex.Match(kept[^1], @"^## v([0-9.]+)").Groups[1].Value;
+        kept.Insert(0, $"This release covers {oldest} to {version} (the versions in between were not published on their own).");
+    }
+
     return string.Join("\n\n", kept) + $"\n\nFull list: [CHANGELOG.md]({Repo}/blob/main/CHANGELOG.md).\n";
+}
+
+// The notes-all command: every release's notes (Notes), each tag's after the tag before it, and version's after the
+// newest tag older than it (version is released too, or about to be), into outDir as v<version>.md.
+static void NotesAll(string changelog, string releasesDir, string outDir, string version, string[] tags)
+{
+    Directory.CreateDirectory(outDir);
+    var releases = tags.Select(t => Version.Parse(t.TrimStart('v'))).Append(Version.Parse(version)).Distinct().Order().ToList();
+    for (int i = 0; i < releases.Count; i++)
+    {
+        string v = releases[i].ToString(3), last = i == 0 ? "-" : $"v{releases[i - 1].ToString(3)}";
+        File.WriteAllText(Path.Combine(outDir, $"v{v}.md"), Notes(changelog, v, last, Path.Combine(releasesDir, $"v{v}.md")), new UTF8Encoding(false));
+    }
 }
 
 // The release's packages in dist. The editor's and the add-ons' are needed only for Nexus Mods (the other sites take
@@ -440,11 +468,10 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
         else
         {
             body["mod_id"] = modUid;
-            var made = await V3(http, Post($"{url}/v3/mod-files", body, auth));
+            await V3(http, Post($"{url}/v3/mod-files", body, auth));
             // The new file's own name, without the version its first version's name has: later releases find it by it.
-            string madeId = (string?)made?["id"] ?? (string?)made?["file"]?["id"]
-                ?? throw new InvalidOperationException($"Nexus Mods: {upload.Name} was published, but Nexus did not say the new file's id: rename it \"{upload.FileName}\" on the site.");
-            await V3(http, Request(HttpMethod.Put, $"{url}/v3/mod-files/{madeId}", new JsonObject { ["name"] = upload.FileName }, auth));
+            string made = await NexusNewFile(http, url, auth, modUid, upload);
+            await V3(http, Request(HttpMethod.Put, $"{url}/v3/mod-files/{made}", new JsonObject { ["name"] = upload.FileName }, auth));
         }
 
         Console.WriteLine($"{Name}: published {upload.Name}.");
@@ -457,6 +484,31 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
     }
 
     Console.WriteLine($"{Name}: https://www.nexusmods.com/{game}/mods/{modId}?tab=files");
+}
+
+// The id of the file a new upload just made. Nexus answers its creation with the file's first version, whose id is not
+// the file's, so the file is found among the mod's, named as that version: no other active file has that name (an
+// add-on's file found by it gets a new version instead). Waits while Nexus does not list it yet.
+static async Task<string> NexusNewFile(HttpClient http, string url, (string, string)[] auth, string modUid, NexusFile upload)
+{
+    var waited = TimeSpan.Zero;
+    for (var delay = TimeSpan.FromSeconds(2); ; delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 1.5, 15)))
+    {
+        var made = (await V3(http, Get($"{url}/v3/mods/{modUid}/files", auth)))!["mod_files"]!.AsArray().OfType<JsonNode>()
+            .Where(f => f["is_active"]?.GetValue<bool>() != false && (string?)f["name"] == upload.Name).Select(f => (string)f["id"]!).ToList();
+        if (made.Count == 1)
+        {
+            return made[0];
+        }
+
+        if (made.Count > 1 || waited > TimeSpan.FromMinutes(2))
+        {
+            throw new InvalidOperationException($"Nexus Mods: {upload.Name} was published, but {made.Count} of the mod's files have that name: rename the new one \"{upload.FileName}\" on the site.");
+        }
+
+        await Task.Delay(delay);
+        waited += delay;
+    }
 }
 
 // What Nexus takes in a file's name (its API: CreateModFileRequest.name).
