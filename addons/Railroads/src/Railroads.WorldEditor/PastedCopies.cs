@@ -9,6 +9,8 @@ namespace Railroads.WorldEditor;
 /// set again by <see cref="RailPlacer"/> once it is pasted. Here what is left:
 /// <list type="bullet">
 /// <item>a vehicle loses its driver, levers and trip, and the hand cart who held its handles;</item>
+/// <item>a train keeps its name but loses its number: the server gives it one of its own, as to a train just built (the
+/// number is what an unnamed train goes by, and the server never numbers a train again);</item>
 /// <item>a piece no longer on a deck (its flatbed was not copied) loses its place on that deck too;</item>
 /// <item>the text the mod's first versions kept the lines and wagons in (it still reads it in older saves) goes: it names
 /// the originals' track and wagons.</item>
@@ -22,7 +24,7 @@ public sealed class PastedCopies : ICopyRewriter
         RailroadsMod.Keys.Line, RailroadsMod.Keys.At, RailroadsMod.Keys.Dir, RailroadsMod.Keys.Trail, RailroadsMod.Keys.Route,
         RailroadsMod.Keys.After, RailroadsMod.Keys.Legs, RailroadsMod.Keys.Moving, RailroadsMod.Keys.Speed, RailroadsMod.Keys.Driver,
         RailroadsMod.Keys.Destination, RailroadsMod.Keys.Switch, RailroadsMod.Keys.Gear, RailroadsMod.Keys.Way, RailroadsMod.Keys.Stop,
-        RailroadsMod.Keys.Front, RailroadsMod.Keys.Back, RailroadsMod.Keys.DeckPos, RailroadsMod.Keys.DeckRot,
+        RailroadsMod.Keys.Front, RailroadsMod.Keys.Back, RailroadsMod.Keys.DeckPos, RailroadsMod.Keys.DeckRot, RailroadsMod.Keys.TrainNumber,
     ];
 
     /// <summary>The lines a vehicle keeps (bytes now; text in the mod's first versions): set again where it lands.</summary>
@@ -45,7 +47,11 @@ public sealed class PastedCopies : ICopyRewriter
         copy.SetVector3(RailroadsMod.Keys.Stop, null);
         copy.SetFloat(RailroadsMod.Keys.At, null);
         copy.SetFloat(RailroadsMod.Keys.Speed, null);
-        foreach (string key in new[] { RailroadsMod.Keys.Dir, RailroadsMod.Keys.Moving, RailroadsMod.Keys.Switch, RailroadsMod.Keys.Gear, RailroadsMod.Keys.Way })
+        foreach (string key in new[]
+        {
+            RailroadsMod.Keys.Dir, RailroadsMod.Keys.Moving, RailroadsMod.Keys.Switch, RailroadsMod.Keys.Gear, RailroadsMod.Keys.Way,
+            RailroadsMod.Keys.TrainNumber,
+        })
         {
             copy.SetInt(key, null);
         }

@@ -224,6 +224,7 @@ editor ([modding.md](modding.md#add-ons)). The ones made here live in `addons/<N
 | `addons/<Name>/tests/<Project>.Tests/` | Its own tests, against the SDK only (the Expand World add-on's also against the editor's Core and its tests' helpers and fixtures, to check its rules with the editor's generator), run by CI's `addon-tests` job with every other add-on's. |
 | `addons/<Name>/VERSION`, `CHANGELOG.md` | Its own version and changes: the zip's name and the DLL's version. `Directory.Build.props` there reads it over the repository's settings. |
 | `addons/<Name>/README.md`, `package-readme.txt` | What it does, for this repository; what the player reads in the zip (`README.txt`). |
+| `addons/<Name>/mods.json` | The mods it follows: each one's Thunderstore package (`<owner>-<name>`) and the version the add-on was last checked against. |
 
 `editor/tests/AddOns.Tests` checks every add-on in the editor itself, with nothing to add for a new one: it is
 installed into an addons folder as its zip holds it, with a stand-in for the mod it serves; the editor reads its
@@ -235,6 +236,13 @@ editor draws the reference records' rock, every mesh kept, the ground cut over e
 `worldeditor.json`, `README.txt` and the licence). Every release carries every add-on's zip beside the editor's
 packages and the SDK's; an add-on whose version did not change goes out again as it was. Nothing of an add-on goes
 into the editor's packages: the editor ships nothing for any mod.
+
+Once a day, `.github/workflows/addon-mods.yml` compares each add-on's `mods.json` with Thunderstore
+(`tools/addon-mods.sh`, which also runs locally and then only prints) and opens an issue, labelled **add-on mod
+update**, for each mod with a newer version: one per add-on and mod, brought up to date when a still newer version
+comes out, never opened again for a version whose issue was closed. Check the add-on against that version, then raise
+the version in `mods.json` (with the mod's `TestMod` item and the README's "checked on", if any), with a fix of the
+add-on if it needed one; that pull request closes the issue.
 
 ## The game's files
 

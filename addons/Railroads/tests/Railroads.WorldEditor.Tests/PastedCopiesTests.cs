@@ -5,7 +5,8 @@ namespace Railroads.WorldEditor.Tests;
 
 /// <summary>
 /// Pasted copies of the mod's pieces made pieces of their own: a vehicle leaves the original's track, trip and driver
-/// behind and keeps its coal and signs; a station sign leaves the original's stop and keeps its name; the train's and
+/// behind and keeps its coal and signs; a train keeps its name, not its number; a station sign leaves the original's stop
+/// and keeps its name; the train's and
 /// the deck's ids are left to the editor's ties (the manifest's), a piece no longer on a deck leaves its place there.
 /// (Where the copy lands sets the rest: RailPlacerTests.)
 /// </summary>
@@ -18,7 +19,7 @@ public class PastedCopiesTests
         new("bytes", RailroadsMod.Keys.Legs), new("int", RailroadsMod.Keys.Moving),
         new("float", RailroadsMod.Keys.Speed), new("long", RailroadsMod.Keys.Driver), new("string", RailroadsMod.Keys.Destination),
         new("int", RailroadsMod.Keys.Switch), new("int", RailroadsMod.Keys.Gear), new("int", RailroadsMod.Keys.Way),
-        new("float", RailroadsMod.Keys.Stop),
+        new("float", RailroadsMod.Keys.Stop), new("int", RailroadsMod.Keys.TrainNumber),
     ];
 
     /// <summary>A value of a type under a key.</summary>
@@ -43,6 +44,20 @@ public class PastedCopiesTests
         Assert.Equal(new[] { RailroadsMod.Keys.Coal, RailroadsMod.Keys.Odometer, RailroadsMod.Keys.Trips }.Order(StringComparer.Ordinal),
             copy.Keys.Order(StringComparer.Ordinal));
         Assert.Equal(40, copy.Ints[RailroadsMod.Keys.Coal]);
+    }
+
+    [Fact]
+    public void APastedTrainKeepsItsNameAndIsNumberedAgain()
+    {
+        var copy = new FakeObject(RailroadsMod.Locomotive);
+        copy.Strings[RailroadsMod.Keys.TrainName] = "Fixture Express";
+        copy.Ints[RailroadsMod.Keys.TrainNumber] = 4;
+
+        Rewrite(copy);
+
+        // The server gives a train without a number the next one (railroads-names.txt).
+        Assert.Equal([RailroadsMod.Keys.TrainName], copy.Keys);
+        Assert.Equal("Fixture Express", copy.Strings[RailroadsMod.Keys.TrainName]);
     }
 
     [Fact]
