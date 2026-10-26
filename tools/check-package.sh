@@ -34,6 +34,8 @@ if [[ "$pkg" == *-macos-*.zip ]]; then
 # Windows: the program's native libraries beside it (they are not unpacked at start).
 elif [[ "$pkg" == *.zip ]]; then
   for f in av_libglesv2.dll libHarfBuzzSharp.dll libSkiaSharp.dll spirv-cross.dll; do need "ValheimWorldEditor/$f"; done
+  # ASP.NET Core's module for IIS: never loaded by the editor, one more native DLL for antivirus heuristics.
+  if grep -qx ValheimWorldEditor/aspnetcorev2_inprocess.dll <<<"$list"; then echo "FORBIDDEN  ValheimWorldEditor/aspnetcorev2_inprocess.dll"; fail=1; fi
 fi
 bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look|plugin|export-game-files)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
 if [ -n "$bad" ]; then echo "FORBIDDEN in the package:"; echo "$bad" | head -20; fail=1; fi

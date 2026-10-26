@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.112.2 — unreleased
+
+### Fixed
+- **Fewer antivirus warnings on Windows.** Every library that comes with the editor is now signed, and a web-server
+  file the editor never used is no longer in the download.
+
 ## v1.112.1 — 2026-10-26
 
 ### Fixed
