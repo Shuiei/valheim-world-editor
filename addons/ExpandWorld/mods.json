@@ -1,0 +1,7 @@
+{
+  "mods": [
+    { "package": "JereKuusela-Expand_World_Size", "version": "1.45.0" },
+    { "package": "JereKuusela-Expand_World_Data", "version": "1.79.0" },
+    { "package": "JereKuusela-Expand_World_Rivers", "version": "1.11.0" }
+  ]
+}
