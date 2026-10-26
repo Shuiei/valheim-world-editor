@@ -4,14 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.112.1 — unreleased
+## v1.112.1 — 2026-10-26
 
 ### Fixed
 - **Reload and Discard keep the History in a live world.** Reading the world again from the game emptied History:
   now every step the game has stays there, applied and still undoable; only the steps not applied yet go, with their
   changes. Discard reads the world from the game when it has to, as it says it does.
 
-## v1.112.0 — unreleased
+## v1.112.0 — 2026-10-26
 
 ### Changed
 - **History is kept whatever you save or apply.** Pasting a blueprint or a building, or shaping ground past the
@@ -19,7 +19,7 @@ the plugin is unchanged in versions without that part.
   ground comes back exactly as it was. Zone resets keep it too (only what the reset made again is left out), and it
   is all there when you open the world again.
 
-## v1.111.1 — unreleased
+## v1.111.1 — 2026-10-26
 
 ### Fixed
 - **Leaning building pieces keep their lean when a world is opened.** A player-built piece that leans (pitched or
