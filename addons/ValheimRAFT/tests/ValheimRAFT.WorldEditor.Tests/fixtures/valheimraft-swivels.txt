@@ -3,6 +3,8 @@
 # with a wall on it; a custom mast turned 30 degrees with a sail hung on its yard; a cart the ship carries; and a land
 # vehicle parked on it, with its own hull. Where each object was saved, and where the mod built it when the world
 # loaded again (the cart and the land vehicle as the mod put them before the game's physics moved them).
+# ValheimRAFT 5.1.1 builds the same ship's pieces, swivels, sail and parked land vehicle the same way to within 0.04 mm
+# (the same build, saved and loaded again on a 5.1.1 server).
 # O <tag> <prefab> <saved x y z> <saved qx qy qz qw> <built x y z> <built qx qy qz qw>
 # I|F|V <tag> <key> <value>  an int, a float, a vector the mod saved on it
 O o546 wood_wall_half 216.953171 33.4 151.175613 0 0.130526319 0 -0.9914448 216.484619 6.79486752 151.687592 0 -0.275637418 0 0.9612618
