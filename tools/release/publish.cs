@@ -468,11 +468,10 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
         else
         {
             body["mod_id"] = modUid;
-            var made = await V3(http, Post($"{url}/v3/mod-files", body, auth));
+            await V3(http, Post($"{url}/v3/mod-files", body, auth));
             // The new file's own name, without the version its first version's name has: later releases find it by it.
-            string madeId = (string?)made?["id"] ?? (string?)made?["file"]?["id"]
-                ?? throw new InvalidOperationException($"Nexus Mods: {upload.Name} was published, but Nexus did not say the new file's id: rename it \"{upload.FileName}\" on the site.");
-            await V3(http, Request(HttpMethod.Put, $"{url}/v3/mod-files/{madeId}", new JsonObject { ["name"] = upload.FileName }, auth));
+            string made = await NexusNewFile(http, url, auth, modUid, upload);
+            await V3(http, Request(HttpMethod.Put, $"{url}/v3/mod-files/{made}", new JsonObject { ["name"] = upload.FileName }, auth));
         }
 
         Console.WriteLine($"{Name}: published {upload.Name}.");
@@ -485,6 +484,31 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
     }
 
     Console.WriteLine($"{Name}: https://www.nexusmods.com/{game}/mods/{modId}?tab=files");
+}
+
+// The id of the file a new upload just made. Nexus answers its creation with the file's first version, whose id is not
+// the file's, so the file is found among the mod's, named as that version: no other active file has that name (an
+// add-on's file found by it gets a new version instead). Waits while Nexus does not list it yet.
+static async Task<string> NexusNewFile(HttpClient http, string url, (string, string)[] auth, string modUid, NexusFile upload)
+{
+    var waited = TimeSpan.Zero;
+    for (var delay = TimeSpan.FromSeconds(2); ; delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 1.5, 15)))
+    {
+        var made = (await V3(http, Get($"{url}/v3/mods/{modUid}/files", auth)))!["mod_files"]!.AsArray().OfType<JsonNode>()
+            .Where(f => f["is_active"]?.GetValue<bool>() != false && (string?)f["name"] == upload.Name).Select(f => (string)f["id"]!).ToList();
+        if (made.Count == 1)
+        {
+            return made[0];
+        }
+
+        if (made.Count > 1 || waited > TimeSpan.FromMinutes(2))
+        {
+            throw new InvalidOperationException($"Nexus Mods: {upload.Name} was published, but {made.Count} of the mod's files have that name: rename the new one \"{upload.FileName}\" on the site.");
+        }
+
+        await Task.Delay(delay);
+        waited += delay;
+    }
 }
 
 // What Nexus takes in a file's name (its API: CreateModFileRequest.name).
