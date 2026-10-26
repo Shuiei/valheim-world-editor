@@ -6,7 +6,7 @@ namespace Railroads.WorldEditor;
 /// Railroads, the mod of stone track, trains and stations (by VladasZ), as the editor knows it: its plugin file, its
 /// pieces and the models it builds them from, and the data keys it keeps on them.
 /// </summary>
-/// <remarks>Followed: Railroads 0.2.6.</remarks>
+/// <remarks>Followed: Railroads 0.2.9.</remarks>
 public static class RailroadsMod
 {
     /// <summary>The mod's plugin file, under a BepInEx plugins folder; its models are in <see cref="MeshFolder"/> beside it.</summary>
@@ -26,6 +26,12 @@ public static class RailroadsMod
 
     /// <summary>The prefab of the station of the mod's first versions (no longer on the hammer; still in worlds).</summary>
     public const string OldStation = "bf_station";
+
+    /// <summary>
+    /// The prefab of the object the server keeps the count of numbered trains on (<see cref="Keys.TrainCount"/>): one
+    /// in a world, at its centre, with nothing to see. No piece: the mod makes it when it first numbers a train.
+    /// </summary>
+    public const string Register = "bf_rail_world";
 
     /// <summary>
     /// Every piece the mod adds, with the model it is built from (meshes/&lt;model&gt;.bfm beside the plugin) and what it
@@ -210,6 +216,15 @@ public static class RailroadsMod
 
         /// <summary>The restaurant wagon's name (string).</summary>
         public const string Cafe = "bf_cafe";
+
+        /// <summary>A train's name, on its locomotive (string; empty or missing: the train is called by its <see cref="TrainNumber"/>).</summary>
+        public const string TrainName = "bf_train_name";
+
+        /// <summary>A train's number, on its locomotive (int), which the server gives each train it has not numbered yet.</summary>
+        public const string TrainNumber = "bf_train_number";
+
+        /// <summary>The last number the server gave a train (int), on the <see cref="Register"/>.</summary>
+        public const string TrainCount = "bf_train_count";
 
         /// <summary>What a support pole under track is made of (int).</summary>
         public const string Leg = "bf_leg";
