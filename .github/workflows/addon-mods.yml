@@ -1,0 +1,30 @@
+# Add-on mod updates: once a day, compares the mods each add-on follows (addons/<Name>/mods.json, the version the
+# add-on was last checked against) with their latest version on Thunderstore, and opens an issue (label "add-on mod
+# update") for each mod that has a newer one, to check the add-on against it (tools/addon-mods.sh). The run's summary
+# lists every mod. Reads only the repository and Thunderstore's public API; writes only issues.
+name: Add-on mod updates
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      # Open, update and label the issues.
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare the add-ons' mods with Thunderstore
+        run: tools/addon-mods.sh --issues
