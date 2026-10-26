@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.113.0 — unreleased
+## v1.113.0 — 2026-10-26
 
 ### Added
 - **Show portals and their links** on the map: every portal of the world as a violet dot (hollow when it has no
@@ -12,7 +12,7 @@ the plugin is unchanged in versions without that part.
   together), and the tags beside them when zoomed in. The switch's text counts the portals, the linked pairs and the
   portals alone. Off at first (spoiler). Portals a mod adds count too, by their name.
 
-## v1.112.2 — unreleased
+## v1.112.2 — 2026-10-26
 
 ### Fixed
 - **Fewer antivirus warnings on Windows.** Every library that comes with the editor is now signed, and a web-server
