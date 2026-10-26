@@ -42,7 +42,8 @@ cosign verify-blob ValheimWorldEditor-v1.19.0-linux-x64.tar.gz \
 
 `Verified OK` means the file is the one the release was signed with, byte for byte.
 
-`ValheimWorldEditor.exe` in the Windows package also carries an Authenticode signature, made with the
+`ValheimWorldEditor.exe` in the Windows package also carries an Authenticode signature (as does
+`spirv-cross.dll` beside it; the other DLLs come signed by their makers), made with the
 maintainer's code-signing certificate (issued by Certum) when the release is built: Windows shows the
 publisher in the file's Properties, under Digital Signatures, and in the "Windows protected your PC"
 prompt while the certificate is new to SmartScreen. On Linux, `osslsigncode verify -in ValheimWorldEditor.exe`.

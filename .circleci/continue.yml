@@ -578,7 +578,7 @@ jobs:
       # After windows-smoke, which ran the unsigned program: the signature changes nothing in how it runs,
       # and the context's secrets (CERTUM_EMAIL, CERTUM_OTP) reach only the jobs after the approval.
       - run:
-          name: Sign the Windows program (Authenticode)
+          name: Sign the Windows program and spirv-cross.dll (Authenticode)
           command: tools/sign-windows.sh /tmp/dist/ValheimWorldEditor-v$(tr -d '[:space:]' < VERSION)-win-x64.zip
       - run:
           name: The game's DLLs (Valheim dedicated server, SteamCMD) and BepInEx
