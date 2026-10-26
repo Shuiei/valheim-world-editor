@@ -17,12 +17,14 @@ with it. ValheimRAFT itself is unchanged and stays in `BepInEx/plugins`; this re
     own turn;
   - what a vehicle **carries** (a cart, an animal) where it was saved.
 
-  Checked on a server running ValheimRAFT 5.0.9: on tilted ships, every piece the editor draws stands where the mod
-  built it, to a hundredth of a millimetre.
+  Checked on a server running ValheimRAFT 5.1.1, as on 5.0.9 before it: on tilted ships, every piece the editor draws
+  stands where the mod built it, to a few hundredths of a millimetre.
 - **Moves, copies and deletes them whole.** Selecting any piece takes the whole vehicle, as with any
   [linked objects](../../docs/select.md#ships-and-other-linked-objects): moving, turning, deleting, the Area tool's
   Remove objects, copies and blueprints. What a vehicle carries goes with it. Each pasted vehicle gets ids of its own;
-  its ropes, sails, switches and plants follow the copy, and a rope to something that was not copied is let go.
+  its ropes, sails, switches and plants follow the copy, and a rope to something that was not copied is let go. A
+  pasted vehicle is not docked (the mod would hold it at the original's dock clamp) and the mod works out its hull
+  shape again (a mirrored copy's would be the original's).
 - **Live too.** Connected to a game or server, moving, turning, pasting and deleting a vehicle reach the game as any
   other change. Checked on a server running the mod: it builds a moved or pasted ship where the editor draws it, the
   pasted ship's ropes tied to its own pieces and what it carries with it; a deleted ship leaves nothing behind. Needs
@@ -32,11 +34,11 @@ with it. ValheimRAFT itself is unchanged and stays in `BepInEx/plugins`; this re
   is tied to (another anchor, the dock, a Karve's or a longship's rope points, an animal's neck); rope ladders with
   their ropes and rungs, down to the ground or 2 m into the water.
 - **Names the mod's values** in the inspector (the vehicle a piece is built on, its place there, a swivel's settings,
-  a sail's corners, mast and colours), with a rope anchor's ropes and a sail's colours in words. Values the mod sets
-  itself are read-only.
+  a sail's corners, mast and colours, a vehicle's build mode, hull shape and the dock clamp it is docked at), with a
+  rope anchor's ropes and a sail's colours in words. Values the mod sets itself are read-only.
 - **Sorts the mod's pieces** in the Workshop's Build panel (**Mods** tab) under the vehicle hammer's own headings:
-  Hull, Structure, Propulsion, Power and mechanisms, Vehicles, Tools and Old hull pieces. The hull boundary tools,
-  which delete themselves once placed, are not offered.
+  Hull, Structure, Propulsion, Power and mechanisms, Vehicles, Tools and Old hull pieces. The hull boundary tools and
+  the build mode toggle, which delete themselves once placed, are not offered.
 
 ## Limits
 
@@ -53,6 +55,8 @@ What the game's saved data cannot tell:
 - **A land vehicle parked on a ship** is drawn where the mod builds it when the world loads, not where it stood
   aboard when the world was saved, and keeps its own turn when the ship is turned, as in the game.
 - **Deleting a vehicle** deletes what it carries too.
+- **A docked vehicle** names its dock clamp by the id the game gives that object while the world runs, given again
+  each time the world loads: the inspector shows it, the editor does not follow it.
 - **Live, with a player near the vehicle**: not checked (there was no game client). The bridge then makes the objects
   again where they go instead of moving them, as for a paste, which was checked.
 
@@ -82,5 +86,10 @@ The tests read two ships the real mod built, saved and built again on a local se
 (`tests/ValheimRAFT.WorldEditor.Tests/fixtures/`: `valheimraft-reference.txt`, with ropes and a sail;
 `valheimraft-swivels.txt`, with turned and moved swivels, a sail on a turned mast, a cart and a parked land vehicle);
 the editor's own tests (`editor/tests/AddOns.Tests/ValheimRAFT`) check that the editor draws each of their pieces
-where the mod built it. The add-on's version is `VERSION` here, its changes `CHANGELOG.md`: it goes out with every
-editor release, under its own version.
+where the mod built it. Both were recorded on ValheimRAFT 5.0.9. On 5.1.1, the same probe had the mod build the same
+two ships on a local server, which saved the world and loaded it again: every piece stood where the add-on puts it
+(within 0.04 mm), on the swivels' platforms, the sail on its mast's yard and the parked land vehicle too; the rope
+anchor's, dock clamp's, rope ladder's and swivel's prefab values, and the tie points on a Karve and a boar, were
+unchanged. The first ship's ropes were not tied: 5.1 saves and loads ropes as before, but no longer ties a new rope from
+an anchor on a vehicle to a piece on a vehicle, unless that piece is another anchor. The add-on's version is `VERSION` here, its changes
+`CHANGELOG.md`: it goes out with every editor release, under its own version.

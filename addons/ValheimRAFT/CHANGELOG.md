@@ -3,6 +3,19 @@
 Changes to the ValheimRAFT add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.2.0 — 2026-10-26
+
+### Added
+- **ValheimRAFT 5.1.1.** Checked on a server running it: vehicles are drawn where 5.1.1 builds them, as with 5.0.9.
+  Its new iron centre bows are listed under Hull in the Build panel; its build mode toggle, which deletes itself once
+  placed, is not offered. The inspector names a vehicle's build mode, its hull shape and the dock clamp it is docked
+  at.
+
+### Fixed
+- **A pasted vehicle is not docked.** With ValheimRAFT 5.1, a copy of a docked vehicle named the original's dock
+  clamp, where the mod would hold it while the original stays. A copy also leaves out the hull shape the mod saved,
+  which the mod works out again: a mirrored copy kept the original's.
+
 ## v0.1.0 — 2026-10-23
 
 ### Added

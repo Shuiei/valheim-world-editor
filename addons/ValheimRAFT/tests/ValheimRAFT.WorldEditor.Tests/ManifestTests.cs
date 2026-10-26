@@ -29,6 +29,15 @@ public sealed class ManifestTests
     }
 
     [Fact]
+    public void ACopyIsNotDockedAndItsHullShapeIsWorkedOutAgain()
+    {
+        // ValheimRAFT 5.1: a docked vehicle names its dock clamp by the game's object id (two longs), and keeps the hull
+        // shape it worked out with its revision; a copy keeps neither (a mirrored copy's hull would be the original's).
+        var drops = Assert.Single(_manifest["links"]!.AsArray())!["dropOnCopy"]!.AsArray().Select(p => (string?)p).ToList();
+        Assert.All(["vehicle_dockZdoId_u", "vehicle_dockZdoId_i", "VehicleConvexHullData", "VehicleConvexHullDataVersionHash"], k => Assert.Contains(k, drops));
+    }
+
+    [Fact]
     public void TheKeysTheExtensionReadsAreLabelled()
     {
         var data = _manifest["data"]!.AsObject();
@@ -41,5 +50,14 @@ public sealed class ManifestTests
     {
         var prefabs = _manifest["prefabs"]!.AsObject();
         Assert.All([Keys.Sail, Keys.RopeAnchor, Keys.DockAnchor, Keys.Swivel, Keys.LandVehicle, Keys.RopeLadder], p => Assert.NotNull(prefabs[p]?["group"]));
+    }
+
+    [Fact]
+    public void TheBuildModeToggleIsNotOfferedAndTheIronBowIsAHullPiece()
+    {
+        // ValheimRAFT 5.1's new pieces: the build mode toggle deletes itself once placed, as the boundary tools do.
+        var prefabs = _manifest["prefabs"]!.AsObject();
+        Assert.True((bool)prefabs["ValheimVehicles_BuildModeToggle"]!["hidden"]!);
+        Assert.All(["ValheimVehicles_hull_bow_center_iron", "ValheimVehicles_hull_bow_center_iron_inverse"], p => Assert.Equal("Hull", (string?)prefabs[p]?["group"]));
     }
 }

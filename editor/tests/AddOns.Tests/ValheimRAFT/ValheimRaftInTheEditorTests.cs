@@ -185,6 +185,28 @@ public sealed class ValheimRaftInTheEditorTests : IDisposable
     }
 
     [Fact]
+    public void APastedShipIsNotDockedAndWorksOutItsHullAgain()
+    {
+        // ValheimRAFT 5.1: the ship names the dock clamp it is docked at by the game's object id, and keeps its hull shape.
+        var ship = Read();
+        var root = new NewObject(0, ship.Root.Prefab, ship.At, Vector3.Zero, 1, Data:
+        [
+            .. Fields(ship.Root),
+            new ObjectField("longs", StableHash.Of("vehicle_dockZdoId_u"), "-4211"),
+            new ObjectField("longs", StableHash.Of("vehicle_dockZdoId_i"), "17"),
+            new ObjectField("bytes", StableHash.Of("VehicleConvexHullData"), Convert.ToBase64String([1, 1, 0])),
+            new ObjectField("ints", StableHash.Of("VehicleConvexHullDataVersionHash"), "3"),
+            new ObjectField("ints", StableHash.Of("vehicle_buildMode"), "1"),
+        ]);
+
+        var copy = ObjectLinks.Remap([root], new HashSet<int> { IdOf(ship.Root) }).Single().Data!;
+
+        string? Value(string key) => copy.SingleOrDefault(f => f.Key == StableHash.Of(key))?.Value;
+        Assert.All<string>(["vehicle_dockZdoId_u", "vehicle_dockZdoId_i", "VehicleConvexHullData", "VehicleConvexHullDataVersionHash"], k => Assert.Null(Value(k)));
+        Assert.Equal("1", Value("vehicle_buildMode"));
+    }
+
+    [Fact]
     public void TheInspectorSaysWhatARopeIsTiedTo()
     {
         var anchor = Read().Pieces.First(p => p.Prefab == "MBRopeAnchor" && IdOf(p.Data) != 0);

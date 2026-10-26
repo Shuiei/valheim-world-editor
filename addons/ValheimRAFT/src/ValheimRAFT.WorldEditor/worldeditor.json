@@ -12,6 +12,11 @@
     "MBRotation": { "label": "Turn on the vehicle (old)", "readOnly": true, "help": "The turn older versions of the mod kept, as a quaternion." },
     "MBPieceCount": { "label": "Pieces", "readOnly": true, "help": "How many pieces the mod counted on this vehicle." },
     "VehicleChunkBounds": { "label": "Hull bounds", "readOnly": true, "help": "The boxes the mod's boundary tools set for this vehicle's hull." },
+    "VehicleConvexHullData": { "label": "Hull shape", "readOnly": true, "help": "The hull the mod worked out for this vehicle, in its frame. A copy leaves it out: the mod works it out again." },
+    "VehicleConvexHullDataVersionHash": { "label": "Hull shape revision", "readOnly": true, "help": "How many times the mod has worked out this vehicle's hull shape." },
+    "vehicle_buildMode": { "label": "Build mode", "help": "0 expandable (new pieces widen the hull), 1 fixed, 2 nothing can be built on it or removed. Without it, the mod takes 1." },
+    "vehicle_dockZdoId_u": { "label": "Docked at (user)", "readOnly": true, "help": "The dock clamp this vehicle is docked at, as the game's object id while the world was running. A copy leaves it out." },
+    "vehicle_dockZdoId_i": { "label": "Docked at (id)", "readOnly": true, "help": "The dock clamp this vehicle is docked at, as the game's object id while the world was running. A copy leaves it out." },
     "VehicleTempPieceParentId": { "label": "Carried by", "readOnly": true, "help": "The vehicle carrying this object (a cart, an animal): it moves, turns and is copied with the vehicle." },
     "MBCultivatableParentId": { "label": "Planted in", "readOnly": true, "help": "The soil piece this plant grows in." },
     "Mechanism_swivelTargetId": { "label": "Swivel it moves", "help": "The swivel this switch moves (its persistent id)." },
@@ -38,6 +43,7 @@
     "m_logoColor": { "label": "Sail logo colour", "readOnly": true }
   },
   "prefabs": {
+    "ValheimVehicles_BuildModeToggle": { "hidden": true },
     "ValheimVehicles_ShipChunkBoundaryEraser": { "hidden": true },
     "ValheimVehicles_ShipChunkBoundaryName_16x16x16": { "hidden": true },
     "ValheimVehicles_ShipChunkBoundaryName_2x2x2": { "hidden": true },
@@ -48,6 +54,8 @@
     "ValheimVehicles_CustomWaterFloatation": { "group": "Tools" },
     "ValheimVehicles_CustomWaterMask": { "group": "Tools" },
     "ValheimVehicles_Powder_Barrel": { "group": "Tools" },
+    "ValheimVehicles_hull_bow_center_iron": { "group": "Hull" },
+    "ValheimVehicles_hull_bow_center_iron_inverse": { "group": "Hull" },
     "ValheimVehicles_hull_bow_center_wood": { "group": "Hull" },
     "ValheimVehicles_hull_bow_center_wood_inverse": { "group": "Hull" },
     "ValheimVehicles_hull_bow_curved_left_iron": { "group": "Hull" },
@@ -228,7 +236,7 @@
         "VehicleTempPieceParentId": { "carried": true }
       },
       "references": ["Mechanism_swivelTargetId", "MBCultivatableParentId"],
-      "dropOnCopy": ["MBRopeAnchor_Ropes"]
+      "dropOnCopy": ["MBRopeAnchor_Ropes", "vehicle_dockZdoId_u", "vehicle_dockZdoId_i", "VehicleConvexHullData", "VehicleConvexHullDataVersionHash"]
     }
   ]
 }
