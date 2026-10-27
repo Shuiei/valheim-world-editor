@@ -153,6 +153,7 @@
   "settings.addressLoopback": "{0} (this computer only)",
   "settings.addressAny": "{0} (every network)",
   "settings.addressOn": "{0} ({1})",
+  "settings.claudeUnencrypted": "Other computers on that network can connect now, with the token. The connection is not encrypted (plain HTTP): anyone on the network can read the token and what the editor sends. Fine on a home network you trust; anywhere else, keep 127.0.0.1 and reach it through an SSH tunnel.",
   "settings.claudeRemoteHint": "From another computer, use {0} in that command instead (or this computer's address on that network, from the list above).",
   "settings.history": "History",
   "settings.historyStepsLabel": "Steps kept",

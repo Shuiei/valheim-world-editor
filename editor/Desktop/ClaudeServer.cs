@@ -46,13 +46,18 @@ public sealed class ClaudeServer
     /// </summary>
     /// <param name="port">The port.</param>
     /// <param name="address">The address the server listens on (null: 127.0.0.1).</param>
-    public static string Url(int port, string? address = null)
-    {
-        string host = ParseAddress(address) is { } ip && !IsEveryAddress(ip)
-            ? (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? $"[{ip}]" : ip.ToString())
-            : "127.0.0.1";
-        return $"http://{host}:{port}/mcp";
-    }
+    public static string Url(int port, string? address = null) =>
+        McpUrl(ParseAddress(address) is { } ip && !IsEveryAddress(ip) ? ip.ToString() : "127.0.0.1", port);
+
+    /// <summary>The MCP server's URL on a host (IPv6 addresses in brackets, as URLs write them) and port.</summary>
+    /// <param name="host">An address or a name.</param>
+    /// <param name="port">The port.</param>
+    private static string McpUrl(string host, int port) => new UriBuilder(Uri.UriSchemeHttp, host, port, "mcp").Uri.AbsoluteUri;
+
+    /// <summary>An address and port as an endpoint is written: 0.0.0.0:5731, [::]:5731.</summary>
+    /// <param name="ip">The address.</param>
+    /// <param name="port">The port.</param>
+    public static string Endpoint(IPAddress ip, int port) => new UriBuilder(Uri.UriSchemeHttp, ip.ToString(), port).Uri.Authority;
 
     /// <summary>
     /// The address another computer connects to when the server listens on every address: this computer's name, as
@@ -63,7 +68,7 @@ public sealed class ClaudeServer
     public static string RemoteUrl(int port)
     {
         string host = Dns.GetHostName();
-        return $"http://{(host.Contains('.', StringComparison.Ordinal) ? host : host + ".local")}:{port}/mcp";
+        return McpUrl(host.Contains('.', StringComparison.Ordinal) ? host : host + ".local", port);
     }
 
     /// <summary>Whether the address is every address (0.0.0.0, ::): every network this computer is on.</summary>
@@ -159,10 +164,10 @@ public sealed class ClaudeServer
             {
                 _running = await Start(settings.ClaudePort, settings.ClaudeToken!, new ClaudeTools(window), address);
                 Status = IPAddress.IsLoopback(address)
-                    ? $"Listening on {Url(settings.ClaudePort)}"
+                    ? $"Listening on {Url(settings.ClaudePort, settings.ClaudeAddress)}"
                     : IsEveryAddress(address)
-                        ? $"Listening on {address}:{settings.ClaudePort}, from other computers too ({RemoteUrl(settings.ClaudePort)}; here: {Url(settings.ClaudePort)})"
-                        : $"Listening on {Url(settings.ClaudePort, settings.ClaudeAddress)}, from other computers too";
+                        ? $"Listening on {Endpoint(address, settings.ClaudePort)}, from other computers too ({RemoteUrl(settings.ClaudePort)}; here: {Url(settings.ClaudePort)}), unencrypted"
+                        : $"Listening on {Url(settings.ClaudePort, settings.ClaudeAddress)}, from other computers too, unencrypted";
                 Console.WriteLine($"claude: {Status}");
                 return null;
             }
@@ -187,7 +192,11 @@ public sealed class ClaudeServer
     internal static async Task<ClaudeServer> Start(int port, string token, ClaudeTools tools, IPAddress? address = null)
     {
         address ??= IPAddress.Loopback;
-        bool loopback = IPAddress.IsLoopback(address);
+        // On a loopback address, the names this computer is reached by: 127.0.0.1, localhost and the address itself
+        // (::1 as a Host is written [::1]). Null on another address: any name is taken there.
+        HashSet<string>? localHosts = IPAddress.IsLoopback(address)
+            ? new(StringComparer.OrdinalIgnoreCase) { "127.0.0.1", "localhost", address.ToString(), $"[{address}]" }
+            : null;
         var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory });
         builder.Logging.ClearProviders();
         // A tool that throws is answered "An error occurred invoking …" by the MCP library, which logs why: the log has it.
@@ -209,10 +218,9 @@ public sealed class ClaudeServer
         byte[] expected = Encoding.UTF8.GetBytes("Bearer " + token);
         app.Use(async (ctx, next) =>
         {
-            // On 127.0.0.1, this computer's address only (a web page reaching it under another name is refused);
-            // on another address, other computers reach it by any of this one's names. The token, always.
-            string host = ctx.Request.Host.Host;
-            if (loopback && host is not ("127.0.0.1" or "localhost"))
+            // On a loopback address, this computer's own names only (a web page reaching it under another name is
+            // refused); on another address, other computers reach it by any of this one's names. The token, always.
+            if (localHosts != null && !localHosts.Contains(ctx.Request.Host.Host))
             {
                 ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return;

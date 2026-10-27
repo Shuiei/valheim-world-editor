@@ -138,11 +138,15 @@ This works after saving or applying too: the next **Save to world** or **Apply l
 
 ## Safety
 
-- **This computer only.** The editor listens on `127.0.0.1` and refuses any request addressed to another name, so a
-  web page you visit cannot reach it. With another **Address**, computers on that network can reach it too, under any
-  of this computer's names, and the token is all that keeps them out; it travels unencrypted, so choose another address
-  only on a network you trust. An SSH tunnel to `127.0.0.1` (`ssh -L 5731:127.0.0.1:5731 you@this-computer`) reaches
-  it from another computer without that.
+- **This computer only.** The editor listens on `127.0.0.1` (or another loopback address you type, such as `::1`) and
+  refuses any request addressed to another name, so a web page you visit cannot reach it. With another **Address**,
+  computers on that network can reach it too, under any of this computer's names, and the token is all that keeps them
+  out.
+- **Not encrypted off this computer.** The connection is plain HTTP: with another **Address**, anyone on that network
+  can read the token and everything the editor and Claude send each other, and with the token, use the editor. That is
+  a fair trade on a home network you trust, and Settings says so under the address as soon as you choose one.
+  Anywhere else, keep `127.0.0.1` and reach it from another computer through an SSH tunnel, which encrypts it:
+  `ssh -L 5731:127.0.0.1:5731 you@this-computer`.
 - **The token.** Every request must carry the token (48 random characters made for your editor). **New token** makes
   another one.
 - **Pending only.** Claude never saves, applies live, discards, reloads, writes or deletes your files, or connects to

@@ -11,6 +11,7 @@ the plugin is unchanged in versions without that part.
   or `0.0.0.0` (every network) or one of this computer's networks, picked from a list that names each (or typed), so a
   Claude on another computer can connect, with the token. The command to add the editor to Claude Code follows the
   address; with every network, a line under it gives the address another computer uses (this computer's name).
+  Off this computer the connection is not encrypted (plain HTTP), and Settings says so under the address.
 
 ## v1.113.0 — 2026-10-26
 

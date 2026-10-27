@@ -26,6 +26,8 @@ public static partial class SettingsDialog
             _command = new TextBox { Name = "ClaudeCommand", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace") }.Tip("settings.claudeCommand");
             _remote = Hint("");
             _remote.Name = "ClaudeRemote";
+            // Off this computer the connection is plain HTTP: said where the address is chosen, not only in its tip.
+            _unencrypted = new TextBlock { Name = "ClaudeUnencrypted", Text = Lang.T("settings.claudeUnencrypted"), FontSize = 12, Foreground = Ui.Warn, TextWrapping = TextWrapping.Wrap };
             ShowCommand();
             _port.TextChanged += (_, _) => ShowCommand();
             _address.PropertyChanged += (_, e) =>
@@ -61,6 +63,7 @@ public static partial class SettingsDialog
                     new TextBlock { Text = Lang.T("settings.port"), VerticalAlignment = VerticalAlignment.Center }, _port, renew,
                 },
             });
+            _claudeDetails.Children.Add(_unencrypted);
             _claudeDetails.Children.Add(Hint(Lang.T("settings.claudeCodeHint")));
             _claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { _command, Ui.Col(copy, 1) } });
             _claudeDetails.Children.Add(_remote);
@@ -78,13 +81,16 @@ public static partial class SettingsDialog
 
         /// <summary>
         /// Shows the command that connects Claude Code at the address and port and with the token typed (or the saved
-        /// port); on every address, also the address another computer uses (this computer's name).
+        /// port); on every address, also the address another computer uses (this computer's name); off this computer,
+        /// the warning that the connection is not encrypted.
         /// </summary>
         private void ShowCommand()
         {
             int port = int.TryParse(_port.Text, out int p) ? p : _settings.ClaudePort;
             _command.Text = ClaudeServer.ClaudeCodeCommand(port, _token, _address.Text);
-            bool every = ClaudeServer.ParseAddress(_address.Text) is { } ip && ClaudeServer.IsEveryAddress(ip);
+            var chosen = ClaudeServer.ParseAddress(_address.Text);
+            _unencrypted.IsVisible = chosen != null && !System.Net.IPAddress.IsLoopback(chosen);
+            bool every = chosen != null && ClaudeServer.IsEveryAddress(chosen);
             _remote.IsVisible = every;
             _remote.Text = every ? Lang.T("settings.claudeRemoteHint", ClaudeServer.RemoteUrl(port)) : "";
         }

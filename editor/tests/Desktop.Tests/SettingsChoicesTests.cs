@@ -74,24 +74,35 @@ public class SettingsChoicesTests
         var address = d.GetLogicalDescendants().OfType<ComboBox>().Single(b => b.Name == "ClaudeAddress");
         var command = Named(d, "ClaudeCommand");
         var remote = d.GetLogicalDescendants().OfType<TextBlock>().Single(b => b.Name == "ClaudeRemote");
+        var unencrypted = d.GetLogicalDescendants().OfType<TextBlock>().Single(b => b.Name == "ClaudeUnencrypted");
         var choices = address.Items.Cast<string>().ToList();
         Assert.Equal(["127.0.0.1 (this computer only)", "0.0.0.0 (every network)"], choices.Take(2));
         Assert.All(choices.Skip(2), c => Assert.Matches(@"^\d+\.\d+\.\d+\.\d+ \(.+\)$", c));
         Assert.Equal("127.0.0.1 (this computer only)", address.Text);
         Assert.False(remote.IsVisible);
+        Assert.False(unencrypted.IsVisible);
         address.Text = "my-pc.local";
         Click(Buttons(d, "Save").Single());
         Assert.Contains(Texts(d).Split(" | "), x => x.Contains("must be an IP address"));
         Assert.Single(owner.OwnedWindows);
-        address.Text = "192.168.1.20";
+        // Off this computer: said, where the address is chosen, that the connection is not encrypted.
+        address.Text = "192.0.2.20";
         Dispatcher.UIThread.RunJobs();
-        Assert.Contains("http://192.168.1.20:5731/mcp", command.Text);
+        Assert.Contains("http://192.0.2.20:5731/mcp", command.Text);
         Assert.False(remote.IsVisible);
+        Assert.True(unencrypted.IsVisible);
+        Assert.Contains("not encrypted", unencrypted.Text);
+        // Another loopback address: still this computer only.
+        address.Text = "::1";
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains("http://[::1]:5731/mcp", command.Text);
+        Assert.False(unencrypted.IsVisible);
         address.SelectedIndex = 1;
         Dispatcher.UIThread.RunJobs();
         Assert.Equal("0.0.0.0 (every network)", address.Text);
         Assert.Contains("http://127.0.0.1:5731/mcp", command.Text);
         Assert.True(remote.IsVisible);
+        Assert.True(unencrypted.IsVisible);
         Assert.Contains(ClaudeServer.RemoteUrl(5731), remote.Text);
         Click(Buttons(d, "Save").Single());
         Assert.True(await shown);

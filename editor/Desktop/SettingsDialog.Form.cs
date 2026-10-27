@@ -28,6 +28,7 @@ public static partial class SettingsDialog
         private string _token = "";
         private TextBox _command = null!;
         private TextBlock _remote = null!;
+        private TextBlock _unencrypted = null!;
         private StackPanel _claudeDetails = null!;
         private CheckBox _scripts = null!;
         private TextBox _desktop = null!;
