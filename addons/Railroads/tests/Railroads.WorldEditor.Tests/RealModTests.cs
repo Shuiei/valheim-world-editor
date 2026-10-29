@@ -6,8 +6,10 @@ namespace Railroads.WorldEditor.Tests;
 
 /// <summary>
 /// The real Railroads (the version the add-on follows, downloaded for the tests): every piece's model is in its folder
-/// and read whole, in the mod's materials; its track's lines run as its pieces are named; each piece is drawn, a vehicle
-/// on its wheels, the locomotive with its name boards (0.2.7), the portal wagon without posts on its open side (0.2.8).
+/// and read whole, in the mod's materials; its track's lines run as its pieces are named, the drawbridge's (0.3.1) as a
+/// 16 m straight's; each piece is drawn, a vehicle on its wheels and with its couplers (apart from its body since 0.3.0),
+/// the locomotive with its name boards (0.2.7), the portal wagon without posts on its open side (0.2.8), the drawbridge
+/// with its leaves, chains and weights.
 /// </summary>
 public class RealModTests
 {
@@ -17,7 +19,9 @@ public class RealModTests
     private static RailModel Model(string name) => ModelFile.Read(File.ReadAllBytes(Path.Combine(Folder, RailroadsMod.MeshFolder, name + ".bfm")));
 
     public static TheoryData<string> Models() =>
-        [.. RailroadsMod.Pieces.Select(p => p.Model).Concat([RailroadsMod.StationLegs, RailroadsMod.Axle, RailroadsMod.SmallAxle, RailroadsMod.BigAxle, RailroadsMod.Beam])];
+        [.. RailroadsMod.Pieces.Select(p => p.Model)
+            .Concat([RailroadsMod.StationLegs, RailroadsMod.Axle, RailroadsMod.SmallAxle, RailroadsMod.BigAxle, RailroadsMod.Beam, RailroadsMod.Coupler])
+            .Concat(DrawbridgeParts.Models)];
 
     [Theory]
     [MemberData(nameof(Models))]
@@ -52,6 +56,35 @@ public class RealModTests
 
         Assert.Equal(Vector3.Zero, line[0]);
         Assert.Equal(new Vector3(0, 0, metres), line[^1]);
+    }
+
+    [Fact]
+    public void TheDrawbridgeRunsAsA16MetreStraight()
+    {
+        var bridge = Assert.Single(Model("track_drawbridge").Lines);
+
+        Assert.Equal(Assert.Single(Model("track_straight_16").Lines), bridge);
+        Assert.Equal(new Vector3(0, 0, DrawbridgeParts.Length), bridge[^1]);
+    }
+
+    [Fact]
+    public void EveryVehicleButTheHandCartHasItsCouplersApart()
+    {
+        foreach (var piece in RailroadsMod.Pieces.Where(p => p.Kind == RailKind.Vehicle))
+        {
+            var model = Model(piece.Model);
+            var couplers = model.Boxes.Where(b => (b.Size - RailroadsMod.CouplerBox).LengthSquared() < 1e-4f).ToList();
+            // The locomotive is coupled at its back only; the hand cart never.
+            int expected = piece.Prefab switch
+            {
+                RailroadsMod.Locomotive => 1,
+                RailroadsMod.Handcart => 0,
+                _ => 2,
+            };
+            Assert.True(expected == couplers.Count, $"{piece.Prefab}: {couplers.Count} couplers");
+            // The body ends where its couplers begin.
+            Assert.All(couplers, c => Assert.True(model.Parts.SelectMany(p => p.Positions).Max(v => v.Z * Math.Sign(c.Center.Z)) < Math.Abs(c.Center.Z), piece.Prefab));
+        }
     }
 
     [Fact]
@@ -117,11 +150,17 @@ public class RealModTests
         return sets + (locomotive ? Model(RailroadsMod.BigAxle).Parts.Count : 0);
     }
 
-    /// <summary>The parts drawn besides the body and wheels: the old station's legs, the hand cart's pump handle.</summary>
+    /// <summary>
+    /// The parts drawn besides the body and wheels: a vehicle's couplers, the old station's legs, the hand cart's pump
+    /// handle, the drawbridge's moving parts (one shape a material).
+    /// </summary>
     private static int Extra(RailPiece piece) => piece.Prefab switch
     {
         RailroadsMod.OldStation => Model(RailroadsMod.StationLegs).Parts.Count,
         RailroadsMod.Handcart => Model(RailroadsMod.Beam).Parts.Count,
+        RailroadsMod.Drawbridge => DrawbridgeParts.Models.SelectMany(m => Model(m).Parts).Select(p => p.Slot).Distinct().Count(),
         _ => 0,
-    };
+    } + (piece.Kind == RailKind.Vehicle
+        ? Model(piece.Model).Boxes.Count(b => (b.Size - RailroadsMod.CouplerBox).LengthSquared() < 1e-4f) * Model(RailroadsMod.Coupler).Parts.Count
+        : 0);
 }

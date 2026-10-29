@@ -26,6 +26,13 @@ internal static class Reference
     /// </summary>
     public static IReadOnlyList<Recorded> Names { get; } = Read(Path.Combine(AppContext.BaseDirectory, "fixtures", "railroads-names.txt"));
 
+    /// <summary>
+    /// The objects of a record of the drawbridge (fixtures/railroads-bridge.txt, Railroads 0.3.6): a railway with 2
+    /// drawbridges, the first raised by its lever and holding a train sent past it, a wagon the mod put on the second,
+    /// a station sign, its console and a feedback post.
+    /// </summary>
+    public static IReadOnlyList<Recorded> Bridge { get; } = Read(Path.Combine(AppContext.BaseDirectory, "fixtures", "railroads-bridge.txt"));
+
     /// <summary>The recorded objects of a prefab.</summary>
     public static IEnumerable<Recorded> Of(string prefab) => Objects.Where(o => o.Object.Prefab == prefab);
 

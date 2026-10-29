@@ -4,8 +4,8 @@ using Xunit;
 namespace Railroads.WorldEditor.Tests;
 
 /// <summary>
-/// The mod's model files read: each part's slot, corners and triangles, the track's lines and the axles, the rest read
-/// past; anything else (another version, a file ending early or running on, a triangle naming a corner its part lacks)
+/// The mod's model files read: each part's slot, corners and triangles, the boxes' centres and sizes, the track's lines
+/// and the axles, the rest read past; anything else (another version, a file ending early or running on, a triangle naming a corner its part lacks)
 /// refused with why.
 /// </summary>
 public class ModelFileTests
@@ -31,10 +31,23 @@ public class ModelFileTests
     }
 
     [Fact]
+    public void ItsBoxesAreReadByCentreAndSize()
+    {
+        var coupler = new RailModel.Box(new Vector3(0, 1.14f, 1.83f), RailroadsMod.CouplerBox);
+
+        var model = ModelFile.Read(ModelBytes.Write([("wood", Square, [0, 1, 2])], boxes: 2, given: [coupler]));
+
+        Assert.Equal(3, model.Boxes.Count);
+        Assert.Equal(coupler, model.Boxes[0]);
+        Assert.Equal(new RailModel.Box(new Vector3(0.5f), new Vector3(0.5f)), model.Boxes[2]);
+    }
+
+    [Fact]
     public void AModelWithoutTrackOrWheelsHasNone()
     {
         var model = ModelFile.Read(ModelBytes.Write([("iron", Square, [0, 1, 2])], boxes: 0, snaps: 0));
 
+        Assert.Empty(model.Boxes);
         Assert.Empty(model.Lines);
         Assert.Empty(model.Axles);
     }

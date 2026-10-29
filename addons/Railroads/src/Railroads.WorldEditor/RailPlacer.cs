@@ -13,7 +13,7 @@ namespace Railroads.WorldEditor;
 /// <item>a vehicle stands on the line of track nearest it, within 1.5 m, at that point of it and facing its way
 /// (<see cref="Keys.Line"/>, <see cref="Keys.At"/>, <see cref="Keys.Dir"/>), as the mod puts a vehicle just built; with
 /// none that near, on none (the mod puts it on track when a player first comes near). It stops: its trip, the lines its
-/// wagons stood on and its speed go, as when the mod ends a trip;</item>
+/// wagons stood on, its speed and who sent it go, as when the mod ends a trip;</item>
 /// <item>a station sign stops trains at the nearest point of straight track or of a loop's circle within 10 m
 /// (<see cref="Keys.Stop"/>), as the mod sets it when the sign is built; with none, it is no stop.</item>
 /// </list>
@@ -75,6 +75,7 @@ public sealed class RailPlacer(ModelLibrary models) : IObjectPlacer
         copy.SetFloat(Keys.Stop, null);
         copy.SetFloat(Keys.Speed, null);
         copy.SetString(Keys.Destination, null);
+        copy.SetLong(Keys.SentBy, null);
         copy.SetString(Keys.Line, null);
         if (network.Nearest(copy.Position, VehicleReach) is not var (line, at, _))
         {

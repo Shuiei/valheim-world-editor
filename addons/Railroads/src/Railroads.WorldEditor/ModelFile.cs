@@ -8,7 +8,8 @@ namespace Railroads.WorldEditor;
 /// game runs: none of them is in an asset bundle, so the editor cannot find them by itself. Little-endian: "BFM5"; the
 /// part count; each part's material slot (a length and UTF-8 text: wood, stone or iron), its corners (position,
 /// normal, texture place: eight floats each) and its triangles (indices into the part's own corners); then the boxes
-/// the mod collides with, its snap points, the track's centre lines (corner lists) and the wheels' axles.
+/// the mod collides with (centre, size, forward, up), its snap points, the track's centre lines (corner lists) and the
+/// wheels' axles.
 /// </summary>
 public static class ModelFile
 {
@@ -55,8 +56,14 @@ public static class ModelFile
                 }
                 parts.Add(new RailModel.Part(slot, positions, triangles));
             }
-            // The boxes (centre, size, forward, up), then the snap points: not drawn.
-            Bytes(reader, Count(reader, "boxes") * 12 * sizeof(float));
+            var boxes = new RailModel.Box[Count(reader, "boxes")];
+            for (int i = 0; i < boxes.Length; i++)
+            {
+                boxes[i] = new RailModel.Box(Vector(reader), Vector(reader));
+                // Its forward and up: the mod's boxes the add-on uses stand straight.
+                Bytes(reader, 6 * sizeof(float));
+            }
+            // The snap points: not drawn.
             Bytes(reader, Count(reader, "snap points") * 3 * sizeof(float));
             var lines = new List<Vector3[]>();
             for (int l = Count(reader, "lines"); l > 0; l--)
@@ -68,7 +75,7 @@ public static class ModelFile
             {
                 throw new InvalidDataException($"{bytes.Length - reader.BaseStream.Position} bytes past its end");
             }
-            return new RailModel(parts, lines, axles);
+            return new RailModel(parts, boxes, lines, axles);
         }
         catch (EndOfStreamException e)
         {
@@ -107,13 +114,20 @@ public static class ModelFile
 
 /// <summary>A model of the mod, as its file holds it (<see cref="ModelFile"/>), in the frame of the piece it builds.</summary>
 /// <param name="Parts">Its parts, one per material slot.</param>
+/// <param name="Boxes">The boxes the mod collides with (a vehicle's include where its couplers are).</param>
 /// <param name="Lines">The centre lines of its track, each a list of points in order (none for what is no track).</param>
 /// <param name="Axles">Where its wheels' axles are (none for what has no wheels).</param>
-public sealed record RailModel(IReadOnlyList<RailModel.Part> Parts, IReadOnlyList<Vector3[]> Lines, IReadOnlyList<Vector3> Axles)
+public sealed record RailModel(IReadOnlyList<RailModel.Part> Parts, IReadOnlyList<RailModel.Box> Boxes, IReadOnlyList<Vector3[]> Lines,
+    IReadOnlyList<Vector3> Axles)
 {
     /// <summary>One part: what it is made of, its corners and its triangles (Unity's winding).</summary>
     /// <param name="Slot">The material it is drawn with: wood, stone or iron.</param>
     /// <param name="Positions">Its corners' positions.</param>
     /// <param name="Triangles">Three indices into <paramref name="Positions"/> per triangle.</param>
     public sealed record Part(string Slot, Vector3[] Positions, int[] Triangles);
+
+    /// <summary>One box the mod collides with, in the piece's frame.</summary>
+    /// <param name="Center">Its centre.</param>
+    /// <param name="Size">Its size along each axis.</param>
+    public sealed record Box(Vector3 Center, Vector3 Size);
 }

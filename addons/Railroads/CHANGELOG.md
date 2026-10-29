@@ -3,6 +3,22 @@
 Changes to the Railroads add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.3.0 — 2026-10-29
+
+### Added
+- **Drawbridges.** Follows Railroads 0.3.6, which has a drawbridge (since 0.3.1): it is drawn with its leaves, chains
+  and counterweights, lowered or raised as the mod keeps it, and **Raised** in the inspector raises or lowers it.
+  Trains placed on it stand on its track; a station sign beside it stops trains on the straight track only, as in the
+  game.
+- **The feedback post** (0.3.0) is drawn and offered in the Build panel, under Other.
+
+### Changed
+- **Couplers.** Since 0.3.0 the mod builds each vehicle's couplers apart from its body; they are drawn again, at each
+  end of the wagons and at the back of the locomotive. An older Railroads still shows them on the body.
+- **The old station is offered again** in the Build panel, as the mod put it back on the hammer in 0.3.5.
+- **A pasted or moved train forgets who sent it**, with the rest of its trip.
+- The inspector names what a piece was paid with (0.3.2) and, for coal, the fuel the server may use instead (0.3.6).
+
 ## v0.2.0 — 2026-10-26
 
 ### Added

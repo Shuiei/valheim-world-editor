@@ -6,9 +6,12 @@ namespace Railroads.WorldEditor.Tests;
 /// <summary>Model files made for a test, in the mod's form (ModelFile), and a stand-in for the mod's folder holding them.</summary>
 internal static class ModelBytes
 {
-    /// <summary>A model file of parts (each its slot, corners and triangles), lines and axles; boxes and snap points given in number only.</summary>
+    /// <summary>
+    /// A model file of parts (each its slot, corners and triangles), lines and axles; boxes given (standing straight) and
+    /// more of no use, and snap points, given in number only.
+    /// </summary>
     public static byte[] Write(IReadOnlyList<(string Slot, Vector3[] Corners, int[] Triangles)> parts, IReadOnlyList<Vector3[]>? lines = null,
-        IReadOnlyList<Vector3>? axles = null, int boxes = 1, int snaps = 2)
+        IReadOnlyList<Vector3>? axles = null, int boxes = 1, int snaps = 2, IReadOnlyList<RailModel.Box>? given = null)
     {
         using var stream = new MemoryStream();
         using var w = new BinaryWriter(stream);
@@ -34,7 +37,15 @@ internal static class ModelBytes
                 w.Write(i);
             }
         }
-        w.Write(boxes);
+        w.Write((given?.Count ?? 0) + boxes);
+        foreach (var box in given ?? [])
+        {
+            // Its centre and size, then forward and up.
+            foreach (float f in new[] { box.Center.X, box.Center.Y, box.Center.Z, box.Size.X, box.Size.Y, box.Size.Z, 0, 0, 1, 0, 1, 0 })
+            {
+                w.Write(f);
+            }
+        }
         for (int i = 0; i < boxes * 12; i++)
         {
             w.Write(0.5f);
