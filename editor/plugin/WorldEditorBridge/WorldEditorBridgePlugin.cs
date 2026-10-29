@@ -187,11 +187,9 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             _thread = new Thread(Serve) { IsBackground = true, Name = "WorldEditorBridge" };
             _thread.Start();
             Logger.LogInfo($"WorldEditorBridge {Version} listening on http://{_bind.Value}:{_port.Value}/ (token in BepInEx/config/{PluginGuid}.cfg)");
-            if (!IsLoopbackBind(_bind.Value))
+            if (BridgeAccess.BindWarning(_bind.Value) is string warning)
             {
-                Logger.LogWarning($"WorldEditorBridge: BindAddress {_bind.Value} lets other machines of this one's local networks connect (never the internet's), "
-                    + "and the token travels unencrypted (plain HTTP): anyone on those networks can read it and change the world. "
-                    + "Keep 127.0.0.1 and reach it through an SSH tunnel (the editor makes one).");
+                Logger.LogWarning(warning);
             }
         }
         catch (Exception ex)
@@ -199,12 +197,6 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             Caught(ex, $"listening on {_bind.Value}:{_port.Value} (the bridge does not answer)", level: LogLevel.Error);
         }
     }
-
-    /// <summary>Whether BindAddress is this machine only (127.0.0.1, localhost, ::1, another loopback address).</summary>
-    /// <param name="bind">The setting's value.</param>
-    private static bool IsLoopbackBind(string bind) =>
-        string.Equals(bind, "localhost", StringComparison.OrdinalIgnoreCase)
-        || (IPAddress.TryParse(bind.Trim('[', ']'), out var ip) && IPAddress.IsLoopback(ip));
 
     /// <summary>Stops the listener, which ends <c>Serve</c>. Unity calls it by name.</summary>
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
