@@ -138,8 +138,8 @@ worn its top down and streaked its flanks with small gullies.*
 ### Restore
 
 **Restore** takes your edits away a little each moment, until the ground is as the world generated it. It also takes
-back ground raised or dug with [No limit](#no-limit) that is not saved yet. It removes paint only in the inner part of
-the brush, so the paint's edge stays clean.
+back ground raised or dug with [No limit](#no-limit), saved or not: the next save takes away the ground discs it no
+longer needs. It removes paint only in the inner part of the brush, so the paint's edge stays clean.
 
 ## Paint brushes
 
@@ -222,8 +222,8 @@ After saving:
 
 - Trees, rocks, ore, bushes and pickables where the ground moved more than 2 m are gone (they would be buried or
   float). Building pieces stay.
-- The new ground counts as generated: **Restore**, and the game's hoe and pickaxe, work ±8 m from it. To take a saved
-  shape away, work it down again with No limit on.
+- The new ground counts as generated: the game's hoe and pickaxe work ±8 m from it. To take a saved shape away,
+  **Restore** it (back to the ground the world generated), or work it down again with No limit on.
 - Very steep walls come out a little softer than drawn.
 - Zones no player has visited yet keep their old ground; the message says how many. Visit them in game first.
 - The in-game map does not show the new shape.

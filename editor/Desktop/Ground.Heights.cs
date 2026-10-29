@@ -13,6 +13,12 @@ public sealed partial class Ground
     /// <summary>The ground the game's ±8 m applies to: the generated one plus the lift.</summary>
     public float Original(int g) => Base[g] + Lift[g];
 
+    /// <summary>
+    /// The lift that takes the point back to the ground as the world generated it: under the ground discs saved No limit
+    /// ground made (Base counts them as generated), 0 elsewhere. Restore backs the lift towards it.
+    /// </summary>
+    public float BareLift(int g) => _bare == null ? 0 : EditStore.KeepLift(_bare[g] - Base[g]);
+
     /// <summary>True when the point's change is at (within 5 cm of) the game's ±8 m.</summary>
     public bool AtLimit(int g) => Mod[g] != 0 && MathF.Abs(Level[g] + Smooth[g]) >= EditStore.MaxLevel - 0.05f;
 

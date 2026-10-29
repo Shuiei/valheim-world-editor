@@ -44,7 +44,7 @@ public static partial class Sculpt
         }
     }
 
-    /// <summary>Restore: backs the point's edits and lift down towards the ground as the world generated it.</summary>
+    /// <summary>Restore: backs the point's edits and lift towards the ground as the world generated it.</summary>
     internal static void RestorePoint(Ground g, int p, float rate, float w)
     {
         float k = MathF.Min(1, 8 * rate * w);
@@ -59,8 +59,10 @@ public static partial class Sculpt
                 g.Mod[p] = 0;
             }
         }
-        // Also back down from a No limit lift.
-        g.Lift[p] = MathF.Abs(g.Lift[p] * (1 - k)) < 0.01f ? 0 : g.Lift[p] * (1 - k);
+        // Also back from a No limit lift, to the generated ground under saved No limit ground too (the next save takes
+        // its ground discs away).
+        float bare = g.BareLift(p), lift = g.Lift[p] + (bare - g.Lift[p]) * k;
+        g.Lift[p] = MathF.Abs(lift - bare) < 0.01f ? bare : lift;
         if (g.PMod[p] != 0 && w > 0.5f)
         {
             g.PMod[p] = 0;

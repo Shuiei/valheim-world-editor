@@ -50,6 +50,12 @@ public sealed partial class Ground
     /// <summary>Height beyond the game's ±8 m per point (metres), saved as ground discs.</summary>
     public float[] Lift { get; }
 
+    /// <summary>
+    /// The ground as the world generated it, without the editor's ground discs (saved No limit ground, which Base
+    /// counts as generated): what Restore takes the ground back to. Null when no disc touches the block (Base).
+    /// </summary>
+    private float[]? _bare;
+
     /// <summary>No limit: edits go past the game's ±8 m (the rest goes into Lift).</summary>
     public bool NoLimit { get; set; }
 
@@ -128,6 +134,31 @@ public sealed partial class Ground
                     {
                         BaseMask[p * 4 + c] = m[i * 4 + c];
                     }
+                }
+            }
+        }
+        ReadBare(terrain);
+    }
+
+    /// <summary>
+    /// The ground without the ground discs, in the zones a disc touches (a disc reaching a zone's edge point is in
+    /// both zones' modifiers, so a zone without discs shares no changed point).
+    /// </summary>
+    private void ReadBare(TerrainService terrain)
+    {
+        _bare = null;
+        for (int zz = 0; zz < ZonesZ; zz++)
+        {
+            for (int zx = 0; zx < ZonesX; zx++)
+            {
+                if (terrain.BareZone(X0 + zx, Z0 + zz) is not { } u)
+                {
+                    continue;
+                }
+                _bare ??= (float[])Base.Clone();
+                foreach (var (i, p) in ZoneGridPoints(zz, zx))
+                {
+                    _bare[p] = u[i];
                 }
             }
         }
