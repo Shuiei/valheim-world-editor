@@ -19,7 +19,7 @@ public static partial class SettingsDialog
                 _error.Text = Lang.T("settings.badPort");
                 return;
             }
-            if (ClaudeServer.ParseAddress(_address.Text) is not { } claudeAddress)
+            if (ChosenAddress() is not { } claudeAddress)
             {
                 _error.Text = Lang.T("settings.badAddress");
                 return;

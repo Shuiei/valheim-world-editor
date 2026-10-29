@@ -49,11 +49,40 @@ public sealed partial class ClaudeTools
     /// <summary>An answer as compact JSON.</summary>
     internal static string ToJson(object o) => JsonSerializer.Serialize(o, Json);
 
-    /// <summary>On the window's thread, as a click would be.</summary>
-    private static Task<T> OnUi<T>(Func<Task<T>> f) => Dispatcher.UIThread.InvokeAsync(f);
+    /// <summary>On the window's thread, as a click would be, with the caller's computer (<see cref="AsCaller"/>).</summary>
+    private static Task<T> OnUi<T>(Func<Task<T>> f)
+    {
+        bool remote = ClaudeServer.FromAnotherComputer.Value;
+        Task<T> Run() => AsCaller(remote, f);
+        return Dispatcher.UIThread.InvokeAsync(Run);
+    }
 
-    /// <summary>On the window's thread, as a click would be.</summary>
-    private static Task<T> OnUi<T>(Func<T> f) => Dispatcher.UIThread.InvokeAsync(f).GetTask();
+    /// <summary>On the window's thread, as a click would be, with the caller's computer (<see cref="AsCaller"/>).</summary>
+    private static Task<T> OnUi<T>(Func<T> f)
+    {
+        bool remote = ClaudeServer.FromAnotherComputer.Value;
+        T Run() => AsCaller(remote, f);
+        return Dispatcher.UIThread.InvokeAsync(Run).GetTask();
+    }
+
+    /// <summary>
+    /// Runs f on the window's thread as the request's: whether it came from another computer
+    /// (<see cref="ClaudeServer.FromAnotherComputer"/>, which the window's thread would not carry over by itself), put
+    /// back after. An async f keeps it through its awaits.
+    /// </summary>
+    private static T AsCaller<T>(bool remote, Func<T> f)
+    {
+        bool was = ClaudeServer.FromAnotherComputer.Value;
+        ClaudeServer.FromAnotherComputer.Value = remote;
+        try
+        {
+            return f();
+        }
+        finally
+        {
+            ClaudeServer.FromAnotherComputer.Value = was;
+        }
+    }
 
     /// <summary>
     /// The camera tool running now (done when none is): one at a time moves the camera or takes a picture, since

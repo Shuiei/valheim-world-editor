@@ -40,7 +40,8 @@ In **Settings** (on the start page), section **Claude**:
 | Claude Desktop lines, **Copy** | The lines to add to Claude Desktop's configuration. |
 
 After **Save**, the section shows "Listening on http://127.0.0.1:5731/mcp" (on another address, "Listening on
-0.0.0.0:5731, from other computers too"), or why it could not ("Could not listen on port …" when the port is taken).
+0.0.0.0:5731, from other computers too"), or why it could not ("Could not listen on 127.0.0.1:5731: …" when the port
+is taken, or when a network address is no longer this computer's).
 
 ## Adding the editor to Claude
 
@@ -140,8 +141,16 @@ This works after saving or applying too: the next **Save to world** or **Apply l
 
 - **This computer only.** The editor listens on `127.0.0.1` (or another loopback address you type, such as `::1`) and
   refuses any request addressed to another name, so a web page you visit cannot reach it. With another **Address**,
-  computers on that network can reach it too, under any of this computer's names, and the token is all that keeps them
-  out.
+  computers on that network can reach it too, under any of this computer's names, with the token. Only this computer's
+  own networks: a computer whose address is not a local one (`10.x`, `172.16`–`172.31`, `192.168.x`, link-local, IPv6
+  `fc00::/7`) or not on the network the editor listens on is refused, so the internet never reaches it, even over IPv6.
+  With `0.0.0.0`, those networks are the ones with a gateway (not Docker's, WSL's or Hyper-V's own, nor a VPN tunnel).
+  A VPN such as Tailscale, whose addresses are `100.64.x.x` to `100.127.x.x`, is taken too when this computer is on
+  it: listen on its Tailscale address or on `0.0.0.0`, and the other computer connects to that address. The VPN
+  encrypts the way, so the token is not read on the network.
+- **Scripts from this computer only.** A Claude on another computer is refused scripts (`run_script`, the Script
+  tool's Run) even with **Claude may run scripts** on: whoever reads the token on the network could otherwise run
+  programs with your rights. Its other tools work as here.
 - **Not encrypted off this computer.** The connection is plain HTTP: with another **Address**, anyone on that network
   can read the token and everything the editor and Claude send each other, and with the token, use the editor. That is
   a fair trade on a home network you trust, and Settings says so under the address as soon as you choose one.

@@ -71,7 +71,9 @@ the editor's tools. The editor holds it to this:
 - **This computer only, with a token.** The editor listens on `127.0.0.1` only, refuses requests addressed to another
   name (so a web page cannot reach it under a made-up address), and refuses any request without its token (48 random
   characters). Another **Address** in Settings (`0.0.0.0`, or one of this computer's) lets other computers on that
-  network connect, with the token, which then travels unencrypted. **New token** makes another; turn the switch off and nothing can connect.
+  network connect, with the token, which then travels unencrypted: only computers with a local address on this
+  computer's own network, never the internet's, and never scripts (they stay this computer's Claude's). **New token**
+  makes another; turn the switch off and nothing can connect.
 - **Pending only.** Whatever Claude changes stays pending, one step each, tagged **Claude** in History. Claude never
   saves, applies live, discards, reloads, writes or deletes your files, or connects to a live game: those stay yours.
   It does not open another world while yours has unsaved changes.
