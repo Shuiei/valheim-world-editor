@@ -6,7 +6,8 @@
 # results (JUnit) go where the CLI asks. Every test runs,
 # failing or not; a test stuck 5 minutes ends the run with a dump (editor/tests/testconfig.json; 10 minutes
 # under coverage). On main only, the batch's coverage is kept for the coverage job
-# (.circleci/continue.yml) in /tmp/coverage/<suite>-<container>/<batch>/. A test process that
+# (.circleci/continue.yml) in /tmp/coverage/<suite>-<container>/<batch>/ ($VWE_COVERAGE_ROOT, for
+# .circleci/run-tests.test.sh, as $VWE_TEST_RUNS stands for /tmp/test-runs). A test process that
 # crashed, or was stopped stuck, writes no results: one failed test in their place, so CircleCI shows
 # it and "Rerun failed tests" runs its class again.
 set -uo pipefail
@@ -14,7 +15,7 @@ suite=$1 project=$2 junit=$3
 batch=$(date +%s%N)
 # The run's own files (a stuck test's dump: hundreds of MB), out of the artifacts; its output in
 # output.log, for the crash report.
-runs=/tmp/test-runs/$suite-$batch
+runs=${VWE_TEST_RUNS:-/tmp/test-runs}/$suite-$batch
 mkdir -p "$runs"
 log=$runs/output.log
 
@@ -26,7 +27,7 @@ coverage=()
 report=""
 if [ "${CIRCLE_BRANCH:-}" = main ]; then
   export VWE_COVERAGE=1
-  report=/tmp/coverage/$suite-${CIRCLE_NODE_INDEX:-0}/$batch/coverage.cobertura.xml
+  report=${VWE_COVERAGE_ROOT:-/tmp/coverage}/$suite-${CIRCLE_NODE_INDEX:-0}/$batch/coverage.cobertura.xml
   coverage=(--coverage --coverage-output-format cobertura --coverage-settings "$PWD/editor/tests/coverage.runsettings"
     --coverage-output "$report" --hangdump-timeout 10m)
 fi

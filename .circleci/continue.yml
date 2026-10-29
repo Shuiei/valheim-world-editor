@@ -3,7 +3,8 @@
 # whether the branch is a release pull request's (release_pr: its required checks report at once, no tests).
 #   code-analysis  the editor (Core, Desktop, Sdk) and the plugin's API build with no .NET analyzer
 #                  warning (warnings are errors); every XML file of the repository (projects, coverage
-#                  settings) is well formed (xmllint)
+#                  settings) is well formed (xmllint); the test jobs' scripts pass their checks against a
+#                  stand-in dotnet (.circleci/run-tests.test.sh)
 #   formatting     the editor's projects are formatted as .editorconfig says (dotnet format,
 #                  tools/format-check.sh) on two containers; a branch checks only the projects it
 #                  changed since main (every one when .editorconfig or a build property changed),
@@ -196,6 +197,11 @@ jobs:
           command: |
             tools/ci-apt.sh libxml2-utils
             git ls-files -z '*.csproj' '*.props' '*.targets' '*.runsettings' '*.xml' | xargs -0 xmllint --noout
+      # The test jobs' scripts (.circleci/run-tests.sh, list-classes.sh, coverage-reports.sh) against a stand-in
+      # dotnet: a failure there would show only in the test jobs, as tests that never ran.
+      - run:
+          name: The test runner's own checks
+          command: bash .circleci/run-tests.test.sh
       - run:
           name: Analyzers (every warning is an error)
           command: |
@@ -318,15 +324,9 @@ jobs:
       - run:
           name: Every container's coverage report is there, merged into one
           command: |
-            reports=()
-            # Each test job's batches (/tmp/coverage/<suite>-<container>/<batch>/): a passed job has a report
-            # for every batch it ran (run-tests.sh fails one without), so at least one from each suite.
-            for suite in core app; do
-              found=(/tmp/coverage/$suite-*/*/coverage.cobertura.xml)
-              [ -e "${found[0]}" ] || { echo "No coverage report from $suite-tests."; exit 1; }
-              echo "$suite-tests: ${#found[@]} batch reports"
-              reports+=("${found[@]}")
-            done
+            # Each test job's batches (/tmp/coverage/<suite>-<container>/<batch>/), at least one from each suite.
+            list=$(.circleci/coverage-reports.sh /tmp/coverage) || exit 1
+            mapfile -t reports < <(printf '%s\n' "$list")
             mkdir -p /tmp/upload
             # Prints the merged total, as Codecov should show it (lines run with every branch taken, of lines measured).
             dotnet run --project tools/MergeCoverage -c Release -- /tmp/upload/coverage.cobertura.xml "${reports[@]}"
