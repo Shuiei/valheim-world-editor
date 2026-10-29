@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.114.5 — unreleased
+## v1.114.5 — 2026-10-29
 
 ### Fixed
 - **The plugin and the add-ons are signed too.** Like the Windows program, the WorldEditorBridge plugin, every
@@ -13,7 +13,7 @@ the plugin is unchanged in versions without that part.
 ### WorldEditorBridge
 - **Signed.** The plugin's DLLs carry the maintainer's signature, as the Windows program does.
 
-## v1.114.4 — unreleased
+## v1.114.4 — 2026-10-29
 
 ### Fixed
 - **The Windows download on Nexus Mods is signed.** It had the program and one of its libraries unsigned, unlike the
