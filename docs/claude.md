@@ -145,6 +145,9 @@ This works after saving or applying too: the next **Save to world** or **Apply l
   own networks: a computer whose address is not a local one (`10.x`, `172.16`–`172.31`, `192.168.x`, link-local, IPv6
   `fc00::/7`) or not on the network the editor listens on is refused, so the internet never reaches it, even over IPv6.
   With `0.0.0.0`, those networks are the ones with a gateway (not Docker's, WSL's or Hyper-V's own, nor a VPN tunnel).
+  A VPN such as Tailscale, whose addresses are `100.64.x.x` to `100.127.x.x`, is taken too when this computer is on
+  it: listen on its Tailscale address or on `0.0.0.0`, and the other computer connects to that address. The VPN
+  encrypts the way, so the token is not read on the network.
 - **Scripts from this computer only.** A Claude on another computer is refused scripts (`run_script`, the Script
   tool's Run) even with **Claude may run scripts** on: whoever reads the token on the network could otherwise run
   programs with your rights. Its other tools work as here.

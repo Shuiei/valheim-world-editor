@@ -13,8 +13,8 @@ the plugin is unchanged in versions without that part.
   address; with every network, a line under it gives the addresses another computer uses (this computer's name, and
   its address on each network for networks that do not answer `.local` names).
   Off this computer the connection is not encrypted (plain HTTP), and Settings says so under the address. Only
-  computers on this computer's own network can connect (never from the internet), and a Claude on another computer
-  cannot run scripts.
+  computers on this computer's own network or VPN (Tailscale) can connect (never from the internet), and a Claude on
+  another computer cannot run scripts.
 
 ## v1.113.0 — 2026-10-26
 

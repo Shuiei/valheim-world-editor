@@ -147,6 +147,12 @@ public sealed class ClaudeServer
             .DistinctBy(u => u.Address)
             .Select(u => (u.Address, u.Network))];
 
+    /// <summary>
+    /// 100.64.0.0, IPv4's shared address space (/10): VPNs such as Tailscale give their computers addresses there, and
+    /// it is never routed on the internet.
+    /// </summary>
+    private static readonly IPAddress SharedV4 = new([100, 64, 0, 0]);
+
     /// <summary>169.254.0.0, IPv4's link-local network (/16).</summary>
     private static readonly IPAddress LinkLocalV4 = new([169, 254, 0, 0]);
 
@@ -166,7 +172,8 @@ public sealed class ClaudeServer
     /// Whether another computer may connect to a server listening on a non-loopback address: its address must be a
     /// local one (10/8, 172.16/12, 192.168/16, link-local; IPv6 unique local fc00::/7 or link-local fe80::/10), never
     /// one from the internet, and on the network of the address the server listens on (on every address: a network
-    /// other computers reach this one on, see <see cref="Unicasts"/>).
+    /// other computers reach this one on, see <see cref="Unicasts"/>). Or a VPN's (100.64/10, Tailscale's) when this
+    /// computer is on that VPN too and the server listens there or on every address.
     /// </summary>
     /// <param name="caller">The caller's address.</param>
     /// <param name="bound">The address the server listens on.</param>
@@ -174,6 +181,12 @@ public sealed class ClaudeServer
     internal static bool OnOwnNetwork(IPAddress caller, IPAddress bound, IReadOnlyList<Unicast> unicasts)
     {
         caller = Unmapped(caller);
+        // A VPN gives each computer one address there (Tailscale's network is a single address, with no gateway), so
+        // the network is the VPN: taken when this computer has an address on it too.
+        if (InNetwork(caller, SharedV4, 10))
+        {
+            return (IsEveryAddress(bound) || InNetwork(Unmapped(bound), SharedV4, 10)) && unicasts.Any(u => InNetwork(Unmapped(u.Address), SharedV4, 10));
+        }
         if (!IsLocalRange(caller))
         {
             return false;

@@ -185,7 +185,8 @@ public class ClaudeToolsTransportTests
     // Who may connect on another address than loopback: this computer (loopback, or one of its own addresses, IPv4 as
     // a dual-mode socket gives it too), and computers with a local address (private IPv4, link-local, IPv6 unique local)
     // on the network listened on: on every address, the networks other computers reach this one on (not Docker's,
-    // which has no gateway); on one address, that one's network, even without a gateway. Never the internet's.
+    // which has no gateway); on one address, that one's network, even without a gateway. A VPN's (100.64/10,
+    // Tailscale's: one address per computer, no gateway) when this computer is on it too. Never the internet's.
     [Fact]
     public void OnlyThisComputersOwnNetworksMayConnect()
     {
@@ -194,6 +195,7 @@ public class ClaudeToolsTransportTests
             new(IPAddress.Parse("192.168.1.20"), 24, "Ethernet", true),
             new(IPAddress.Parse("172.17.0.1"), 16, "docker0", false),
             new(IPAddress.Parse("fd00::20"), 64, "Ethernet", true),
+            new(IPAddress.Parse("100.101.102.103"), 32, "tailscale0", false),
         ];
         bool Here(string caller) => ClaudeServer.IsThisComputer(IPAddress.Parse(caller), unicasts);
         bool May(string caller, string bound) => ClaudeServer.OnOwnNetwork(IPAddress.Parse(caller), IPAddress.Parse(bound), unicasts);
@@ -218,6 +220,14 @@ public class ClaudeToolsTransportTests
         Assert.True(ClaudeServer.InNetwork(IPAddress.Parse("172.31.255.255"), IPAddress.Parse("172.16.0.0"), 12));
         Assert.False(ClaudeServer.InNetwork(IPAddress.Parse("172.32.0.0"), IPAddress.Parse("172.16.0.0"), 12));
         Assert.False(ClaudeServer.InNetwork(IPAddress.Parse("::ffff:172.16.0.1"), IPAddress.Parse("172.16.0.0"), 12));
+        // A VPN's computer (Tailscale): on every address or this computer's VPN address, not on another network's; and
+        // only when this computer is on a VPN too.
+        Assert.True(Here("100.101.102.103"));
+        Assert.True(May("100.90.1.2", "0.0.0.0"));
+        Assert.True(May("100.90.1.2", "100.101.102.103"));
+        Assert.False(May("100.90.1.2", "192.168.1.20"));
+        Assert.False(ClaudeServer.OnOwnNetwork(IPAddress.Parse("100.90.1.2"), IPAddress.Any, [unicasts[0]]));
+        Assert.False(May("100.128.0.1", "0.0.0.0"));
     }
 
     // --mcp-stdio relays to the address the settings choose: the chosen one, or this computer's 127.0.0.1 for every
