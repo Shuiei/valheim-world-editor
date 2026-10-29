@@ -75,7 +75,9 @@ public sealed partial class WorldGenerator
             // not the game's, and hands 1.2f times the radius over as a double: the game's runtime works the float
             // product out in double and never rounds it to a float (at the game's radius it is the literal 12000.0).
             DeepNorthGapShift = 0.4f * sr;
+#pragma warning disable S1244 // The mod replaces them only when the radius is not exactly the game's.
             DeepNorthGapRadius = sr != 10000f ? (double)1.2f * sr : 12000.0;
+#pragma warning restore S1244
             DeepNorthGapWidth = 0.04 * sr;
             AshlandsGapWidth = 0.04 * sr;
             AshlandsGap = r.AshlandsGap;
@@ -101,7 +103,9 @@ public sealed partial class WorldGenerator
             WaterDepth = r.WaterDepthMultiplier;
             WaterDepthOn = r.WaterDepthMultiplier != 1f;
             ForestMultiplier = r.ForestMultiplier == 0f ? 1f : r.ForestMultiplier;
+#pragma warning disable S1244 // Only exactly 1 is the game's own forest.
             ForestOn = ForestMultiplier != 1f;
+#pragma warning restore S1244
             SetSeeds(r, offsetA, offsetB, offsetDetail, riverSeed, streamSeed);
             SetWater(r);
             SetBiomes(r);

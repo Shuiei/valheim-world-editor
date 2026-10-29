@@ -189,7 +189,8 @@ public class ScriptHostTests
     public void TheDocumentationsRecipesRun()
     {
         string doc = File.ReadAllText(Path.Combine(Fixtures.Root, "..", "..", "..", "docs", "scripting.md"));
-        var recipes = System.Text.RegularExpressions.Regex.Matches(doc, "```csharp\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
+        var recipes = System.Text.RegularExpressions.Regex.Matches(doc, "```csharp\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline,
+            TimeSpan.FromSeconds(1))
             .Select(m => m.Groups[1].Value).ToList();
         Assert.True(recipes.Count >= 6, $"{recipes.Count} recipes");
         foreach (string code in recipes)

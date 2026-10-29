@@ -11,7 +11,9 @@ namespace ExpandWorld.WorldEditor;
 /// read as plain lists and maps of strings (<see cref="ReadList"/>), never into typed objects, so any version of the
 /// library the mod runs with will do.
 /// </summary>
+#pragma warning disable S3453 // Made by its static Load (and Find), the only way to get one.
 public sealed class YamlReader
+#pragma warning restore S3453
 {
     /// <summary>The library's file name under a BepInEx plugins folder.</summary>
     public const string DllName = "YamlDotNet.dll";

@@ -37,5 +37,7 @@ public sealed record HeightTransform
 
     /// <summary>Whether this transform changes nothing (the mod's defaults).</summary>
     [JsonIgnore]
+#pragma warning disable S1244 // Exactly the mod's defaults: any other value, however close, is a change.
     public bool IsIdentity => Multiplier == 1f && Delta == 0f && DepthMultiplier == 1f && Minimum == -1000f && Maximum == 10000f;
+#pragma warning restore S1244
 }
