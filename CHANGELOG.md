@@ -4,14 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.114.3 — unreleased
+## v1.114.3 — 2026-10-29
 
 ### Fixed
 - **Restore takes saved No limit ground away.** Once ground past the game's ±8 m was saved, the Restore brush and the
   Area tool's **Restore the ground** brought the ground back only to that saved shape, not to the ground the world
   generated. They now go all the way back, and the next save takes away the ground discs that are no longer needed.
 
-## v1.114.2 — unreleased
+## v1.114.2 — 2026-10-29
 
 ### WorldEditorBridge
 - **Never reachable from the internet.** Only the machine the plugin runs on, its local networks and VPNs such as
@@ -20,14 +20,14 @@ the plugin is unchanged in versions without that part.
   in the house without SSH.
   The token is only taken from the editor's header, no longer from the address, where it could end up in logs.
 
-## v1.114.1 — unreleased
+## v1.114.1 — 2026-10-29
 
 ### Fixed
 - **Claude shows you each script before it runs.** With **Claude may run scripts** on, every script Claude writes now
   opens a window with its code, to run or refuse (a dry run and its run ask once). Text in a world, such as a sign
   another player wrote, could otherwise talk Claude into running a harmful one unseen.
 
-## v1.114.0 — unreleased
+## v1.114.0 — 2026-10-29
 
 ### Added
 - **Claude from another computer.** Settings → Claude has an **Address**: `127.0.0.1` (this computer only) as before,
