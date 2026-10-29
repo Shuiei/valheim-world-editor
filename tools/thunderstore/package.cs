@@ -133,10 +133,12 @@ static void Check(string dir)
 {
     using var m = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "manifest.json")));
     var root = m.RootElement;
-    Require(Regex.IsMatch(root.GetProperty("name").GetString()!, "^[A-Za-z0-9_]{1,128}$"), "name");
+    Require(Regex.IsMatch(root.GetProperty("name").GetString()!, "^[A-Za-z0-9_]{1,128}$", RegexOptions.None, TimeSpan.FromMilliseconds(RegexTimeout)), "name");
     Require(root.GetProperty("description").GetString()!.EnumerateRunes().Count() <= 250, "description too long");
-    Require(Regex.IsMatch(root.GetProperty("version_number").GetString()!, @"^[0-9]+\.[0-9]+\.[0-9]+$"), "version");
-    Require(root.GetProperty("dependencies").EnumerateArray().All(d => Regex.IsMatch(d.GetString()!, @"^\w+-\w+-[0-9]+\.[0-9]+\.[0-9]+$")), "dependencies");
+    Require(Regex.IsMatch(root.GetProperty("version_number").GetString()!, @"^[0-9]+\.[0-9]+\.[0-9]+$", RegexOptions.None,
+        TimeSpan.FromMilliseconds(RegexTimeout)), "version");
+    Require(root.GetProperty("dependencies").EnumerateArray().All(d => Regex.IsMatch(d.GetString()!, @"^\w+-\w+-[0-9]+\.[0-9]+\.[0-9]+$",
+        RegexOptions.None, TimeSpan.FromMilliseconds(RegexTimeout))), "dependencies");
     byte[] png = File.ReadAllBytes(Path.Combine(dir, "icon.png"));
     ReadOnlySpan<byte> signature = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
     // Width and height, 256 each, as big-endian 32-bit numbers at bytes 16 to 23 of the IHDR chunk.

@@ -88,7 +88,9 @@ public static partial class ExpandWorldMod
         float minDistance = DistWhenPositive(f.F("minDistance", 0f), radius), maxDistance = DistWhenPositive(f.F("maxDistance", 0f), radius);
         string[]? several = prefabs.Length > 1 ? prefabs : null;
         float centerX = f.F("centerX", 0f), centerY = f.F("centerY", 0f);
+#pragma warning disable S1244 // Exactly 0 is the mod's value for no centre.
         bool ownCentre = centerX != 0f || centerY != 0f;
+#pragma warning restore S1244
         bool enabled = f.B("enabled", true);
         if (enabled)
         {
@@ -141,7 +143,9 @@ public static partial class ExpandWorldMod
             minDistanceFromCenter = ownCentre ? 0f : minDistance,
             maxDistanceFromCenter = ownCentre ? 0f : maxDistance,
             center = ownCentre ? [Dist(centerX, radius), Dist(centerY, radius)] : null,
+#pragma warning disable S1244 // Exactly 0 is the mod's value for one not given.
             distance = ownCentre && (minDistance != 0f || maxDistance != 0f) ? [minDistance, maxDistance] : null,
+#pragma warning restore S1244
             surroundCheckVegetation = Flag(f, "surroundCheckVegetation"),
             surroundCheckDistance = f.F("surroundCheckDistance", 20f),
             surroundCheckLayers = f.I("surroundCheckLayers", 2),
@@ -167,8 +171,9 @@ public static partial class ExpandWorldMod
     {
         string[] parts = text.Split(',');
         float x = Channel(parts, 0, 0f), z = Channel(parts, 1, 0f), y = Channel(parts, 2, 0f);
-        // Exactly 0 is the mod's sentinel for an axis not given.
+#pragma warning disable S1244 // Exactly 0 is the mod's sentinel for an axis not given.
         x = x == 0f ? 1f : x;
         return [x, y == 0f ? x : y, z == 0f ? x : z];
+#pragma warning restore S1244
     }
 }

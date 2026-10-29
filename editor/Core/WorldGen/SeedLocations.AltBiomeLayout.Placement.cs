@@ -144,8 +144,10 @@ public static partial class SeedLocations
             static float Stretched(float bound, float stretch) => (float)((double)bound * stretch);
             float aboveX = Stretched(alt.AboveWorldX, stretch), belowX = Stretched(alt.BelowWorldX, stretch);
             float aboveY = Stretched(alt.AboveWorldY, stretch), belowY = Stretched(alt.BelowWorldY, stretch);
+#pragma warning disable S1244 // Exactly 0 is the mod's value for no bound.
             return !((aboveX != 0f && sector.CenterX < aboveX) || (belowX != 0f && sector.CenterX > belowX)
                 || (aboveY != 0f && sector.CenterY < aboveY) || (belowY != 0f && sector.CenterY > belowY));
+#pragma warning restore S1244
         }
 
         /// <summary>

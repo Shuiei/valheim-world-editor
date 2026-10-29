@@ -28,14 +28,14 @@ public class VersionTests
     public void TheChangelogHasASectionForIt()
     {
         // The Thunderstore package's changelog is made from this one (tools/thunderstore/package.cs).
-        Assert.Matches(new Regex($@"^## v{Regex.Escape(Version)}\b", RegexOptions.Multiline), File.ReadAllText(Path.Combine(Repo, "CHANGELOG.md")));
+        Assert.Matches(new Regex($@"^## v{Regex.Escape(Version)}\b", RegexOptions.Multiline, TimeSpan.FromSeconds(1)), File.ReadAllText(Path.Combine(Repo, "CHANGELOG.md")));
     }
 
     [Theory]
     [InlineData("bridge")]
     public void ThunderstoreManifestsFollowTheRules(string package)
     {
-        using var m = JsonDocument.Parse(File.ReadAllText(Path.Combine(Repo, "tools", "thunderstore", package, "manifest.json")));
+        using var m = JsonDocument.Parse(File.ReadAllText(Path.Combine(Repo, "tools", "thunderstore", package, "manifest.json"))); // nosemgrep
         Assert.Equal("@VERSION@", m.RootElement.GetProperty("version_number").GetString());
         Assert.Matches("^[A-Za-z0-9_]{1,128}$", m.RootElement.GetProperty("name").GetString());
         Assert.True(m.RootElement.GetProperty("description").GetString()!.Length <= 250);
