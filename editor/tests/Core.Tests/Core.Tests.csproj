@@ -36,6 +36,9 @@
   <ItemGroup>
     <!-- The helpers both test projects share: the test world, the fixtures, a stand-in game. -->
     <Compile Include="../Support/**/*.cs" LinkBase="Support/Shared" />
+    <!-- The bridge plugin's access rules: the plugin builds against the game's DLLs, this file against none, so it is
+         tested here as the plugin compiles it (Plugin/BridgeAccessTests). -->
+    <Compile Include="../../plugin/WorldEditorBridge/BridgeAccess.cs" Link="Plugin/BridgeAccess.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../Core/ValheimWorldEditor.Core.csproj" />
