@@ -5,6 +5,38 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
+    /// The question before a script Claude wrote runs (run_script, or the Script tool's Run pressed by Claude): its code
+    /// shown, Run it or Refuse; true to run. Tests answer it.
+    /// </summary>
+    internal Func<string, Task<bool>> ConfirmClaudeScript { get; set; }
+
+    /// <summary>
+    /// Claude's scripts the user let run since the editor started, by their code: the same code again (a dry run, then
+    /// the run) is not asked twice.
+    /// </summary>
+    private readonly HashSet<string> _claudeScriptsAllowed = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Whether a script Claude wrote may run: the user is shown it and asked, once for the same code. Claude's leave in
+    /// Settings is not enough on its own: text in a world (a sign, a tag, a name) can talk Claude into writing a
+    /// harmful one, and a script has the user's rights on this computer.
+    /// </summary>
+    /// <param name="code">The script's C# source.</param>
+    internal async Task<bool> ClaudeMayRun(string code)
+    {
+        if (_claudeScriptsAllowed.Contains(code))
+        {
+            return true;
+        }
+        if (!await ConfirmClaudeScript(code))
+        {
+            return false;
+        }
+        _claudeScriptsAllowed.Add(code);
+        return true;
+    }
+
+    /// <summary>
     /// A script on the open area (the Script tool's Run, Claude's run_script): compiled in the background, run in a
     /// process of its own on a snapshot of the area (ScriptHost.RunInChild: Stop and the 2-minute limit end that
     /// process whatever the script is doing), then what it changed goes in as one undo step, nothing when it fails,

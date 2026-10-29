@@ -64,6 +64,40 @@ public class ClaudeToolsTests
         Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
     }
 
+    // With the leave, each script Claude wrote is shown to the user first: refused, nothing runs and Claude is told;
+    // the same code is asked once (a dry run, then the run). The Script tool's Run pressed by Claude is asked too.
+    // Scripts the editor writes for a tool (flatten…) are not asked.
+    [AvaloniaFact]
+    public async Task ClaudesScriptsAreShownToTheUserFirst()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var asked = new List<string>();
+        bool answer = false;
+        r.W.ConfirmClaudeScript = code =>
+        {
+            asked.Add(code);
+            return Task.FromResult(answer);
+        };
+        Assert.Equal(ClaudeTools.ScriptRefusedByUser, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Equal(["Ground.Raise(0, 0, 3);"], asked);
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        answer = true;
+        Assert.StartsWith("Dry run:", await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Equal(2, asked.Count);
+        Assert.Contains("ground point", await r.T.Flatten(-10, -10, 10, 10, 31));
+        Assert.Equal(2, asked.Count);
+        // The Script tool's Run, pressed by Claude: its code is shown too, and refused runs nothing.
+        answer = false;
+        r.W.ScriptPanel.CodeBox.Text = "Ground.Raise(5, 5, 2);";
+        var before = r.W.World.Pending;
+        await r.T.SetControl("script.run", "click");
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal("Ground.Raise(5, 5, 2);", asked[^1]);
+        Assert.Equal(before, r.W.World.Pending);
+    }
+
     [AvaloniaFact]
     public async Task LiveWithAutoOnClaudeChangesNothing()
     {

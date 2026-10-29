@@ -70,6 +70,12 @@ public sealed partial class MainWindow
             return;
         }
         var panel = ScriptPanel;
+        // Pressed by Claude (set_control): the code may be Claude's as much as run_script's, so the user is asked the same.
+        if (ClaudeTools.Acting.Value && !await ClaudeMayRun(panel.CodeBox.Text ?? ""))
+        {
+            Msg("claude.script.refused");
+            return;
+        }
         string name = panel.ChosenName ?? Lang.T("script.unnamed");
         panel.Running(true);
         try

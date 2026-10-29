@@ -32,7 +32,7 @@ In **Settings** (on the start page), section **Claude**:
 | Setting | What it does |
 |---|---|
 | **Allow Claude to connect** | On: the editor takes Claude's requests, from this computer only, from callers with the token. Off: nothing can connect. |
-| **Claude may run scripts** | On: Claude may run C# scripts, as the [Script](scripting.md) tool does. A script is a program with your rights on this computer, your files included. Off (the default): Claude's scripts are refused; its other tools still work. |
+| **Claude may run scripts** | On: Claude may run C# scripts, as the [Script](scripting.md) tool does, each one shown to you first to run or refuse. A script is a program with your rights on this computer, your files included. Off (the default): Claude's scripts are refused; its other tools still work. |
 | **Port** | The port Claude connects to on `127.0.0.1`: 5731 at first, 1024 to 65535. Change it if another program uses 5731. |
 | **New token** | Makes another token. Once you **Save**, the old one stops working: add the editor to Claude again with the new command. |
 | Claude Code command, **Copy** | The command that adds the editor to Claude Code. It holds the token: keep it to yourself. |
@@ -143,9 +143,13 @@ This works after saving or applying too: the next **Save to world** or **Apply l
   another one.
 - **Pending only.** Claude never saves, applies live, discards, reloads, writes or deletes your files, or connects to
   a live game: no tool does these, and `set_control` refuses those controls.
-- **Scripts need your leave.** `run_script` (dry runs too) and the Script tool's **Run** are refused until you turn on
-  **Claude may run scripts**. Claude's other tools (`flatten`, `road`, `forest`…) run the editor's own code and need
-  no leave.
+- **Scripts need your leave, each one.** `run_script` (dry runs too) and the Script tool's **Run** are refused until you
+  turn on **Claude may run scripts**. Then each script Claude writes is shown to you before it runs: **Run it** or
+  **Refuse** (Enter and Esc refuse). The same script is asked once, so a dry run and then the run ask once. Claude's
+  other tools (`flatten`, `road`, `forest`…) run the editor's own code and are not asked.
+- **What a world says is not an order.** Signs, portal tags and names are written by players, and a blueprint or a
+  mod's data by others: Claude is told to treat them as data. A sign that tries to give Claude orders cannot run a
+  script without you seeing it first.
 - **Live with Auto on: nothing.** While the open world is live with **Auto** on, each change would reach the game at
   once, so Claude changes nothing but the View panel and asks you to turn Auto off.
 - **Off is off.** Turn **Allow Claude to connect** off and nothing can connect.

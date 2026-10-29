@@ -5,8 +5,9 @@ using WorldEditor.Tests;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// A window on a copy of the test world with its Claude tools, questions answered No, settings never saved, Auto
-/// apply and area follow off, and a Homestead folder of its own; OpenLive opens a stand-in game instead.
+/// A window on a copy of the test world with its Claude tools, questions answered No (but Claude's scripts let run),
+/// settings never saved, Auto apply and area follow off, and a Homestead folder of its own; OpenLive opens a stand-in
+/// game instead.
 /// </summary>
 internal sealed class ClaudeRun : IDisposable
 {
@@ -21,6 +22,8 @@ internal sealed class ClaudeRun : IDisposable
         W.Show();
         W.Tell = _ => Task.CompletedTask;
         W.Ask = (_, _, _, _) => Task.FromResult(false);
+        // The user's Run for each of Claude's scripts, as most tests need it; one test refuses.
+        W.ConfirmClaudeScript = _ => Task.FromResult(true);
         W.SaveSettings = _ => { };
         W.Settings.AutoApply = W.Settings.AreaFollow = false;
         // The user's leave for scripts, as most tests need it; one test takes it back.

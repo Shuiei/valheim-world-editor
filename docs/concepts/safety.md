@@ -77,8 +77,9 @@ the editor's tools. The editor holds it to this:
 - **Nothing live with Auto on.** While a live world has **Auto** on, each change would reach the players at once, so
   Claude changes nothing and asks you to turn Auto off.
 - **No scripts without your leave.** Claude's scripts are refused until you turn on **Claude may run scripts** in
-  Settings (off by default), a choice you make once, as for a document's macros. Its other tools run the editor's own
-  code and need no leave.
+  Settings (off by default). Even then, each script Claude writes is shown to you before it runs, to run or refuse:
+  text in a world (a sign, a tag written by another player) could talk Claude into writing a harmful one. Its other
+  tools run the editor's own code and are not asked.
 - **Easy to take back.** **Take back Claude's changes** in History removes every step Claude made in the open area
   and keeps yours (see [History](saving-and-history.md#history)).
 
