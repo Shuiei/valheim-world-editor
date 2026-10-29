@@ -187,6 +187,7 @@ public class ClaudeToolsTransportTests
     // on the network listened on: on every address, the networks other computers reach this one on (not Docker's,
     // which has no gateway); on one address, that one's network, even without a gateway. A VPN's (100.64/10,
     // Tailscale's: one address per computer, no gateway) when this computer is on it too. Never the internet's.
+#pragma warning disable S1313 // Made-up addresses of each kind (private, link-local, mapped, VPN, IPv6, public): the test's cases, not hosts.
     [Fact]
     public void OnlyThisComputersOwnNetworksMayConnect()
     {
@@ -229,6 +230,7 @@ public class ClaudeToolsTransportTests
         Assert.False(ClaudeServer.OnOwnNetwork(IPAddress.Parse("100.90.1.2"), IPAddress.Any, [unicasts[0]]));
         Assert.False(May("100.128.0.1", "0.0.0.0"));
     }
+#pragma warning restore S1313
 
     // --mcp-stdio relays to the address the settings choose: the chosen one, or this computer's 127.0.0.1 for every
     // network.
@@ -315,6 +317,7 @@ public class ClaudeToolsTransportTests
 
     // The address Claude connects to: this computer's 127.0.0.1 for 127.0.0.1 and every address, else the one chosen.
     // Only addresses written in full are taken: "0" would be every network, a zone would be lost in the URL.
+#pragma warning disable S1313 // Addresses written in every form ParseAddress must take or refuse: the test's cases, not hosts.
     [Fact]
     public void TheUrlFollowsTheAddress()
     {
@@ -355,4 +358,5 @@ public class ClaudeToolsTransportTests
         Assert.Equal(local.Select(a => McpUrl($"{a.Address}:5731")), ClaudeServer.RemoteAddressUrls(5731));
         Assert.Equal([McpUrl("192.0.2.20:5731")], ClaudeServer.RemoteAddressUrls(5731, [(IPAddress.Parse("192.0.2.20"), "Ethernet")]));
     }
+#pragma warning restore S1313
 }
