@@ -64,6 +64,68 @@ public class ClaudeToolsTests
         Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
     }
 
+    // With the leave, each script Claude wrote is shown to the user first: refused, nothing runs and Claude is told; a
+    // dry run's leave covers that code's next run in the same area, once (the pair asks once), and the same run again
+    // asks again. The Script tool's Run pressed by Claude is asked too. Scripts the editor writes for a tool (flatten…)
+    // are not asked.
+    [AvaloniaFact]
+    public async Task ClaudesScriptsAreShownToTheUserFirst()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var asked = new List<string>();
+        bool answer = false;
+        r.W.ConfirmClaudeScript = code =>
+        {
+            asked.Add(code);
+            return Task.FromResult(answer);
+        };
+        Assert.Equal(ClaudeTools.ScriptRefusedByUser, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Equal(["Ground.Raise(0, 0, 3);"], asked);
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        answer = true;
+        Assert.StartsWith("Dry run:", await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Equal(2, asked.Count);
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Equal(3, asked.Count);
+        Assert.Contains("ground point", await r.T.Flatten(-10, -10, 10, 10, 31));
+        Assert.Equal(3, asked.Count);
+        // The Script tool's Run, pressed by Claude: its code is shown too, and refused runs nothing.
+        answer = false;
+        r.W.ScriptPanel.CodeBox.Text = "Ground.Raise(5, 5, 2);";
+        var before = r.W.World.Pending;
+        await r.T.SetControl("script.run", "click");
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal("Ground.Raise(5, 5, 2);", asked[^1]);
+        Assert.Equal(before, r.W.World.Pending);
+    }
+
+    // A Claude on another computer (Settings → Claude → Address): never a script, whatever Settings says, since its
+    // connection is not encrypted; not through set_control either. Its other tools still work. The request's mark goes
+    // with each call onto the window's thread.
+    [AvaloniaFact]
+    public async Task ScriptsAreThisComputersClaudesOnly()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        r.W.Settings.ClaudeScripts = true;
+        ClaudeServer.FromAnotherComputer.Value = true;
+        try
+        {
+            Assert.Equal(ClaudeTools.ScriptsHereOnly, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+            Assert.Equal(ClaudeTools.ScriptsHereOnly, await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+            Assert.Contains("only for a Claude on this computer", await r.T.SetControl("script.run", "click"));
+            Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+            Assert.Contains("ground point", await r.T.Flatten(-10, -10, 10, 10, 31));
+        }
+        finally
+        {
+            ClaudeServer.FromAnotherComputer.Value = false;
+        }
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+    }
+
     [AvaloniaFact]
     public async Task LiveWithAutoOnClaudeChangesNothing()
     {
