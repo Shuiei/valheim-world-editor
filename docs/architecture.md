@@ -468,7 +468,8 @@ user runs.
 an MCP server inside the editor, on when Settings → Claude says so. It listens on `127.0.0.1`
 (port 5731 by default; Settings' Address can choose another of this computer's addresses, or `0.0.0.0`),
 answers only a request with `Authorization: Bearer <token>` and, on `127.0.0.1`, a local `Host`, which keeps
-web pages out. `--mcp-stdio` (`editor/Desktop/ClaudeRelay.cs`) relays stdin/stdout to it
+web pages out; on another address, only callers from this computer or with a local address on its own networks
+(`ClaudeServer.OnOwnNetwork`), and `run_script` for this computer's only (`ClaudeServer.FromAnotherComputer`). `--mcp-stdio` (`editor/Desktop/ClaudeRelay.cs`) relays stdin/stdout to it
 for clients that start a program. The tools (each a `[McpServerTool]` method in `ClaudeTools`) look
 at what is open and change it as the user would, through the same code: `run_script` goes through
 `ScriptHost`, `place_pieces` through the `Hammer`, `support_check` through `Stability`.

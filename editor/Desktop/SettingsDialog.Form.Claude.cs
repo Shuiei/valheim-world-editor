@@ -18,10 +18,21 @@ public static partial class SettingsDialog
             _claude = new CheckBox { Content = Lang.T("settings.claudeAllow"), IsChecked = _settings.ClaudeConnect }.Classed("switch").Tip("settings.claude");
             _port = new TextBox { Name = "ClaudePort", Text = _settings.ClaudePort.ToString(System.Globalization.CultureInfo.InvariantCulture), Width = 90 }.Tip("settings.claudePort");
             // The address: picked from this computer's (each said in words) or typed; the saved one shown as its choice.
-            var choices = AddressChoices();
+            // This computer's networks and name are asked of the system once, not on every key typed.
+            _networks = ClaudeServer.LocalAddresses();
+            _hostName = System.Net.Dns.GetHostName();
+            var choices = AddressChoices(_networks);
             var saved = ClaudeServer.ParseAddress(_settings.ClaudeAddress);
             _address = new ComboBox { Name = "ClaudeAddress", IsEditable = true, MinWidth = 260, ItemsSource = choices }.Tip("settings.claudeAddress");
-            _address.Text = choices.FirstOrDefault(c => saved != null && saved.Equals(ClaudeServer.ParseAddress(c))) ?? _settings.ClaudeAddress;
+            if (choices.FirstOrDefault(c => c.Address.Equals(saved)) is { } savedChoice)
+            {
+                _address.SelectedItem = savedChoice;
+                _address.Text = savedChoice.Label;
+            }
+            else
+            {
+                _address.Text = _settings.ClaudeAddress;
+            }
             _token = string.IsNullOrEmpty(_settings.ClaudeToken) ? ClaudeServer.NewToken() : _settings.ClaudeToken;
             _command = new TextBox { Name = "ClaudeCommand", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace") }.Tip("settings.claudeCommand");
             _remote = Hint("");
@@ -39,9 +50,9 @@ public static partial class SettingsDialog
             };
             _address.SelectionChanged += (_, _) =>
             {
-                if (_address.SelectedItem is string chosen && _address.Text != chosen)
+                if (_address.SelectedItem is AddressChoice chosen && _address.Text != chosen.Label)
                 {
-                    _address.Text = chosen;
+                    _address.Text = chosen.Label;
                 }
             };
             var copy = new Button { Content = Lang.T("common.copy") }.Tip("settings.claudeCopy");
@@ -88,8 +99,8 @@ public static partial class SettingsDialog
         private void ShowCommand()
         {
             int port = int.TryParse(_port.Text, out int p) ? p : _settings.ClaudePort;
-            _command.Text = ClaudeServer.ClaudeCodeCommand(port, _token, _address.Text);
-            var chosen = ClaudeServer.ParseAddress(_address.Text);
+            var chosen = ChosenAddress();
+            _command.Text = ClaudeServer.ClaudeCodeCommand(port, _token, chosen?.ToString());
             _unencrypted.IsVisible = chosen != null && !System.Net.IPAddress.IsLoopback(chosen);
             bool every = chosen != null && ClaudeServer.IsEveryAddress(chosen);
             _remote.IsVisible = every;
@@ -98,21 +109,38 @@ public static partial class SettingsDialog
                 _remote.Text = "";
                 return;
             }
-            var byAddress = ClaudeServer.RemoteAddressUrls(port);
+            var byAddress = ClaudeServer.RemoteAddressUrls(port, _networks);
             _remote.Text = byAddress.Count == 0
-                ? Lang.T("settings.claudeRemoteHint", ClaudeServer.RemoteUrl(port))
-                : Lang.T("settings.claudeRemoteHintAddresses", ClaudeServer.RemoteUrl(port), string.Join(", ", byAddress));
+                ? Lang.T("settings.claudeRemoteHint", ClaudeServer.RemoteUrl(port, _hostName))
+                : Lang.T("settings.claudeRemoteHintAddresses", ClaudeServer.RemoteUrl(port, _hostName), string.Join(", ", byAddress));
         }
+
+        /// <summary>
+        /// The address chosen: a choice's own, as long as its words are still what the box shows (they are never read
+        /// back, so a language may say them in any order), else the address typed, or null when that is not one.
+        /// </summary>
+        private System.Net.IPAddress? ChosenAddress() =>
+            _address.SelectedItem is AddressChoice c && _address.Text == c.Label ? c.Address : ClaudeServer.ParseAddress(_address.Text);
 
         /// <summary>
         /// The addresses to choose from, each said in words: this computer only, every network, then each network this
         /// computer is on with its address.
         /// </summary>
-        private static List<string> AddressChoices() =>
+        /// <param name="networks">This computer's addresses (ClaudeServer.LocalAddresses).</param>
+        private static List<AddressChoice> AddressChoices(IReadOnlyList<(System.Net.IPAddress Address, string Network)> networks) =>
         [
-            Lang.T("settings.addressLoopback", "127.0.0.1"),
-            Lang.T("settings.addressAny", "0.0.0.0"),
-            .. ClaudeServer.LocalAddresses().Select(a => Lang.T("settings.addressOn", a.Address, a.Network)),
+            new(System.Net.IPAddress.Loopback, Lang.T("settings.addressLoopback", "127.0.0.1")),
+            new(System.Net.IPAddress.Any, Lang.T("settings.addressAny", "0.0.0.0")),
+            .. networks.Select(a => new AddressChoice(a.Address, Lang.T("settings.addressOn", a.Address, a.Network))),
         ];
+
+        /// <summary>One of Settings' address choices: the address, and the words the list shows for it.</summary>
+        /// <param name="Address">The address.</param>
+        /// <param name="Label">What the list shows.</param>
+        internal sealed record AddressChoice(System.Net.IPAddress Address, string Label)
+        {
+            /// <summary>What the list and the box show.</summary>
+            public override string ToString() => Label;
+        }
     }
 }

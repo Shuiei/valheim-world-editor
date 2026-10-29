@@ -25,6 +25,10 @@ public static partial class SettingsDialog
         private CheckBox _claude = null!;
         private TextBox _port = null!;
         private ComboBox _address = null!;
+        /// <summary>This computer's network addresses, asked once when the section is built.</summary>
+        private IReadOnlyList<(System.Net.IPAddress Address, string Network)> _networks = [];
+        /// <summary>This computer's name, asked once when the section is built.</summary>
+        private string _hostName = "";
         private string _token = "";
         private TextBox _command = null!;
         private TextBlock _remote = null!;

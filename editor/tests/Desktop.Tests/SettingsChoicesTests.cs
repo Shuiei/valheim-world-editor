@@ -75,7 +75,7 @@ public class SettingsChoicesTests
         var command = Named(d, "ClaudeCommand");
         var remote = d.GetLogicalDescendants().OfType<TextBlock>().Single(b => b.Name == "ClaudeRemote");
         var unencrypted = d.GetLogicalDescendants().OfType<TextBlock>().Single(b => b.Name == "ClaudeUnencrypted");
-        var choices = address.Items.Cast<string>().ToList();
+        var choices = address.Items.Cast<object>().Select(c => c.ToString()!).ToList();
         Assert.Equal(["127.0.0.1 (this computer only)", "0.0.0.0 (every network)"], choices.Take(2));
         Assert.All(choices.Skip(2), c => Assert.Matches(@"^\d+\.\d+\.\d+\.\d+ \(.+\)$", c));
         Assert.Equal("127.0.0.1 (this computer only)", address.Text);
@@ -84,6 +84,13 @@ public class SettingsChoicesTests
         address.Text = "my-pc.local";
         Click(Buttons(d, "Save").Single());
         Assert.Contains(Texts(d).Split(" | "), x => x.Contains("must be an IP address"));
+        Assert.Single(owner.OwnedWindows);
+        // Nor an address written short: "0" would be 0.0.0.0, every network.
+        address.Text = "0";
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(unencrypted.IsVisible);
+        Click(Buttons(d, "Save").Single());
+        Assert.Contains(Texts(d).Split(" | "), x => x.Contains("written in full"));
         Assert.Single(owner.OwnedWindows);
         // Off this computer: said, where the address is chosen, that the connection is not encrypted.
         address.Text = "192.0.2.20";
