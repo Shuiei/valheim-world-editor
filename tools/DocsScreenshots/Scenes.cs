@@ -9,7 +9,8 @@ namespace TerrainEditor.DocsScreenshots;
 /// </summary>
 /// <remarks>
 /// The scenes are split by documentation page: the ground tools (Scenes.Ground.cs and Scenes.Shapes.cs), objects
-/// (Scenes.Objects.cs), building and dungeons (Scenes.Building.cs), and the pages around the 3D editor (Scenes.Pages.cs).
+/// (Scenes.Objects.cs), building and dungeons (Scenes.Building.cs), the pages around the 3D editor (Scenes.Pages.cs), and
+/// the diagrams drawn without the app (Scenes.Diagrams.cs, run with no editor).
 /// The helpers the scenes share are in Scenes.Input.cs (pointer and key input) and Scenes.Builds.cs (builds and nature). A picture shows
 /// its subject clearly: nothing in front of it (the tool panel stays on the left, the subject right of it), neither
 /// too close nor too far.
@@ -45,30 +46,46 @@ public sealed partial class Scenes
             ("brush-shapes", BrushShapes),
             ("brush-falloffs", BrushFalloffs),
             ("flatten", Flatten),
+            ("lower-smooth-restore", LowerSmoothRestore),
             ("naturalize", Naturalize),
             ("erode", Erode),
             ("stamps", Stamps),
+            ("stamp-once", StampOnce),
             ("paint", Paint),
+            ("limit-red", LimitRed),
             ("no-limit", NoLimit),
+            ("concept-location-flattening", LocationFlattening),
             ("shape", ShapeTool),
+            ("shape-formula-error", ShapeFormulaError),
+            ("mountain-preview", MountainPreview),
             ("mountain", Mountain),
             // Path (path.md).
             ("path", PathTool),
+            ("path-soft-edge", PathSoftEdge),
             ("path-ramp", PathRamp),
             ("path-river", PathRiver),
             ("path-cave", PathCave),
             // Mask, Measure (masks.md, measure.md).
             ("mask", Mask),
+            ("mask-warning", MaskWarning),
             ("measure", Measure),
             ("height-lines", HeightLines),
+            ("slope-colours", SlopeColours),
             // Area, copy and paste (area.md).
             ("area", Area),
             ("area-polygon", AreaPolygon),
             ("area-regrow", AreaRegrow),
             ("paste", Paste),
             ("paste-stack", PasteStack),
+            ("area-cut-fill", AreaCutFill),
+            ("paste-clear-site", PasteClearSite),
+            ("area-reset", AreaReset),
+            ("area-backup", AreaBackup),
+            ("area-heightmap", AreaHeightmap),
             // Place (place.md).
             ("plant-brush", PlantBrush),
+            ("place-brush-before-after", PlaceBrushBeforeAfter),
+            ("guide-forest-zone", GuideForestZone),
             ("plant-line", PlantLine),
             ("line-shapes", LineShapes),
             ("plant-grid", PlantGrid),
@@ -77,28 +94,55 @@ public sealed partial class Scenes
             ("spawn-points", SpawnPoints),
             // Select (select.md).
             ("select-arrows", SelectArrows),
+            ("select-ctrl-click", SelectCtrlClick),
+            ("select-moving", SelectMoving),
             ("select-building", SelectBuilding),
+            ("select-box", SelectBox),
+            ("select-through", SelectThrough),
+            ("select-pick", SelectPick),
+            ("select-hide", SelectHide),
             ("select-zone", SelectZone),
             ("inspector", Inspector),
             // Dungeons (dungeons.md).
             ("dungeon", Dungeon),
+            ("dungeon-frost", DungeonFrost),
             // The Workshop and blueprints (workshop.md).
             ("blueprints", Blueprints),
             ("workshop", Workshop),
             ("workshop-dungeon", WorkshopDungeon),
+            ("support-stone-wood", SupportStoneWood),
             // Script (scripting.md).
             ("script", Script),
+            ("script-error", ScriptError),
             // The map, the start page, a new world (map.md, README, new-world.md).
             ("map", Map),
+            ("map-reset", MapReset),
+            ("map-edited-zones", MapEditedZones),
+            ("concept-area-zones", ConceptAreaZones),
+            ("game-saved-replay", GameSavedReplay),
             ("start", Start),
+            ("settings", Settings),
+            ("claude-history", ClaudeHistory),
+            ("start-missing", StartMissing),
+            ("start-setup", StartSetup),
+            ("start-server-error", StartServerError),
+            ("save-confirm", SaveConfirm),
             // Live mode (live-mode.md), with $DOCS_LIVE.
             ("live", Live),
             ("new-world", NewWorld),
+        ];
+        Drawn =
+        [
+            // Drawn, without the app (Scenes.Diagrams.cs): how No limit ground is saved (ground-limits.md).
+            ("concept-ground-discs", GroundDiscs),
         ];
     }
 
     /// <summary>The scenes by name, in the order they run when none is named.</summary>
     public IReadOnlyList<(string Name, Action<Editor> Run)> All { get; }
+
+    /// <summary>The diagrams drawn without the app (no editor is started for them), by name.</summary>
+    public IReadOnlyList<(string Name, Action Draw)> Drawn { get; }
 
     /// <summary>A point on the bare zone, dx east and dz north of its middle (metres).</summary>
     private static (double X, double Z) P(double dx, double dz) => (Cx + dx, Cz + dz);

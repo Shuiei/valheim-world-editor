@@ -1,28 +1,33 @@
 # Translating the editor
 
 The editor's words are in catalogues, one per language: a JSON file of texts by key. English,
-[`Core/Lang/en.json`](../Core/Lang/en.json), is the source every other catalogue is translated
-from. The editor shows the language chosen under **Settings › Language**, by default the
-computer's when there is a catalogue of it; a text a catalogue does not have yet shows in
-English. A new language is taken when the editor starts again.
+[`editor/Core/Lang/en.json`](../editor/Core/Lang/en.json), is the source every other catalogue is translated from.
 
-Not every text comes from the catalogue yet. These do: every hover tip (the Inspector's tips made
-from an object's data keep its names as the save has them), Settings, the small dialogs
-(questions, messages, a blueprint's details) and the words they share, the History panel, the save bar with what saving, applying, discarding, leaving
-and quitting ask and say, the brush options with the stamps and the cursor readout, the Measure,
-Mask, Script, Path, Cave, Shape, Mountain, Select and Paste tools, the biome names, the 3D editor's
-area bar with the live game's messages and players, the View panel, the help card, the status
-bar's readouts, the Blueprints panel, the Workshop and its Build panel, the Place and Area tools,
-the Dungeon tool with its generator, the world map page, the New world page, the start page, what
-the status bar and the History say of Claude's changes, and the Inspector; the rest moves over
-window by window. A catalogue made now keeps working as more texts are added: the new ones show in
+The editor shows the language chosen under **Settings → Language**, by default the computer's when there is a
+catalogue of it. A text a catalogue does not have yet shows in English. A new language is taken when the editor starts
+again.
+
+Not every text comes from the catalogue yet. These do:
+
+- every hover tip (the Inspector's tips made from an object's data keep its names as the save has them);
+- the start page, Settings, the world map, the New world page, and the small dialogs (questions, messages, a
+  blueprint's details) with the words they share;
+- the 3D editor's top bar, with what saving, applying, discarding, leaving and quitting ask and say, the live game's
+  messages and players;
+- the status bar's readouts, the History panel, the View panel, the help card, and what the status bar and History say
+  of Claude's changes;
+- the tools: the brushes with their stamps, Measure, Mask, Script, Path, Cave, Shape, Mountain, Select, Paste, Place,
+  Area, the Dungeon tool with its generator, the Blueprints panel, the Workshop and its Build panel, and the Inspector;
+- the biome names.
+
+The rest moves over window by window. A catalogue made now keeps working as more texts are added: the new ones show in
 English until translated.
 
 ## Making a catalogue
 
 1. Copy `en.json` into the `lang` folder of the editor's data folder
    (`~/.local/share/ValheimWorldEditor/lang` on Linux, `%LOCALAPPDATA%\ValheimWorldEditor\lang` on
-   Windows; **Settings › Language** shows it), named after the language's code: `fr.json`,
+   Windows; **Settings → Language** shows it), named after the language's code: `fr.json`,
    `de.json`, `pt-BR.json`.
 2. Translate the values, never the keys. `lang.name` is the language's own name ("Français"), as
    Settings lists it.
@@ -36,7 +41,7 @@ The same folder also takes corrections: a file there with the code of a catalogu
 carries is laid over it, text by text. There, a key you leave out (or a text that is not used)
 keeps the carried translation; English shows only where neither has the text.
 
-To have a catalogue carried by the editor, open a pull request adding it to `Core/Lang/` (keys
+To have a catalogue carried by the editor, open a pull request adding it to `editor/Core/Lang/` (keys
 only from `en.json`; `LangTests` checks them).
 
 ## For developers
@@ -45,7 +50,7 @@ only from `en.json`; `LangTests` checks them).
   (`settings.port`, `common.cancel` for words used everywhere) and is asked for with
   `Lang.T("settings.port")`, or `Lang.T("settings.worldNotFound", path)` with values for its
   `{0}`… places (put in with the invariant culture). A hover tip is a `tip.` key, given with
-  `.Tip("settings.port")` (see `Desktop/Tips.cs`).
+  `.Tip("settings.port")` (see `editor/Desktop/Tips.cs`).
 - Write the key in full in the code, even when it is passed along: `LangTests` checks that every
   key asked for is in `en.json` and every key of `en.json` is asked for somewhere.
 - Texts for Claude (the MCP tools' descriptions and answers), the log, command-line output and

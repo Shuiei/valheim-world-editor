@@ -29,15 +29,15 @@ reviews:
       mode: "off"
   path_filters:
     # The tests' copies of the game's data and the documentation's pictures: data, not code.
-    - "!tests/fixtures/**"
+    - "!editor/tests/fixtures/**"
     - "!docs/images/**"
   path_instructions:
-    - path: "Core/WorldGen/**"
+    - path: "editor/Core/WorldGen/**"
       instructions: >-
         The world generator follows the game's formulas bit for bit (WorldCheck checks it against
         values recorded in the game): flag any change to arithmetic, casts or the order of random
         draws.
-    - path: "plugin/**"
+    - path: "editor/plugin/**"
       instructions: >-
         A BepInEx plugin for Valheim (Unity, .NET Framework 4.7.2): Unity calls Awake, Update and
         OnDestroy by name, Unity's == null also catches destroyed objects, and Harmony finds patch

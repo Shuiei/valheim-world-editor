@@ -1,0 +1,94 @@
+using TerrainEditor.App;
+
+namespace WorldEditor.Tests;
+
+/// <summary>
+/// Builds the private Regrow types that the placement steps take (a vegetation rule, the ground, a zone's heightmap)
+/// with the values the tests need. A rule from <see cref="OpenRule"/> passes every check; a test changes one value to
+/// make one check fail, so each check is tested alone.
+/// </summary>
+internal static class RegrowFixtures
+{
+    private static Type RuleType { get; } = typeof(ValheimGen.VegetationRule);
+    private static Type GroundType { get; } = PrivateMember.Nested(typeof(Regrow), "Ground");
+    private static Type ZoneType { get; } = PrivateMember.Nested(typeof(Regrow), "Zone");
+
+    /// <summary>The rule type (ValheimGen.VegetationRule), for the tests that name it.</summary>
+    public static Type Rule => RuleType;
+
+    /// <summary>The private zone type, for the tests that build dictionaries of zones.</summary>
+    public static Type Zone => ZoneType;
+
+    /// <summary>Calls one of the private checks a spot passes, by its name, with these arguments.</summary>
+    /// <param name="name">The check's method name on the Regrow type.</param>
+    /// <param name="args">The arguments the check takes.</param>
+    /// <returns>Whether the spot passes the check.</returns>
+    public static bool Check(string name, params object?[] args) =>
+        PrivateMember.Call<bool>(typeof(Regrow), name, null, args);
+
+    /// <summary>The test world's terrain (its generator, for the checks that read the forest factor), made once.</summary>
+    public static ValheimGen.TerrainService Terrain => LazyTerrain.Value;
+
+    /// <summary>The terrain, made on first use.</summary>
+    private static readonly Lazy<ValheimGen.TerrainService> LazyTerrain = new(() => new ValheimGen.TerrainService(TerrainEditor.Save.WorldSave.Load(Fixtures.World)));
+
+    /// <summary>
+    /// A rule that passes every check at any spot: every biome and area, no altitude, mask, ocean, slope or distance
+    /// limit, one object per group, placed once.
+    /// </summary>
+    /// <param name="prefab">The prefab placed.</param>
+    public static object OpenRule(string prefab = "Pine")
+    {
+        object rule = PrivateMember.New(RuleType);
+        PrivateMember.Set(rule, "prefab", prefab);
+        PrivateMember.Set(rule, "enable", 1);
+        PrivateMember.Set(rule, "biome", -1);
+        PrivateMember.Set(rule, "min", 1f);
+        PrivateMember.Set(rule, "max", 1f);
+        PrivateMember.Set(rule, "groupSizeMin", 1);
+        PrivateMember.Set(rule, "groupSizeMax", 1);
+        return rule;
+    }
+
+    /// <summary>A flat ground of 81 × 81 metres at <paramref name="height"/>, from (-40, -40) to (40, 40).</summary>
+    public static object FlatGround(float height = 0f)
+    {
+        const int Size = 81;
+        float[] heights = new float[Size * Size];
+        Array.Fill(heights, height);
+        return PrivateMember.New(GroundType, heights, Size, Size, -40f, -40f);
+    }
+
+    /// <summary>
+    /// A ground of 20 × 20 metres from (-10, -10) to (10, 10) whose height rises by <paramref name="slope"/> per metre
+    /// along x (0: flat).
+    /// </summary>
+    public static object SlopedGround(float slope)
+    {
+        const int Size = 20;
+        float[] heights = new float[Size * Size];
+        for (int z = 0; z < Size; z++)
+        {
+            for (int x = 0; x < Size; x++)
+            {
+                heights[z * Size + x] = x * slope;
+            }
+        }
+        return PrivateMember.New(GroundType, heights, Size, Size, -10f, -10f);
+    }
+
+    /// <summary>
+    /// A zone (at the world's origin) of one biome in all four corners, with a zero paint mask and no ocean: its
+    /// biome is <paramref name="biome"/> everywhere and its area is the median.
+    /// </summary>
+    public static object FlatZone(int biome = 4)
+    {
+        object zone = PrivateMember.New(ZoneType);
+        PrivateMember.Set(zone, "Corners", new[] { biome, biome, biome, biome });
+        PrivateMember.Set(zone, "Mask", new float[65 * 65 * 4]);
+        PrivateMember.Set(zone, "OceanDepth", new float[4]);
+        PrivateMember.Set(zone, "Cx", 0f);
+        PrivateMember.Set(zone, "Cz", 0f);
+        return zone;
+    }
+}

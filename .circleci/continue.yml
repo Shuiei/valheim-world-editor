@@ -1,5 +1,6 @@
 # Valheim World Editor: tests and build checks on every push and pull request, and the release on main.
-# The pipeline starts in .circleci/config.yml, which says whether a release is due (the release parameter).
+# The pipeline starts in .circleci/config.yml, which says whether a release is due (the release parameter), and
+# whether the branch is a release pull request's (release_pr: its required checks report at once, no tests).
 #   code-analysis  the editor (Core, Desktop, Sdk) and the plugin's API build with no .NET analyzer
 #                  warning (warnings are errors); every XML file of the repository (projects, coverage
 #                  settings) is well formed (xmllint)
@@ -11,8 +12,8 @@
 #                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
 #   app-tests      the app's windows, headless, on six containers, and the visual tests: the real
 #                  editor drawing with OpenGL on a virtual screen (Xvfb, Mesa's software OpenGL),
-#                  driven by the tests. Each builds its test project (tests/Core.Tests, tests/Desktop.Tests)
-#                  with warnings as errors, then CircleCI's testsuite CLI runs its classes (Smarter
+#                  driven by the tests. Each builds its test project (editor/tests/Core.Tests,
+#                  editor/tests/Desktop.Tests) with warnings as errors, then CircleCI's testsuite CLI runs its classes (Smarter
 #                  Testing: .circleci/test-suites.yml, each batch through .circleci/run-tests.sh): the
 #                  containers take classes from one shared queue as they finish, longest first (dynamic
 #                  test splitting), and "Rerun failed tests" reruns only the classes that failed. Every
@@ -29,7 +30,8 @@
 #   windows-smoke  on main only: the Windows package does the same on a Windows machine
 #                  (tools/smoke-test.ps1). Both are slow and what they check (tools/release.sh, the
 #                  packaging) seldom changes, so branches and pull requests run the tests only.
-# When a release is due (main, VERSION's CHANGELOG heading dated, no tag for it yet), the release
+# When a release is due (main, a release pull request's commit "Release v<VERSION>", VERSION's CHANGELOG
+# heading dated, no tag for it yet), the release
 # workflow runs instead, and nothing in it runs before the approval (the tests ran on the pull request,
 # which main's ruleset keeps up to date with main, so the merged commit's tree is the one they tested):
 #   hold-release   waits for someone to approve it in CircleCI (the mod-token context is restricted)
@@ -39,10 +41,11 @@
 #                  (tools/thunderstore.sh, against a Valheim dedicated server from SteamCMD and
 #                  BepInExPack_Valheim), tags the commit and makes the GitHub release with the packages
 #                  tested above (the Sign release workflow on GitHub adds Sigstore signatures to them)
-#   publish-*      the plugin on Thunderstore and Hexium, and the plugin and the editor on Nexus Mods
+#   publish-*      the plugin (only) on Thunderstore and Hexium, and the plugin, the editor and every
+#                  add-on (a file each) on Nexus Mods
 #                  (tools/release/publish.cs, tools/release/sites.json), side by side
 # How to release: docs/development.md#releasing.
-# Security and bug patterns (CodeQL) are checked by GitHub's code scanning, set up on GitHub itself.
+# Security and bug patterns (CodeQL) are checked by GitHub Actions (.github/workflows/codeql.yml), forks' pull requests too.
 # What CI cannot cover: the plugin build (outside a release) and reading the game's data (both need
 # Valheim's files), the game's look in the visual tests (copied from Valheim: CI's editor draws plain
 # colours) and live mode against a real game.
@@ -51,6 +54,11 @@ version: 2.1
 parameters:
   # Set by .circleci/config.yml: true on main when VERSION is ready to be released and not tagged yet.
   release:
+    type: boolean
+    default: false
+  # Set by .circleci/config.yml: true on a release pull request's branch (release/v<VERSION>) that changes only
+  # CHANGELOG.md and docs/releases/: no tests (main's code, tested as each pull request merged).
+  release_pr:
     type: boolean
     default: false
 
@@ -73,7 +81,7 @@ commands:
     steps:
       - restore_cache:
           keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "editor/Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "editor/Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "editor/tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "editor/tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" }}
             # Else main's latest (a branch whose packages changed restores only what it adds).
             - nuget-v2-
 
@@ -99,15 +107,15 @@ commands:
       - checkout
       - run:
           name: OpenSSH server (the tunnel's tests) and fonts (Avalonia headless)
-          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
+          command: tools/ci-apt.sh openssh-server libfontconfig1 && mkdir -p /run/sshd
       - when:
           condition: << parameters.display >>
           steps:
             - run:
                 name: Xvfb and Mesa's software OpenGL (the visual tests' virtual screen)
                 command: |
-                  apt-get install -y -qq --no-install-recommends xvfb xauth libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 \
-                    libgles2 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 > /dev/null
+                  tools/ci-apt.sh --no-install-recommends xvfb xauth libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 \
+                    libgles2 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6
             # For the rest of the job (the tests' step finds it at :99). The image's keyboard layouts name
             # keys newer than its X libraries know: the keymap compiler's warnings about them (harmless,
             # not fatal) are left out, anything else Xvfb says is kept.
@@ -126,6 +134,9 @@ commands:
           no_output_timeout: 11m
           environment:
             VWE_NEED_SSHD: "1"
+            # The mods the build downloaded (editor/tests/TestMods.targets) are kept through the test processes of
+            # this run (the list is read, then run, in separate processes); the step after deletes them.
+            VWE_KEEP_TEST_MODS: "1"
           command: |
             # The virtual screen, where there is one (it starts in the background: a moment): the visual
             # tests draw on it, else they skip.
@@ -138,13 +149,18 @@ commands:
             # stuck test is dumped and stopped; on main, the batch's coverage is kept in /tmp/coverage; a
             # crashed test process shows as one failed test) and keeps the results itself.
             circleci testsuite run "<< parameters.suite >> tests"
+      # The mods the build downloaded for the tests, deleted once every test process has run.
+      - run:
+          name: Delete the tests' downloaded mods
+          when: always
+          command: rm -rf "${TMPDIR:-/tmp}/vwe-test-mods"
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
       - when:
           condition:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "editor/Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "editor/Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "editor/tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "editor/tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" }}
                 paths:
                   - ~/.nuget/packages
       # On main, the coverage of this container's batches, kept for the coverage job (which sends it with
@@ -173,25 +189,25 @@ jobs:
       - checkout
       - restore-nuget
       # Every XML file of the repository is well formed: the builds read only the projects they build, and
-      # nothing reads tests/coverage.runsettings before the tests on main (a "--" in its comment once made
+      # nothing reads editor/tests/coverage.runsettings before the tests on main (a "--" in its comment once made
       # every test container there refuse its options).
       - run:
           name: XML files are well formed (projects, coverage settings)
           command: |
-            apt-get update -qq && apt-get install -y -qq libxml2-utils > /dev/null
+            tools/ci-apt.sh libxml2-utils
             git ls-files -z '*.csproj' '*.props' '*.targets' '*.runsettings' '*.xml' | xargs -0 xmllint --noout
       - run:
           name: Analyzers (every warning is an error)
           command: |
-            dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
-            dotnet build plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj -c Release -warnaserror
+            dotnet build editor/Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
+            dotnet build sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj -c Release -warnaserror
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
       - when:
           condition:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "editor/Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "editor/Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "editor/tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "editor/tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" }}
                 paths:
                   - ~/.nuget/packages
 
@@ -207,8 +223,8 @@ jobs:
           name: Formatting (dotnet format, as .editorconfig says)
           command: |
             case $CIRCLE_NODE_INDEX in
-              0) projects="Desktop/ValheimWorldEditor.Desktop.csproj Sdk/ValheimWorldEditor.Sdk.csproj" ;;
-              *) projects="Core/ValheimWorldEditor.Core.csproj plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" ;;
+              0) projects="editor/Desktop/ValheimWorldEditor.Desktop.csproj sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" ;;
+              *) projects="editor/Core/ValheimWorldEditor.Core.csproj sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj sdk/samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj $(git ls-files 'addons/*.csproj' | tr '\n' ' ')" ;;
             esac
             if [ "$CIRCLE_BRANCH" = main ]; then
               tools/format-check.sh $projects
@@ -226,7 +242,7 @@ jobs:
     parallelism: 3
     steps:
       - test-classes:
-          project: tests/Core.Tests/Core.Tests.csproj
+          project: editor/tests/Core.Tests/Core.Tests.csproj
           suite: core
           what: Core tests (saves, world generator, live mode, SSH tunnel)
 
@@ -241,10 +257,44 @@ jobs:
     parallelism: 6
     steps:
       - test-classes:
-          project: tests/Desktop.Tests/Desktop.Tests.csproj
+          project: editor/tests/Desktop.Tests/Desktop.Tests.csproj
           suite: app
           what: App tests (the windows, headless; the real editor drawing, on the virtual screen)
           display: true
+
+  # The add-ons (addons/<Name>/), every one found by itself: the editor loading each as a player installs it and
+  # running its hooks (editor/tests/AddOns.Tests: a change of the editor or the SDK that breaks an add-on fails
+  # here), then each add-on's own tests (addons/<Name>/tests), then every add-on's zip as a release makes it
+  # (tools/addons.sh). Each project builds with every warning an error; a failing one fails the job after the others
+  # ran. Not in Codecov's figure, which is the editor's (editor/tests/coverage.runsettings).
+  addon-tests:
+    executor: dotnet
+    steps:
+      - checkout
+      - restore-nuget
+      - run:
+          name: The add-ons in the editor, and each add-on's own tests
+          no_output_timeout: 11m
+          command: |
+            failed=0
+            for project in editor/tests/AddOns.Tests/AddOns.Tests.csproj $(git ls-files 'addons/*/tests/*.csproj'); do
+              name=$(basename "$project" .csproj)
+              echo "== $project"
+              dotnet build "$project" -c Release -warnaserror || { failed=1; continue; }
+              dotnet test --project "$project" -c Release --no-build --no-ansi --no-progress --results-directory /tmp/test-runs \
+                --report-spekt-junit --report-spekt-junit-filename "/tmp/test-results/$name/results.xml" || failed=1
+            done
+            exit $failed
+      - run:
+          name: The add-ons' zips
+          command: |
+            tools/ci-apt.sh zip
+            tools/addons.sh /tmp/addons
+      - store_test_results:
+          path: /tmp/test-results
+      - store_artifacts:
+          path: /tmp/addons
+          destination: addons
 
   # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
   # core-tests and app-tests have both passed (workflows), so Codecov gets every container's coverage
@@ -253,7 +303,8 @@ jobs:
   # reports in one upload, kept only part of the app tests' coverage, and Microsoft's dotnet-coverage
   # merge dropped the lines' branch counts. The orb's fail_on_error does nothing (its
   # set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing
-  # report is caught before, and a failed upload leaves Codecov with the last full figure.
+  # report is caught before the upload, and a refused or unprocessed one after it, by asking Codecov for
+  # this commit's coverage (Codecov then keeps the last full figure, and the job fails).
   coverage:
     executor: dotnet
     steps:
@@ -261,7 +312,7 @@ jobs:
       - checkout
       - run:
           name: gpg (Codecov's CLI is checked against its signature)
-          command: apt-get update -qq && apt-get install -y -qq gnupg > /dev/null
+          command: tools/ci-apt.sh gnupg
       - attach_workspace:
           at: /tmp/coverage
       - run:
@@ -283,9 +334,46 @@ jobs:
       - store_artifacts:
           path: /tmp/upload
           destination: coverage
+      - run:
+          name: Codecov's reports of this commit before the upload
+          command: |
+            # Each upload Codecov takes adds a session to the commit: a re-run must add one, not find an earlier one.
+            # A commit Codecov does not know (404) or knows with no report has none; any other answer fails the job,
+            # since taking it for none would let an earlier report pass the check after the upload.
+            url="https://api.codecov.io/api/v2/github/$CIRCLE_PROJECT_USERNAME/repos/$CIRCLE_PROJECT_REPONAME/commits/$CIRCLE_SHA1/"
+            status=$(curl -sS -o /tmp/codecov-commit.json -w '%{http_code}' "$url") || { echo "Codecov could not be asked for $CIRCLE_SHA1."; exit 1; }
+            sessions=$(grep -Eo '"sessions": *[0-9]+' /tmp/codecov-commit.json | head -1 | grep -Eo '[0-9]+$' || true)
+            if [ "$status" = 404 ] || { [ "$status" = 200 ] && grep -Eq '"totals": *null' /tmp/codecov-commit.json; }; then
+              sessions=0
+            elif [ "$status" != 200 ] || [ -z "$sessions" ]; then
+              echo "Codecov answered HTTP $status for $CIRCLE_SHA1 with no report count: $(head -c 300 /tmp/codecov-commit.json)"
+              exit 1
+            fi
+            echo "$sessions" > /tmp/codecov-sessions
+            echo "Codecov has $sessions report(s) of $CIRCLE_SHA1 so far."
       - codecov/upload:
           dir: /tmp/upload
           plugins: noop
+      - run:
+          name: Codecov has this commit's coverage
+          command: |
+            # Codecov processes a report after taking it: its public API is asked for this commit's, every 10 s for
+            # up to ten minutes (the merged report is large), until it is processed with one more report than before
+            # the upload. None (the upload refused, or never processed) fails the job.
+            url="https://api.codecov.io/api/v2/github/$CIRCLE_PROJECT_USERNAME/repos/$CIRCLE_PROJECT_REPONAME/commits/$CIRCLE_SHA1/"
+            before=$(cat /tmp/codecov-sessions)
+            for try in $(seq 60); do
+              commit=$(curl -fsS "$url" 2>/dev/null || true)
+              sessions=$(printf '%s' "$commit" | grep -Eo '"sessions": *[0-9]+' | head -1 | grep -Eo '[0-9]+$' || true)
+              if printf '%s' "$commit" | grep -Eq '"state": *"complete"' && [ "${sessions:-0}" -gt "$before" ]; then
+                echo "Codecov has $CIRCLE_SHA1: $(printf '%s' "$commit" | grep -Eo '"coverage": *[0-9.]+' | head -1)"
+                exit 0
+              fi
+              echo "Try $try: Codecov has ${sessions:-0} report(s) of $CIRCLE_SHA1, not yet the new one processed."
+              sleep 10
+            done
+            echo "Codecov has no new processed coverage for $CIRCLE_SHA1 after ten minutes: the upload was refused or failed."
+            exit 1
 
   packages:
     executor: dotnet
@@ -294,7 +382,7 @@ jobs:
       - run:
           name: Tools for packaging
           command: |
-            apt-get update -qq && apt-get install -y -qq zip > /dev/null
+            tools/ci-apt.sh zip
             # rcodesign signs the Mac app (ad hoc) on Linux; pinned and checked against its release's checksum.
             v=0.29.0; f=apple-codesign-$v-x86_64-unknown-linux-musl
             curl -fsSL -o /tmp/$f.tar.gz "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F$v/$f.tar.gz"
@@ -306,16 +394,20 @@ jobs:
       - run:
           name: Check what is in them
           command: for p in /tmp/dist/*; do tools/check-package.sh "$p"; done
+      # The SDK's zip as a release makes it (its own folder: the release job makes it again), both builds in it.
+      - run:
+          name: The SDK for mod authors' zip, and what is in it
+          command: tools/sdk.sh /tmp/sdk-dist && tools/check-package.sh /tmp/sdk-dist/ValheimWorldEditor.Sdk-*.zip
       - run:
           name: Smoke test of the Linux package (Xvfb, Mesa's software OpenGL)
           no_output_timeout: 5m
           command: |
-            apt-get install -y -qq xvfb xauth mesa-utils libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 libgles2 \
-              libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 libfontconfig1 > /dev/null
+            tools/ci-apt.sh xvfb xauth mesa-utils libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 libgles2 \
+              libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 libfontconfig1
             mkdir -p /tmp/smoke && tar -C /tmp/smoke -xzf /tmp/dist/ValheimWorldEditor-*-linux-x64.tar.gz
             # The OpenGL the virtual screen offers (Mesa's software renderer, llvmpipe).
             xvfb-run -a -s "-screen 0 1600x1000x24" glxinfo -B | grep -E 'renderer|version' || true
-            xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor tests/fixtures/CITest
+            xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor editor/tests/fixtures/CITest
       # The packages kept as artifacts (releases take them from there: about 135 MB a run, kept
       # 30 days).
       - store_artifacts:
@@ -341,7 +433,43 @@ jobs:
           no_output_timeout: 5m
           command: |
             Expand-Archive (Get-Item C:\dist\ValheimWorldEditor-*-win-x64.zip).FullName -DestinationPath C:\smoke
-            tools\smoke-test.ps1 C:\smoke\ValheimWorldEditor\ValheimWorldEditor.exe tests\fixtures\CITest
+            tools\smoke-test.ps1 C:\smoke\ValheimWorldEditor\ValheimWorldEditor.exe editor\tests\fixtures\CITest
+
+  # The Windows-only specs: the tests of the code paths only Windows takes (the home folder, file locks, the folder
+  # flush that Windows does not need). They skip on Linux, so this runs the whole test project on a Windows machine,
+  # on main and on the branches whose name has "windows" in it (a Windows fix can be checked before it is merged),
+  # next to windows-smoke. The SDK is installed when the image has none (dot.net's install script).
+  windows-tests:
+    machine:
+      image: windows-server-2022-gui:current
+    resource_class: windows.medium
+    shell: powershell.exe -ExecutionPolicy Bypass
+    steps:
+      - checkout
+      # Windows checks files out with CRLF line ends; the repository's .editorconfig asks for LF, and the build's
+      # formatting analysis (warnings as errors) would fail on every file. So the checkout is redone with LF.
+      - run:
+          name: Line ends as the repository has them (LF)
+          command: |
+            git config core.autocrlf false
+            git reset --hard HEAD
+      - run:
+          name: Windows-only specs
+          no_output_timeout: 20m
+          command: |
+            if (-not ((dotnet --list-sdks 2> $null) -match '^10\.')) {
+              Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile $env:TEMP\dotnet-install.ps1
+              & $env:TEMP\dotnet-install.ps1 -Channel 10.0 -InstallDir C:\dotnet
+              $env:PATH = "C:\dotnet;$env:PATH"
+            }
+            # The code style is checked by formatting on Linux, with the SDK the build containers use. This image's
+            # latest SDK reports the style differently, so its style analyzers are left out here.
+            dotnet build editor\tests\Core.Tests\Core.Tests.csproj -c Release -warnaserror -p:EnforceCodeStyleInBuild=false
+            # The results as JUnit, so CircleCI lists each failing test (as the Linux test jobs do).
+            New-Item -ItemType Directory -Force C:\test-results | Out-Null
+            dotnet test --project editor\tests\Core.Tests\Core.Tests.csproj -c Release --no-build --no-ansi --no-progress --report-spekt-junit --report-spekt-junit-filename C:\test-results\windows-core.xml
+      - store_test_results:
+          path: C:\test-results
 
   # The GitHub release, made from the packages packages made and windows-smoke tested (the workspace). The
   # plugin builds here against the game's own DLLs: a Valheim dedicated server (free, anonymous SteamCMD)
@@ -351,12 +479,16 @@ jobs:
     executor: dotnet
     steps:
       - checkout
+      # Before the release is made: a file name Nexus Mods refuses stopped v1.109.0 half published (its add-ons).
+      - run:
+          name: The mod sites' file names (tools/release/sites.json)
+          command: dotnet run tools/release/publish.cs -- check
       - attach_workspace:
           at: /tmp/dist
       - run:
           name: Tools (zip, SteamCMD's 32-bit libraries, GitHub's CLI, SSH for git fetch, ssign and osslsigncode)
           command: |
-            apt-get update -qq && apt-get install -y -qq zip unzip lib32gcc-s1 openssh-client osslsigncode > /dev/null
+            tools/ci-apt.sh zip unzip lib32gcc-s1 openssh-client osslsigncode
             gh=2.63.2
             curl -fsSLO "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_linux_amd64.tar.gz"
             curl -fsSL "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_checksums.txt" | grep "gh_${gh}_linux_amd64.tar.gz" | sha256sum -c -
@@ -378,7 +510,7 @@ jobs:
       # After windows-smoke, which ran the unsigned program: the signature changes nothing in how it runs,
       # and the context's secrets (CERTUM_EMAIL, CERTUM_OTP) reach only the jobs after the approval.
       - run:
-          name: Sign the Windows program (Authenticode)
+          name: Sign the Windows program and spirv-cross.dll (Authenticode)
           command: tools/sign-windows.sh /tmp/dist/ValheimWorldEditor-v$(tr -d '[:space:]' < VERSION)-win-x64.zip
       - run:
           name: The game's DLLs (Valheim dedicated server, SteamCMD) and BepInEx
@@ -405,10 +537,13 @@ jobs:
           environment:
             ValheimDir: /tmp/valheim
             BepInExDir: /tmp/bepinex/BepInExPack_Valheim/BepInEx
-          command: dotnet build samples/ExampleVehicles.Bridge/ExampleVehicles.Bridge.csproj -c Release -warnaserror
+          command: dotnet build sdk/samples/ExampleVehicles.Bridge/ExampleVehicles.Bridge.csproj -c Release -warnaserror
       - run:
           name: The SDK for mod authors' zip
           command: tools/sdk.sh /tmp/dist
+      - run:
+          name: The add-ons' zips, one each
+          command: tools/addons.sh /tmp/dist
       - run:
           name: The release notes
           command: |
@@ -424,16 +559,29 @@ jobs:
               --target "$CIRCLE_SHA1" --title "v$version" --notes-file /tmp/dist/notes.md \
               /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip /tmp/dist/ValheimWorldEditor-v$version-linux-x64.tar.gz \
               /tmp/dist/ValheimWorldEditor-v$version-macos-arm64-experimental.zip \
-              /tmp/dist/WorldEditorBridge-$version.zip /tmp/dist/ValheimWorldEditor.Sdk-$version.zip
+              /tmp/dist/WorldEditorBridge-$version.zip /tmp/dist/ValheimWorldEditor.Sdk-$version.zip \
+              /tmp/dist/ValheimWorldEditor-addon-*.zip
       - store_artifacts:
           path: /tmp/dist/notes.md
+      # The plugin for every site, the add-ons for Nexus Mods (publish.cs), the notes.
       - persist_to_workspace:
           root: /tmp/dist
           paths:
             - WorldEditorBridge-*.zip
+            - ValheimWorldEditor-addon-*.zip
             - notes.md
 
-  # The plugin on one mod site, or the plugin and the editor on Nexus Mods (tools/release/publish.cs).
+  # A required check of a release pull request, reported at once: its code is main's, tested already.
+  tested-on-main:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: Tested on main
+          command: echo "A release pull request changes only CHANGELOG.md and docs/releases/; its code was tested on main."
+
+  # The plugin on one mod site, or the plugin, the editor and the add-ons on Nexus Mods (tools/release/publish.cs).
   publish:
     executor: dotnet
     parameters:
@@ -452,12 +600,15 @@ jobs:
 
 workflows:
   # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage for
-  # both test jobs to pass. Branches and pull requests run code-analysis, formatting and the two test
-  # jobs: packages, windows-smoke and coverage are main's. Main's ruleset requires those four checks
-  # of a pull request, and no other: it must stay in step with this list.
+  # both test jobs to pass. Branches and pull requests run code-analysis, formatting, the two test
+  # jobs and addon-tests: packages, windows-smoke and coverage are main's, and windows-tests main's and the "windows"
+  # branches'. Main's ruleset requires those five checks of a pull request, and no other: it must stay in step with
+  # this list (and with release-pr's below).
   test:
     when:
-      not: << pipeline.parameters.release >>
+      and:
+        - not: << pipeline.parameters.release >>
+        - not: << pipeline.parameters.release_pr >>
     jobs:
       - packages:
           filters:
@@ -467,12 +618,19 @@ workflows:
       - formatting
       - core-tests
       - app-tests
+      - addon-tests
       - windows-smoke:
           requires:
             - packages
           filters:
             branches:
               only: main
+      - windows-tests:
+          filters:
+            branches:
+              only:
+                - main
+                - /.*windows.*/
       - coverage:
           requires:
             - core-tests
@@ -480,6 +638,21 @@ workflows:
           filters:
             branches:
               only: main
+
+  # A release pull request: the five checks main's ruleset requires, reported at once (no tests: main's code).
+  release-pr:
+    when: << pipeline.parameters.release_pr >>
+    jobs:
+      - tested-on-main:
+          name: code-analysis
+      - tested-on-main:
+          name: formatting
+      - tested-on-main:
+          name: core-tests
+      - tested-on-main:
+          name: app-tests
+      - tested-on-main:
+          name: addon-tests
 
   # The approval first, so nothing runs for a release nobody approves; then only what the release needs:
   # the packages (the tests ran on the pull request, on the same tree) and the Windows smoke test, then

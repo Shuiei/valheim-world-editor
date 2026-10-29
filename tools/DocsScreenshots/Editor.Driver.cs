@@ -12,7 +12,7 @@ public sealed partial class Editor
     /// Starts the app driven in the stand-in home: run with dotnet when it is a dll, with its window size and the extra
     /// arguments.
     /// </summary>
-    /// <param name="app">The app's dll or executable; null for the Debug build in Desktop/bin.</param>
+    /// <param name="app">The app's dll or executable; null for the Debug build in editor/Desktop/bin.</param>
     /// <param name="width">Window width in pixels.</param>
     /// <param name="height">Window height in pixels.</param>
     /// <param name="extra">More command-line arguments for the app.</param>
@@ -20,7 +20,7 @@ public sealed partial class Editor
     /// <returns>The started process.</returns>
     private Process StartApp(string? app, int width, int height, IReadOnlyList<string>? extra, string data)
     {
-        app ??= Path.Combine(Repo, "Desktop", "bin", "Debug", "net10.0", "ValheimWorldEditor.dll");
+        app ??= Path.Combine(Repo, "editor", "Desktop", "bin", "Debug", "net10.0", "ValheimWorldEditor.dll");
         bool dll = app.EndsWith(".dll", StringComparison.Ordinal);
         var start = new ProcessStartInfo(dll ? "dotnet" : app)
         {

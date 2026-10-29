@@ -8,24 +8,25 @@
 # The options: the CLI keeps the results itself (store-test-results: the Tests tab, the timings, and
 # "Rerun failed tests" running only the failed classes), and the containers take classes from one
 # shared queue as they finish, longest first (dynamic test splitting: paid, above the plan's
-# allowance). Test impact analysis is not on: it needs each test's coverage as LCOV or Go's format,
-# which .NET's coverage does not write.
+# allowance). Test impact analysis is not on: it needs each test's coverage as LCOV, Go's format or
+# CircleCI's own, which .NET's coverage does not write (it writes Cobertura, for the whole run). Auto
+# rerun (max-auto-rerun) is not on either: a test that fails, then passes, would pass the job unseen.
 # Check a change with "circleci testsuite doctor 'core tests'" (it runs the suite).
 ---
 name: core tests
 discover: >-
-  dotnet test --project tests/Core.Tests/Core.Tests.csproj -c Release --no-build --no-ansi --no-progress --list-tests
+  dotnet test --project editor/tests/Core.Tests/Core.Tests.csproj -c Release --no-build --no-ansi --no-progress --list-tests
   | sed -n 's/^  \([A-Za-z_]\)/\1/p' | sed 's/(.*//; s/\.[^.]*$//' | sort -u
-run: bash .circleci/run-tests.sh core tests/Core.Tests/Core.Tests.csproj "<< outputs.junit >>"
+run: bash .circleci/run-tests.sh core editor/tests/Core.Tests/Core.Tests.csproj "<< outputs.junit >>"
 options:
   store-test-results: true
   dynamic-test-splitting: true
 ---
 name: app tests
 discover: >-
-  dotnet test --project tests/Desktop.Tests/Desktop.Tests.csproj -c Release --no-build --no-ansi --no-progress --list-tests
+  dotnet test --project editor/tests/Desktop.Tests/Desktop.Tests.csproj -c Release --no-build --no-ansi --no-progress --list-tests
   | sed -n 's/^  \([A-Za-z_]\)/\1/p' | sed 's/(.*//; s/\.[^.]*$//' | sort -u
-run: bash .circleci/run-tests.sh app tests/Desktop.Tests/Desktop.Tests.csproj "<< outputs.junit >>"
+run: bash .circleci/run-tests.sh app editor/tests/Desktop.Tests/Desktop.Tests.csproj "<< outputs.junit >>"
 options:
   store-test-results: true
   dynamic-test-splitting: true

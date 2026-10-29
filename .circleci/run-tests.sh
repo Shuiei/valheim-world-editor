@@ -4,7 +4,7 @@
 # The classes come on stdin, one full name a line (as the suite's discover lists them); each becomes a
 # --filter-class of dotnet test (an empty batch runs nothing and writes an empty result), and the
 # results (JUnit) go where the CLI asks. Every test runs,
-# failing or not; a test stuck 5 minutes ends the run with a dump (tests/testconfig.json; 10 minutes
+# failing or not; a test stuck 5 minutes ends the run with a dump (editor/tests/testconfig.json; 10 minutes
 # under coverage). On main only, the batch's coverage is kept for the coverage job
 # (.circleci/continue.yml) in /tmp/coverage/<suite>-<container>/<batch>/. A test process that
 # crashed, or was stopped stuck, writes no results: one failed test in their place, so CircleCI shows
@@ -27,7 +27,7 @@ report=""
 if [ "${CIRCLE_BRANCH:-}" = main ]; then
   export VWE_COVERAGE=1
   report=/tmp/coverage/$suite-${CIRCLE_NODE_INDEX:-0}/$batch/coverage.cobertura.xml
-  coverage=(--coverage --coverage-output-format cobertura --coverage-settings "$PWD/tests/coverage.runsettings"
+  coverage=(--coverage --coverage-output-format cobertura --coverage-settings "$PWD/editor/tests/coverage.runsettings"
     --coverage-output "$report" --hangdump-timeout 10m)
 fi
 

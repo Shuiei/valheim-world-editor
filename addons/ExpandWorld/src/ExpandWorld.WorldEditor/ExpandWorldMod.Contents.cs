@@ -1,0 +1,248 @@
+using System.Globalization;
+using ValheimGen;
+using NVector3 = System.Numerics.Vector3;
+
+namespace ExpandWorld.WorldEditor;
+
+// What the location file changes about a location's objects (LocationExtraInfo), for New world to build it.
+public static partial class ExpandWorldMod
+{
+    /// <summary>
+    /// A location's contents as the file changes them (the mod's LocationExtraInfo): the added objects, the swaps and
+    /// the data of its objects (the location's own lists over the shared ones), its own data, the scale, offset and
+    /// cardinal turn, the ground levelled and painted round it, and a blueprint location's blueprint; with why the game
+    /// must make it instead, when the editor cannot (a blueprint with a terrain snapshot, commands, a time-based seed,
+    /// another dungeon, data or names worked out when the game spawns it).
+    /// </summary>
+    /// <param name="f">The entry's fields.</param>
+    /// <param name="data">The world's data entries.</param>
+    /// <param name="blueprint">Whether the kind is a blueprint.</param>
+    /// <param name="exterior">The kind's exterior radius (what the ground changes are measured by).</param>
+    /// <param name="blueprints">The folder the mod reads blueprint files from; null for none.</param>
+    private static LocationContents ContentsOf(Fields f, DataTable data, bool blueprint, float exterior, string? blueprints)
+    {
+        var why = new List<string>();
+        void Cannot(bool when, string what)
+        {
+            if (when)
+            {
+                why.Add(what);
+            }
+        }
+        Cannot(f.Has("commands"), "commands");
+        Cannot(f.B("randomSeed", false), "a random seed");
+        Cannot(f.Str("dungeon") != "", "another dungeon");
+        var proxy = data.Resolve(f.Raw("data"));
+        Cannot(proxy.Why != null, proxy.Why ?? "");
+        var swaps = Merged(Swaps(f.Rows("objectSwap"), why), Swaps(f.Rows("locationObjectSwap"), why));
+        var objectData = Merged(DataChoices(f.Rows("objectData"), data, why), DataChoices(f.Rows("locationObjectData"), data, why));
+        var objects = Objects(f.Rows("objects"), data, why);
+        float[] min = ScaleOf(f.Str("scaleMin", "1")), max = ScaleOf(f.Str("scaleMax", "1"));
+        bool scaled = !min.SequenceEqual(max);
+        var (parts, file) = blueprint ? BlueprintOfLocation(f.Str("prefab"), blueprints, data, why) : default;
+        return new LocationContents
+        {
+            Blueprint = parts == null ? null : f.Str("prefab"),
+            Blueprints = parts,
+            Objects = objects,
+            Swaps = swaps,
+            Data = objectData,
+            ProxyData = proxy.OrNull,
+            ScaleMin = scaled ? new NVector3(min[0], min[1], min[2]) : null,
+            ScaleMax = new NVector3(max[0], max[1], max[2]),
+            ScaleUniform = f.B("scaleUniform", true),
+            Offset = f.FOpt("offset") ?? f.F("groundOffset", 0f),
+            RandomCardinal = f.B("randomCardinal", false),
+            Level = LevelOf(f, LevelsItself(blueprint, file), exterior),
+            TerrainHeights = Snapshots(file).Heights,
+            TerrainPaints = Snapshots(file).Paints,
+            Paint = PaintOf(f, exterior),
+            LeftToGame = why.Count > 0 ? string.Join(", ", why.Distinct()) : null,
+        };
+    }
+
+    /// <summary>
+    /// Whether a location levels its ground as a blueprint does: a blueprint location, unless its blueprint's height
+    /// snapshot levels it instead (LocationSpawning: useDefaultBlueprintLeveling).
+    /// </summary>
+    private static bool LevelsItself(bool blueprint, BlueprintFile? file) => blueprint && Snapshots(file).Heights == null;
+
+    /// <summary>A blueprint file's terrain snapshots; none for no file.</summary>
+    private static (TerrainSnapshot? Heights, TerrainSnapshot? Paints) Snapshots(BlueprintFile? file) => file == null ? default : (file.Heights, file.Paints);
+
+    /// <summary>
+    /// A blueprint location's blueprint and those it holds, with its own file (its terrain snapshots); null (why) when it
+    /// cannot be read.
+    /// </summary>
+    private static (Dictionary<string, IReadOnlyList<BlueprintPart>>? Parts, BlueprintFile? File) BlueprintOfLocation(string name, string? folder, DataTable data, List<string> why)
+    {
+        List<string> unread = [];
+        var files = new Dictionary<string, BlueprintFile>(StringComparer.Ordinal);
+        var parts = BlueprintsOf(folder, name, data, why, unread, files);
+        why.AddRange(unread);
+        if (parts == null)
+        {
+            why.Add($"the blueprint {name}, which cannot be read");
+        }
+        return (parts, files.GetValueOrDefault(name));
+    }
+
+    /// <summary>
+    /// The ground levelled round the spot (LocationSpawning.HandleTerrain): "levelArea" empty levels a blueprint only,
+    /// "false" never, anything else always; "levelRadius" and "levelBorder", else the exterior radius split by
+    /// "levelArea" as a fraction (0.5 when it is no number). Null when nothing is levelled.
+    /// </summary>
+    private static LevelArea? LevelOf(Fields f, bool blueprint, float exterior)
+    {
+        string area = f.Str("levelArea");
+        if (area == "" ? !blueprint : area == "false")
+        {
+            return null;
+        }
+        float radius = f.F("levelRadius", 0f), border = f.F("levelBorder", 0f);
+#pragma warning disable S1244 // Exactly 0 is the mod's value for one not given.
+        if (radius == 0f && border == 0f)
+#pragma warning restore S1244
+        {
+            float part = float.TryParse(area, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : 0.5f;
+            (radius, border) = (part * exterior, (1f - part) * exterior);
+        }
+        return new LevelArea(radius, border);
+    }
+
+    /// <summary>The paint names the mod knows (Terrain.Paints), as the paint mask's r, g, b, a.</summary>
+    private static readonly Dictionary<string, float[]> PaintNames = new(StringComparer.Ordinal)
+    {
+        ["grass"] = [0f, 0f, 0f, 1f],
+        ["patches"] = [0f, 0.75f, 0f, 1f],
+        ["grass_dark"] = [0.6f, 0.5f, 0f, 1f],
+        ["dirt"] = [1f, 0f, 0f, 1f],
+        ["cultivated"] = [0f, 1f, 0f, 1f],
+        ["paved"] = [0f, 0f, 1f, 1f],
+        ["paved_moss"] = [0f, 0f, 0.5f, 1f],
+        ["paved_dirt"] = [1f, 0f, 0.5f, 1f],
+        ["paved_dark"] = [0f, 1f, 0.5f, 1f],
+    };
+
+    /// <summary>
+    /// The ground painted round the spot: "paint" a name of the mod's, else "r, g, b[, a]" (a missing or unreadable
+    /// number 0, a 1), over "paintRadius" (the exterior radius) and "paintBorder" (5 m). Null without paint.
+    /// </summary>
+    private static PaintArea? PaintOf(Fields f, float exterior)
+    {
+        string paint = f.Str("paint");
+        if (paint == "")
+        {
+            return null;
+        }
+        string[] s = [.. paint.Split(',').Select(p => p.Trim()).Where(p => p != "")];
+        float[] c = s.Length < 3 && PaintNames.TryGetValue(paint, out float[]? named) ? named : [Number(s, 0, 0f), Number(s, 1, 0f), Number(s, 2, 0f), Number(s, 3)];
+        return new PaintArea(f.FOpt("paintRadius") ?? exterior, f.FOpt("paintBorder") ?? 5f, new NVector3(c[0], c[1], c[2]), c[3]);
+    }
+
+    /// <summary>The shared list's choices with the location's own over them, by source.</summary>
+    private static Dictionary<string, IReadOnlyList<Weighted<T>>> Merged<T>(Dictionary<string, IReadOnlyList<Weighted<T>>> shared, Dictionary<string, IReadOnlyList<Weighted<T>>> own)
+    {
+        foreach (var (key, list) in own)
+        {
+            shared[key] = list;
+        }
+        return shared;
+    }
+
+    /// <summary>
+    /// The swaps (Create.LoadSwaps): each row "source[:weight], target[:weight]...", the targets' weights times the
+    /// row's, rows of one source together, then each source's weights made to sum to 1; an empty target removes the
+    /// object. A source or target that is no prefab of the game (a group, a blueprint) cannot be built.
+    /// </summary>
+    private static Dictionary<string, IReadOnlyList<Weighted<string>>> Swaps(IReadOnlyList<string> rows, List<string> why) =>
+        Choices(rows, why, target => target == "" || Known(target) ? (null, target) : ($"a swap to {target}", target));
+
+    /// <summary>The data choices (Create.LoadData), as the swaps; data that cannot be written cannot be built.</summary>
+    private static Dictionary<string, IReadOnlyList<Weighted<IReadOnlyList<ContentField>?>>> DataChoices(IReadOnlyList<string> rows, DataTable data, List<string> why) =>
+        Choices(rows, why, name => data.Resolve(name) is var values ? (values.Why, values.OrNull) : default);
+
+    /// <summary>
+    /// Weighted choices by source from rows "source[:weight], choice[:weight]...", each choice made by
+    /// <paramref name="make"/> (with why it cannot be built, or null); a source that is neither a prefab of the game nor
+    /// "all" cannot be built.
+    /// </summary>
+    private static Dictionary<string, IReadOnlyList<Weighted<T>>> Choices<T>(IReadOnlyList<string> rows, List<string> why, Func<string, (string? Why, T Value)> make)
+    {
+        var lists = new Dictionary<string, List<Weighted<T>>>(StringComparer.Ordinal);
+        foreach (string row in rows)
+        {
+            string[] items = [.. row.Split(',').Select(s => s.Trim())];
+            string[] source = [.. items[0].Split(':').Select(s => s.Trim()).Where(s => s != "")];
+            if (source.Length == 0)
+            {
+                continue;
+            }
+            if (source[0] != "all" && !Known(source[0]))
+            {
+                why.Add($"a choice for {source[0]} (no prefab of the game)");
+                continue;
+            }
+            float weight = Number(source, 1);
+            if (!lists.TryGetValue(source[0], out var list))
+            {
+                lists[source[0]] = list = [];
+            }
+            foreach (string item in items.Skip(1))
+            {
+                string[] parts = [.. item.Split(':').Select(s => s.Trim())];
+                var (cannot, made) = make(parts[0]);
+                if (cannot != null)
+                {
+                    why.Add(cannot);
+                }
+                list.Add(new Weighted<T>(Number(parts, 1) * weight, made));
+            }
+        }
+        return lists.ToDictionary(kv => kv.Key, kv =>
+        {
+            // Weights adding to nothing: the mod's are then all NaN and its draw ends on the last choice; here they are
+            // all 0, which ends there too.
+            float total = kv.Value.Sum(w => w.Weight);
+            return (IReadOnlyList<Weighted<T>>)[.. kv.Value.Select(w => w with { Weight = Math.Abs(total) > 0f ? w.Weight / total : 0f })];
+        });
+    }
+
+    /// <summary>
+    /// The added objects (Helper.ParseObjects): "prefab, x, z, y, turn y, turn x, turn z, scale x, scale z, scale y,
+    /// chance, data", blank fields dropped as the mod drops them, "snap" for the height to stand on the ground.
+    /// </summary>
+    private static List<ContentObject> Objects(IReadOnlyList<string> rows, DataTable data, List<string> why)
+    {
+        List<ContentObject> objects = [];
+        foreach (string row in rows)
+        {
+            string[] s = [.. row.Split(',').Select(p => p.Trim()).Where(p => p != "")];
+            if (s.Length == 0)
+            {
+                continue;
+            }
+            if (!Known(s[0]))
+            {
+                why.Add($"an added {s[0]} (no prefab of the game)");
+                continue;
+            }
+            var values = data.Resolve(s.Length > 11 ? s[11] : null);
+            if (values.Why != null)
+            {
+                why.Add(values.Why);
+            }
+            objects.Add(new ContentObject(s[0], new NVector3(Number(s, 1, 0f), Number(s, 3, 0f), Number(s, 2, 0f)),
+                new NVector3(Number(s, 5, 0f), Number(s, 4, 0f), Number(s, 6, 0f)), new NVector3(Number(s, 7), Number(s, 9), Number(s, 8)),
+                values.OrNull, Number(s, 10), s.Length > 3 && s[3].Equals("snap", StringComparison.OrdinalIgnoreCase)));
+        }
+        return objects;
+    }
+
+    /// <summary>A number at an index as the mod reads it (Parse.Float): the default when missing or not a number.</summary>
+    private static float Number(string[] s, int index, float fallback = 1f) =>
+        index < s.Length && float.TryParse(s[index], NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : fallback;
+
+    /// <summary>Whether a name is a prefab of the game the editor can make.</summary>
+    private static bool Known(string name) => Game.HasPrefab(name);
+}

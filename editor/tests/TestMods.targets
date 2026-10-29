@@ -1,0 +1,34 @@
+<Project>
+  <!-- The game mods the tests install into their BepInEx folders (TestMods), the real packages from Thunderstore at the
+       versions the editor follows: downloaded when the build starts into the system's temporary folder, one folder a
+       test project (never the repository), and deleted when the test run ends (TestMods.Cleanup). The editor's and the
+       add-ons' test projects import this file, on CI as locally; one that sets TestModsOwnList to true downloads only
+       the TestMod items it lists itself (an add-on's own mod). -->
+  <PropertyGroup>
+    <TestModsDir>$([System.IO.Path]::Combine($([System.IO.Path]::GetTempPath()), 'vwe-test-mods', '$(MSBuildProjectName)'))</TestModsDir>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TestModsOwnList)' != 'true'">
+    <TestMod Include="JereKuusela-Expand_World_Size" Owner="JereKuusela" Package="Expand_World_Size" Version="1.45.0" Dll="ExpandWorldSize.dll" />
+    <TestMod Include="JereKuusela-Expand_World_Data" Owner="JereKuusela" Package="Expand_World_Data" Version="1.79.0" Dll="ExpandWorldData.dll" />
+    <TestMod Include="JereKuusela-Expand_World_Rivers" Owner="JereKuusela" Package="Expand_World_Rivers" Version="1.11.0" Dll="ExpandWorldRivers.dll" />
+    <TestMod Include="Gurebu-Riverheim" Owner="Gurebu" Package="Riverheim" Version="1.2.1" Dll="BepInEx/plugins/Riverheim.dll" />
+    <!-- BepInEx itself: the BepInEx and Harmony assemblies Riverheim's plugin classes name. -->
+    <TestMod Include="denikson-BepInExPack_Valheim" Owner="denikson" Package="BepInExPack_Valheim" Version="5.4.2202" Dll="BepInExPack_Valheim/BepInEx/core/BepInEx.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Where the tests find them. -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>TestMods</_Parameter1>
+      <_Parameter2>$(TestModsDir)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <Target Name="DownloadTestMods" BeforeTargets="BeforeBuild">
+    <DownloadFile SourceUrl="https://thunderstore.io/package/download/%(TestMod.Owner)/%(TestMod.Package)/%(TestMod.Version)/"
+                  DestinationFolder="$(TestModsDir)" DestinationFileName="%(TestMod.Identity).zip" Retries="3" RetryDelayMilliseconds="2000"
+                  Condition="!Exists('$(TestModsDir)/%(TestMod.Identity)/%(TestMod.Dll)')" />
+    <Unzip SourceFiles="$(TestModsDir)/%(TestMod.Identity).zip" DestinationFolder="$(TestModsDir)/%(TestMod.Identity)"
+           Condition="Exists('$(TestModsDir)/%(TestMod.Identity).zip')" />
+    <Delete Files="$(TestModsDir)/%(TestMod.Identity).zip" />
+    <Error Text="%(TestMod.Identity) %(TestMod.Version) has no %(TestMod.Dll) after its download." Condition="!Exists('$(TestModsDir)/%(TestMod.Identity)/%(TestMod.Dll)')" />
+  </Target>
+</Project>

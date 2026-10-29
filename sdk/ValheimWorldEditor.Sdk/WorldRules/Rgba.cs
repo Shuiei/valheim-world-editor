@@ -1,0 +1,12 @@
+
+namespace ValheimGen;
+
+/// <summary>
+/// A colour as Expand World Data's files give one: four 0..1 channels ("r, g, b" or "r, g, b, a", alpha 1 when left
+/// out). A plain value the rules can carry and write as JSON (the editor's drawing turns it into its own colours).
+/// </summary>
+/// <param name="R">Red, 0..1.</param>
+/// <param name="G">Green, 0..1.</param>
+/// <param name="B">Blue, 0..1.</param>
+/// <param name="A">Alpha, 0..1.</param>
+public readonly record struct Rgba(float R, float G, float B, float A);

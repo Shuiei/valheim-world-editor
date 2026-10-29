@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- What a mod builds an editor extension against (docs/modding.md#extensions): the interfaces the
+       editor calls and the values it hands over, nothing of the editor itself. netstandard2.0, so a
+       mod's own projects (net472 for the game) can share code with their extension. Released as
+       ValheimWorldEditor.Sdk.dll with each editor version; the editor loads extensions against its
+       own copy. -->
+  <!-- net10.0 too, as the editor runs: the world-rules model (WorldRules/, the rules a world is generated with) is in
+       that build only, for add-ons that read or make world rules (they run on the editor's .NET); netstandard2.0
+       extensions see the same SDK without it. -->
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <LangVersion Condition="'$(TargetFramework)' == 'netstandard2.0'">12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ValheimWorldEditor.Sdk</AssemblyName>
+    <RootNamespace>ValheimWorldEditor.Sdk</RootNamespace>
+    <!-- The API's version, not the editor's: extensions bind to it, so it only changes when the API
+         breaks (SdkInfo.ApiVersion). -->
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <!-- Vector3 and Quaternion, which netstandard2.0 does not hold; the game and .NET both have them. -->
+    <PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
+    <Compile Remove="WorldRules/**" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <!-- The editor reaches the model's internals (its generator's own uses of the rules). -->
+    <InternalsVisibleTo Include="ValheimWorldEditor.Core" />
+    <InternalsVisibleTo Include="ValheimWorldEditor" />
+    <InternalsVisibleTo Include="Core.Tests" />
+    <InternalsVisibleTo Include="Desktop.Tests" />
+    <InternalsVisibleTo Include="AddOns.Tests" />
+    <InternalsVisibleTo Include="Fuzz" />
+    <InternalsVisibleTo Include="WorldCheck" />
+    <InternalsVisibleTo Include="ExpandWorld.WorldEditor.Tests" />
+  </ItemGroup>
+</Project>

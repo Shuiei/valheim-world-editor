@@ -49,6 +49,33 @@ public sealed partial class Editor
         File.WriteAllText(Path.Combine(_data, "settings.json"), JsonSerializer.Serialize(new { Recent = opened }));
     }
 
+    /// <summary>
+    /// Copies the app into the stand-in home's ValheimWorldEditor folder, as a player unpacks it there: the program's
+    /// files are copied, its subfolders (native libraries, translations) linked. The app then runs from there, so the
+    /// folders it names next to its program are in the stand-in home ("~").
+    /// </summary>
+    /// <param name="app">The app's dll or executable; null for the Debug build in editor/Desktop/bin.</param>
+    /// <returns>The copy to run.</returns>
+    private string AppInHome(string? app)
+    {
+        app ??= Path.Combine(Repo, "editor", "Desktop", "bin", "Debug", "net10.0", "ValheimWorldEditor.dll");
+        string from = Path.GetDirectoryName(Path.GetFullPath(app))!;
+        string to = Path.Combine(_home, "ValheimWorldEditor");
+        Directory.CreateDirectory(to);
+        foreach (string f in Directory.GetFiles(from))
+        {
+            File.Copy(f, Path.Combine(to, Path.GetFileName(f)));
+        }
+        foreach (string d in Directory.GetDirectories(from))
+        {
+            Directory.CreateSymbolicLink(Path.Combine(to, Path.GetFileName(d)), d);
+        }
+        return Path.Combine(to, Path.GetFileName(app));
+    }
+
+    /// <summary>The stand-in home's data folder: what the app keeps there (its settings.json) for a scene to read.</summary>
+    public string DataFolder => Path.Combine(_home, ".local", "share", "ValheimWorldEditor");
+
     /// <summary>The real user's home (the stand-in one is only the app's).</summary>
     private static string UserHome => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
@@ -57,7 +84,7 @@ public sealed partial class Editor
     {
         for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
         {
-            if (File.Exists(Path.Combine(d.FullName, "VERSION")) && Directory.Exists(Path.Combine(d.FullName, "Desktop")))
+            if (File.Exists(Path.Combine(d.FullName, "VERSION")) && Directory.Exists(Path.Combine(d.FullName, "editor", "Desktop")))
             {
                 return d.FullName;
             }

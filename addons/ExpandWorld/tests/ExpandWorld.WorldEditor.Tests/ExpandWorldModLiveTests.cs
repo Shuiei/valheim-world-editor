@@ -1,0 +1,141 @@
+using TerrainEditor.App;
+using TerrainEditor.Save;
+using ValheimGen;
+using ValheimWorldEditor.Sdk;
+using WorldEditor.Tests;
+using Xunit;
+
+namespace ExpandWorld.WorldEditor.Tests;
+
+/// <summary>
+/// A live world's rules (ExpandWorldMod.ResolveLive, through the editor's ILiveGame): the mods' settings and data files
+/// as the game's bridge serves them, with the world's keys from its file on the game's disk, and the blueprint files the
+/// location file names; the local BepInEx folders with an older bridge, or when the bridge fails.
+/// </summary>
+[Collection("DataDir")]
+public class ExpandWorldModLiveTests : AppSettingsTestBase
+{
+    public ExpandWorldModLiveTests()
+    {
+        AppSettings.DataDirOverride = Path.Combine(Data, "editor");
+    }
+
+    /// <summary>A local BepInEx folder with Expand World Size installed, its settings file and the YamlDotNet library under plugins.</summary>
+    private string Local(string sizeCfg)
+    {
+        string bep = Path.Combine(Data, "local", "BepInEx");
+        Directory.CreateDirectory(Path.Combine(bep, "config"));
+        YamlStandIn.Install(bep);
+        TestMods.Install(bep, TestMods.Size);
+        File.WriteAllText(Path.Combine(bep, "config", "expand_world_size.cfg"), sizeCfg);
+        return bep;
+    }
+
+    /// <summary>A world file's bytes with these starting global keys.</summary>
+    private byte[] Meta(params string[] keys)
+    {
+        string path = Path.Combine(Data, "meta.fwl");
+        WorldFileHead.Write(path, 32, keys);
+        return File.ReadAllBytes(path);
+    }
+
+    /// <summary>Expand World Size as the bridge lists it among the game's plugins.</summary>
+    private static readonly (string, string, string) Size = ("expand_world_size", "Expand World Size", "1.45.0");
+
+    private const string LocalCfg = "[1. General]\nWorld radius = 15000\n";
+
+    /// <summary>The world's rules through this game's bridge, with the local folder of <see cref="LocalCfg"/>, as a live world opens: its keys from the game's file, then the add-on's rules with the game.</summary>
+    private async Task<WorldRules> Resolve(WorldSave save, FakeGame game)
+    {
+        var settings = new AppSettings { BepInExFolders = { Local(LocalCfg) } };
+        using var live = new LiveBridge(game.Url, game.Token);
+        await save.TakeLiveKeys(live);
+        var world = new WorldRulesRequest(save.Name, [.. save.StartingGlobalKeys], save.Zones?.GlobalKeys, save.GridWidth, new LiveGame(live, []));
+        return await ExpandWorldMod.Resolve(world, new EditorHost(() => settings));
+    }
+
+    [Fact]
+    public async Task AnOlderBridgeLeavesTheLocalFolders()
+    {
+        using var w = new TempWorld();
+        var save = w.Load();
+        using var game = new FakeGame();
+        var rules = await Resolve(save, game);
+        Assert.Equal(15000f, rules.Radius);
+        Assert.True(rules.SizeInstalled);
+        Assert.Empty(save.StartingGlobalKeys);
+    }
+
+    [Fact]
+    public async Task TheGamesFilesAreReadThroughTheBridge()
+    {
+        Fixtures.UseLocations();
+        using var w = new TempWorld();
+        var save = w.Load();
+        using var game = new FakeGame
+        {
+            Plugins = [Size, ("expand_world_data", "Expand World Data", "1.79.0")],
+            WorldMeta = Meta("ews_world_radius 25000"),
+        };
+        game.AddConfig("expand_world_size.cfg", "[1. General]\nWorld radius = 20000\n");
+        // Rivers is not loaded: its settings file is not read.
+        game.AddConfig("expand_world_rivers.cfg", "[1. General]\nWater level = 40\n");
+        game.AddConfig("expand_world_data.cfg", "[3. Data]\nBiome data = true\nLocation data = true\nBlueprint folder = Prints\n");
+        game.AddConfig("expand_world/expand_biomes.yaml", "- biome: Highlands\n  terrain: mountain\n");
+        game.AddConfig("expand_world/more/expand_locations.yaml", "- prefab: MyHut\n  biome: Meadows\n  quantity: 5\n");
+        game.AddConfig("Prints/MyHut.vbuild", "woodwall 0 0 0 1 10 0 -10\nwood_floor 0 0 0 1 -10 3 10\n");
+        game.AddConfig("Prints/Other.vbuild", "woodwall 0 0 0 1 0 0 0\n");
+        game.AddConfig("Prints/deep/Nested.blueprint", "#Pieces\nwoodwall;;0;0;0;0;0;0;1\n");
+        game.AddConfig("Prints/readme.txt", "not a blueprint\n");
+        game.AddConfig("Prints/Huge.vbuild", "woodwall 0 0 0 1 0 0 0\n");
+        game.RefusedConfigFiles.Add("Prints/Huge.vbuild");
+        var rules = await Resolve(save, game);
+        // The world's keys win over the settings file, as for a world opened from its files.
+        Assert.Equal(25000f, rules.Radius);
+        Assert.True(rules.SizeInstalled);
+        Assert.True(rules.DataInstalled);
+        Assert.False(rules.RiversInstalled);
+        Assert.Equal(30f, rules.WaterLevel);
+        // The data files, read through the local library.
+        Assert.True(rules.BiomeData);
+        Assert.Contains(rules.Biomes.Biomes, b => b.Id == "Highlands");
+        Assert.NotNull(rules.Locations);
+        Assert.True(Assert.Single(rules.Locations.Locations, l => l.Prefab == "MyHut").Blueprint);
+        // Copied as a BepInEx folder: the loaded mods' settings, the yaml files, every blueprint at any depth (a
+        // blueprint may name others); one the bridge refuses is left out and noted, the rest still copied.
+        string config = Path.Combine(ExpandWorldMod.LiveFolder(AppSettings.DataDir), "config");
+        Assert.True(File.Exists(Path.Combine(config, "expand_world_size.cfg")));
+        Assert.False(File.Exists(Path.Combine(config, "expand_world_rivers.cfg")));
+        Assert.True(File.Exists(Path.Combine(config, "expand_world", "more", "expand_locations.yaml")));
+        Assert.True(File.Exists(Path.Combine(config, "Prints", "MyHut.vbuild")));
+        Assert.True(File.Exists(Path.Combine(config, "Prints", "Other.vbuild")));
+        Assert.True(File.Exists(Path.Combine(config, "Prints", "deep", "Nested.blueprint")));
+        Assert.False(File.Exists(Path.Combine(config, "Prints", "readme.txt")));
+        Assert.False(File.Exists(Path.Combine(config, "Prints", "Huge.vbuild")));
+    }
+
+    [Fact]
+    public async Task AWorldFileTheBridgeCannotServeLeavesTheKeysButNotTheFiles()
+    {
+        using var w = new TempWorld();
+        var save = w.Load();
+        using var game = new FakeGame { Plugins = [Size] };
+        game.AddConfig("expand_world_size.cfg", "[1. General]\nWorld radius = 20000\n");
+        game.Fail["/world/meta"] = 500;
+        var rules = await Resolve(save, game);
+        // The keys stay as the game loaded them (none here); the settings file is still the game's, not the local one.
+        Assert.Equal(20000f, rules.Radius);
+        Assert.True(File.Exists(Path.Combine(ExpandWorldMod.LiveFolder(AppSettings.DataDir), "config", "expand_world_size.cfg")));
+    }
+
+    [Fact]
+    public async Task ABridgeThatFailsLeavesTheLocalFolders()
+    {
+        using var w = new TempWorld();
+        var save = w.Load();
+        using var game = new FakeGame { Plugins = [Size] };
+        game.Fail["/config"] = 500;
+        var rules = await Resolve(save, game);
+        Assert.Equal(15000f, rules.Radius);
+    }
+}

@@ -4,12 +4,908 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.47.32 — unreleased
+## v1.114.1 — unreleased
+
+### Fixed
+- **Claude shows you each script before it runs.** With **Claude may run scripts** on, every script Claude writes now
+  opens a window with its code, to run or refuse (a dry run and its run ask once). Text in a world, such as a sign
+  another player wrote, could otherwise talk Claude into running a harmful one unseen.
+
+## v1.114.0 — unreleased
+
+### Added
+- **Claude from another computer.** Settings → Claude has an **Address**: `127.0.0.1` (this computer only) as before,
+  or `0.0.0.0` (every network) or one of this computer's networks, picked from a list that names each (or typed), so a
+  Claude on another computer can connect, with the token. The command to add the editor to Claude Code follows the
+  address; with every network, a line under it gives the addresses another computer uses (this computer's name, and
+  its address on each network for networks that do not answer `.local` names).
+  Off this computer the connection is not encrypted (plain HTTP), and Settings says so under the address. Only
+  computers on this computer's own network or VPN (Tailscale) can connect (never from the internet), and a Claude on
+  another computer cannot run scripts.
+
+## v1.113.0 — 2026-10-26
+
+### Added
+- **Show portals and their links** on the map: every portal of the world as a violet dot (hollow when it has no
+  partner), a line between the two portals of each tag (the pair the game joins; a pair the save holds joined stays
+  together), and the tags beside them when zoomed in. The switch's text counts the portals, the linked pairs and the
+  portals alone. Off at first (spoiler). Portals a mod adds count too, by their name.
+
+## v1.112.2 — 2026-10-26
+
+### Fixed
+- **Fewer antivirus warnings on Windows.** Every library that comes with the editor is now signed, and a web-server
+  file the editor never used is no longer in the download.
+
+## v1.112.1 — 2026-10-26
+
+### Fixed
+- **Reload and Discard keep the History in a live world.** Reading the world again from the game emptied History:
+  now every step the game has stays there, applied and still undoable; only the steps not applied yet go, with their
+  changes. Discard reads the world from the game when it has to, as it says it does.
+
+## v1.112.0 — 2026-10-26
+
+### Changed
+- **History is kept whatever you save or apply.** Pasting a blueprint or a building, or shaping ground past the
+  game's ±8 m, then saving or applying live, no longer empties History: undo it and save or apply again, and the
+  ground comes back exactly as it was. Zone resets keep it too (only what the reset made again is left out), and it
+  is all there when you open the world again.
+
+## v1.111.1 — 2026-10-26
+
+### Fixed
+- **Leaning building pieces keep their lean when a world is opened.** A player-built piece that leans (pitched or
+  rolled, as a blueprint built in the Workshop or a mod can place it) was read with only its turn about y: the 3D
+  view, Claude and scripts showed it upright, and moving, turning or copying it (into a blueprint too) then saved it
+  upright. It now keeps its pitch and roll as the world stores them.
+
+## v1.111.0 — 2026-10-23
+
+### Added
+- **A Railroads add-on.** The track, stations and trains of the Railroads mod are drawn in the 3D view as the game
+  builds them, from the mod's own models; track, trains and station signs you place, paste, move or turn with the
+  editor work in the game as if built there, saved or live. It is its own download beside the editor's: unpack it
+  into the addons folder.
+- **Mods' extensions follow what you place, move and turn.** For mod authors: a placer (`AddPlacer`) is handed the
+  objects of its prefabs each time the editor places, pastes, moves or turns them, by any tool, a script or Claude,
+  to set what its mod works out from where they stand (a turn it keeps, the track under a vehicle); and a copy
+  rewriter or a tool's edit can now set or take away a quaternion value (`ICopy.SetQuaternion`). See
+  [Hooks](docs/modding.md#hooks).
+- **Trains and other tied objects stay together.** A mod's `worldeditor.json` can tie objects to one that names them
+  (a locomotive and its wagons, a deck and what is built on it): selecting, moving, turning, copying and deleting take
+  the whole group, and each pasted copy gets ids of its own. See [Tied objects](docs/modding.md#tied-objects).
+
+### Changed
+- **Mods' objects an add-on draws show as drawn.** A mod's object the editor has no model of but an add-on or a mod's
+  extension draws no longer shows the grey stand-in box inside its drawing, is picked and outlined by what is drawn,
+  and shows in the Place and Paste previews.
+
+## v1.110.0 — 2026-10-23
+
+### Added
+- **A ValheimRAFT add-on.** Ships and land vehicles built with ValheimRAFT are drawn whole, as the mod builds them,
+  with their swivels, sails, ropes and rope ladders and what they carry, and move, copy and delete as one, live too.
+  Its own download beside the editor's: see [ValheimRAFT](addons/ValheimRAFT/README.md).
+- **For mod authors: more ways to place linked objects.** A link rule's `placements` give the parts hanging on one of
+  its parent keys their own offset and turn keys, or let the group carry them where they were saved (a cart aboard a
+  ship). An extension's link placer (`AddLinkPlacer`) turns the frame a parent's parts hang in (a swivel the mod has
+  turned) or places a part itself, and shape hooks can read the ground's height (`IGroundView`). See
+  [For mod authors](docs/modding.md#linked-objects).
+
+### WorldEditorBridge
+- **Mods know at once what the editor pastes.** Objects the bridge makes, moves or changes go through the game's own
+  handling of objects that come from another game, so a mod that finds objects by ids it keeps (ValheimRAFT's ships
+  and ropes) finds pasted ones right away: a host's game no longer drops the ropes of a ship pasted live.
+
+## v1.109.0 — 2026-10-22
+
+### Changed
+- **Fly goes through the ground.** In Fly (`F` twice), `C` now takes the camera below the ground, into what a mod digs
+  under it: Tunnelheim's tunnels and cellars, which the 3D view draws but no camera could reach. Space brings it back
+  up. Walk still keeps the eyes 1.8 m over the ground, and the usual view turns around a point on it.
+
+## v1.108.1 — 2026-10-22
+
+### Fixed
+- **Saving after an undo.** Undoing something you had saved (a placement, a deletion) and saving again now really
+  takes it out of the world or puts it back: it said "Nothing to save" and left the world as last saved.
+- **Saving and undo.** After a save, undoing a placement is counted as what the next save does (deleted, not added),
+  offline and live; Discard puts back saved steps you had undone instead of losing them; the object count under the
+  world's name follows your edits and undos; the map shows the new save number after saving.
+- **Nothing lost in dungeons above.** The Mountain tool, scripts' `Ground.Mountain` and saving raised ground no longer
+  remove trees and other things inside a dungeon 5000 m above them.
+- **Copies land right.** Trees and rocks copied with the Area tool stand on the ground where you paste them; a moved
+  tree in a wood stands on the ground, not on the other trees.
+- **Keys stay where you type.** Typing an item name in a chest slot no longer sends the rest of the name to the editor's
+  shortcuts.
+- **Dungeons.** The Dungeon panel no longer says there is no dungeon right after you place one built of pieces; Go to
+  the dungeon follows undo; the go-to buttons have the same names everywhere; the generator shows exactly the settings
+  that apply to the game's own rooms, Loot included, and its summary names dungeons as the game does; building in a
+  dungeon shows only the pieces, and its status line goes when you stop.
+- **Workshop.** Save blueprint warns about falling pieces even with Support check off; a long cost line no longer
+  pushes the top bar's buttons off the window.
+- **Scripts.** Scripts move or remove a ship and its pieces as one, like the Select tool; the Terraced hill example only
+  clears the nature it buries; an empty script says plainly that it has nothing to run.
+- **Claude.** Opening a world closes the Workshop or the previous world properly; saving a blueprint again keeps its
+  description and tags; flatten, road and paint stay within the game's ±8 m; unknown dungeon choices are refused
+  with the valid ones listed; its errors go into the log.
+- **The window.** The top bar fits narrower windows, live mode included; the right-hand panels no longer overlap; the
+  locations note no longer covers the tools, and panels stop above a two-line status bar; cut-off labels in the Select,
+  Path, Settings, map and new-world panels are shown whole; unsaved zones on the map stand out from saved ones.
+- **Smaller things.** The new-world map can be dragged from anywhere; Measure's height difference follows the ground;
+  the Select panel clears when undo removes what was selected; path and Place marks near the area's edge no longer
+  spike; old messages ("Opening…", the Workshop's, a discarded world's) no longer linger; a Recent world that can't be
+  opened says why; a link or the log your system can't open is named so you can open it yourself; a live world opened by
+  its address no longer says "live" twice; a paste without its ground says its site was dug out instead of "with the ground"; zone resets now warn that tamed animals go too.
+- **Texts.** About twenty tooltips and messages that said something untrue are corrected (the support colours, what
+  Esc does, the ±8 m limit, presets, Follow, backups) and plurals and grammar fixed.
+
+## v1.108.0 — 2026-10-22
+
+### Added
+- **Help for the tool you are using.** `F1`, on any page, opens the help at what you are doing: the tool in use, the
+  Inspector, the map, a new world or the start page; each panel also has a small **?** at the top that opens its page.
+  The documentation itself is rewritten: getting started, guides for common tasks, a page per tool, how things work,
+  troubleshooting, every shortcut and a glossary, with new pictures.
+
+## v1.107.0 — 2026-10-21
+
+### Added
+- **The documentation is now inside the editor.** **Documentation** on the start page opens it in its own window,
+  beside the editor: every page with its pictures (click one to see it full size), a search through all of them,
+  links between pages, Back and Forward. It works without internet and always matches your version of the editor;
+  **Open in browser** shows the same page on GitHub.
+
+## v1.106.0 — 2026-10-21
+
+### Changed
+- **Expand World is now an add-on.** Worlds made with the Expand World mods follow them with the Expand World add-on,
+  its own download beside the editor's (unpack it into the addons folder); its switch under Add-ons in Settings
+  replaces the Expand World switch. The Expand World folder setting is gone: add the BepInEx folder with the mods in
+  Settings instead. Everything else works as before.
+
+## v1.105.0 — 2026-10-21
+
+### Added
+- **Add-ons for mods that change the world through settings.** An add-on can now give the rules worlds are generated
+  with, from a mod's settings and data files, on this computer or from a live game's own files, as Expand World's
+  support does. See [World rules](docs/modding.md#world-rules).
+
+## v1.104.0 — 2026-10-21
+
+### Added
+- **Clearer cards for worlds of world generation mods that cannot open.** A world made with such a mod stays in the
+  world list, greyed out, and now says what is missing: the add-on for it turned off, the add-on waiting for its mod,
+  the add-on not running, or the mod's own extension not turned on; and with the Riverheim add-on, a Riverheim too old
+  for the world. See [World generators](docs/modding.md#world-generators).
+
+## v1.103.3 — 2026-10-21
+
+### Fixed
+- **A mod's object changed twice before applying is updated in place in the game.** When a mod's tool changed the
+  same object twice before the changes were applied live (two digs in one tunnel column, say), the game's object was
+  removed and a new one made instead of being updated; with Tunnelheim, which keeps its records, the column then held
+  two records.
+
+## v1.103.2 — 2026-10-21
+
+### Fixed
+- **The New world page says when players need a mod.** With a world generation mod's generator chosen (Riverheim),
+  the page still said the world was a normal one players need no mod for; it now says every player needs the mod,
+  so console players on crossplay cannot join. The start page says so too, and the seed search no longer claims to use
+  the game's own generator.
+
+## v1.103.1 — 2026-10-21
+
+### Fixed
+- **Settings' add-on and extension switches take effect at once.** Turning an add-on or a mod's extension on or off
+  in Settings changed nothing in the worlds listed until a world or the Workshop was opened: the list now follows the
+  switches as soon as Settings is saved.
+
+## v1.103.0 — 2026-10-21
+
+### Changed
+- **Riverheim is now an add-on.** Worlds made with Riverheim open with the Riverheim add-on, its own download beside
+  the editor's (unpack it into the addons folder); its switch under Add-ons in Settings replaces the Riverheim switch.
+  Everything else works as before.
+
+## v1.102.0 — 2026-10-21
+
+### Added
+- **Add-ons for world generation mods.** An add-on can now teach the editor a world generation mod: reading and drawing
+  the worlds it makes, and making new ones with it, as Riverheim's support does. See
+  [World generators](docs/modding.md#world-generators).
+
+## v1.101.0 — 2026-10-21
+
+### Added
+- **Add-ons can be turned off.** Settings, under Add-ons, gives each installed add-on a switch: off, the editor does
+  not use it, and its folder stays where it is.
+
+## v1.100.0 — 2026-10-21
+
+### Added
+- **Mods' extensions read the mod's own settings.** An extension can ask for settings from its mod's BepInEx settings
+  files, as the world's game has them: a live server's own (the settings its players get), else the player's. See
+  [Extensions](docs/modding.md#extensions).
+
+## v1.99.2 — 2026-10-21
+
+### Fixed
+- **What mods' tools add is kept by the game.** Objects a mod's tool made (Tunnelheim's tunnel records, say) were saved
+  as objects the game does not keep: the game took them away again once their area was unloaded, live at once. They
+  are now saved as the game saves its own.
+
+## v1.99.1 — 2026-10-21
+
+### Fixed
+- **Mods' extensions read the ground exactly as the game does.** Between the ground's points, the height an extension
+  read could be a few micrometres off the game's; an add-on that keeps the ground in its data (Tunnelheim's records)
+  now matches the game to the bit.
+
+## v1.99.0 — 2026-10-21
+
+### Added
+- **A Tunnelheim add-on.** The release page now carries add-ons for mods beside the editor, each its own download to
+  unpack into the addons folder; the first draws the tunnels Tunnelheim digs, as the game builds them.
+
+## v1.98.2 — 2026-10-21
+
+### WorldEditorBridge
+- A folder of the game's BepInEx config folder that is replaced by a link while the editor asks for it is no longer
+  listed: the folder is checked again once read, as a file already was.
+
+## v1.98.1 — 2026-10-21
+
+### WorldEditorBridge
+- Settings files the editor reads from the game's BepInEx config folder are found through that folder's own list of
+  files, so nothing the request names is ever used as a path, and every answer tells a browser not to guess its type.
+
+## v1.98.0 — 2026-10-21
+
+### Added
+- **Mods' data goes with copies.** An extension can keep what its mod holds of a copied place, such as dug-out rock
+  that no copied object carries, so it travels with the copy and its blueprint files and is put back where you paste,
+  turned and mirrored with it, in the same undo step.
+
+## v1.97.0 — 2026-10-21
+
+### Added
+- **Changes keep the game's object live.** In live mode, an object whose data you change (in the inspector, or with a
+  mod's tool) now keeps its identity in the game instead of being removed and made again, so mods that track it, or
+  that refuse to let their records be removed, keep working.
+
+### WorldEditorBridge
+- Objects can take new data in place, keeping their id, when the editor changes them.
+
+## v1.96.0 — 2026-10-21
+
+### Added
+- **Add-ons.** Editor support for a mod can now come as an add-on of its own, made by anyone: unpack it into the new
+  addons folder next to the editor, and it is used whenever the mod it is for is installed. Settings lists them.
+
+## v1.95.0 — 2026-10-21
+
+### Added
+- **Mods' own tools.** An extension can add a tool to the rail, under Mods, with its own settings card: it is told
+  where you point and click in the 3D view and which keys you press, previews its work, and its changes go in the
+  history, undone and saved like the editor's own.
+
+## v1.94.0 — 2026-10-21
+
+### Added
+- **Mods' extensions can draw whole areas.** An extension can now draw what its mod makes of an area (a canal, rock
+  dug out of a hill) with the game's own ground look, in place of the editor's ground, and clicks land on it.
+
+## v1.93.0 — 2026-10-21
+
+### Added
+- **More for mod authors' editor extensions.** A mod's file can now mark objects that only hold its data (the editor
+  no longer shows them as boxes, and a zone reset that keeps buildings keeps them), and its extension can read the
+  settings of the game's own scripts, as your copy of Valheim has them.
+
+### WorldEditorBridge
+- A live zone reset that keeps buildings also keeps the objects mods mark as holding their data.
+
+## v1.92.0 — 2026-10-20
+
+### Added
+- **Live Riverheim worlds.** A game or server running a Riverheim world opens live, drawn with your own Riverheim when
+  it is of the same release as the game's (else the editor says both versions).
+
+## v1.91.0 — 2026-10-20
+
+### Added
+- **New Riverheim worlds.** With the Riverheim switch on and Riverheim installed, the New world page can make a
+  Riverheim world: its map, marks and seed search show Riverheim's world, and the game opens it as a Riverheim world.
+
+## v1.90.0 — 2026-10-20
+
+### Added
+- **Riverheim with Expand World.** A Riverheim world played with the Expand World mods is drawn as the game draws it
+  with both, and the log says which Expand World settings work otherwise on a Riverheim world (the Riverheim page lists
+  them all).
+
+## v1.89.0 — 2026-10-20
+
+### Added
+- **Riverheim worlds open.** With the Riverheim switch on in Settings, a world made with Riverheim is drawn with your own
+  copy of the mod: its ground, biomes, forests, map and predictions are Riverheim's, as the game makes them.
+
+## v1.88.0 — 2026-10-20
+
+### Added
+- **Worlds made with Riverheim are recognised.** The worlds list tags them and says why they cannot be opened yet
+  (turn Riverheim on in Settings, install Riverheim); before, their name and seed were read wrongly.
+
+## v1.87.4 — 2026-10-21
+
+### Fixed
+- **The Deep North's ground matches the game to the bit.** A few points of the Deep North came out a hair higher or
+  lower than the game makes them, with or without Expand World.
+
+## v1.87.3 — 2026-10-20
+
+### Fixed
+- **Expand World Size's wider or stretched worlds match the game near the Deep North.** The ground along the Deep
+  North's edge came out a hair higher or lower than the game makes it.
+
+## v1.87.2 — 2026-10-20
+
+### Fixed
+- **Expand World Size's "Stretch biomes" lays the biomes out as the game does.** The editor spread the biome fields
+  from the wrong origin, so about one point in fifteen had a different biome than in the game.
+
+## v1.87.1 — 2026-10-20
+
+### Fixed
+- **Expand World Size's altitude and water depth match the game to the bit.** With those settings changed, about one
+  point in eight came out a hair higher or lower than the game makes it.
+
+## v1.87.0 — 2026-10-20
+
+### Added
+- **Pick only built pieces, or only nature.** The Select panel's Pick choice makes clicks, boxes and zones take only
+  the pieces players built (a box over a house leaves its trees and rocks) or only trees, rocks and the like; what is
+  left out is not in the way of what is behind it.
+
+## v1.86.0 — 2026-10-20
+
+### Added
+- **Click again to reach what is behind.** A second click at the same spot selects the next object behind the one
+  selected there (a chest, then the floor under it, then the beam below), and round again, as in Unity.
+
+## v1.85.0 — 2026-10-20
+
+### Changed
+- **The selection is outlined like in Blender.** An orange line follows the shape of the selected objects, seen
+  through what is in front of them, instead of boxes; the last object clicked is outlined in a lighter yellow.
+
+## v1.84.0 — 2026-10-20
+
+### Added
+- **Selection keys from Blender.** Ctrl + A selects every shown object, Alt + A clears the selection, Ctrl + I
+  inverts it, Ctrl + H hides the selected objects in the view to reach what they cover (Alt + H shows them again;
+  nothing changes in the world), and Shift + F or Numpad . turns the camera onto the selection. The Select panel has
+  All, Hide and Show hidden buttons. The camera no longer moves when Ctrl or Alt is held with a movement key.
+
+## v1.83.0 — 2026-10-20
+
+### Changed
+- **Selection keys like Blender or a map editor.** Ctrl + click adds an object, or takes it out when it is selected;
+  Shift + click takes it out; Ctrl + drag adds what the box takes, Shift + drag takes it out. The row from the last
+  object clicked is now Ctrl + Shift + click.
+
+## v1.82.0 — 2026-10-20
+
+### Added
+- **Select through.** A new Select panel switch (Alt + Z) makes the box on the screen also take what is hidden behind
+  others inside it, like Blender's X-ray: the furniture inside a house, the wall behind another.
+
+## v1.81.0 — 2026-10-20
+
+### Added
+- **A drag selects what is seen inside a box on the screen.** Like in Blender or a map editor, a drag on empty ground
+  (or Alt + drag over a building) draws a box and selects only the objects seen inside it, not those behind others,
+  so you can take one floor, one wall or a roof instead of everything from the ground up. The Select panel's "A drag
+  draws" brings back the zone on the ground.
+
+## v1.80.0 — 2026-10-20
+
+### Changed
+- **One thin box marks a selection of several objects.** The 3D view drew a box round each selected object, a tangle
+  of lines over a building; it now draws one box round them all, with thinner lines, and selected objects lose their
+  unsaved green dot until you select something else.
+
+## v1.79.2 — 2026-10-20
+
+### Fixed
+- **Objects a mod hides deep under the ground are no longer picked with what stands above them.** A zone drawn over a
+  house took the crafting stations a mod keeps 10 km under it, and moving the house with "Put each object on the
+  ground when moving" on then lifted it 10 km to put them on the ground. Zones, Same kind, Invert, Whole building and
+  the Area tool now leave out anything more than 10 m under the ground.
+
+## v1.79.1 — 2026-10-20
+
+### Fixed
+- **A building moved with "Put each object on the ground when moving" off keeps its shape.** Each object kept its own
+  height above the ground under it, so on uneven ground the pieces went up and down apart and the building came out
+  crooked. The whole selection now moves as one block, up or down with the ground under its middle.
+
+## v1.79.0 — 2026-10-20
+
+### Added
+- **The Dungeon tool builds Expand World Data's blueprint rooms.** A room of the room file made of a blueprint joins
+  dungeons with its openings where the blueprint's snap points are, and brings the blueprint's pieces with it.
+
+## v1.78.0 — 2026-10-20
+
+### Added
+- **The Dungeon tool joins each room only as far from the entrance as the game allows.** The game's rooms (and Expand
+  World Data's room file) say how many rooms from the entrance a room may appear at the fewest; shrines, treasure
+  rooms and deep halls no longer turn up right at the way in.
+
+## v1.77.0 — 2026-10-20
+
+### Added
+- **The Dungeon tool follows Expand World Data's object swaps and data for rooms and dungeons.** A room's objects are
+  swapped, removed or given data as the room and dungeon files say, and the objects a room file adds keep their data.
+
+## v1.76.0 — 2026-10-20
+
+### Changed
+- **New world and Regrow nature follow the game's random draws more closely.** Objects that make random choices as
+  the game creates them (chests filling with loot, beehives, fires, creatures, ruins and others) are now taken into
+  account, so Expand World Data's swaps, data and added objects, and the vegetation after such objects, come out as
+  the game makes them.
+
+## v1.75.1 — 2026-10-20
+
+### Fixed
+- **Location objects the game drops onto the ground stand on it in the zones the editor generates.** The start
+  temple's stones and branches, the tar pits' lox ribs, the ship settings' rocks and treasure, the traders and
+  others were left at their height in the location instead of on the ground beneath.
+
+## v1.75.0 — 2026-10-20
+
+### Added
+- **Alt biomes' ground look.** An Expand World Data alt biome that gives its areas another biome's ground texture
+  ("terrainTextureOverride") is drawn that way in the 3D view, as the game draws it.
+
+## v1.74.1 — 2026-10-20
+
+### Fixed
+- **Expand World Data's location and alt biome files are used for a world opened in the editor.** They were skipped
+  when the world opened before the game's own location rules had been read, so the map and the 3D view showed the
+  game's locations and alt biomes.
+
+## v1.74.0 — 2026-10-20
+
+### Added
+- **New world builds blueprint locations with a terrain snapshot.** Their ground takes the heights and paint the
+  blueprint captured, in every zone the snapshot reaches, as Expand World Data does, where such a location used to be
+  left for the game to build.
+
+## v1.73.0 — 2026-10-20
+
+### Added
+- **The Dungeon tool follows Expand World Data's room and dungeon files.** Rooms turned off, changed or copied
+  under a new name, and each dungeon's themes, size, room counts, required and excluded rooms, room limits and
+  doors, are used when it makes a dungeon from the game's rooms and in its list of rooms to add.
+
+## v1.72.0 — 2026-10-20
+
+### Added
+- **The map's pointer box tells more.** It names the alt biome of the area under the pointer (Dark Meadows, Bog
+  Swamp...), and with Expand World Data its territory and the status effects a player gets there.
+
+## v1.71.0 — 2026-10-20
+
+### Added
+- **Expand World Data's water colours.** With its "Custom water color" setting on, the 3D view's water takes the
+  colours the biome or the territory under the camera gives, as the game colours the water where the player is.
+
+## v1.70.0 — 2026-10-20
+
+### Added
+- **The map shows the locations' icons.** The start and the traders are marked on the world map with the game's own
+  icons, as in the game; with Expand World Data, the icons its location file gives.
+
+## v1.69.0 — 2026-10-19
+
+### Added
+- **The map draws the sea at the world's real water level.** With Expand World Rivers moving the water, the coast
+  on the map now follows it, instead of the game map's fixed line.
+
+## v1.68.0 — 2026-10-19
+
+### Added
+- **New world builds Expand World's blueprint locations.** A location made of a blueprint is now built in the
+  generated zones as the mod spawns it, with its pieces, the blueprints it holds, the file's swaps and data, and its
+  levelled ground, instead of its zone being left to the game. Blueprints with a terrain snapshot are still left to it.
+
+## v1.67.3 — 2026-10-19
+
+### Fixed
+- **Expand World blueprint locations are laid out at the mod's size.** The room a blueprint location needs is now
+  measured as the mod measures it (a blueprint in a subfolder or with spaces in its name is found, and its terrain
+  snapshot counts), and live mode reads every blueprint of the game's folder, so the predicted places match the game's.
+
+## v1.67.2 — 2026-10-19
+
+### Fixed
+- **Odd Expand World files no longer stop the editor.** A world too large or stretched too far for a biome map is
+  refused with a message, a blueprint holding the blueprint it is in is left out instead of being grown without end,
+  and choices whose weights add to nothing, or a vegetation check with no rings, are handled as the mod handles them.
+
+## v1.67.1 — 2026-10-19
+
+### Fixed
+- **Expand World changes the worlds only where the mods are installed and on.** With the switch on, a mod that was
+  removed or turned off in a mod manager no longer counts because its settings files were left behind, and a world
+  made with Expand World Size is generated as the game generates it when no folder has the mod.
+
+## v1.67.0 — 2026-10-19
+
+### Added
+- **New world builds Expand World locations that level or paint their ground.** The ground round such a location
+  is now levelled and painted in the generated zones as the mod does it, and its objects and the vegetation stand
+  on it, instead of the zone being left to the game.
+
+## v1.66.2 — 2026-10-19
+
+### Fixed
+- **Ground painted by Expand World Data shows and edits in the editor.** Terrain the mod levels or paints round a
+  location was skipped as damaged, so those zones showed as never edited; they are now read as the game reads them.
+
+## v1.66.1 — 2026-10-19
+
+### Fixed
+- **New world's locations stand on the ground as the game spawns them.** A location in the generated zones now
+  stands on the terrain under its spot, as the game puts it, instead of slightly above or below it, so its objects
+  are at the game's heights.
+
+## v1.66.0 — 2026-10-19
+
+### Added
+- **Expand World vegetation with data and blueprints grows as the mod grows it.** Regrow nature and New world's
+  generated zones now give each object its rule's "data" and "drops", and grow a blueprint named as a rule's prefab
+  as its pieces, each made by chance, turned and scaled as the mod does it.
+
+## v1.65.0 — 2026-10-19
+
+### Added
+- **New world wears damaged locations as the game does.** Building pieces of ruins and houses the game spawns worn
+  now get the game's random health in the generated zones, and Expand World locations with "randomDamage" are built
+  by the editor instead of being left to the game.
+
+## v1.64.1 — 2026-10-19
+
+### Fixed
+- **New world writes Expand World's cloned locations as the mod does.** A copy of a game location ("Name:Tag") in
+  the generated zones now spawns the game location it copies, with its own name kept as the mod keeps it, instead of
+  a name the game has no location of.
+
+## v1.64.0 — 2026-10-19
+
+### Added
+- **New world builds the Expand World locations whose contents the mod changes.** Objects the location file adds,
+  objects it swaps, removes or gives data, and a location's own data, scale, height and cardinal turn are now made
+  in the generated zones as the mod makes them, instead of those zones being left to the game. Locations the editor
+  cannot build ahead of the game (commands, levelled ground, random damage, data worked out as the game spawns) are
+  still left to it.
+
+## v1.63.0 — 2026-10-19
+
+### Added
+- **Expand World vegetation that wants the greenest spots grows where the game grows it.** A vegetation rule of the
+  mod's file that checks the vegetation round each spot now does so in Regrow nature and New world as the game
+  does: the first spots of a zone set the bar, and only spots that reach it grow.
+
+## v1.62.0 — 2026-10-19
+
+### Changed
+- **Regrow nature and New world keep the ground clear round locations as the game does.** Nothing grows in the
+  square the game keeps clear round a village, a dungeon entrance or any place whose kind clears its ground, and
+  the trees and rocks after it fall where the game puts them. With Expand World, the location file's clear areas,
+  a wide place in the next zone and the vegetation file's clear areas are followed too.
+
+## v1.61.0 — 2026-10-19
+
+### Added
+- **Alt biomes are where the game puts them.** The editor now works out which areas get an alt biome (Dark Meadows,
+  Rock Black Forest, Goblin Plains...) from the seed, as the game does. The New world page shows the dungeons an
+  alt biome adds or keeps out where the game puts them, and Regrow nature and New world's zones grow what an alt
+  biome adds (mushrooms, fireflies, ruined walls...) and leave out what it keeps out. With Expand World, its alt
+  biome file and the alt biomes its world file forces onto areas are followed too.
+
+## v1.60.3 — 2026-10-19
+
+### Fixed
+- **Locations are predicted where Expand World Size puts them on a bigger or stretched world.** The mod sizes the
+  game's biome map to the world, and locations are drawn from that map; the editor kept the game's map, so the New
+  world page, the dungeon entrances and New world's zones put locations in the wrong places on such worlds.
+
+## v1.60.2 — 2026-10-19
+
+### Fixed
+- **Expand World vegetation scaled by axis keeps its shape.** Trees and rocks that Expand World Data stretches by axis
+  were saved with the same scale on every axis by Regrow nature and New world; each axis now keeps its own.
+
+## v1.60.1 — 2026-10-19
+
+### Fixed
+- **Expand World vegetation rules that need a global key follow the world's keys again.** Expand World Data 1.79
+  renamed the vegetation file's global key fields, so such rules were always grown; both names are now read.
+
+## v1.60.0 — 2026-10-19
+
+### Changed
+- **Moved objects land on what is under them, not only on the ground.** With the Select tool's **Put each object on
+  the ground when moving** on, a chair, a chest, a creature or any other object you move now ends up on the top of
+  the floor, stair, table or other object under it where you let go, and on the ground only when nothing is under
+  it, as `End` has always dropped it. Each object is carried at the height above the ground it had, so a top higher
+  than the object itself (a roof, a wall) does not count: it goes under. A building still moves as one block that
+  keeps its shape, its bottom layer put on the floor or platform under it, else on the ground. Before, every moved
+  object was set onto the ground, through the floor it was moved onto.
+  
+## v1.59.0 — 2026-10-19
+
+### Added
+- **Creatures are never sunk into building pieces.** A creature put down, moved, copied, pasted, placed by a script or
+  brought by a blueprint with its feet inside a floor, a wall or any other building piece now stands on top of the
+  highest piece under it instead; the ground is left as it was (a creature stands on it as placed). The message of
+  each step says how many were lifted (`2 creature(s) stood on the piece under them.`), and Claude's answers give
+  their final height. The Workshop's support check also counts the creatures still inside a piece (a blueprint from
+  another tool can have them) in its bar and in Claude's `support_check`.
+
+## v1.58.0 — 2026-10-19
+
+### Added
+- **Blueprints say which pieces only the editor can place, and cost only what the hammer builds.** Homestead's
+  hammer builds the real build pieces of a blueprint and silently skips the rest (statues, ships, creatures, the
+  T.W.I.G.); only the editor places those, into a world or live. A blueprint the editor saves now marks them in its
+  file (lines Homestead skips), the library and Claude's `list_blueprints` say how many (`2 of 40 piece(s) only the
+  editor can place`), and the cost shown for a blueprint (library, Build panel, the Workshop's title and save dialog,
+  `list_blueprints`) leaves them out, so it is what a hammer user pays. Blueprints from before, or Homestead's own,
+  carry no marks and say nothing rather than a wrong zero.
+
+## v1.57.5 — 2026-10-19
+
+### Fixed
+- **A bed on a floor can be clicked again.** A click on a bed, a hide rug or any other piece drawn with a cut-out
+  material went through it to the floor piece under it, as it does through a tree's leaves. Only leaves, bushes and
+  grass are looked through now; a cut-out piece is picked where its shape is, like any other.
+
+## v1.57.4 — 2026-10-19
+
+### Fixed
+- **Opening the Workshop while a live world is open no longer leaves the map asking the game for its players.** The
+  world's connection was closed with the world, but the map kept asking it every few seconds, and the log filled with
+  "Cannot access a disposed object" lines until the editor was closed or another world opened.
+
+## v1.57.3 — 2026-10-19
+
+### Fixed
+- **Live, the editor shows every object where the game really has it, its own included.** An object you placed and
+  applied kept the place and data the editor sent: the game had since set the object up (a creature's health, its
+  spawn point and look) and physics had settled it, and the editor, Claude's `get_object` and `list_objects` still
+  showed the editor's copy. Creatures and other things that move on their own, and objects another mod changes, were
+  followed only when they appeared or went. Now, once applied, your objects take the place, turn and data the game
+  gives them (under the same id: undo still takes them away, and a copy is made from the game's version), and
+  creatures, ships, carts, items, fires and the like are followed as they move or change, read alone so a creature
+  walking does not have its whole zone read at every look. Needs WorldEditorBridge 1.57.3 for the moves; with an
+  older plugin, your applied objects still take the game's data when something else in their zone changes.
+
+### WorldEditorBridge
+- `POST /watch` gives a second number per zone, which changes when a kind that moves or ticks on its own (creatures,
+  ships, carts, items, fires, smelters...) moves or changes its data; the first number is as before.
+- `POST /zone/movers` serves only those kinds of the zones asked for, in `/zone`'s format.
+
+## v1.57.2 — 2026-10-19
+
+### Fixed
+- **No limit ground loads before the buildings on it, not disc by disc among them.** A player's game spawns a
+  zone's objects a few per frame, nearest first, and every ground disc rebuilt the zone's ground as it came in: on
+  a big build the ground climbed for ten seconds or more at every visit, with the game stuttering. Discs are now
+  saved as objects of the Terrain kind, which the game spawns before everything else, so the ground is finished in
+  the first frames and the pieces then come in on top of it. Discs saved before this version are changed by the
+  WorldEditorBridge plugin (below) or when their ground is lifted again.
+
+### WorldEditorBridge
+- **Ground discs are kept first in line.** The game puts a disc back to the Solid kind when the player who owns it
+  spawns it; the plugin looks at the world's discs every few seconds, puts them back to Terrain, and changes the
+  discs of older editor versions at the first look. The log says how many discs the world has and when any were
+  put back.
+
+## v1.57.1 — 2026-10-19
+
+### Fixed
+- **A live world's settings from Expand World are read again.** The editor asks the game's WorldEditorBridge for
+  the world's file (the mod keeps the world's size there), and the plugin looked for it where older games saved it
+  (`worlds/name.fwl`): the game now saves `worlds/name/_main.n.fwl2`, so the plugin failed, and the editor then
+  read nothing through the bridge and fell back to the BepInEx folders on this computer. The plugin now serves the
+  file the game saves (or the older one for a world not saved by this game yet), and the editor still reads the
+  mods' files through the bridge when only the world's file cannot be served.
+
+### WorldEditorBridge
+- `GET /world/meta` serves the world file the game saves (`_main.n.fwl2`), else the older `.fwl`; 404 when the
+  game has neither.
+
+## v1.57.0 — 2026-10-19
+
+### Added
+- **The history keeps every change by default, and you choose how many in Settings.** It used to keep the last 200
+  changes only. **Settings > History > Steps kept** sets a number; empty or 0 keeps them all, as long as they take
+  less than 2 GB of memory (past that, the oldest go first). The History panel shows the newest 200 changes, and
+  **Show older** adds 200 more each time.
+
+## v1.56.1 — 2026-10-19
+
+### Fixed
+- **The Workshop's support check no longer counts the parts of a piece that move on their own.** The swinging leaf
+  of a door, a gate, a drawbridge or a window's shutter, and the hulls of two ships, held up whatever rested on
+  them, where the game takes no support from them: a pole leaning on a door's leaf now falls, as it would in game.
+
+## v1.56.0 — 2026-10-19
+
+### Added
+- **The 3D view draws what item stands and armour stands hold.** An item stand shows its item hanging or lying as
+  the game shows it (a shield on the wall, a trophy, food on a table), an armour stand its armour, helmet, cape and
+  the weapons in its hands and on its back. They follow the stand (shown and hidden with its kind, moved with it)
+  and change at once when the inspector or Claude changes what the stand holds. Shields and capes are drawn in
+  their first style, and an armour stand in its resting pose. Items on stands cannot be picked: pick the stand.
+
+## v1.55.2 — 2026-10-19
+
+### Fixed
+- **On Windows the editor no longer holds on to the YamlDotNet library in your BepInEx plugins folder.** The file was
+  kept open as long as the editor ran, so a mod manager could not update it; now the editor reads it once and lets
+  it go.
+
+## v1.55.1 — 2026-10-19
+
+### Fixed
+- **Expand World Data's alt biome file counts even without a location file.** What each alt biome keeps out was
+  only used when the location file was in use or Expand World Size changed the game's kinds; now the game's own
+  kinds take it into account too.
+
+## v1.55.0 — 2026-10-19
+
+### Added
+- **The New world page's map shows the Expand World mods' own colours** (with the Expand World switch in Settings on):
+  a biome of Expand World Data's biome file is drawn in the map colour the file gives it rather than in the colour of
+  the ground it borrows, a territory in its own, and the water line on that map follows Expand World Rivers' sea
+  level. The same holds for the closer look when zoomed in and for the seed pictures Claude's tools give.
+
+## v1.54.0 — 2026-10-19
+
+### Added
+- **A live world follows the Expand World mods the game itself runs** (with the Expand World switch in Settings on):
+  the editor reads the mods' settings and data files from the game's own BepInEx folder through WorldEditorBridge,
+  along with the world's own settings from its file on the game's disk, instead of the BepInEx folders on this
+  computer. The YamlDotNet library the data files need is still taken from a local BepInEx folder. An older plugin
+  leaves the local folders in use, said in the log. See [Expand World](addons/ExpandWorld/README.md#live-mode).
+
+### WorldEditorBridge
+- Three read-only routes for the editor: `GET /plugins` lists the plugins BepInEx loaded (id, name, version),
+  `GET /config?path=` serves a file under `BepInEx/config` or lists a folder there (nothing outside it, 4 MB at most
+  per file), and `GET /world/meta` serves the world's meta file as it lies on disk. The status lists the feature
+  "files".
+
+## v1.53.0 — 2026-10-19
+
+### Added
+- **The map, the New world page and the 3D view follow the Expand World mods** (with the Expand World switch in
+  Settings on): the overview covers a wider world, the map opens on all of it, a seed is looked at and a new world
+  made with the mods' settings and data (the page says so above Create), biomes the mods add are named and coloured
+  as their files say, and a world made with Expand World Size shows "Expand World" on its card on the start page.
+  Settings gets a folder for the mods' files, for a server world opened from its files. See
+  [Expand World](addons/ExpandWorld/README.md).
+
+## v1.52.0 — 2026-10-19
+
+### Added
+- **Worlds made with Expand World Data's locations and vegetation are laid out as the mod lays them out**, with the
+  Expand World switch in Settings on: the location file (clones of the game's locations, blueprint locations, groups,
+  "away from" and "close to" rules, a location wider than a zone put at the zone's middle, the start temple forced into
+  the middle zone when none was placed), the vegetation file (several prefabs drawn one at a time, a scale by axis, a
+  centre of its own, rules turned on or off by the world's global keys), the alt biome file (what each keeps out), and
+  Expand World Size's locations multiplier. Zone spawners can be left out and a random-seed location is left to the
+  game. See [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
+
+## v1.51.0 — 2026-10-19
+
+### Added
+- **Worlds made with Expand World Data's biomes are generated as the mod makes them**, with the Expand World switch
+  in Settings on: the biome file (new biomes and changed ones, their ground, colours, lava and height transforms),
+  the world file (the rules that lay the biomes out, including the older "legacy" evaluation, sectors, rectangles and
+  the boiling sea) and the territory file. The editor reads the mod's files through the YamlDotNet library the mod
+  installs under the BepInEx plugins folder; it ships no copy of its own. The location, vegetation and alt biome
+  files come in a later step. See [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
+
+## v1.50.0 — 2026-10-19
+
+### Added
+- **Worlds saved on a wider zone grid open and save as they lie.** Expand World Size lays a world wider than 16 km
+  out on a bigger grid of chunk files (up to 2048 zones a side, about 65 km) and notes the grid in the world file;
+  the editor now reads that note and files every object and zone under the right chunk, whether or not the Expand
+  World switch is on. Before, anything past 16 km was taken for outside the world. See
+  [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
+
+## v1.49.0 — 2026-10-19
+
+### Added
+- **Worlds made with Expand World Size and Expand World Rivers are generated as those mods make them** (the first
+  step of the editor's Expand World support), once the **Expand World** switch in Settings is on. The world's
+  radius and edge, its stretch, altitude and water depth settings, the Ashlands' limits and gaps, the forest
+  amount, the seeds the mods replace, the water level and every lake, river and stream setting come from the
+  world file (Expand World Size keeps its settings in it) and the mods' settings files in the BepInEx folder.
+  With the switch off, as before, every world is generated as the game itself does. Not yet: Expand World Data's
+  biomes, locations and vegetation, worlds wider than the game's save grid, and the map's size.
+## v1.48.2 — 2026-10-19
+
+### Fixed
+- **A new world is saved where the installed game looks for it.** On Linux, the New world page offered the native
+  game's folder first even when Valheim is the Windows build run through Proton, which keeps its worlds inside its
+  Steam prefix: a world made there never showed in the game. The installed game's own folder now comes first in
+  **Saved in** (and is the one Claude's tools use), the others after it.
+
+## v1.48.1 — 2026-10-19
+
+### Fixed
+- **The `--export-locations` and `--export-test-data` commands close the game's files when they are done.** They
+  kept them open until the editor ended, which on Windows stopped anything else from touching the game's folder
+  meanwhile.
+
+## v1.48.0 — 2026-10-17
+
+### Added
+- **A double click on an object in the View tool switches to Select with it selected.** Its arrows and ring show at
+  once, ready to move or turn it, without pressing `E` and clicking it again. Only a plain double click on an object
+  does it: with `Ctrl` or `Shift` held, or on empty ground, View stays. See [Select](docs/select.md#use-it).
+
+## v1.47.36 — 2026-10-19
+
+### Fixed
+- **Apply live no longer fails now and then with "An error occurred while sending the request".** After about ten
+  seconds without talking to the game, the editor could still send on a connection the game was closing at that
+  moment; it now always opens a new one by then.
+
+## v1.47.35 — 2026-10-19
+
+### Fixed
+- **The game data's reading no longer keeps open a file in the bundles folder that is not a bundle.** The pass over
+  the game's bundles at the editor's start passed such a file over but kept it open, as the model reading did before.
+
+## v1.47.34 — 2026-10-19
+
+### Fixed
+- **A file in the game's or a mod's bundles folder that is not a bundle is no longer kept open.** The editor passed
+  such a file over but kept it open; on Windows that stopped the mods' copies from being replaced when a mod changed.
+
+## v1.47.33 — 2026-10-19
+
+### Fixed
+- **A save on Windows no longer fails while another program holds the file for a moment.** The settings, saved
+  servers, blueprints and caches are written beside the old file and moved over it; when Windows refused the move for
+  an instant (an antivirus scanning the file, two saves at once), the save failed with "Access to the path is denied",
+  and it is now tried again for up to half a second.
+
+## v1.47.32 — 2026-10-19
 
 ### Fixed
 - Internal code cleanup; no change for users.
 
-## v1.47.30 — unreleased
+## v1.47.31 — 2026-10-17
+
+### Fixed
+- **The Dungeon panel no longer fails at the editor's start.** It made its first dungeon a moment after the window
+  opened, before the game's data was read, so no item was known yet and the key chest failed ("“CryptKey” is not an
+  item of the game"). It now says it waits for the game's data and makes the dungeon once the data is in use.
+
+## v1.47.30 — 2026-10-19
 
 ### Fixed
 - Internal code cleanup; no change for users.
@@ -171,7 +1067,7 @@ the plugin is unchanged in versions without that part.
 ## v1.47.0 — 2026-10-17
 
 ### Added
-- **Your changes are kept when the game saved the world since you opened it.** Save used to be refused then, and the only way out was to leave the world and lose every unsaved change. The editor now offers to bring them over: it reads the game's save and makes each pending change again on it (changed ground, zone resets, No limit ground, deleted, added and moved objects with their data). Where the game changed the same zone or object, it asks once per kind whose version stays; the world is then the game's save with your changes pending and your history kept, and nothing is written until you save. See [Saving](docs/editor-basics.md#saving).
+- **Your changes are kept when the game saved the world since you opened it.** Save used to be refused then, and the only way out was to leave the world and lose every unsaved change. The editor now offers to bring them over: it reads the game's save and makes each pending change again on it (changed ground, zone resets, No limit ground, deleted, added and moved objects with their data). Where the game changed the same zone or object, it asks once per kind whose version stays; the world is then the game's save with your changes pending and your history kept, and nothing is written until you save. See [Saving](docs/concepts/saving-and-history.md#the-game-saved-since-you-opened-it).
 
 ## v1.45.110 — 2026-10-17
 
@@ -1056,7 +1952,7 @@ the plugin is unchanged in versions without that part.
 ## v1.31.0 — 2026-10-14
 
 ### Added
-- **Linked objects**: objects a mod builds out of others (a ship and the pieces built on it) are drawn where the mod builds them, around their root, turned and leaning with it, instead of in a pile where the game saves them. Such a group is moved, turned, copied and deleted whole: a double click on a part selects it, and any part brings the rest along (the Select tool, copy and paste, Claude's tools). Each pasted copy gets ids of its own, so the game keeps the copies apart. The editor knows no mod: a mod says how its objects link in the `links` of its `worldeditor.json`. See [Linked objects](docs/select.md#linked-objects-ships-and-other-mods-groups) and [for mod authors](docs/modding.md#linked-objects).
+- **Linked objects**: objects a mod builds out of others (a ship and the pieces built on it) are drawn where the mod builds them, around their root, turned and leaning with it, instead of in a pile where the game saves them. Such a group is moved, turned, copied and deleted whole: a double click on a part selects it, and any part brings the rest along (the Select tool, copy and paste, Claude's tools). Each pasted copy gets ids of its own, so the game keeps the copies apart. The editor knows no mod: a mod says how its objects link in the `links` of its `worldeditor.json`. See [Linked objects](docs/select.md#ships-and-other-linked-objects) and [for mod authors](docs/modding.md#linked-objects).
 
 ## v1.30.0 — 2026-10-14
 

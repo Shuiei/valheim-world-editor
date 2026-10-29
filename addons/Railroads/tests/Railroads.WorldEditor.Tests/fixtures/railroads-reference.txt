@@ -1,0 +1,131 @@
+# Railroads 0.2.6 (vladasz.railroads) reference data, recorded on a local headless Valheim dedicated server
+# Valheim l-1.0.20 (world version 42 CheatCleanSlate), BepInEx 5.4.23.5
+# Recorded 2026-10-23 11:35:52 by a throwaway harness driving the mod's own code (prefabs, Piece.SetCreator postfixes, RPCs, simulation)
+# the train is under way to the station 'Fixture Halt' (sent by the bf_request RPC); world saved in the same frame
+# ZDOIDs are live session ids (Valheim reassigns ids when a world loads); floats are written with ToString("R")
+# 13 objects
+object bf_handcart 3787984176:13776
+pos 409.291138 79.511795 -287.59137
+rot 0 0.7351226 0 -0.67793417
+int bf_dir -1
+int creatorIndex -1
+long creator 424242424242
+float bf_at 4.9889245
+bytes bf_line nTrKQwoGn0IMXJDDaU7OQwoGn0InwI/D
+end
+object bf_locomotive 3787984176:13772
+pos 394.593079 79.511795 -306.412048
+rot 0 0.195080236 0 0.9807873
+int bf_coal 30
+int bf_moving 1
+int bf_trips 1
+int bf_way 1
+int creatorIndex -1
+long bf_torch0_time 20400000000
+long bf_torch1_time 20400000000
+long creator 424242424242
+float bf_at 1.53556728
+float bf_odo 2.5355494
+float bf_speed 3.14661646
+float bf_stop 3.999978
+float bf_torch0 2
+float bf_torch1 2
+string bf_dest Rml4dHVyZSBIYWx0
+string bf_horn 
+bytes bf_after 
+bytes bf_legs AAAAAA==
+bytes bf_line sgDFQwoGn0JV6pnDkIjGQwoGn0JIOJbD
+bytes bf_route kIjGQwoGn0JIOJbDbhDIQwoGn0I7hpLD
+bytes bf_trail 1HjDQwoGn0JinJ3DsgDFQwoGn0JV6pnD9vDBQwoGn0JvTqHD1HjDQwoGn0JinJ3D
+bytes bf_wagons MA3I4QAAAADNNQAAMA3I4QAAAADONQAA
+end
+object bf_station_sign 3787984176:12540
+pos 401.831238 79.184845 -298.083527
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+vec3 bf_stop 398.597626 79.511795 -296.7442
+string bf_name Rml4dHVyZSBIYWx0
+end
+object bf_track_curve_r8_45 3787984176:11089
+pos 400.128357 79.511795 -293.048676
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 3787984176:11085
+pos 387.8825 79.511795 -322.612762
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 3787984176:11086
+pos 390.94397 79.511795 -315.221741
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 3787984176:11087
+pos 394.005432 79.511795 -307.830719
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_straight_8 3787984176:11088
+pos 397.0669 79.511795 -300.4397
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.195090339 0 0.9807853
+end
+object bf_track_switch_right_8 3787984176:11090
+pos 404.457916 79.511795 -288.719116
+rot 0 0.555570245 0 0.8314696
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.555570245 0 0.8314696
+end
+object bf_train_console 3787984176:12541
+pos 400.8745 78.4053345 -300.393219
+rot 0 0.195090339 0 0.980785251
+int creatorIndex -1
+long creator 424242424242
+end
+object bf_wagon 3787984176:13773
+pos 392.583984 79.511795 -311.2624
+rot 0 0.195103154 0 0.980782747
+int InUse 0
+int addedDefaultItems 1
+int creatorIndex -1
+long bf_torch0_time 20400000000
+long bf_torch1_time 20400000000
+long creator 424242424242
+float bf_at 4.285551
+float bf_torch0 2
+float bf_torch1 2
+bytes bf_line 1HjDQwoGn0JinJ3DsgDFQwoGn0JV6pnD
+bytes bf_self MA3I4QAAAADNNQAA
+end
+object bf_wagon_flat 3787984176:13774
+pos 390.479248 79.511795 -316.34375
+rot 0 0.195103154 0 0.980782747
+int creatorIndex -1
+long bf_deck_key 5598681266590675721
+long creator 424242424242
+float bf_at 6.785535
+bytes bf_line 9vDBQwoGn0JvTqHD1HjDQwoGn0JinJ3D
+bytes bf_self MA3I4QAAAADONQAA
+end
+object wood_floor 3787984176:13775
+pos 389.5089 81.011795 -318.686279
+rot 0 0.195103154 0 0.980782747
+int creatorIndex -1
+long bf_deck 5598681266590675721
+long creator 424242424242
+vec3 bf_deck_pos 0 1.5 0
+quat bf_deck_rot 0 0 0 1
+end

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Checks the formatting of the editor's projects, as .editorconfig says (dotnet format whitespace and
-# style, verifying only): the projects given, else all five. With --since <ref>, only the projects
+# style, verifying only): the projects given, else all of them (the editor's, the SDK's and every add-on's). With --since <ref>, only the projects
 # that changed since <ref> (since its merge base with HEAD): one changes when a file under its folder
 # does, and all of them when a shared configuration file does (.editorconfig, Directory.Build.props,
 # global.json, this script). CI's formatting job runs it on every project on main and with
@@ -13,9 +13,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-all=(Core/ValheimWorldEditor.Core.csproj Desktop/ValheimWorldEditor.Desktop.csproj
-  Sdk/ValheimWorldEditor.Sdk.csproj plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj
-  samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj)
+all=(editor/Core/ValheimWorldEditor.Core.csproj editor/Desktop/ValheimWorldEditor.Desktop.csproj
+  sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj
+  sdk/samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj)
+mapfile -t addons < <(git ls-files 'addons/*.csproj')
+all+=(${addons[@]+"${addons[@]}"})
 since=
 if [ "${1:-}" = --since ]; then since=${2:?a ref after --since}; shift 2; fi
 projects=("$@")

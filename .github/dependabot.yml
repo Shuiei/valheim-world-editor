@@ -8,8 +8,8 @@ updates:
     directories:
       # Directory.Build.props: the analyzers every project uses (Roslynator).
       - /
-      - /Core
-      - /Desktop
+      - /editor/Core
+      - /editor/Desktop
       - /tools/WorldCheck
       - /tools/DocsScreenshots
     schedule:
@@ -19,11 +19,17 @@ updates:
       app:
         patterns: ["*"]
 
-  # The C# tests (xUnit, JUnit logger, coverage and hang dump; SkiaSharp for Core's).
+  # The C# tests (xUnit, JUnit logger, coverage and hang dump; SkiaSharp for Core's, YamlDotNet for Expand World's).
   - package-ecosystem: nuget
     directories:
-      - /tests/Core.Tests
-      - /tests/Desktop.Tests
+      - /editor/tests/Core.Tests
+      - /editor/tests/Desktop.Tests
+      - /editor/tests/AddOns.Tests
+      - /addons/Tunnelheim/tests/Tunnelheim.WorldEditor.Tests
+      - /addons/Riverheim/tests/Riverheim.WorldEditor.Tests
+      - /addons/ExpandWorld/tests/ExpandWorld.WorldEditor.Tests
+      - /addons/Railroads/tests/Railroads.WorldEditor.Tests
+      - /addons/ValheimRAFT/tests/ValheimRAFT.WorldEditor.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3

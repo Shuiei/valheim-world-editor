@@ -78,4 +78,6 @@ Good to know
   - Every control explains itself when you hover it; "?" lists the keyboard shortcuts.
   - Settings, saved servers (servers.cfg) and the log (ValheimWorldEditor.log):
     ~/Library/Application Support/ValheimWorldEditor ("Open log" at the bottom of the start page's menu).
+  - Add-ons (editor support for a mod, each its own download) go in the addons folder next to
+    ValheimWorldEditor.app: see addons/README.txt.
   - Keep your own backups of worlds you care about.

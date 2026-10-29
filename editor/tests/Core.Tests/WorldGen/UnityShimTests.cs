@@ -1,0 +1,220 @@
+using ValheimGen;
+using Xunit;
+using Rnd = ValheimGen.UnityEngine.Random;
+
+namespace WorldEditor.Tests;
+
+/// <summary>
+/// The small stand-ins the generator uses for Unity: vectors and their operators, the equality of vectors and colours
+/// (NaN and -0 included), Mathf, the random number generator at
+/// its edges (backwards ranges, the unit circle), GenMath's remapping, and the piece catalogue's footprints for the
+/// map.
+/// </summary>
+[Collection("World files")]
+public class UnityShimTests
+{
+    [Fact]
+    public void TwoDimensionalVectors()
+    {
+        Assert.Equal(new Vector2(0, 1), Vector2.Up);
+        Assert.Equal(new Vector2(0, -1), Vector2.Down);
+        Assert.Equal(new Vector2(-1, 0), Vector2.Left);
+        Assert.Equal(new Vector2(1, 0), Vector2.Right);
+        Assert.Equal(new Vector2(-2, 3), -new Vector2(2, -3));
+        Assert.Equal(new Vector2(4, 6), 2f * new Vector2(2, 3));
+        Assert.True(new Vector2(1, 2) != new Vector2(1, 3));
+        var same = new Vector2(1, 2);
+        Assert.False(same != new Vector2(1, 2));
+        Assert.True(new Vector2(1, 2).Equals(new Vector2(1, 2)));
+        Assert.False(new Vector2(1, 2).Equals("not a vector"));
+        Assert.Equal(new Vector2(1, 2).GetHashCode(), new Vector2(1, 2).GetHashCode());
+    }
+
+    // Equals is float.Equals on each component: NaN equals NaN and -0 equals 0, with equal hashes. Vector2's == is
+    // Unity's approximate one instead, false for NaN.
+    [Theory]
+    [InlineData(float.NaN, float.NaN)]
+    [InlineData(-0f, 0f)]
+    public void VectorsAndColoursEqualTheirTwinWithNaNOrNegativeZero(float odd, float twin)
+    {
+        var v = new Vector2(odd, odd);
+        var w = new Vector2(twin, twin);
+        EqualityAsserts.Same(v, w);
+        Assert.Equal(!float.IsNaN(odd), v == w);
+        EqualityAsserts.Same(new Vector3(odd, odd, odd), new Vector3(twin, twin, twin));
+        EqualityAsserts.Same(new Color(odd, odd, odd, odd), new Color(twin, twin, twin, twin));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void VectorsAndColoursDifferingInOneComponentAreNotEqual(int which)
+    {
+        float[] c = [1, 2, 3, 4];
+        float[] d = [1, 2, 3, 4];
+        d[which] += 0.5f;
+        EqualityAsserts.Differ(new Color(c[0], c[1], c[2], c[3]), new Color(d[0], d[1], d[2], d[3]));
+        if (which < 3)
+        {
+            EqualityAsserts.Differ(new Vector3(c[0], c[1], c[2]), new Vector3(d[0], d[1], d[2]));
+        }
+        if (which < 2)
+        {
+            EqualityAsserts.Differ(new Vector2(c[0], c[1]), new Vector2(d[0], d[1]));
+        }
+    }
+
+    [Fact]
+    public void TwoDimensionalVectorsAFractionApartAreApproximatelyButNotExactlyEqual()
+    {
+        var v = new Vector2(1, 2);
+        var w = new Vector2(1, 2.000001f);
+        Assert.True(v == w);
+        EqualityAsserts.Differ(v, w);
+    }
+
+    [Fact]
+    public void ThreeDimensionalVectors()
+    {
+        var v = new Vector3(3, 0, 4);
+        Assert.Equal(5f, v.Magnitude);
+        var n = v.Normalized;
+        Assert.Equal(0.6f, n.X, 5);
+        Assert.Equal(0.8f, n.Z, 5);
+        // A vector too short to have a direction normalizes to zero.
+        var z = new Vector3(0, 1e-6f, 0).Normalized;
+        Assert.Equal(0f, z.X + z.Y + z.Z);
+        Assert.Equal(0f, Vector3.Zero.Magnitude);
+        var s = new Vector3(1, 2, 3) + new Vector3(1, 1, 1) - new Vector3(0, 1, 0);
+        Assert.Equal((2f, 2f, 4f), (s.X, s.Y, s.Z));
+        var d = new Vector3(2, 4, 6) / 2f;
+        Assert.Equal((1f, 2f, 3f), (d.X, d.Y, d.Z));
+    }
+
+    [Fact]
+    public void IntegerVectors()
+    {
+        var cell = new Vector2i(1, 2);
+        Assert.True(cell == new Vector2i(1, 2));
+        Assert.True(new Vector2i(1, 2) != new Vector2i(2, 1));
+        Assert.True(new Vector2i(1, 2).Equals((object)new Vector2i(1, 2)));
+        Assert.False(new Vector2i(1, 2).Equals(7));
+        var a = new Vector2s(5, 7);
+        var b = new Vector2s(2, 3);
+        Assert.Equal(new Vector2s(3, 4), a - b);
+        Assert.True(a.Equals((object)new Vector2s(5, 7)));
+        Assert.False(a.Equals((object)b));
+        Assert.NotEqual(a.GetHashCode(), b.GetHashCode());
+    }
+
+    // Corners west of the middle (x < 0) keep y in their hash: x was sign-extended over it, so every corner of
+    // half the world shared ~160 hashes and the generator's corner caches became long chains.
+    [Fact]
+    public void ShortVectorsWestOfTheMiddleHashTheirY()
+    {
+        var hashes = Enumerable.Range(-160, 321).Select(y => new Vector2s(-64, y * 64).GetHashCode()).ToHashSet();
+        Assert.Equal(321, hashes.Count);
+        Assert.Equal(new Vector2s(-64, 128).GetHashCode(), new Vector2s(-64, 128).GetHashCode());
+    }
+
+    [Fact]
+    public void MathfLikeUnity()
+    {
+        Assert.Equal(2, Mathf.Min(2, 5));
+        Assert.Equal(2f, Mathf.Min(2f, 5f));
+        Assert.Equal(5, Mathf.Max(2, 5));
+        Assert.Equal(3, Mathf.Clamp(9, 0, 3));
+        Assert.Equal(0, Mathf.Clamp(-9, 0, 3));
+        Assert.Equal(2, Mathf.Clamp(2, 0, 3));
+        Assert.Equal(1f, Mathf.Cos(0f));
+        Assert.Equal(0.5, GenMath.InverseLerp(10, 20, 15));
+        // An empty range: 0, not a division by zero.
+        Assert.Equal(0.0, GenMath.InverseLerp(10, 10, 15));
+    }
+
+    [Fact]
+    public void RandomRangesBackwardsAndEmpty()
+    {
+        Rnd.InitState(42);
+        for (int i = 0; i < 200; i++)
+        {
+            // Backwards: Unity gives a value in (max, min].
+            int v = Rnd.Range(10, 3);
+            Assert.InRange(v, 4, 10);
+        }
+        Assert.Equal(4, Rnd.Range(4, 4));
+        for (int i = 0; i < 200; i++)
+        {
+            var c = Rnd.InsideUnitCircle;
+            Assert.True(c.X * c.X + c.Y * c.Y <= 1.0001f);
+        }
+        // The same seed, the same numbers.
+        Rnd.InitState(7);
+        int first = Rnd.Range(0, 1000);
+        Rnd.InitState(7);
+        Assert.Equal(first, Rnd.Range(0, 1000));
+    }
+
+    [Fact]
+    public void TheMapsFootprintsLeaveOutDeletedAndUnknownPieces()
+    {
+        var world = new TerrainEditor.Save.WorldSave { Directory = "none", SaveNumber = 1 };
+        Assert.True(TerrainEditor.Terrain.PieceCatalog.Count > 100);
+        int wall = TerrainEditor.Save.StableHash.Of("wood_wall_half");
+        world.Pieces.Add((5, wall, new System.Numerics.Vector3(10, 30, 20), new System.Numerics.Vector3(0, 90, 0)));
+        world.Pieces.Add((6, wall, new System.Numerics.Vector3(12, 30, 20), System.Numerics.Vector3.Zero));
+        // A piece the catalogue does not know is left out.
+        world.Pieces.Add((7, TerrainEditor.Save.StableHash.Of("not_a_piece"), new System.Numerics.Vector3(1, 2, 3), System.Numerics.Vector3.Zero));
+        const int S = TerrainEditor.Terrain.PieceCatalog.Stride;
+        float[] all = TerrainEditor.Terrain.PieceCatalog.Encode(world, Array.Empty<int>());
+        Assert.Equal(2 * S, all.Length);
+        var info = TerrainEditor.Terrain.PieceCatalog.Get(wall)!;
+        // Position, turn, footprint, top, category, bottom, index in the names, id.
+        Assert.Equal(new[] { 10f, 30f, 20f, 90f, info.MinX, info.MaxX, info.MinZ, info.MaxZ, 30 + info.MaxY, info.Category, 30 + info.MinY, info.Index, 5f }, all[..S]);
+        Assert.Equal("wood_wall_half", TerrainEditor.Terrain.PieceCatalog.Names[info.Index]);
+        // One deleted: left out.
+        float[] less = TerrainEditor.Terrain.PieceCatalog.Encode(world, [5]);
+        Assert.Equal(S, less.Length);
+        Assert.Equal(6f, less[S - 1]);
+    }
+
+    // The ruins' pieces: builder-less objects the catalogue knows (not other objects, not deleted ones), packed as
+    // the built ones, with whether each is joined to a building.
+    [Fact]
+    public void TheMapsRuinPiecesSayWhichAreJoinedToABuilding()
+    {
+        var world = new TerrainEditor.Save.WorldSave { Directory = "none", SaveNumber = 1 };
+        int wall = TerrainEditor.Save.StableHash.Of("stone_wall_2x1"), beech = TerrainEditor.Save.StableHash.Of("Beech1");
+        world.Pieces.Add((1, TerrainEditor.Save.StableHash.Of("wood_wall_half"), new System.Numerics.Vector3(0, 30, 0), System.Numerics.Vector3.Zero));
+        world.Objects.Add((2, wall, new System.Numerics.Vector3(2, 30, 0), new System.Numerics.Vector3(0, 90, 0), System.Numerics.Vector3.One));
+        world.Objects.Add((3, wall, new System.Numerics.Vector3(100, 30, 0), System.Numerics.Vector3.Zero, System.Numerics.Vector3.One));
+        world.Objects.Add((4, wall, new System.Numerics.Vector3(102, 30, 0), System.Numerics.Vector3.Zero, System.Numerics.Vector3.One));
+        world.Objects.Add((5, beech, new System.Numerics.Vector3(1, 30, 0), System.Numerics.Vector3.Zero, System.Numerics.Vector3.One));
+        const int S = TerrainEditor.Terrain.PieceCatalog.Stride;
+        var (data, joined) = TerrainEditor.Terrain.PieceCatalog.EncodeRuins(world, [4]);
+        Assert.Equal(2 * S, data.Length);
+        var info = TerrainEditor.Terrain.PieceCatalog.Get(wall)!;
+        Assert.Equal(new[] { 2f, 30f, 0f, 90f, info.MinX, info.MaxX, info.MinZ, info.MaxZ, 30 + info.MaxY, info.Category, 30 + info.MinY, info.Index, 2f }, data[..S]);
+        Assert.Equal(3f, data[2 * S - 1]);
+        Assert.Equal([true, false], joined);
+    }
+
+    [Fact]
+    public void TheOverviewColoursWaterByDepthAndUnknownGroundGrey()
+    {
+        const float Water = 30f;
+        Assert.Equal((112f, 158f, 72f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, 31, Water));
+        // The water line itself is dry ground; under it the biome does not matter and deeper is darker.
+        Assert.Equal((112f, 158f, 72f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, Water, Water));
+        Assert.Equal((37.5f, 89.5f, 135f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, Water - 6, Water));
+        Assert.Equal((15f, 40f, 90f), TerrainService.BiomeColor(Heightmap.Biome.Plains, -100, Water));
+        // Ocean ground above the water line (a shore) and no biome at all have no colour of their own.
+        Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.Ocean, 31, Water));
+        Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.None, 31, Water));
+        // The water line follows the world's rules: with the water at 20 m, 25 m is dry land.
+        Assert.Equal((112f, 158f, 72f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, 25, 20));
+        Assert.Equal((37.5f, 89.5f, 135f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, 14, 20));
+    }
+}

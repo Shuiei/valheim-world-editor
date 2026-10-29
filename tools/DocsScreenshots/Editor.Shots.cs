@@ -50,24 +50,12 @@ public sealed partial class Editor
     }
 
     /// <summary>
-    /// Closes the 3D editor's locations note (bottom left, shown when locations lie near the area): its close button
-    /// is only an icon, which the driver's click cannot name, so it is clicked on the display with xdotool. The pointer
-    /// is then moved off the window, where it cannot touch the scene. Does nothing without xdotool.
+    /// Closes the 3D editor's locations note (shown when locations lie near the area), wherever the window puts it,
+    /// with the driver's note command (as its × does).
     /// </summary>
     public void CloseLocationNote()
     {
         Send("wait 300");
-        string? window = GameWindow();
-        if (window == null)
-        {
-            return;
-        }
-        // The note is 420 pixels wide at most (its text always wraps to three lines), 10 from the left and 58 from
-        // the bottom; its close button is at its right end, halfway up.
-        string height = Xdotool("getwindowgeometry", "--shell", window)?.Split('\n').FirstOrDefault(l => l.StartsWith("HEIGHT=", StringComparison.Ordinal))?[7..] ?? "900";
-        int y = int.Parse(height, System.Globalization.CultureInfo.InvariantCulture) - 89;
-        Xdotool("mousemove", "--window", window, "408", y.ToString(System.Globalization.CultureInfo.InvariantCulture), "click", "1");
-        Xdotool("mousemove", "1915", "1075");
-        Send("wait 200");
+        Send("note close");
     }
 }
