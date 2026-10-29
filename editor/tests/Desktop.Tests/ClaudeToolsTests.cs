@@ -101,6 +101,31 @@ public class ClaudeToolsTests
         Assert.Equal(before, r.W.World.Pending);
     }
 
+    // A Claude on another computer (Settings → Claude → Address): never a script, whatever Settings says, since its
+    // connection is not encrypted; not through set_control either. Its other tools still work. The request's mark goes
+    // with each call onto the window's thread.
+    [AvaloniaFact]
+    public async Task ScriptsAreThisComputersClaudesOnly()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        r.W.Settings.ClaudeScripts = true;
+        ClaudeServer.FromAnotherComputer.Value = true;
+        try
+        {
+            Assert.Equal(ClaudeTools.ScriptsHereOnly, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+            Assert.Equal(ClaudeTools.ScriptsHereOnly, await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+            Assert.Contains("only for a Claude on this computer", await r.T.SetControl("script.run", "click"));
+            Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+            Assert.Contains("ground point", await r.T.Flatten(-10, -10, 10, 10, 31));
+        }
+        finally
+        {
+            ClaudeServer.FromAnotherComputer.Value = false;
+        }
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+    }
+
     [AvaloniaFact]
     public async Task LiveWithAutoOnClaudeChangesNothing()
     {

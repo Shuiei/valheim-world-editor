@@ -68,8 +68,8 @@ public sealed partial class AppSettings
     public bool AreaFollow { get; set; }
 
     /// <summary>
-    /// Claude's connection (Settings): the editor's MCP server, on 127.0.0.1 at <c>ClaudePort</c>, for callers that
-    /// send <c>ClaudeToken</c>. Off unless chosen.
+    /// Claude's connection (Settings): the editor's MCP server, on <c>ClaudeAddress</c> (127.0.0.1 unless chosen) at
+    /// <c>ClaudePort</c>, for callers that send <c>ClaudeToken</c>. Off unless chosen.
     /// </summary>
     public bool ClaudeConnect { get; set; }
 
@@ -94,6 +94,13 @@ public sealed partial class AppSettings
     /// The local port the MCP server for Claude listens on.
     /// </summary>
     public int ClaudePort { get; set; } = 5731;
+
+    /// <summary>
+    /// The address the MCP server for Claude listens on: 127.0.0.1 (this computer only, the default), one of this
+    /// computer's network addresses, or 0.0.0.0 (all of them), for a Claude on another computer. The token is asked
+    /// for on every address.
+    /// </summary>
+    public string ClaudeAddress { get; set; } = "127.0.0.1";
 
     /// <summary>
     /// The token callers of the MCP server for Claude must send.

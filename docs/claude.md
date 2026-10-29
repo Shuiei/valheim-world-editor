@@ -31,15 +31,17 @@ In **Settings** (on the start page), section **Claude**:
 
 | Setting | What it does |
 |---|---|
-| **Allow Claude to connect** | On: the editor takes Claude's requests, from this computer only, from callers with the token. Off: nothing can connect. |
+| **Allow Claude to connect** | On: the editor takes Claude's requests, from this computer only (unless **Address** says otherwise), from callers with the token. Off: nothing can connect. |
 | **Claude may run scripts** | On: Claude may run C# scripts, as the [Script](scripting.md) tool does, each one shown to you first to run or refuse. A script is a program with your rights on this computer, your files included. Off (the default): Claude's scripts are refused; its other tools still work. |
-| **Port** | The port Claude connects to on `127.0.0.1`: 5731 at first, 1024 to 65535. Change it if another program uses 5731. |
+| **Address** | Where Claude can connect from: pick one from the list, or type an address. `127.0.0.1 (this computer only)`, the default; `0.0.0.0 (every network)`; or one of this computer's networks with its address (`192.168.1.20 (Ethernet)`): that network only. With every network, a line under the command gives the addresses another computer uses: this computer's name (`http://my-pc.local:5731/mcp`), where the network answers `.local` names (mDNS), and its address on each network (`http://192.168.1.20:5731/mcp`), which always works but changes when the network gives it another. See [Safety](#safety). |
+| **Port** | The port Claude connects to: 5731 at first, 1024 to 65535. Change it if another program uses 5731. |
 | **New token** | Makes another token. Once you **Save**, the old one stops working: add the editor to Claude again with the new command. |
 | Claude Code command, **Copy** | The command that adds the editor to Claude Code. It holds the token: keep it to yourself. |
 | Claude Desktop lines, **Copy** | The lines to add to Claude Desktop's configuration. |
 
-After **Save**, the section shows "Listening on http://127.0.0.1:5731/mcp", or why it could not ("Could not listen on
-port …" when the port is taken).
+After **Save**, the section shows "Listening on http://127.0.0.1:5731/mcp" (on another address, "Listening on
+0.0.0.0:5731, from other computers too"), or why it could not ("Could not listen on 127.0.0.1:5731: …" when the port
+is taken, or when a network address is no longer this computer's).
 
 ## Adding the editor to Claude
 
@@ -137,8 +139,23 @@ This works after saving or applying too: the next **Save to world** or **Apply l
 
 ## Safety
 
-- **This computer only.** The editor listens on `127.0.0.1` and refuses any request addressed to another name, so a
-  web page you visit cannot reach it.
+- **This computer only.** The editor listens on `127.0.0.1` (or another loopback address you type, such as `::1`) and
+  refuses any request addressed to another name, so a web page you visit cannot reach it. With another **Address**,
+  computers on that network can reach it too, under any of this computer's names, with the token. Only this computer's
+  own networks: a computer whose address is not a local one (`10.x`, `172.16`–`172.31`, `192.168.x`, link-local, IPv6
+  `fc00::/7`) or not on the network the editor listens on is refused, so the internet never reaches it, even over IPv6.
+  With `0.0.0.0`, those networks are the ones with a gateway (not Docker's, WSL's or Hyper-V's own, nor a VPN tunnel).
+  A VPN such as Tailscale, whose addresses are `100.64.x.x` to `100.127.x.x`, is taken too when this computer is on
+  it: listen on its Tailscale address or on `0.0.0.0`, and the other computer connects to that address. The VPN
+  encrypts the way, so the token is not read on the network.
+- **Scripts from this computer only.** A Claude on another computer is refused scripts (`run_script`, the Script
+  tool's Run) even with **Claude may run scripts** on: whoever reads the token on the network could otherwise run
+  programs with your rights. Its other tools work as here.
+- **Not encrypted off this computer.** The connection is plain HTTP: with another **Address**, anyone on that network
+  can read the token and everything the editor and Claude send each other, and with the token, use the editor. That is
+  a fair trade on a home network you trust, and Settings says so under the address as soon as you choose one.
+  Anywhere else, keep `127.0.0.1` and reach it from another computer through an SSH tunnel, which encrypts it:
+  `ssh -L 5731:127.0.0.1:5731 you@this-computer`.
 - **The token.** Every request must carry the token (48 random characters made for your editor). **New token** makes
   another one.
 - **Pending only.** Claude never saves, applies live, discards, reloads, writes or deletes your files, or connects to

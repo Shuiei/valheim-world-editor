@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.App;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -14,21 +15,11 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("DataDir")]
 public class ClaudeServerTests
 {
-    /// <summary>A port free on this computer now.</summary>
-    private static int FreePort()
-    {
-        var probe = new TcpListener(IPAddress.Loopback, 0);
-        probe.Start();
-        int port = ((IPEndPoint)probe.LocalEndpoint).Port;
-        probe.Stop();
-        return port;
-    }
-
     [AvaloniaFact]
     public async Task SettingsStartAndStopTheServer()
     {
         var w = new MainWindow(load: false);
-        var settings = new AppSettings { ClaudeConnect = true, ClaudePort = FreePort() };
+        var settings = new AppSettings { ClaudeConnect = true, ClaudePort = LoopbackPort.Free() };
         try
         {
             Assert.Null(await ClaudeServer.Apply(settings, w));
@@ -43,7 +34,7 @@ public class ClaudeServerTests
 
             // Started again on another port, with the same token: the first one stopped.
             int first = settings.ClaudePort;
-            settings.ClaudePort = FreePort();
+            settings.ClaudePort = LoopbackPort.Free();
             Assert.Null(await ClaudeServer.Apply(settings, w));
             Assert.Equal(token, settings.ClaudeToken);
             Assert.Equal($"Listening on {ClaudeServer.Url(settings.ClaudePort)}", ClaudeServer.Status);
@@ -52,13 +43,24 @@ public class ClaudeServerTests
                 await Assert.ThrowsAsync<HttpRequestException>(() => http.PostAsync(ClaudeServer.Url(first), new StringContent("{}"), TestContext.Current.CancellationToken));
             }
 
-            // A port another program holds: said, and nothing listening.
+            // A port another program holds: said with the address (a network address can be gone too), and nothing
+            // listening.
             using var taken = new TcpListener(IPAddress.Loopback, 0);
             taken.Start();
             settings.ClaudePort = ((IPEndPoint)taken.LocalEndpoint).Port;
             string? problem = await ClaudeServer.Apply(settings, w);
-            Assert.StartsWith($"Could not listen on port {settings.ClaudePort}: ", problem);
+            Assert.StartsWith($"Could not listen on 127.0.0.1:{settings.ClaudePort}: ", problem);
             Assert.Equal(problem, ClaudeServer.Status);
+
+            // An address that is not one (a settings file written by hand): said, and nothing listening.
+            settings.ClaudePort = LoopbackPort.Free();
+            settings.ClaudeAddress = "my-pc.local";
+            problem = await ClaudeServer.Apply(settings, w);
+            Assert.StartsWith("Could not listen on my-pc.local: not an IP address", problem);
+            Assert.Equal(problem, ClaudeServer.Status);
+            // Nor one written short: "0" would be 0.0.0.0, every network.
+            settings.ClaudeAddress = "0";
+            Assert.StartsWith("Could not listen on 0: not an IP address", await ClaudeServer.Apply(settings, w));
         }
         finally
         {
