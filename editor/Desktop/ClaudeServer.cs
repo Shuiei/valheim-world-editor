@@ -62,7 +62,7 @@ public sealed class ClaudeServer
     /// <summary>
     /// The address another computer connects to when the server listens on every address: this computer's name, as
     /// the network's name service answers it (a name without a domain gets .local, mDNS's, which Windows, macOS and
-    /// Linux answer).
+    /// Linux usually answer; not every network does, see <see cref="RemoteAddressUrls"/>).
     /// </summary>
     /// <param name="port">The port.</param>
     public static string RemoteUrl(int port)
@@ -70,6 +70,21 @@ public sealed class ClaudeServer
         string host = Dns.GetHostName();
         return McpUrl(host.Contains('.', StringComparison.Ordinal) ? host : host + ".local", port);
     }
+
+    /// <summary>
+    /// The addresses another computer connects to when the server listens on every address, by this computer's
+    /// network addresses: they work where the name does not resolve (no mDNS), until the network gives this computer
+    /// another address.
+    /// </summary>
+    /// <param name="port">The port.</param>
+    public static IReadOnlyList<string> RemoteAddressUrls(int port) => [.. LocalAddresses().Select(a => Url(port, a.Address))];
+
+    /// <summary>
+    /// Every address another computer connects to when the server listens on every address, said in one line: by
+    /// name, then by each network address.
+    /// </summary>
+    /// <param name="port">The port.</param>
+    private static string RemoteUrls(int port) => string.Join(" or ", RemoteAddressUrls(port).Prepend(RemoteUrl(port)));
 
     /// <summary>Whether the address is every address (0.0.0.0, ::): every network this computer is on.</summary>
     /// <param name="ip">The address.</param>
@@ -166,7 +181,7 @@ public sealed class ClaudeServer
                 Status = IPAddress.IsLoopback(address)
                     ? $"Listening on {Url(settings.ClaudePort, settings.ClaudeAddress)}"
                     : IsEveryAddress(address)
-                        ? $"Listening on {Endpoint(address, settings.ClaudePort)}, from other computers too ({RemoteUrl(settings.ClaudePort)}; here: {Url(settings.ClaudePort)}), unencrypted"
+                        ? $"Listening on {Endpoint(address, settings.ClaudePort)}, from other computers too ({RemoteUrls(settings.ClaudePort)}; here: {Url(settings.ClaudePort)}), unencrypted"
                         : $"Listening on {Url(settings.ClaudePort, settings.ClaudeAddress)}, from other computers too, unencrypted";
                 Console.WriteLine($"claude: {Status}");
                 return null;

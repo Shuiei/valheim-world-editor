@@ -81,8 +81,9 @@ public static partial class SettingsDialog
 
         /// <summary>
         /// Shows the command that connects Claude Code at the address and port and with the token typed (or the saved
-        /// port); on every address, also the address another computer uses (this computer's name); off this computer,
-        /// the warning that the connection is not encrypted.
+        /// port); on every address, also the addresses another computer uses (this computer's name, and its network
+        /// addresses for networks that do not answer the name); off this computer, the warning that the connection is
+        /// not encrypted.
         /// </summary>
         private void ShowCommand()
         {
@@ -92,7 +93,15 @@ public static partial class SettingsDialog
             _unencrypted.IsVisible = chosen != null && !System.Net.IPAddress.IsLoopback(chosen);
             bool every = chosen != null && ClaudeServer.IsEveryAddress(chosen);
             _remote.IsVisible = every;
-            _remote.Text = every ? Lang.T("settings.claudeRemoteHint", ClaudeServer.RemoteUrl(port)) : "";
+            if (!every)
+            {
+                _remote.Text = "";
+                return;
+            }
+            var byAddress = ClaudeServer.RemoteAddressUrls(port);
+            _remote.Text = byAddress.Count == 0
+                ? Lang.T("settings.claudeRemoteHint", ClaudeServer.RemoteUrl(port))
+                : Lang.T("settings.claudeRemoteHintAddresses", ClaudeServer.RemoteUrl(port), string.Join(", ", byAddress));
         }
 
         /// <summary>

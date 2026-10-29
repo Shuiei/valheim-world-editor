@@ -294,5 +294,7 @@ public class ClaudeToolsTransportTests
         Assert.Matches(@"^http://[^/:]+\.[^/:]+:5731/mcp$", ClaudeServer.RemoteUrl(5731));
         Assert.StartsWith($"http://{Dns.GetHostName()}", ClaudeServer.RemoteUrl(5731), StringComparison.OrdinalIgnoreCase);
         Assert.All(ClaudeServer.LocalAddresses(), a => Assert.False(IPAddress.IsLoopback(IPAddress.Parse(a.Address))));
+        // And by each network address, for networks that do not answer the name.
+        Assert.Equal(ClaudeServer.LocalAddresses().Select(a => $"http://{a.Address}:5731/mcp"), ClaudeServer.RemoteAddressUrls(5731));
     }
 }

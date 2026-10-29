@@ -104,6 +104,8 @@ public class SettingsChoicesTests
         Assert.True(remote.IsVisible);
         Assert.True(unencrypted.IsVisible);
         Assert.Contains(ClaudeServer.RemoteUrl(5731), remote.Text);
+        // And by address, for networks that do not answer the name: each of this computer's, ready to use.
+        Assert.All(ClaudeServer.RemoteAddressUrls(5731), u => Assert.Contains(u, remote.Text));
         Click(Buttons(d, "Save").Single());
         Assert.True(await shown);
         Assert.Equal("0.0.0.0", AppSettings.Load().ClaudeAddress);
