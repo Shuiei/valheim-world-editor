@@ -50,7 +50,7 @@ public static partial class ClaudeRelay
     /// <returns>The protocol version agreed so far, after these answers.</returns>
     internal static async Task<string?> Forward(HttpClient http, string line, AppSettings s, JsonNode? id, string? method, TextWriter output, string? protocol)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, ClaudeServer.Url(s.ClaudePort)) { Content = new StringContent(line, Encoding.UTF8, "application/json") };
+        using var request = new HttpRequestMessage(HttpMethod.Post, ClaudeServer.Url(s.ClaudePort, s.ClaudeAddress)) { Content = new StringContent(line, Encoding.UTF8, "application/json") };
         request.Headers.Accept.ParseAdd("application/json");
         request.Headers.Accept.ParseAdd("text/event-stream");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", s.ClaudeToken);

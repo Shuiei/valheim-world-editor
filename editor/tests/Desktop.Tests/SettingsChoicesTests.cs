@@ -55,7 +55,74 @@ public class SettingsChoicesTests
         Assert.True(kept.ClaudeConnect);
         Assert.True(kept.ClaudeScripts);
         Assert.Equal(6000, kept.ClaudePort);
+        Assert.Equal("127.0.0.1", kept.ClaudeAddress);
         Assert.Equal(token, kept.ClaudeToken);
+    }
+
+    // The address: picked from a list that says each in words (this computer only, every network, then this computer's
+    // networks) or typed; the saved one shown as its choice; a name or nonsense is refused; another address shows in
+    // the command; every network shows this computer's 127.0.0.1 there, and under it the address another computer uses
+    // (this computer's name); saved as the address alone.
+    [AvaloniaFact]
+    public async Task ClaudesAddressIsChosenAndChecked()
+    {
+        using var t = new Temp();
+        var settings = new AppSettings { ClaudeConnect = true };
+        var owner = Owner();
+        var shown = SettingsDialog.Show(owner, settings);
+        var d = TestWindows.Shown(owner);
+        var address = d.GetLogicalDescendants().OfType<ComboBox>().Single(b => b.Name == "ClaudeAddress");
+        var command = Named(d, "ClaudeCommand");
+        var remote = d.GetLogicalDescendants().OfType<TextBlock>().Single(b => b.Name == "ClaudeRemote");
+        var unencrypted = d.GetLogicalDescendants().OfType<TextBlock>().Single(b => b.Name == "ClaudeUnencrypted");
+        var choices = address.Items.Cast<object>().Select(c => c.ToString()!).ToList();
+        Assert.Equal(["127.0.0.1 (this computer only)", "0.0.0.0 (every network)"], choices.Take(2));
+        Assert.All(choices.Skip(2), c => Assert.Matches(@"^\d+\.\d+\.\d+\.\d+ \(.+\)$", c));
+        Assert.Equal("127.0.0.1 (this computer only)", address.Text);
+        Assert.False(remote.IsVisible);
+        Assert.False(unencrypted.IsVisible);
+        address.Text = "my-pc.local";
+        Click(Buttons(d, "Save").Single());
+        Assert.Contains(Texts(d).Split(" | "), x => x.Contains("must be an IP address"));
+        Assert.Single(owner.OwnedWindows);
+        // Nor an address written short: "0" would be 0.0.0.0, every network.
+        address.Text = "0";
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(unencrypted.IsVisible);
+        Click(Buttons(d, "Save").Single());
+        Assert.Contains(Texts(d).Split(" | "), x => x.Contains("written in full"));
+        Assert.Single(owner.OwnedWindows);
+        // Off this computer: said, where the address is chosen, that the connection is not encrypted.
+        address.Text = "192.0.2.20";
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains(ClaudeToolsTransportTests.McpUrl("192.0.2.20:5731"), command.Text);
+        Assert.False(remote.IsVisible);
+        Assert.True(unencrypted.IsVisible);
+        Assert.Contains("not encrypted", unencrypted.Text);
+        // Another loopback address: still this computer only.
+        address.Text = "::1";
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains(ClaudeToolsTransportTests.McpUrl("[::1]:5731"), command.Text);
+        Assert.False(unencrypted.IsVisible);
+        address.SelectedIndex = 1;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("0.0.0.0 (every network)", address.Text);
+        Assert.Contains("http://127.0.0.1:5731/mcp", command.Text);
+        Assert.True(remote.IsVisible);
+        Assert.True(unencrypted.IsVisible);
+        Assert.Contains(ClaudeServer.RemoteUrl(5731), remote.Text);
+        // And by address, for networks that do not answer the name: each of this computer's, ready to use.
+        Assert.All(ClaudeServer.RemoteAddressUrls(5731), u => Assert.Contains(u, remote.Text));
+        Click(Buttons(d, "Save").Single());
+        Assert.True(await shown);
+        Assert.Equal("0.0.0.0", AppSettings.Load().ClaudeAddress);
+
+        // Opened again: the saved address shown as its choice.
+        var again = SettingsDialog.Show(owner, AppSettings.Load());
+        var d2 = TestWindows.Shown(owner);
+        Assert.Equal("0.0.0.0 (every network)", d2.GetLogicalDescendants().OfType<ComboBox>().Single(b => b.Name == "ClaudeAddress").Text);
+        Click(Buttons(d2, "Cancel").Single());
+        Assert.False(await again);
     }
 
     // Drawing: only on Windows; the driver's OpenGL off at first, saved when chosen.

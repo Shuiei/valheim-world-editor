@@ -70,15 +70,19 @@ the editor's tools. The editor holds it to this:
 
 - **This computer only, with a token.** The editor listens on `127.0.0.1` only, refuses requests addressed to another
   name (so a web page cannot reach it under a made-up address), and refuses any request without its token (48 random
-  characters). **New token** makes another; turn the switch off and nothing can connect.
+  characters). Another **Address** in Settings (`0.0.0.0`, or one of this computer's) lets other computers on that
+  network connect, with the token, which then travels unencrypted: only computers with a local address on this
+  computer's own network, never the internet's, and never scripts (they stay this computer's Claude's). **New token**
+  makes another; turn the switch off and nothing can connect.
 - **Pending only.** Whatever Claude changes stays pending, one step each, tagged **Claude** in History. Claude never
   saves, applies live, discards, reloads, writes or deletes your files, or connects to a live game: those stay yours.
   It does not open another world while yours has unsaved changes.
 - **Nothing live with Auto on.** While a live world has **Auto** on, each change would reach the players at once, so
   Claude changes nothing and asks you to turn Auto off.
 - **No scripts without your leave.** Claude's scripts are refused until you turn on **Claude may run scripts** in
-  Settings (off by default), a choice you make once, as for a document's macros. Its other tools run the editor's own
-  code and need no leave.
+  Settings (off by default). Even then, each script Claude writes is shown to you before it runs, to run or refuse:
+  text in a world (a sign, a tag written by another player) could talk Claude into writing a harmful one. Its other
+  tools run the editor's own code and are not asked.
 - **Easy to take back.** **Take back Claude's changes** in History removes every step Claude made in the open area
   and keeps yours (see [History](saving-and-history.md#history)).
 

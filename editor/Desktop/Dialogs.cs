@@ -41,6 +41,47 @@ public static class Dialogs
         return result;
     }
 
+    /// <summary>
+    /// A script Claude wrote, shown before it runs: what it is, its code (read-only, scrolled when long), Run it or
+    /// Refuse. Refuse takes Enter and Esc, so a key pressed by habit runs nothing. True when Run it is chosen.
+    /// </summary>
+    /// <param name="owner">The window it is modal to.</param>
+    /// <param name="code">The script's C# source.</param>
+    public static async Task<bool> AskScript(Window owner, string code)
+    {
+        bool result = false;
+        var dialog = Modal(Lang.T("claude.script.title"), 720);
+        var run = new Button { Content = Lang.T("claude.script.run") }.Tip("claude.scriptRun");
+        run.Click += (_, _) => { result = true; dialog.Close(); };
+        var refuse = new Button { Content = Lang.T("claude.script.refuse"), IsDefault = true, IsCancel = true }.Tip("dialog.cancel");
+        refuse.Click += (_, _) => dialog.Close();
+        var source = new TextBox
+        {
+            Name = "ClaudeScript",
+            Text = code,
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.NoWrap,
+            FontFamily = new FontFamily("monospace"),
+            FontSize = 12,
+            MaxHeight = 380,
+        }.Tip("claude.scriptCode");
+        dialog.Content = new StackPanel
+        {
+            Margin = new Thickness(18),
+            Spacing = 12,
+            Children =
+            {
+                new SelectableTextBlock { Text = Lang.T("claude.script.text"), TextWrapping = TextWrapping.Wrap, FontSize = 13 },
+                source,
+                ButtonRow(run, refuse),
+            },
+        };
+        dialog.Opened += (_, _) => refuse.Focus();
+        await dialog.ShowDialog(owner);
+        return result;
+    }
+
     /// <summary>A message with an OK button.</summary>
     public static Task Tell(Window owner, string title, string text) => Ask(owner, title, text, Lang.T("common.ok"), alone: true);
 
