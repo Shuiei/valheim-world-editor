@@ -46,12 +46,16 @@ public static partial class ExpandWorldMod
             if (byPrefab.TryGetValue(baseName, out var own))
             {
                 interior = interior > 0f ? interior : own.InteriorRadius;
+#pragma warning disable S1244 // Exactly 0 is the mod's value for one not given.
                 exterior = exterior != 0f ? exterior : own.ExteriorRadius;
+#pragma warning restore S1244
             }
             else if (BlueprintRadius(blueprints, prefab, notes) is { } bpRadius)
             {
                 blueprint = true;
+#pragma warning disable S1244 // Exactly 0 is the mod's value for one not given.
                 exterior = exterior != 0f ? exterior : bpRadius + 5f;
+#pragma warning restore S1244
             }
             else
             {

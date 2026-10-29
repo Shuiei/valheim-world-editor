@@ -59,6 +59,6 @@ public static class EditorApp
         psi.Environment["XDG_DATA_HOME"] = home;
         psi.Environment["HOME"] = home;
         psi.Environment["LOCALAPPDATA"] = home;
-        return Process.Start(psi)!;
+        return Process.Start(psi)!; // nosemgrep
     }
 }

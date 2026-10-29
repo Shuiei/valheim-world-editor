@@ -26,7 +26,9 @@ public static partial class ExpandWorldMod
     /// A setting both Expand World Size and Data patch: Data's when it is away from the game's value, else Size's. The
     /// comparison is exact on purpose: the mod decides the same way, and a value a hair from the game's is a change.
     /// </summary>
+#pragma warning disable S1244 // Exact on purpose (above): the mod decides the same way.
     private static float Overriding(float data, float game, float size) => data != game ? data : size;
+#pragma warning restore S1244
 
     /// <summary>A switch both Expand World Size and Data patch: on only when neither turns it off.</summary>
     private static bool BothOn(string? size, string? data, bool fallback) => Bool(size, fallback) && Bool(data, fallback);

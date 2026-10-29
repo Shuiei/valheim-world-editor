@@ -43,10 +43,10 @@ public sealed class StartupTests : IDisposable
         Assert.Equal("abc", Options.LiveToken);
         Assert.Null(Options.Folder);
         Environment.SetEnvironmentVariable("WORLD_BRIDGE_TOKEN", "from-env");
-        Options.Parse(["--live", "http://server:5182"]);
+        Options.Parse(["--live", "http://127.0.0.1:5182"]);
         Assert.Equal("from-env", Options.LiveToken);
         // The line wins over the environment.
-        Options.Parse(["--live", "http://server:5182", "--token", "typed"]);
+        Options.Parse(["--live", "http://127.0.0.1:5182", "--token", "typed"]);
         Assert.Equal("typed", Options.LiveToken);
         // Nothing left over from the last start.
         Options.Parse([]);
