@@ -18,7 +18,7 @@
     "bf_moving": { "label": "Sent", "readOnly": true, "help": "The train was sent to a station and is on its way." },
     "bf_wagons": { "label": "Wagons", "readOnly": true, "help": "The wagons this train pulls, in order." },
     "bf_self": { "label": "Wagon's own id", "readOnly": true, "help": "This wagon's id as the mod last saw it: how it finds its wagons again." },
-    "bf_coal": { "label": "Coal" },
+    "bf_coal": { "label": "Coal", "help": "The fuel in the locomotive: coal, or the item the server's Fuel setting names (Railroads 0.3.6)." },
     "bf_odo": { "label": "Metres on this coal", "readOnly": true },
     "bf_speed": { "label": "Speed", "readOnly": true, "help": "Metres a second." },
     "bf_driver": { "label": "Driver", "readOnly": true, "help": "The player driving." },
@@ -50,7 +50,12 @@
     "bf_paid": { "label": "Price known", "readOnly": true },
     "bf_paid_wood": { "label": "Paid wood", "readOnly": true, "help": "What removing this track gives back." },
     "bf_paid_stone": { "label": "Paid stone", "readOnly": true, "help": "What removing this track gives back." },
-    "bf_corewood": { "label": "Paid core wood", "readOnly": true, "help": "What removing this track gives back." }
+    "bf_corewood": { "label": "Paid core wood", "readOnly": true, "help": "What removing this track gives back." },
+    "bf_paid_items": { "label": "Paid with", "readOnly": true, "help": "What this piece was paid with, by the game's item names, which removing it gives back. -: nothing." },
+    "bf_bridge_up": { "label": "Raised", "help": "The drawbridge's leaves are up, for ships: trains stop before it. The mod raises it only with no train on it." },
+    "bf_bridge_from": { "label": "Swing from", "readOnly": true, "help": "How far up the leaves were when they last began to swing: 0 down, 1 up." },
+    "bf_bridge_since": { "label": "Swing began at", "readOnly": true, "help": "When the leaves last began to swing, in the game's ticks. A swing takes 8 seconds." },
+    "bf_sent_by": { "label": "Sent by", "readOnly": true, "help": "The player who sent the train, told when a raised drawbridge holds it." }
   },
   "ties": [
     { "name": "train", "root": "bf_wagons", "member": "bf_self", "idBytes": 12 },
@@ -81,9 +86,10 @@
     "bf_track_loop": { "group": "Track" },
     "bf_track_junction_t": { "group": "Track" },
     "bf_track_junction_x": { "group": "Track" },
+    "bf_track_drawbridge": { "group": "Track" },
     "bf_track_switch_right": { "hidden": true },
     "bf_track_switch_left": { "hidden": true },
-    "bf_station": { "hidden": true },
+    "bf_station": { "group": "Stations" },
     "bf_station_sign": { "group": "Stations" },
     "bf_train_console": { "group": "Stations" },
     "bf_locomotive": { "group": "Trains" },
@@ -92,6 +98,7 @@
     "bf_wagon_portal": { "group": "Trains" },
     "bf_wagon_flat": { "group": "Trains" },
     "bf_handcart": { "group": "Trains" },
+    "bf_feedback_post": { "group": "Other" },
     "bf_rail_world": { "hidden": true, "data": true }
   }
 }

@@ -4,8 +4,8 @@ using Xunit;
 namespace Railroads.WorldEditor.Tests;
 
 /// <summary>
-/// Pasted copies of the mod's pieces made pieces of their own: a vehicle leaves the original's track, trip and driver
-/// behind and keeps its coal and signs; a train keeps its name, not its number; a station sign leaves the original's stop
+/// Pasted copies of the mod's pieces made pieces of their own: a vehicle leaves the original's track, trip, driver and
+/// sender behind and keeps its coal and signs; a train keeps its name, not its number; a station sign leaves the original's stop
 /// and keeps its name; the train's and
 /// the deck's ids are left to the editor's ties (the manifest's), a piece no longer on a deck leaves its place there.
 /// (Where the copy lands sets the rest: RailPlacerTests.)
@@ -19,7 +19,7 @@ public class PastedCopiesTests
         new("bytes", RailroadsMod.Keys.Legs), new("int", RailroadsMod.Keys.Moving),
         new("float", RailroadsMod.Keys.Speed), new("long", RailroadsMod.Keys.Driver), new("string", RailroadsMod.Keys.Destination),
         new("int", RailroadsMod.Keys.Switch), new("int", RailroadsMod.Keys.Gear), new("int", RailroadsMod.Keys.Way),
-        new("float", RailroadsMod.Keys.Stop), new("int", RailroadsMod.Keys.TrainNumber),
+        new("float", RailroadsMod.Keys.Stop), new("int", RailroadsMod.Keys.TrainNumber), new("long", RailroadsMod.Keys.SentBy),
     ];
 
     /// <summary>A value of a type under a key.</summary>

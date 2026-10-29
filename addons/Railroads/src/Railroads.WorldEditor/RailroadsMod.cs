@@ -6,7 +6,7 @@ namespace Railroads.WorldEditor;
 /// Railroads, the mod of stone track, trains and stations (by VladasZ), as the editor knows it: its plugin file, its
 /// pieces and the models it builds them from, and the data keys it keeps on them.
 /// </summary>
-/// <remarks>Followed: Railroads 0.2.9.</remarks>
+/// <remarks>Followed: Railroads 0.3.6.</remarks>
 public static class RailroadsMod
 {
     /// <summary>The mod's plugin file, under a BepInEx plugins folder; its models are in <see cref="MeshFolder"/> beside it.</summary>
@@ -24,8 +24,14 @@ public static class RailroadsMod
     /// <summary>The prefab of a station sign, a named stop for trains.</summary>
     public const string Sign = "bf_station_sign";
 
-    /// <summary>The prefab of the station of the mod's first versions (no longer on the hammer; still in worlds).</summary>
+    /// <summary>The prefab of the station of the mod's first versions (off the hammer from 0.2.5, back on it since 0.3.5).</summary>
     public const string OldStation = "bf_station";
+
+    /// <summary>
+    /// The prefab of the drawbridge: 16 m of track between 2 stone towers, whose 2 leaves the mod raises for ships
+    /// (<see cref="Keys.BridgeUp"/>), drawn from <see cref="DrawbridgeParts"/>.
+    /// </summary>
+    public const string Drawbridge = "bf_track_drawbridge";
 
     /// <summary>
     /// The prefab of the object the server keeps the count of numbered trains on (<see cref="Keys.TrainCount"/>): one
@@ -65,7 +71,8 @@ public static class RailroadsMod
         Track("bf_track_loop", "track_loop"),
         Track("bf_track_junction_t", "track_junction_t"),
         Track("bf_track_junction_x", "track_junction_x"),
-        new(OldStation, "station", RailKind.Station, Retired: true),
+        Track(Drawbridge, "track_drawbridge"),
+        new(OldStation, "station", RailKind.Station),
         new(Sign, "station_sign", RailKind.Station),
         new("bf_train_console", "train_console", RailKind.Station),
         new(Locomotive, "locomotive", RailKind.Vehicle),
@@ -74,6 +81,7 @@ public static class RailroadsMod
         new("bf_wagon_portal", "portal", RailKind.Vehicle),
         new("bf_wagon_flat", "flatbed", RailKind.Vehicle),
         new(Handcart, "handcart", RailKind.Vehicle),
+        new("bf_feedback_post", "feedback_post", RailKind.Other),
     ];
 
     /// <summary>The old station's legs (unless it keeps <see cref="Keys.Bare"/>), drawn from their own model.</summary>
@@ -84,6 +92,15 @@ public static class RailroadsMod
 
     /// <summary>The wheel set under each of the locomotive's own axles.</summary>
     public const string SmallAxle = "axle_small";
+
+    /// <summary>
+    /// A vehicle's coupler, at each of its model's boxes of <see cref="CouplerBox"/>'s size: since 0.3.0 the mod builds
+    /// it apart from the body (whose model no longer has it), to turn it towards the next vehicle on slopes.
+    /// </summary>
+    public const string Coupler = "coupler";
+
+    /// <summary>The size of the box the mod builds a coupler at; the coupler reaches from the box's inner end to its outer one.</summary>
+    public static readonly Vector3 CouplerBox = new(0.2f, 0.2f, 0.45f);
 
     /// <summary>The locomotive's big driving wheels, at <see cref="BigAxleAt"/>.</summary>
     public const string BigAxle = "axle_big";
@@ -246,6 +263,24 @@ public static class RailroadsMod
 
         /// <summary>The core wood a track piece was paid with (int).</summary>
         public const string PaidCoreWood = "bf_corewood";
+
+        /// <summary>
+        /// What a piece was paid with, as the game names items ("Wood 4, Stone 2"; "-": nothing), since 0.3.2: what
+        /// removing it gives back (string).
+        /// </summary>
+        public const string PaidItems = "bf_paid_items";
+
+        /// <summary>A drawbridge's leaves are up, or swinging up (bool).</summary>
+        public const string BridgeUp = "bf_bridge_up";
+
+        /// <summary>How far up a drawbridge's leaves were when they last began to swing, 0 down to 1 up (float).</summary>
+        public const string BridgeFrom = "bf_bridge_from";
+
+        /// <summary>When a drawbridge's leaves last began to swing (long, the game's ticks): they take 8 s.</summary>
+        public const string BridgeSince = "bf_bridge_since";
+
+        /// <summary>The player who sent a train (long), told when a raised drawbridge holds it.</summary>
+        public const string SentBy = "bf_sent_by";
     }
 }
 
@@ -260,6 +295,9 @@ public enum RailKind
 
     /// <summary>A locomotive, a wagon or the hand cart: it runs on the track.</summary>
     Vehicle,
+
+    /// <summary>A piece of the mod of none of those kinds: the feedback post.</summary>
+    Other,
 }
 
 /// <summary>One piece the mod adds.</summary>

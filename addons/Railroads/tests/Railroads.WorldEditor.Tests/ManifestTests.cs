@@ -58,7 +58,8 @@ public class ManifestTests
             {
                 RailKind.Track => "Track",
                 RailKind.Station => "Stations",
-                _ => "Trains",
+                RailKind.Vehicle => "Trains",
+                _ => "Other",
             };
             Assert.Equal((group, piece.Retired, false), ((string?)entry["group"], (bool?)entry["hidden"] == true, (bool?)entry["data"] == true));
         }

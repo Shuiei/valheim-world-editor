@@ -121,16 +121,19 @@ public class ReferenceTests
     /// A copy of a recorded object put where it stands by the add-on, among the rest of the recorded objects (its
     /// original left out, as when the editor moves it).
     /// </summary>
-    private static FakeObject Placed(FakeObject original)
+    private static FakeObject Placed(FakeObject original) => Placed(original, Reference.Objects);
+
+    /// <summary>A copy of a recorded object put where it stands by the add-on, among the rest of its record.</summary>
+    internal static FakeObject Placed(FakeObject original, IReadOnlyList<Recorded> record)
     {
         var copy = Copy(original);
-        var rest = Reference.Objects.Select(r => r.Object).Where(o => o != original).Cast<ValheimWorldEditor.Sdk.IObjectView>().ToArray();
+        var rest = record.Select(r => r.Object).Where(o => o != original).Cast<ValheimWorldEditor.Sdk.IObjectView>().ToArray();
         new RailPlacer(Models).Place([copy], new ObjectsArea(rest));
         return copy;
     }
 
     /// <summary>A copy of an object with all its values.</summary>
-    private static FakeObject Copy(FakeObject o)
+    internal static FakeObject Copy(FakeObject o)
     {
         var c = new FakeObject(o.Prefab) { Position = o.Position, Orientation = o.Orientation };
         foreach (var v in o.Ints)

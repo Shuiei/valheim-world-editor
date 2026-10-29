@@ -6,7 +6,8 @@ namespace Railroads.WorldEditor.Tests;
 /// <summary>
 /// The mod's pieces set right wherever the editor puts them: track keeps the turn it is put with; a vehicle stands on
 /// the nearest line of track within 1.5 m, at its point and facing its way, stopped; a station sign stops trains at the
-/// nearest point of straight track within 10 m; track put in the same step counts.
+/// nearest point of straight track within 10 m; the drawbridge is track vehicles stand on but no stop; track put in the
+/// same step counts.
 /// </summary>
 public sealed class RailPlacerTests : IDisposable
 {
@@ -22,6 +23,8 @@ public sealed class RailPlacerTests : IDisposable
             lines: [[Vector3.Zero, new Vector3(0, 0, 4), new Vector3(0, 0, 8)]]));
         _mod.Put("track_curve_r8_45", ModelBytes.Write([("stone", [Vector3.Zero, Vector3.UnitZ, Vector3.UnitX], [0, 1, 2])],
             lines: [[Vector3.Zero, new Vector3(1, 0, 4), new Vector3(2.34f, 0, 5.66f)]]));
+        _mod.Put("track_drawbridge", ModelBytes.Write([("stone", [Vector3.Zero, Vector3.UnitZ, Vector3.UnitX], [0, 1, 2])],
+            lines: [[Vector3.Zero, new Vector3(0, 0, 8), new Vector3(0, 0, 16)]]));
         _placer = new RailPlacer(new ModelLibrary(new FakeHost { Plugin = _mod.Plugin }, Assert.Fail));
     }
 
@@ -55,6 +58,7 @@ public sealed class RailPlacerTests : IDisposable
         train.Ints[RailroadsMod.Keys.Moving] = 1;
         train.Floats[RailroadsMod.Keys.Speed] = 9;
         train.Ints[RailroadsMod.Keys.Coal] = 12;
+        train.Longs[RailroadsMod.Keys.SentBy] = 77;
 
         _placer.Place([train], new ObjectsArea(track));
 
@@ -113,6 +117,26 @@ public sealed class RailPlacerTests : IDisposable
         _placer.Place([sign], new ObjectsArea(Straight(new Vector3(10, 0, 0))));
 
         Assert.Empty(sign.Keys);
+    }
+
+    [Fact]
+    public void TheDrawbridgeIsTrackVehiclesStandOnButNoStop()
+    {
+        // Its line runs from (40, 0, 0) to (56, 0, 0); the wagon stands on it, the sign is beside it.
+        var bridge = new FakeObject(RailroadsMod.Drawbridge) { Position = new Vector3(40, 0, 0), Orientation = Quarter };
+        var wagon = new FakeObject("bf_wagon") { Position = new Vector3(45, 1, 0.5f), Orientation = Quarter };
+        var sign = new FakeObject(RailroadsMod.Sign) { Position = new Vector3(48, 1, 3) };
+        var post = new FakeObject("bf_feedback_post") { Position = new Vector3(44, 0, 3), Orientation = Quarter };
+
+        _placer.Place([bridge, wagon, sign, post], new ObjectsArea());
+
+        Assert.Equal(Quarter, bridge.Quaternions[RailroadsMod.Keys.Turn]);
+        var (a, b) = Assert.Single(TrackLines.Read(wagon.Bytes[RailroadsMod.Keys.Line])!);
+        Assert.True(Vector3.Distance(new Vector3(40, 0, 0), a) < 1e-4f && Vector3.Distance(new Vector3(56, 0, 0), b) < 1e-4f);
+        Assert.Equal(5, wagon.Floats[RailroadsMod.Keys.At], 1e-4f);
+        // Trains stop at signs only beside straight track and loops, as the mod has it.
+        Assert.Empty(sign.Keys);
+        Assert.Empty(post.Keys);
     }
 
     [Fact]

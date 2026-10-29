@@ -1,0 +1,148 @@
+# Railroads 0.3.6 (vladasz.railroads) drawbridge, recorded on a local headless Valheim dedicated server
+# Valheim l-1.0.20 (world version 42 CheatCleanSlate), BepInEx 5.4.23.5
+# Recorded 2026-10-29 13:10 by a throwaway harness, on the world railroads-names.txt was recorded on, 300 m or more from its railway; the world's clock run as with a player online (a server stops it while nobody is)
+# built: 3 straights, drawbridge A, 2 straights with the station sign 'Bridge End' (and its console) beside the second, drawbridge B, a straight;
+#   a feedback post; a locomotive with a wagon coupled (30 coal) on the third straight; a restaurant wagon on drawbridge B, which the mod put on B's line
+# drawbridge A raised by its lever's RPC (bf_bridge_toggle), then the train sent to 'Bridge End' (bf_request): the mod held it before A
+#   (its log: "drawbridge ... holds the train ...")
+# below: the train held, the world saved in the same frame. Then A was lowered by its lever: the train went on to its stop; after a restart
+#   both drawbridges were down, as saved
+# ZDOIDs are live session ids (Valheim reassigns ids when a world loads); floats are written with ToString("R")
+# 14 objects
+object bf_feedback_post 2532119111:24763
+pos -203.901382 46.456028 440.8432
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+end
+object bf_locomotive 2532119111:26752
+pos -197.293915 47.6156921 446.287659
+rot 0 0.2588332 0 0.965922058
+int bf_coal 30
+int bf_moving 1
+int bf_train_number 4
+int bf_trips 1
+int bf_way 1
+int creatorIndex -1
+long bf_sent_by 2532119111
+long bf_torch0_time 20671232657
+long bf_torch1_time 20671232657
+long creator 424242424242
+float bf_at 4.01877165
+float bf_odo 2.0187335
+float bf_speed 0
+float bf_stop 4.00014544
+float bf_torch0 1.99819934
+float bf_torch1 1.99819934
+string bf_dest QnJpZGdlIEVuZA==
+string bf_horn 
+bytes bf_after 
+bytes bf_legs AAAAAA==
+bytes bf_line pU1Hw3h2PkJVZ91DpU1Dw3h2PkIk3uBD
+bytes bf_route pU1Dw3h2PkIk3uBDpU07w3h2PkLDy+dDpU07w3h2PkLDy+dDpU03w3h2PkKSQutDpU03w3h2PkKSQutDpU0zw3h2PkJhue5D
+bytes bf_trail pU1Lw3h2PkKG8NlDpU1Hw3h2PkJVZ91D
+bytes bf_wagons RxLtlgAAAACBaAAA
+end
+object bf_station_sign 2532119111:24761
+pos -178.272217 49.448307 472.234222
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+vec3 bf_stop -181.303238 47.6156921 473.9843
+string bf_name QnJpZGdlIEVuZA==
+end
+object bf_track_drawbridge 2532119111:22883
+pos -195.3033 47.6156921 449.735474
+rot 0 0.258819044 0 0.9659258
+int bf_bridge_up 1
+int creatorIndex -1
+long bf_bridge_since 20530858002
+long creator 424242424242
+float bf_bridge_from 0
+quat bf_turn 0 0.258819073 0 0.9659259
+end
+object bf_track_drawbridge 2532119111:22886
+pos -179.3033 47.6156921 477.448273
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.258819073 0 0.9659259
+end
+object bf_track_straight_8 2532119111:22880
+pos -207.3033 47.6156921 428.9509
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.258819073 0 0.9659259
+end
+object bf_track_straight_8 2532119111:22881
+pos -203.3033 47.6156921 435.8791
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.258819073 0 0.9659259
+end
+object bf_track_straight_8 2532119111:22882
+pos -199.3033 47.6156921 442.807281
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.258819073 0 0.9659259
+end
+object bf_track_straight_8 2532119111:22884
+pos -187.3033 47.6156921 463.5919
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.258819073 0 0.9659259
+end
+object bf_track_straight_8 2532119111:22885
+pos -183.3033 47.6156921 470.520081
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.258819073 0 0.9659259
+end
+object bf_track_straight_8 2532119111:22887
+pos -171.3033 47.6156921 491.3047
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+quat bf_turn 0 0.258819073 0 0.9659259
+end
+object bf_train_console 2532119111:24762
+pos -179.522217 49.448307 470.069153
+rot 0 0.258819044 0 0.9659258
+int creatorIndex -1
+long creator 424242424242
+end
+object bf_wagon 2532119111:26753
+pos -199.918915 47.6156921 441.741
+rot 0 0.258803725 0 0.9659299
+int InUse 0
+int addedDefaultItems 1
+int creatorIndex -1
+long bf_torch0_time 20661232636
+long bf_torch1_time 20661232636
+long creator 424242424242
+float bf_at 6.76876163
+float bf_torch0 1.99839938
+float bf_torch1 1.99839938
+bytes bf_line pU1Lw3h2PkKG8NlDpU1Hw3h2PkJVZ91D
+bytes bf_self RxLtlgAAAACBaAAA
+end
+object bf_wagon_restaurant 2532119111:26754
+pos -175.3033 47.6156921 484.376465
+rot 0 0.258803725 0 0.9659299
+int InUse 0
+int addedDefaultItems 1
+int creatorIndex -1
+long StartTime 20670565990
+long bf_torch0_time 20671232657
+long bf_torch1_time 20671232657
+long creator 424242424242
+float bf_at 7.99999
+float bf_torch0 1.99839938
+float bf_torch1 1.99839938
+bytes bf_line pU0zw3h2PkJhue5DpU0rw3h2PkIAp/VD
+end

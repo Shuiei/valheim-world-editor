@@ -8,7 +8,7 @@ namespace Railroads.WorldEditor;
 /// new ids); what depends on where a copy lands (the track a vehicle stands on, a sign's stop, track's exact turn) is
 /// set again by <see cref="RailPlacer"/> once it is pasted. Here what is left:
 /// <list type="bullet">
-/// <item>a vehicle loses its driver, levers and trip, and the hand cart who held its handles;</item>
+/// <item>a vehicle loses its driver, levers and trip (and who sent it), and the hand cart who held its handles;</item>
 /// <item>a train keeps its name but loses its number: the server gives it one of its own, as to a train just built (the
 /// number is what an unnamed train goes by, and the server never numbers a train again);</item>
 /// <item>a piece no longer on a deck (its flatbed was not copied) loses its place on that deck too;</item>
@@ -25,6 +25,7 @@ public sealed class PastedCopies : ICopyRewriter
         RailroadsMod.Keys.After, RailroadsMod.Keys.Legs, RailroadsMod.Keys.Moving, RailroadsMod.Keys.Speed, RailroadsMod.Keys.Driver,
         RailroadsMod.Keys.Destination, RailroadsMod.Keys.Switch, RailroadsMod.Keys.Gear, RailroadsMod.Keys.Way, RailroadsMod.Keys.Stop,
         RailroadsMod.Keys.Front, RailroadsMod.Keys.Back, RailroadsMod.Keys.DeckPos, RailroadsMod.Keys.DeckRot, RailroadsMod.Keys.TrainNumber,
+        RailroadsMod.Keys.SentBy,
     ];
 
     /// <summary>The lines a vehicle keeps (bytes now; text in the mod's first versions): set again where it lands.</summary>
@@ -55,7 +56,7 @@ public sealed class PastedCopies : ICopyRewriter
         {
             copy.SetInt(key, null);
         }
-        foreach (string key in new[] { RailroadsMod.Keys.Driver, RailroadsMod.Keys.Front, RailroadsMod.Keys.Back })
+        foreach (string key in new[] { RailroadsMod.Keys.Driver, RailroadsMod.Keys.Front, RailroadsMod.Keys.Back, RailroadsMod.Keys.SentBy })
         {
             copy.SetLong(key, null);
         }
