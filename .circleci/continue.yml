@@ -37,10 +37,10 @@
 # which main's ruleset keeps up to date with main, so the merged commit's tree is the one they tested):
 #   hold-release   waits for someone to approve it in CircleCI (the mod-token context is restricted)
 #   packages, windows-smoke   as above: the packages to release, and the Windows one smoke-tested
-#   github-release signs the Windows program (Authenticode, tools/sign-windows.sh: the maintainer's
-#                  Certum certificate through SimplySign's cloud), builds the plugin's zip
-#                  (tools/thunderstore.sh, against a Valheim dedicated server from SteamCMD and
-#                  BepInExPack_Valheim), tags the commit and makes the GitHub release with the packages
+#   github-release builds the plugin's zip (tools/thunderstore.sh, against a Valheim dedicated server
+#                  from SteamCMD and BepInExPack_Valheim), the SDK's and the add-ons', signs the Windows
+#                  program and every DLL built here (Authenticode, tools/sign-windows.sh: the maintainer's
+#                  Certum certificate through SimplySign's cloud), tags the commit and makes the GitHub release with the packages
 #                  tested above (the Sign release workflow on GitHub adds Sigstore signatures to them)
 #   publish-*      the plugin (only) on Thunderstore and Hexium, and the plugin, the editor and every
 #                  add-on (a file each) on Nexus Mods
@@ -507,11 +507,6 @@ jobs:
               echo "v$version is tagged already (released from another pipeline?)."; exit 1
             fi
             ls /tmp/dist/ValheimWorldEditor-v$version-linux-x64.tar.gz /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip
-      # After windows-smoke, which ran the unsigned program: the signature changes nothing in how it runs,
-      # and the context's secrets (CERTUM_EMAIL, CERTUM_OTP) reach only the jobs after the approval.
-      - run:
-          name: Sign the Windows program and spirv-cross.dll (Authenticode)
-          command: tools/sign-windows.sh /tmp/dist/ValheimWorldEditor-v$(tr -d '[:space:]' < VERSION)-win-x64.zip
       - run:
           name: The game's DLLs (Valheim dedicated server, SteamCMD) and BepInEx
           no_output_timeout: 20m
@@ -544,6 +539,15 @@ jobs:
       - run:
           name: The add-ons' zips, one each
           command: tools/addons.sh /tmp/dist
+      # After windows-smoke, which ran the unsigned program: the signature changes nothing in how it runs,
+      # and the context's secrets (CERTUM_EMAIL, CERTUM_OTP) reach only the jobs after the approval. Once every zip
+      # is made, so one login signs the Windows program and every DLL built here.
+      - run:
+          name: Sign the Windows program, spirv-cross.dll and our DLLs (Authenticode)
+          command: |
+            version=$(tr -d '[:space:]' < VERSION)
+            tools/sign-windows.sh /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip /tmp/dist/WorldEditorBridge-$version.zip \
+              /tmp/dist/ValheimWorldEditor.Sdk-$version.zip /tmp/dist/ValheimWorldEditor-addon-*.zip
       - run:
           name: The release notes
           command: |
