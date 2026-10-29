@@ -142,6 +142,9 @@ public sealed partial class TerrainModifiers
     /// </summary>
     public IReadOnlyList<Modifier> InZone(int zx, int zz) => _byZone.TryGetValue((zx, zz), out var list) ? list : Array.Empty<Modifier>();
 
+    /// <summary>Whether one of the editor's ground discs (saved No limit ground) touches zone (zx, zz).</summary>
+    public bool HasDiscs(int zx, int zz) => InZone(zx, zz).Any(m => m.Disc);
+
     /// <summary>
     /// Applies the zone's modifiers to its 65x65 base heights (in place), and their cleared paint to its base paint
     /// mask when one is given. Returns the heights the saved edits are clamped against (TerrainComp.ApplyToHeightmap's
@@ -151,11 +154,12 @@ public sealed partial class TerrainModifiers
     /// <param name="zz">Zone z.</param>
     /// <param name="heights">The zone's generated heights, changed in place.</param>
     /// <param name="mask">The zone's generated paint mask (65x65 RGBA), painted in place; null: heights only.</param>
+    /// <param name="discs">False: the editor's ground discs are left out (the ground as the world generated it).</param>
     /// <returns>The heights before the first player-made modifier; a copy of the result when there is none.</returns>
-    public float[] Apply(int zx, int zz, float[] heights, float[]? mask = null)
+    public float[] Apply(int zx, int zz, float[] heights, float[]? mask = null, bool discs = true)
     {
         float[]? baseHeights = null, levelOnly = null;
-        foreach (Modifier m in InZone(zx, zz))
+        foreach (Modifier m in InZone(zx, zz).Where(m => discs || !m.Disc))
         {
             if (m.Player && baseHeights == null)
             {

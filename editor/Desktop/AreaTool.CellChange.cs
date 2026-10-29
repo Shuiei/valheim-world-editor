@@ -63,8 +63,9 @@ public sealed partial class AreaTool
                     G.Mod[p] = 0;
                 }
             }
-            // Also back down from a No limit lift (a mountain, a deep paste), as the Restore brush.
-            G.Lift[p] = w > 0.98f || MathF.Abs(G.Lift[p] * (1 - w)) < 0.01f ? 0 : G.Lift[p] * (1 - w);
+            // Also back from a No limit lift (a mountain, a deep paste), saved or not, as the Restore brush.
+            float bare = G.BareLift(p), lift = G.Lift[p] + (bare - G.Lift[p]) * w;
+            G.Lift[p] = w > 0.98f || MathF.Abs(lift - bare) < 0.01f ? bare : lift;
             if (G.PMod[p] != 0 && w > 0.5f)
             {
                 G.PMod[p] = 0;

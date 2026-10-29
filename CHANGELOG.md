@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.114.3 — unreleased
+
+### Fixed
+- **Restore takes saved No limit ground away.** Once ground past the game's ±8 m was saved, the Restore brush and the
+  Area tool's **Restore the ground** brought the ground back only to that saved shape, not to the ground the world
+  generated. They now go all the way back, and the next save takes away the ground discs that are no longer needed.
+
 ## v1.114.2 — unreleased
 
 ### WorldEditorBridge

@@ -40,6 +40,9 @@ public sealed partial class TerrainService
 
         /// <summary>BaseMask's paint masks by zone, painted by <see cref="Modifiers"/>.</summary>
         public ConcurrentDictionary<(int, int), float[]> Masks { get; } = new();
+
+        /// <summary>BareZone's heights by zone (zones a ground disc touches), built with the other modifiers.</summary>
+        public ConcurrentDictionary<(int, int), float[]> Bare { get; } = new();
     }
 
     /// <summary>The modifiers in use and the zones built with them.</summary>
@@ -90,6 +93,28 @@ public sealed partial class TerrainService
         {
             float[] h = Build(k.Item1, k.Item2, null);
             ground.Modifiers?.Apply(k.Item1, k.Item2, h);
+            return h;
+        });
+    }
+
+    /// <summary>
+    /// The ground as the world generated it where the editor's ground discs (saved No limit ground) changed it: the
+    /// generated terrain and the other modifiers, without the discs. Null when no disc touches the zone (it is
+    /// <see cref="BaseZone"/>). Cached; callers must not change the array.
+    /// </summary>
+    /// <param name="zx">Zone x.</param>
+    /// <param name="zz">Zone z.</param>
+    public float[]? BareZone(int zx, int zz)
+    {
+        Modified ground = _ground;
+        if (ground.Modifiers is not { } modifiers || !modifiers.HasDiscs(zx, zz))
+        {
+            return null;
+        }
+        return ground.Bare.GetOrAdd((zx, zz), k =>
+        {
+            float[] h = Build(k.Item1, k.Item2, null);
+            modifiers.Apply(k.Item1, k.Item2, h, discs: false);
             return h;
         });
     }
