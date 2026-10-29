@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.113.2 — unreleased
+
+### WorldEditorBridge
+- **Never reachable from the internet.** Only the machine the plugin runs on and its local networks can connect, even
+  with `BindAddress` changed from `127.0.0.1`, and the server's log warns that the token then travels unencrypted.
+  The token is only taken from the editor's header, no longer from the address, where it could end up in logs.
+
 ## v1.113.0 — 2026-10-26
 
 ### Added

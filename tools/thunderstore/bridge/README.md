@@ -144,7 +144,7 @@ In `BepInEx/config/Tie.WorldEditorBridge.cfg`:
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `BindAddress` | `127.0.0.1` | Only this computer can connect. Keep it: a server is reached through the editor's SSH tunnel. |
+| `BindAddress` | `127.0.0.1` | Only this computer can connect. Keep it: a server is reached through the editor's SSH tunnel. Another address lets this computer's local networks in (never the internet), with the token unencrypted. |
 | `Port` | `5182` | Change it if something else uses 5182 (the editor reads it from the file, or asks). |
 | `Token` | random | The secret the editor sends. Leave it empty to get a new one at the next start. |
 

@@ -79,7 +79,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     private ConfigEntry<int> _port;
 
     /// <summary>
-    /// Secret every request must carry (X-Bridge-Token header or ?token=); made on first start when empty.
+    /// Secret every request must carry in its X-Bridge-Token header; made on first start when empty.
     /// </summary>
     private ConfigEntry<string> _token;
 
@@ -158,9 +158,9 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                 Caught(ex, $"moving the settings from {OldGuid}.cfg to {PluginGuid}.cfg (the old file is left)");
             }
         }
-        _bind = Config.Bind("Http", "BindAddress", "127.0.0.1", "Address to listen on. Keep 127.0.0.1 and reach it through an SSH tunnel (ssh -L 5182:127.0.0.1:5182 user@server).");
+        _bind = Config.Bind("Http", "BindAddress", "127.0.0.1", "Address to listen on. Keep 127.0.0.1 and reach it through an SSH tunnel (ssh -L 5182:127.0.0.1:5182 user@server). Another address lets this machine's local networks in (never the internet), and the token then travels unencrypted.");
         _port = Config.Bind("Http", "Port", 5182, "TCP port of the bridge.");
-        _token = Config.Bind("Http", "Token", "", "Secret the editor must send (X-Bridge-Token header or ?token=). Generated on first start when empty.");
+        _token = Config.Bind("Http", "Token", "", "Secret the editor must send (X-Bridge-Token header). Generated on first start when empty.");
         if (string.IsNullOrWhiteSpace(_token.Value))
         {
             byte[] b = new byte[18];
@@ -187,12 +187,24 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             _thread = new Thread(Serve) { IsBackground = true, Name = "WorldEditorBridge" };
             _thread.Start();
             Logger.LogInfo($"WorldEditorBridge {Version} listening on http://{_bind.Value}:{_port.Value}/ (token in BepInEx/config/{PluginGuid}.cfg)");
+            if (!IsLoopbackBind(_bind.Value))
+            {
+                Logger.LogWarning($"WorldEditorBridge: BindAddress {_bind.Value} lets other machines of this one's local networks connect (never the internet's), "
+                    + "and the token travels unencrypted (plain HTTP): anyone on those networks can read it and change the world. "
+                    + "Keep 127.0.0.1 and reach it through an SSH tunnel (the editor makes one).");
+            }
         }
         catch (Exception ex)
         {
             Caught(ex, $"listening on {_bind.Value}:{_port.Value} (the bridge does not answer)", level: LogLevel.Error);
         }
     }
+
+    /// <summary>Whether BindAddress is this machine only (127.0.0.1, localhost, ::1, another loopback address).</summary>
+    /// <param name="bind">The setting's value.</param>
+    private static bool IsLoopbackBind(string bind) =>
+        string.Equals(bind, "localhost", StringComparison.OrdinalIgnoreCase)
+        || (IPAddress.TryParse(bind.Trim('[', ']'), out var ip) && IPAddress.IsLoopback(ip));
 
     /// <summary>Stops the listener, which ends <c>Serve</c>. Unity calls it by name.</summary>
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]

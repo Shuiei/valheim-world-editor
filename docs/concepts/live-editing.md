@@ -14,7 +14,8 @@ need neither, console players included, and offline editing needs neither.
 The plugin answers the editor on a port of the computer it runs on (5182 at first), and it is built to stay private:
 
 - **It only listens on that computer itself** (`127.0.0.1`), so nothing on the network can reach it. Its
-  `BindAddress` setting can open it to the network; keep it as it is.
+  `BindAddress` setting can open it to the computer's local networks (never to the internet: those callers are
+  refused), with the token unencrypted; keep it as it is.
 - **It needs its secret token.** On its first start the plugin writes `BepInEx/config/Tie.WorldEditorBridge.cfg` with
   a **token** of 24 random letters and digits. A request without it is refused. Until the game or server has started
   once with the plugin, there is no token.

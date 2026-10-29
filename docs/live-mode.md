@@ -160,9 +160,9 @@ reads either.)
 
 | Setting | Default | What it does |
 |---|---|---|
-| `BindAddress` | `127.0.0.1` | The address the plugin listens on. Keep `127.0.0.1`: the editor reaches a server through its own SSH tunnel. Anything else exposes the plugin to the network. |
+| `BindAddress` | `127.0.0.1` | The address the plugin listens on. Keep `127.0.0.1`: the editor reaches a server through its own SSH tunnel. Anything else exposes the plugin to the machine's local networks (never the internet: callers from elsewhere are refused), with the token unencrypted, and the log warns about it. |
 | `Port` | `5182` | The plugin's port. Change it when another program uses 5182. |
-| `Token` | made on first start | The secret the editor must send: 24 random letters and digits. Anyone with it and access to the port can change the world, so keep it private. Empty the line and restart to get a new one. |
+| `Token` | made on first start | The secret the editor must send, in a header (never in the address): 24 random letters and digits. Anyone with it and access to the port can change the world, so keep it private. Empty the line and restart to get a new one. |
 
 ## What the plugin logs
 
