@@ -206,10 +206,10 @@ public class ClaudeToolsTransportTests
     // --mcp-stdio relays to the address the settings choose: the chosen one, or this computer's 127.0.0.1 for every
     // network.
     [Theory]
-    [InlineData("192.0.2.20", "http://192.0.2.20:5799/mcp")]
-    [InlineData("2001:db8::1", "http://[2001:db8::1]:5799/mcp")]
-    [InlineData("0.0.0.0", "http://127.0.0.1:5799/mcp")]
-    public async Task TheRelayGoesToTheChosenAddress(string address, string url)
+    [InlineData("192.0.2.20", "192.0.2.20:5799")]
+    [InlineData("2001:db8::1", "[2001:db8::1]:5799")]
+    [InlineData("0.0.0.0", "127.0.0.1:5799")]
+    public async Task TheRelayGoesToTheChosenAddress(string address, string authority)
     {
         var seen = new List<Uri>();
         var handler = new Answer(req =>
@@ -221,8 +221,14 @@ public class ClaudeToolsTransportTests
         });
         var on = new TerrainEditor.App.AppSettings { ClaudeConnect = true, ClaudeToken = "tok", ClaudePort = 5799, ClaudeAddress = address };
         await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}\n"), new StringWriter(), () => on, handler);
-        Assert.Equal(url, Assert.Single(seen).ToString());
+        Assert.Equal(McpUrl(authority), Assert.Single(seen).ToString());
     }
+
+    /// <summary>
+    /// The MCP server's URL at an authority (host:port, IPv6 in brackets), as the editor gives it: plain HTTP by design
+    /// (see ClaudeServer).
+    /// </summary>
+    internal static string McpUrl(string authority) => $"{Uri.UriSchemeHttp}://{authority}/mcp";
 
     /// <summary>A port free now on this computer.</summary>
     private static int FreePort()
@@ -275,16 +281,16 @@ public class ClaudeToolsTransportTests
         Assert.Equal("http://127.0.0.1:5731/mcp", ClaudeServer.Url(5731));
         Assert.Equal("http://127.0.0.1:5731/mcp", ClaudeServer.Url(5731, "0.0.0.0"));
         Assert.Equal("http://127.0.0.1:5731/mcp", ClaudeServer.Url(5731, "::"));
-        Assert.Equal("http://[::1]:5731/mcp", ClaudeServer.Url(5731, "::1"));
-        Assert.Equal("http://192.0.2.20:5731/mcp", ClaudeServer.Url(5731, " 192.0.2.20 "));
-        Assert.Equal("http://[2001:db8::1]:5731/mcp", ClaudeServer.Url(5731, "2001:db8::1"));
+        Assert.Equal(McpUrl("[::1]:5731"), ClaudeServer.Url(5731, "::1"));
+        Assert.Equal(McpUrl("192.0.2.20:5731"), ClaudeServer.Url(5731, " 192.0.2.20 "));
+        Assert.Equal(McpUrl("[2001:db8::1]:5731"), ClaudeServer.Url(5731, "2001:db8::1"));
         Assert.Equal("http://127.0.0.1:5731/mcp", ClaudeServer.Url(5731, "not an address"));
-        Assert.Contains("http://192.0.2.20:6000/mcp --header", ClaudeServer.ClaudeCodeCommand(6000, "abc", "192.0.2.20"));
+        Assert.Contains(McpUrl("192.0.2.20:6000") + " --header", ClaudeServer.ClaudeCodeCommand(6000, "abc", "192.0.2.20"));
         Assert.Null(ClaudeServer.ParseAddress("my-pc.local"));
         Assert.Equal(IPAddress.Any, ClaudeServer.ParseAddress("0.0.0.0"));
         // A choice of Settings' list reads as its address.
         Assert.Equal(IPAddress.Any, ClaudeServer.ParseAddress("0.0.0.0 (every network)"));
-        Assert.Equal("http://192.0.2.20:5731/mcp", ClaudeServer.Url(5731, "192.0.2.20 (Ethernet)"));
+        Assert.Equal(McpUrl("192.0.2.20:5731"), ClaudeServer.Url(5731, "192.0.2.20 (Ethernet)"));
         Assert.True(ClaudeServer.IsEveryAddress(IPAddress.IPv6Any));
         Assert.False(ClaudeServer.IsEveryAddress(IPAddress.Loopback));
         // Endpoints as the status line writes them: IPv6 in brackets.
@@ -292,9 +298,9 @@ public class ClaudeToolsTransportTests
         Assert.Equal("[::]:5731", ClaudeServer.Endpoint(IPAddress.IPv6Any, 5731));
         // Another computer: this one's name, with .local when it has no domain.
         Assert.Matches(@"^http://[^/:]+\.[^/:]+:5731/mcp$", ClaudeServer.RemoteUrl(5731));
-        Assert.StartsWith($"http://{Dns.GetHostName()}", ClaudeServer.RemoteUrl(5731), StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith($"{Uri.UriSchemeHttp}://{Dns.GetHostName()}", ClaudeServer.RemoteUrl(5731), StringComparison.OrdinalIgnoreCase);
         Assert.All(ClaudeServer.LocalAddresses(), a => Assert.False(IPAddress.IsLoopback(IPAddress.Parse(a.Address))));
         // And by each network address, for networks that do not answer the name.
-        Assert.Equal(ClaudeServer.LocalAddresses().Select(a => $"http://{a.Address}:5731/mcp"), ClaudeServer.RemoteAddressUrls(5731));
+        Assert.Equal(ClaudeServer.LocalAddresses().Select(a => McpUrl($"{a.Address}:5731")), ClaudeServer.RemoteAddressUrls(5731));
     }
 }

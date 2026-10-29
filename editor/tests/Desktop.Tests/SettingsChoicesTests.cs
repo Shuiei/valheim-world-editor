@@ -88,14 +88,14 @@ public class SettingsChoicesTests
         // Off this computer: said, where the address is chosen, that the connection is not encrypted.
         address.Text = "192.0.2.20";
         Dispatcher.UIThread.RunJobs();
-        Assert.Contains("http://192.0.2.20:5731/mcp", command.Text);
+        Assert.Contains(ClaudeToolsTransportTests.McpUrl("192.0.2.20:5731"), command.Text);
         Assert.False(remote.IsVisible);
         Assert.True(unencrypted.IsVisible);
         Assert.Contains("not encrypted", unencrypted.Text);
         // Another loopback address: still this computer only.
         address.Text = "::1";
         Dispatcher.UIThread.RunJobs();
-        Assert.Contains("http://[::1]:5731/mcp", command.Text);
+        Assert.Contains(ClaudeToolsTransportTests.McpUrl("[::1]:5731"), command.Text);
         Assert.False(unencrypted.IsVisible);
         address.SelectedIndex = 1;
         Dispatcher.UIThread.RunJobs();
