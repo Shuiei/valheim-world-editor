@@ -56,7 +56,9 @@ namespace WorldEditorBridge;
 [BepInPlugin(PluginGuid, "WorldEditorBridge", Version)]
 [BepInDependency(JotunnGuid, BepInDependency.DependencyFlags.SoftDependency)]
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Unity owns its lifetime; OnDestroy stops the listener.")]
+#pragma warning disable S2931 // Unity owns its lifetime; OnDestroy stops the listener.
 public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
+#pragma warning restore S2931
 {
     /// <summary>BepInEx plugin id; it also names the settings file in BepInEx/config.</summary>
     public const string PluginGuid = "Tie.WorldEditorBridge";

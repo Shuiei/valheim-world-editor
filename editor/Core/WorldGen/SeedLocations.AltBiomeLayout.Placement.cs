@@ -35,7 +35,7 @@ public static partial class SeedLocations
                     {
                         continue;
                     }
-                    Rnd.InitState(unchecked((int)biome + StableHash.Of(alt.Name) + gen.GetSeed()));
+                    Rnd.InitState(unchecked((int)biome + StableHash.Of(alt.Name) + gen.GetSeed())); // nosemgrep
                     Shuffle(sectors);
                     foreach (int s in sectors)
                     {
@@ -43,7 +43,7 @@ public static partial class SeedLocations
                         {
                             continue;
                         }
-                        float draw = Rnd.Range(0f, 1f);
+                        float draw = Rnd.Range(0f, 1f); // nosemgrep
                         var sector = areas.Sectors[s];
                         if ((counts[a] < alt.MinAmountSpawned || alt.Chance >= draw) && !forced.ContainsKey(s) && MayHave(areas, sector, alt, stretch))
                         {
@@ -75,7 +75,7 @@ public static partial class SeedLocations
         {
             for (int n = list.Count - 1; n > 0; n--)
             {
-                int k = Rnd.Range(0, n + 1);
+                int k = Rnd.Range(0, n + 1); // nosemgrep
                 (list[n], list[k]) = (list[k], list[n]);
             }
         }
@@ -144,8 +144,10 @@ public static partial class SeedLocations
             static float Stretched(float bound, float stretch) => (float)((double)bound * stretch);
             float aboveX = Stretched(alt.AboveWorldX, stretch), belowX = Stretched(alt.BelowWorldX, stretch);
             float aboveY = Stretched(alt.AboveWorldY, stretch), belowY = Stretched(alt.BelowWorldY, stretch);
+#pragma warning disable S1244 // Exactly 0 is the mod's value for no bound.
             return !((aboveX != 0f && sector.CenterX < aboveX) || (belowX != 0f && sector.CenterX > belowX)
                 || (aboveY != 0f && sector.CenterY < aboveY) || (belowY != 0f && sector.CenterY > belowY));
+#pragma warning restore S1244
         }
 
         /// <summary>

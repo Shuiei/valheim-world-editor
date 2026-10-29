@@ -37,8 +37,8 @@ public sealed partial class WorldGenerator
                 }
                 var river = new River { P0 = p, P1 = _lakes[to] };
                 river.Center = (river.P0 + river.P1) * 0.5f;
-                river.WidthMax = Rnd.Range(_v.RiverWidthMin, _v.RiverWidthMax);
-                river.WidthMin = Rnd.Range(_v.RiverWidthMin, river.WidthMax);
+                river.WidthMax = Rnd.Range(_v.RiverWidthMin, _v.RiverWidthMax); // nosemgrep
+                river.WidthMin = Rnd.Range(_v.RiverWidthMin, river.WidthMax); // nosemgrep
                 Curves(river, _v.RiverCurveWidth, _v.RiverCurveWaveLength);
                 rivers.Add(river);
             }

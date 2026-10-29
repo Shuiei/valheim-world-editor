@@ -137,24 +137,24 @@ public class UnityShimTests
     [Fact]
     public void RandomRangesBackwardsAndEmpty()
     {
-        Rnd.InitState(42);
+        Rnd.InitState(42); // nosemgrep
         for (int i = 0; i < 200; i++)
         {
             // Backwards: Unity gives a value in (max, min].
-            int v = Rnd.Range(10, 3);
+            int v = Rnd.Range(10, 3); // nosemgrep
             Assert.InRange(v, 4, 10);
         }
-        Assert.Equal(4, Rnd.Range(4, 4));
+        Assert.Equal(4, Rnd.Range(4, 4)); // nosemgrep
         for (int i = 0; i < 200; i++)
         {
             var c = Rnd.InsideUnitCircle;
             Assert.True(c.X * c.X + c.Y * c.Y <= 1.0001f);
         }
         // The same seed, the same numbers.
+        Rnd.InitState(7); // nosemgrep
+        int first = Rnd.Range(0, 1000); // nosemgrep
         Rnd.InitState(7);
-        int first = Rnd.Range(0, 1000);
-        Rnd.InitState(7);
-        Assert.Equal(first, Rnd.Range(0, 1000));
+        Assert.Equal(first, Rnd.Range(0, 1000)); // nosemgrep
     }
 
     [Fact]

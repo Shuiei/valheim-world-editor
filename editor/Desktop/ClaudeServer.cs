@@ -19,7 +19,9 @@ namespace TerrainEditor.Desktop;
 /// stays pending: it never saves a world or applies live. Only the Workshop's building can be kept, as a blueprint of
 /// the user's library (save_blueprint, which never replaces one without being told to).
 /// </summary>
+#pragma warning disable S3453 // Made by its static Start, the only way to get one.
 public sealed class ClaudeServer
+#pragma warning restore S3453
 {
     /// <summary>The server the settings started, null when off.</summary>
     private static ClaudeServer? _running;

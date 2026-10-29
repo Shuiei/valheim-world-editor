@@ -51,7 +51,7 @@ public class SeedLocationsPlacerZonesTests
     {
         // With the game's radius a reach of 15 km only ever gives zones within 10 km; with a 20 km world, some lie further.
         // Unity's random is seeded first: its unseeded state on a fresh thread draws the same zone forever.
-        ValheimGen.UnityEngine.Random.InitState(4242);
+        ValheimGen.UnityEngine.Random.InitState(4242); // nosemgrep
         var plain = Placer();
         var wide = Placer(new WorldRules { Radius = 20000f });
         static float Metres((int X, int Y) zone) => MathF.Sqrt(MathF.Pow(zone.X * 64f, 2) + MathF.Pow(zone.Y * 64f, 2));

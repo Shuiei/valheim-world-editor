@@ -39,7 +39,9 @@ public static partial class ScriptHost
                 for (int dx = fromX; dx <= toX; dx++)
                 {
                     float v = shape(dx, dz);
+#pragma warning disable S1244 // Only an exact 0 raises nothing; the smallest rise is still one.
                     if (v != 0 && Point(x + dx, z + dz) is int p and >= 0)
+#pragma warning restore S1244
                     {
                         // Read and written under the lock, so two mountains at once both count.
                         lock (_ch)

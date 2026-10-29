@@ -13,7 +13,7 @@ public class ModObjectsTests
     [Fact]
     public void APickDrawsOnlyBetweenSeveralChoices()
     {
-        Rnd.InitState(3);
+        Rnd.InitState(3); // nosemgrep
         var start = Rnd.State;
         Assert.Equal("a", ModObjects.Pick<string>([new(1f, "a")]));
         Assert.Equal("", ModObjects.Pick<string>([]));

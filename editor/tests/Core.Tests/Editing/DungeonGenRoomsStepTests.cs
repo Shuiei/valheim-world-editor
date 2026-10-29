@@ -53,7 +53,7 @@ public class DungeonGenRoomsStepTests
         var (entrances, normal, _, kind) = RoomsOf("DG_ForestCrypt");
         const int Seed = 5;
         var rooms = Join(kind, new DungeonGen.Settings(Size: 1, Seed: Seed), Seed, entrances, normal);
-        var expected = entrances[new Random(Seed).Next(entrances.Count)];
+        var expected = entrances[new Random(Seed).Next(entrances.Count)]; // nosemgrep
         Assert.Equal(expected.Hash, rooms[0].Hash);
         Assert.InRange(rooms.Count, 1, 8);
     }

@@ -73,7 +73,9 @@ public static partial class ExpandWorldMod
             Name = f.Str("name"),
             Terrain = terrain,
             Nature = nature,
+#pragma warning disable S1244 // Exactly the mod's defaults: any other value, however close, is a change.
             HasData = f.Count("statusEffects") > 0 || !height.IsIdentity || mapMultiplier != 1f || (mapColour?.A ?? 0f) != 0f || forest != 1f || lavaAmount != 1f,
+#pragma warning restore S1244
             Height = height,
             ForestMultiplier = forest,
             MapColorMultiplier = mapMultiplier,

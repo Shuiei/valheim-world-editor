@@ -22,7 +22,7 @@ public static partial class DungeonGen
     {
         var r = new Random(seed * 7919 + 13);
         string[] starts = NameStarts(style ?? BiomeOf(biome).Style);
-        return $"{starts[r.Next(starts.Length)]} of {NameEnds[r.Next(NameEnds.Length)]}";
+        return $"{starts[r.Next(starts.Length)]} of {NameEnds[r.Next(NameEnds.Length)]}"; // nosemgrep
     }
 
     // ---- From the game's rooms.
