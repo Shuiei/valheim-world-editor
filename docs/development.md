@@ -22,7 +22,7 @@ SDK.
 | `editor/tests/Core.Tests/`, `editor/tests/Desktop.Tests/` | Core's tests and the app's (xUnit v3, the app's in Avalonia's headless mode), laid out like `editor/Core/` and `editor/Desktop/`, see [Tests](#tests). `editor/tests/Support/` holds the helpers both share, `editor/tests/fixtures/` the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
 | `tools/DocsScreenshots/` | `Scenes.cs` builds and takes the pictures in `docs/images/`, through `Editor.cs`, which drives the app. |
-| `tools/release.sh`, `tools/check-package.sh`, `tools/sign-windows.sh` | The release packages, their check, and the Windows program's signature. |
+| `tools/release.sh`, `tools/check-package.sh`, `tools/sign-windows.sh` | The release packages, their check, and the signature of the Windows program and of every DLL built here. |
 
 ## Command line
 
@@ -173,11 +173,11 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
 3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then
    **packages** builds the editor packages and **windows-smoke** tries the Windows one, as on every
    push to main, and:
-   - **github-release** signs the Windows program and `spirv-cross.dll` (`tools/sign-windows.sh`:
-     Authenticode, with the maintainer's Certum code-signing certificate through SimplySign's cloud,
-     timestamped by Certum),
-     builds the plugin's zip (against a Valheim dedicated server downloaded with SteamCMD and the
-     BepInExPack its manifest names), tags the commit `v<version>` and publishes the GitHub release
+   - **github-release** builds the plugin's zip (against a Valheim dedicated server downloaded with
+     SteamCMD and the BepInExPack its manifest names), the SDK's and the add-ons', then signs the
+     Windows program, `spirv-cross.dll` and every DLL in the plugin's, the SDK's and the add-ons' zips
+     (`tools/sign-windows.sh`: Authenticode, with the maintainer's Certum code-signing certificate through
+     SimplySign's cloud, timestamped by Certum, one login for all), tags the commit `v<version>` and publishes the GitHub release
      with the two editor packages the pipeline tested (the Windows one signed), the plugin, the SDK's zip
      and one zip for each add-on (`tools/addons.sh`, `ValheimWorldEditor-addon-<Name>-<its version>.zip`).
      Publishing signs the files (`.github/workflows/sign-release.yml`, Sigstore): each gets a
@@ -211,9 +211,10 @@ To check the publishing without publishing:
 packages in the folder and the site's token in the environment. It checks the token, that the version
 is not on the site yet, the categories and the files.
 
-By hand, without CI: `tools/release.sh <folder>`, `tools/sign-windows.sh <folder>/<the win-x64 zip>`
-(with [ssign](https://github.com/Le-Syl21/ssign) installed, `CERTUM_EMAIL` and `CERTUM_TOKEN`, the
-current six-digit code from the SimplySign app, in the environment) and `tools/thunderstore.sh <folder>`,
+By hand, without CI: `tools/release.sh <folder>`, `tools/thunderstore.sh <folder>`, `tools/sdk.sh <folder>`,
+`tools/addons.sh <folder>`, then `tools/sign-windows.sh` with the win-x64 zip and those zips (with
+[ssign](https://github.com/Le-Syl21/ssign) installed, `CERTUM_EMAIL` and `CERTUM_TOKEN`, the current
+six-digit code from the SimplySign app, in the environment),
 then tag `v<version>` and `gh release create` with every file (a file added after publishing is signed by
 running Actions > Sign release by hand, with the tag), then `publish.cs` for each site.
 
