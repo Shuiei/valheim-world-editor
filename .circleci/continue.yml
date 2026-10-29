@@ -563,10 +563,12 @@ jobs:
               /tmp/dist/ValheimWorldEditor-addon-*.zip
       - store_artifacts:
           path: /tmp/dist/notes.md
-      # The plugin for every site, the add-ons for Nexus Mods (publish.cs), the notes.
+      # The plugin for every site, the add-ons for Nexus Mods (publish.cs), the notes, and the signed Windows
+      # package: it takes the place of the unsigned one packages kept, so Nexus Mods gets the one GitHub has.
       - persist_to_workspace:
           root: /tmp/dist
           paths:
+            - ValheimWorldEditor-v*-win-x64.zip
             - WorldEditorBridge-*.zip
             - ValheimWorldEditor-addon-*.zip
             - notes.md
