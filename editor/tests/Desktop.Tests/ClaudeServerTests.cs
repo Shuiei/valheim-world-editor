@@ -59,6 +59,13 @@ public class ClaudeServerTests
             string? problem = await ClaudeServer.Apply(settings, w);
             Assert.StartsWith($"Could not listen on port {settings.ClaudePort}: ", problem);
             Assert.Equal(problem, ClaudeServer.Status);
+
+            // An address that is not one (a settings file written by hand): said, and nothing listening.
+            settings.ClaudePort = FreePort();
+            settings.ClaudeAddress = "my-pc.local";
+            problem = await ClaudeServer.Apply(settings, w);
+            Assert.StartsWith("Could not listen on my-pc.local: not an IP address", problem);
+            Assert.Equal(problem, ClaudeServer.Status);
         }
         finally
         {
