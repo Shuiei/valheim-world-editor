@@ -43,10 +43,11 @@ public sealed partial class WorldEditorBridgePlugin
         HttpListenerResponse res = ctx.Response;
         try
         {
-            string token = ctx.Request.Headers["X-Bridge-Token"] ?? ctx.Request.QueryString["token"];
-            if (token != _token.Value)
+            // Only this machine and its local networks, never the internet's, whatever BindAddress opens; the token in
+            // the header only (in the URL it would end up in logs and histories).
+            if (BridgeAccess.Refusal(ctx.Request.RemoteEndPoint?.Address, ctx.Request.Headers, _token.Value) is { } refused)
             {
-                Reply(res, 401, "text/plain", Encoding.UTF8.GetBytes("bad or missing token"));
+                Reply(res, refused.Status, "text/plain", Encoding.UTF8.GetBytes(refused.Text));
                 return;
             }
             if (ZNet.instance == null || ZDOMan.instance == null || ZoneSystem.instance == null)
