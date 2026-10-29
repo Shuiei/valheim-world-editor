@@ -158,7 +158,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                 Caught(ex, $"moving the settings from {OldGuid}.cfg to {PluginGuid}.cfg (the old file is left)");
             }
         }
-        _bind = Config.Bind("Http", "BindAddress", "127.0.0.1", "Address to listen on. Keep 127.0.0.1 and reach it through an SSH tunnel (ssh -L 5182:127.0.0.1:5182 user@server). Another address lets this machine's local networks in (never the internet), and the token then travels unencrypted.");
+        _bind = Config.Bind("Http", "BindAddress", "127.0.0.1", "Address to listen on. Keep 127.0.0.1 and reach it through an SSH tunnel (ssh -L 5182:127.0.0.1:5182 user@server). Another address lets this machine's local networks and VPNs in (never the internet), and the token then travels unencrypted.");
         _port = Config.Bind("Http", "Port", 5182, "TCP port of the bridge.");
         _token = Config.Bind("Http", "Token", "", "Secret the editor must send (X-Bridge-Token header). Generated on first start when empty.");
         if (string.IsNullOrWhiteSpace(_token.Value))

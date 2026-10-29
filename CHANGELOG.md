@@ -7,8 +7,10 @@ the plugin is unchanged in versions without that part.
 ## v1.113.2 — unreleased
 
 ### WorldEditorBridge
-- **Never reachable from the internet.** Only the machine the plugin runs on and its local networks can connect, even
-  with `BindAddress` changed from `127.0.0.1`, and the server's log warns that the token then travels unencrypted.
+- **Never reachable from the internet.** Only the machine the plugin runs on, its local networks and VPNs such as
+  Tailscale can connect, even with `BindAddress` changed from `127.0.0.1`, and the server's log warns that the token
+  then travels unencrypted. [Live mode](docs/live-mode.md#without-ssh) explains how to connect from another computer
+  in the house without SSH.
   The token is only taken from the editor's header, no longer from the address, where it could end up in logs.
 
 ## v1.113.0 — 2026-10-26

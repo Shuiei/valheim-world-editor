@@ -160,9 +160,43 @@ reads either.)
 
 | Setting | Default | What it does |
 |---|---|---|
-| `BindAddress` | `127.0.0.1` | The address the plugin listens on. Keep `127.0.0.1`: the editor reaches a server through its own SSH tunnel. Anything else exposes the plugin to the machine's local networks (never the internet: callers from elsewhere are refused), with the token unencrypted, and the log warns about it. |
+| `BindAddress` | `127.0.0.1` | The address the plugin listens on. Keep `127.0.0.1`: the editor reaches a server through its own SSH tunnel. Another address exposes the plugin to the machine's local networks and VPNs (never the internet: callers from elsewhere are refused), with the token unencrypted, and the log warns about it; see [Without SSH](#without-ssh). |
 | `Port` | `5182` | The plugin's port. Change it when another program uses 5182. |
 | `Token` | made on first start | The secret the editor must send, in a header (never in the address): 24 random letters and digits. Anyone with it and access to the port can change the world, so keep it private. Empty the line and restart to get a new one. |
+
+## Without SSH
+
+The editor needs no SSH when the game runs on the same computer: it finds the plugin there by itself. For another
+computer, the plugin has to listen on an address that computer can reach, instead of `127.0.0.1`.
+
+**Another computer in the same house** (the same home network):
+
+1. On the computer that runs the game or the server, find its local address: `ipconfig` on Windows ("IPv4 Address"),
+   `ip addr` on Linux. It looks like `192.168.1.20`.
+2. In its `BepInEx/config/Tie.WorldEditorBridge.cfg`, set `BindAddress = 192.168.1.20` (that address exactly, not
+   `0.0.0.0`) and start the game or server again. Its log says `listening on http://192.168.1.20:5182/`, then a warning
+   that the token travels unencrypted.
+3. Let the port in through that computer's firewall, on private networks only. On Windows, in PowerShell as
+   administrator (Windows only applies it when that network is set as **Private**):
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "WorldEditorBridge" -Direction Inbound -Protocol TCP -LocalPort 5182 -Action Allow -Profile Private
+   ```
+
+4. Copy the `Token` line of the same file.
+5. In the editor, on the start page: **A dedicated server** → **More options** → **I made my own tunnel**. Type
+   `192.168.1.20:5182` as **Bridge address**, paste the token, and press **Connect**.
+
+The token and the world's changes cross the network unencrypted: anyone on the same Wi-Fi could read the token and
+change the world. Fine at home; not on a shared network (a dorm, a café). The router can also give that computer
+another address one day: then the plugin no longer listens until `BindAddress` is changed, unless the router keeps
+the address for it (a "DHCP reservation").
+
+**A computer outside the house** (a friend's, a rented server): the plugin refuses callers from the internet, since
+the token would cross it in clear. Either give that computer an SSH server, which the editor's own encrypted tunnel
+then uses (Windows 10 and 11 have one: **Settings** → **Optional features** → **OpenSSH Server**), or put both
+computers on a VPN (Tailscale, ZeroTier, WireGuard), which encrypts the way, and follow the steps above with the
+computer's address on the VPN (Tailscale's `100.x.y.z`).
 
 ## What the plugin logs
 
