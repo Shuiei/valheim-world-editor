@@ -43,7 +43,9 @@ public static partial class ExpandWorldMod
         {
             var f = new Fields(entry, "world", notes);
             float minSector = f.F("minSector", 0f), maxSector = f.F("maxSector", 1f);
+#pragma warning disable S1244 // Exactly the mod's defaults: any other value, however close, is a change.
             sectors |= minSector != 0f || maxSector != 1f;
+#pragma warning restore S1244
             rules.Add(RuleOf(f, biomes, radius, wiggles, notes));
         }
         return (rules, sectors);

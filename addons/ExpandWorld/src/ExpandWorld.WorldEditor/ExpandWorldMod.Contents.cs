@@ -100,7 +100,9 @@ public static partial class ExpandWorldMod
             return null;
         }
         float radius = f.F("levelRadius", 0f), border = f.F("levelBorder", 0f);
+#pragma warning disable S1244 // Exactly 0 is the mod's value for one not given.
         if (radius == 0f && border == 0f)
+#pragma warning restore S1244
         {
             float part = float.TryParse(area, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : 0.5f;
             (radius, border) = (part * exterior, (1f - part) * exterior);

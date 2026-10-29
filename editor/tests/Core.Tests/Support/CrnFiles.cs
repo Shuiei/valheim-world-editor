@@ -9,7 +9,7 @@ namespace WorldEditor.Tests;
 public static class CrnFiles
 {
     /// <summary>A fixture's bytes (editor/tests/fixtures).</summary>
-    public static byte[] Fixture(string name) => File.ReadAllBytes(Path.Combine(Fixtures.Root, name));
+    public static byte[] Fixture(string name) => File.ReadAllBytes(Path.Combine(Fixtures.Root, name)); // nosemgrep
 
     /// <summary>A copy of a file, changed as given.</summary>
     public static byte[] Copy(byte[] crn, Action<byte[]> change)

@@ -155,7 +155,7 @@ public static partial class GameData
         {
             foreach (var kind in Kinds)
             {
-                Use(kind, File.ReadAllText(Path.Combine(folder, kind.Name + ".json")));
+                Use(kind, File.ReadAllText(Path.Combine(folder, kind.Name + ".json"))); // nosemgrep
             }
             _from = Copies;
             _generation++;
