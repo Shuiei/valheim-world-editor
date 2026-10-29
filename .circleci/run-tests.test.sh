@@ -8,6 +8,8 @@
 #   coverage-reports.sh every batch's report of both suites, and none from a suite fails
 #   test-suites.yml     both suites keep their results and share one queue
 # Run it from the repository's root: bash .circleci/run-tests.test.sh
+# Each check takes the status of the test (often a condition) run just before it.
+# shellcheck disable=SC2319
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 work=$(mktemp -d)
@@ -15,7 +17,8 @@ trap 'rm -rf "$work"' EXIT
 failures=0
 
 fail() { echo "FAIL: $*"; failures=$((failures + 1)); }
-check() { if eval "$2"; then echo "ok: $1"; else fail "$1"; fi; }
+# A check's name and the status of its test, run just before: check "what it checks" $?
+check() { if [ "$2" = 0 ]; then echo "ok: $1"; else fail "$1"; fi; }
 
 # The stand-in dotnet: --list-tests prints a listing as dotnet test does; a run records its arguments and, as
 # FAKE says, writes the results (pass, fail), none (crash: the process's error output; hang: the hang dump's
@@ -64,59 +67,73 @@ well_formed() {
 
 # The suites' discover: classes once each, a theory's values and the method cut, a nested class kept.
 classes=$(bash "$here/list-classes.sh" editor/tests/Core.Tests/Core.Tests.csproj)
-check "discover lists each class once" \
-  '[ "$classes" = "$(printf "%s\n" "WorldEditor.Tests.Outer+InnerTests" WorldEditor.Tests.SaveTests WorldEditor.Tests.ZoneTests)" ]'
+[ "$classes" = "$(printf "%s\n" "WorldEditor.Tests.Outer+InnerTests" WorldEditor.Tests.SaveTests WorldEditor.Tests.ZoneTests)" ]
+check "discover lists each class once" $?
 
 # A batch that passes: each class a --filter-class, the results where the CLI asks, no coverage off main.
 junit=$work/out/pass.xml
 FAKE=pass bash "$here/run-tests.sh" core editor/tests/Core.Tests/Core.Tests.csproj "$junit" <<< $'WorldEditor.Tests.SaveTests\nWorldEditor.Tests.ZoneTests\n' > /dev/null
 rc=$?
-check "a passing batch succeeds" '[ "$rc" = 0 ]'
-check "each class is a --filter-class" \
-  'grep -qx -- --filter-class=WorldEditor.Tests.SaveTests "$FAKE_ARGS" && grep -qx -- --filter-class=WorldEditor.Tests.ZoneTests "$FAKE_ARGS"'
-check "the results go where the CLI asks" '[ -s "$junit" ]'
-check "no coverage off main" '! grep -qx -- --coverage "$FAKE_ARGS"'
+[ "$rc" = 0 ]
+check "a passing batch succeeds" $?
+grep -qx -- --filter-class=WorldEditor.Tests.SaveTests "$FAKE_ARGS" && grep -qx -- --filter-class=WorldEditor.Tests.ZoneTests "$FAKE_ARGS"
+check "each class is a --filter-class" $?
+[ -s "$junit" ]
+check "the results go where the CLI asks" $?
+! grep -qx -- --coverage "$FAKE_ARGS"
+check "no coverage off main" $?
 
 # A batch with a failed test: the job fails, and the test's own results stay (not a crash's).
 junit=$work/out/fail.xml
 FAKE=fail bash "$here/run-tests.sh" core p "$junit" <<< 'WorldEditor.Tests.SaveTests' > /dev/null
 rc=$?
-check "a failed test fails the batch" '[ "$rc" != 0 ]'
-check "a failed test keeps its own results" 'grep -q "failures=\"1\"" "$junit" && ! grep -q "stuck\|crashed" "$junit"'
+[ "$rc" != 0 ]
+check "a failed test fails the batch" $?
+grep -q "failures=\"1\"" "$junit" && ! grep -q "stuck\|crashed" "$junit"
+check "a failed test keeps its own results" $?
 
 # A crashed test process: one failed test of the class on the crash's stack, in well-formed XML.
 junit=$work/out/crash.xml
 FAKE=crash bash "$here/run-tests.sh" app p "$junit" <<< 'WorldEditor.Tests.CrashTests' > /dev/null
 rc=$?
-check "a crash fails the batch" '[ "$rc" != 0 ]'
-check "a crash is reported as well-formed XML" 'well_formed "$junit"'
-check "a crash names the class on its stack" 'grep -q "classname=\"WorldEditor.Tests.CrashTests\"" "$junit" && grep -q "crashed (Exit code: 134)" "$junit"'
+[ "$rc" != 0 ]
+check "a crash fails the batch" $?
+well_formed "$junit"
+check "a crash is reported as well-formed XML" $?
+grep -q "classname=\"WorldEditor.Tests.CrashTests\"" "$junit" && grep -q "crashed (Exit code: 134)" "$junit"
+check "a crash names the class on its stack" $?
 
 # A stuck test: one failed test of the stuck test's class.
 junit=$work/out/hang.xml
 FAKE=hang bash "$here/run-tests.sh" app p "$junit" <<< 'WorldEditor.Tests.HungTests' > /dev/null
 rc=$?
-check "a stuck test fails the batch" '[ "$rc" != 0 ]'
-check "a stuck test is reported as well-formed XML, with its class" \
-  'well_formed "$junit" && grep -q "classname=\"WorldEditor.Tests.HungTests\"" "$junit" && grep -q "was stuck" "$junit"'
+[ "$rc" != 0 ]
+check "a stuck test fails the batch" $?
+well_formed "$junit" && grep -q "classname=\"WorldEditor.Tests.HungTests\"" "$junit" && grep -q "was stuck" "$junit"
+check "a stuck test is reported as well-formed XML, with its class" $?
 
 # An empty batch: dotnet test is not run (it would run every class), and an empty result is written.
 rm -f "$FAKE_ARGS"
 junit=$work/out/empty.xml
 FAKE=pass bash "$here/run-tests.sh" core p "$junit" <<< $'\n  \n' > /dev/null
 rc=$?
-check "an empty batch succeeds without running dotnet" '[ "$rc" = 0 ] && [ ! -e "$FAKE_ARGS" ]'
-check "an empty batch writes an empty result" 'well_formed "$junit" && grep -q "<testsuites />" "$junit"'
+[ "$rc" = 0 ] && [ ! -e "$FAKE_ARGS" ]
+check "an empty batch succeeds without running dotnet" $?
+well_formed "$junit" && grep -q "<testsuites />" "$junit"
+check "an empty batch writes an empty result" $?
 
 # On main: the coverage in <suite>-<container>/<batch>/; a passed batch without its report fails.
 export CIRCLE_BRANCH=main CIRCLE_NODE_INDEX=2
 FAKE=pass bash "$here/run-tests.sh" core p "$work/out/main.xml" <<< 'WorldEditor.Tests.SaveTests' > /dev/null
 rc=$?
-check "a main batch with its coverage succeeds" '[ "$rc" = 0 ]'
-check "the coverage goes to <suite>-<container>/<batch>/" 'ls "$VWE_COVERAGE_ROOT"/core-2/*/coverage.cobertura.xml > /dev/null 2>&1'
+[ "$rc" = 0 ]
+check "a main batch with its coverage succeeds" $?
+ls "$VWE_COVERAGE_ROOT"/core-2/*/coverage.cobertura.xml > /dev/null 2>&1
+check "the coverage goes to <suite>-<container>/<batch>/" $?
 FAKE=nocov bash "$here/run-tests.sh" core p "$work/out/nocov.xml" <<< 'WorldEditor.Tests.SaveTests' > /dev/null
 rc=$?
-check "a main batch without its coverage fails" '[ "$rc" != 0 ]'
+[ "$rc" != 0 ]
+check "a main batch without its coverage fails" $?
 unset CIRCLE_BRANCH CIRCLE_NODE_INDEX
 
 # The coverage job: every batch's report of both suites, whatever the containers' count; none from one fails.
@@ -125,17 +142,19 @@ mkdir -p "$root/core-0/1" "$root/core-2/7" "$root/app-5/3"
 for d in core-0/1 core-2/7 app-5/3; do echo '<coverage/>' > "$root/$d/coverage.cobertura.xml"; done
 reports=$(bash "$here/coverage-reports.sh" "$root" 2> /dev/null)
 rc=$?
-check "every batch's report is found" '[ "$rc" = 0 ] && [ "$(printf "%s\n" "$reports" | wc -l)" = 3 ]'
+[ "$rc" = 0 ] && [ "$(printf "%s\n" "$reports" | wc -l)" = 3 ]
+check "every batch's report is found" $?
 rm -r "$root/app-5"
 bash "$here/coverage-reports.sh" "$root" > /dev/null 2>&1
 rc=$?
-check "a suite without a report fails" '[ "$rc" != 0 ]'
+[ "$rc" != 0 ]
+check "a suite without a report fails" $?
 
 # Both suites keep their results and share one queue.
 for suite in "core tests" "app tests"; do
   block=$(awk -v name="name: $suite" '$0 == name { on = 1; next } /^---/ { on = 0 } on' "$here/test-suites.yml")
-  check "$suite keep their results and share one queue" \
-    'grep -q "store-test-results: true" <<< "$block" && grep -q "dynamic-test-splitting: true" <<< "$block"'
+  grep -q "store-test-results: true" <<< "$block" && grep -q "dynamic-test-splitting: true" <<< "$block"
+  check "$suite keep their results and share one queue" $?
 done
 
 if [ "$failures" -gt 0 ]; then
