@@ -20,8 +20,8 @@ public static partial class WorldCreator
         }
         if (rule.RandomRotation != 0)
         {
-            Rnd.InitState(zoneSeed); // nosemgrep
-            return Rnd.Range(0, 16) * 22.5f; // nosemgrep
+            Rnd.InitState(zoneSeed);
+            return Rnd.Range(0, 16) * 22.5f;
         }
         return 0f;
     }
@@ -33,7 +33,7 @@ public static partial class WorldCreator
     private static float CardinalYaw(int zoneSeed)
     {
         Rnd.InitState(zoneSeed);
-        return Rnd.Range(0, 4) * 90f; // nosemgrep
+        return Rnd.Range(0, 4) * 90f;
     }
 
     /// <summary>The ground's normal at a world point, from the generator's heights a metre apart around it.</summary>

@@ -14,7 +14,7 @@ public class SeedLocationsBiomeMapDataTests
     [Fact]
     public void TheUniformDrawPicksAnyFlagOfTheSet()
     {
-        ValheimGen.UnityEngine.Random.InitState(7); // nosemgrep
+        ValheimGen.UnityEngine.Random.InitState(7);
         var set = Heightmap.Biome.Meadows | Heightmap.Biome.Swamp | Custom;
         var drawn = Enumerable.Range(0, 300).Select(_ => SeedLocations.BiomeMap.RandomBiome(set, uniform: true)).ToHashSet();
         Assert.Equal([Heightmap.Biome.Meadows, Heightmap.Biome.Swamp, Custom], drawn.OrderBy(b => b));
@@ -38,7 +38,7 @@ public class SeedLocationsBiomeMapDataTests
         Assert.Equal(-1, SeedLocations.BiomeMap.Index(Custom));
         map.List(11);
         Assert.NotEmpty(map.All[11]);
-        ValheimGen.UnityEngine.Random.InitState(4242); // nosemgrep
+        ValheimGen.UnityEngine.Random.InitState(4242);
         var (x, z) = map.RandomPoint(Custom, aboveSea: false)!.Value;
         Assert.True(x * x + z * z < 520f * 520f, $"{x}, {z}");
     }

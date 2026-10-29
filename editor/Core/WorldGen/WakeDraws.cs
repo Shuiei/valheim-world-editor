@@ -149,7 +149,7 @@ public static class WakeDraws
         }
         for (int picks = Rnd.Range(loot.Min, loot.Max + 1); picks > 0; picks--)
         {
-            int at = Picked(weights, Rnd.Range(0f, total)); // nosemgrep
+            int at = Picked(weights, Rnd.Range(0f, total));
             if (at < 0)
             {
                 continue;

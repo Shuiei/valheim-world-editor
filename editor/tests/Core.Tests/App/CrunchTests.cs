@@ -52,7 +52,7 @@ public class CrunchTests
     {
         byte[] crn = CrnFiles.Fixture("crunch-dxt5.crn");
         byte[] garbage = new byte[crn.Length];
-        new Random(5).NextBytes(garbage); // nosemgrep
+        new Random(5).NextBytes(garbage);
         byte[] header = CrnFiles.Copy(crn, c => c[13] ^= 1);
         byte[] data = CrnFiles.Copy(crn, c => c[^1] ^= 1);
         byte[] dxn = CrnFiles.Copy(crn, c => c[18] = 7);

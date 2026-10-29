@@ -30,11 +30,14 @@ public static partial class Homestead
             ? Dungeon ? this : this with { Tags = [.. Tags, DungeonTag] }
             : this with { Tags = [.. Tags.Where(t => !t.Equals(DungeonTag, StringComparison.OrdinalIgnoreCase))] };
 
+        /// <summary>What <see cref="ParseTags"/> splits on.</summary>
+        private static readonly char[] TagSeparators = [',', ';'];
+
         /// <summary>
         /// "house, Viking,stone ,house" → house, Viking, stone. Split on commas or semicolons, duplicates
         /// dropped ignoring case, 12 at most.
         /// </summary>
-        public static List<string> ParseTags(string? text) => [.. (text ?? "").Split(',', ';').Select(t => t.Trim()).Where(t => t.Length > 0)
+        public static List<string> ParseTags(string? text) => [.. (text ?? "").Split(TagSeparators).Select(t => t.Trim()).Where(t => t.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(12)];
     }
 

@@ -58,7 +58,7 @@ public sealed partial class WorldGenerator
     {
         for (int i = 0; i < _v.StreamIterations; i++)
         {
-            float x = Rnd.Range(-_v.Radius, _v.Radius), z = Rnd.Range(-_v.Radius, _v.Radius); // nosemgrep
+            float x = Rnd.Range(-_v.Radius, _v.Radius), z = Rnd.Range(-_v.Radius, _v.Radius);
             float h = GetPregenerationHeight(x, z, forRivers);
             if (h > _v.StreamStartMin && h < _v.StreamStartMax)
             {

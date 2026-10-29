@@ -64,7 +64,7 @@ public static partial class ObjectLinks
         int id;
         do
         {
-            id = random.Next(1, int.MaxValue); // nosemgrep
+            id = random.Next(1, int.MaxValue);
         }
         while (!taken.Add(id));
         return id;

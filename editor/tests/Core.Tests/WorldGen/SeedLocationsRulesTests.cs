@@ -44,7 +44,7 @@ public class SeedLocationsRulesTests
     [Fact]
     public void ARandomBiomeIsOneOfTheSet()
     {
-        ValheimGen.UnityEngine.Random.InitState(7); // nosemgrep
+        ValheimGen.UnityEngine.Random.InitState(7);
         var two = Heightmap.Biome.Meadows | Heightmap.Biome.Swamp;
         for (int i = 0; i < 20; i++)
         {

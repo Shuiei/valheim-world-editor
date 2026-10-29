@@ -47,21 +47,21 @@ public sealed partial class WorldGenerator
         var saved = Rnd.State;
         try
         {
-            Rnd.InitState(world.Seed); // nosemgrep
-            _offsetA = Rnd.Range(-10000, 10000); // nosemgrep
-            _offsetB = Rnd.Range(-10000, 10000); // nosemgrep
-            _offsetForest = Rnd.Range(-10000, 10000); // nosemgrep
-            _offsetDetail = Rnd.Range(-10000, 10000); // nosemgrep
-            _riverSeed = Rnd.Range(int.MinValue, int.MaxValue); // nosemgrep
-            _streamSeed = Rnd.Range(int.MinValue, int.MaxValue); // nosemgrep
-            _offsetMist = Rnd.Range(-10000, 10000); // nosemgrep
+            Rnd.InitState(world.Seed);
+            _offsetA = Rnd.Range(-10000, 10000);
+            _offsetB = Rnd.Range(-10000, 10000);
+            _offsetForest = Rnd.Range(-10000, 10000);
+            _offsetDetail = Rnd.Range(-10000, 10000);
+            _riverSeed = Rnd.Range(int.MinValue, int.MaxValue);
+            _streamSeed = Rnd.Range(int.MinValue, int.MaxValue);
+            _offsetMist = Rnd.Range(-10000, 10000);
             if (Rules.DataInstalled)
             {
                 // Expand World Data's four draws before the water is laid out (its Pregenerate prefix).
-                _offsetAsh = Rnd.Range(-10000, 10000); // nosemgrep
-                _offsetNorth = Rnd.Range(-10000, 10000); // nosemgrep
-                _offsetMountain = Rnd.Range(-10000, 10000); // nosemgrep
-                _offsetOcean = Rnd.Range(-10000, 10000); // nosemgrep
+                _offsetAsh = Rnd.Range(-10000, 10000);
+                _offsetNorth = Rnd.Range(-10000, 10000);
+                _offsetMountain = Rnd.Range(-10000, 10000);
+                _offsetOcean = Rnd.Range(-10000, 10000);
             }
             // The rules' values, and the seed's draws they replace (Expand World Size and Rivers).
             _v = new RuleValues(Rules, _offsetA, _offsetB, _offsetDetail, _riverSeed, _streamSeed);

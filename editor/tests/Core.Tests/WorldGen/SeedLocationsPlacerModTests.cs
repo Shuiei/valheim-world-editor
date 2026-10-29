@@ -44,7 +44,7 @@ public class SeedLocationsPlacerModTests
     public void AKindWiderThanAZoneStandsAtTheZonesMiddle()
     {
         var wide = Open("Wide", exterior: 40f);
-        ValheimGen.UnityEngine.Random.InitState(1); // nosemgrep
+        ValheimGen.UnityEngine.Random.InitState(1);
         var placer = Placer(Gen(true, wide));
         Assert.True(placer.TrySpot(wide, Heightmap.Biome.All, (3, 2), 40f));
         var at = placer.Instances[(3, 2)];

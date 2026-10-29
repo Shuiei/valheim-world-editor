@@ -35,7 +35,7 @@ public static partial class SeedLocations
                     {
                         continue;
                     }
-                    Rnd.InitState(unchecked((int)biome + StableHash.Of(alt.Name) + gen.GetSeed())); // nosemgrep
+                    Rnd.InitState(unchecked((int)biome + StableHash.Of(alt.Name) + gen.GetSeed()));
                     Shuffle(sectors);
                     foreach (int s in sectors)
                     {
@@ -43,7 +43,7 @@ public static partial class SeedLocations
                         {
                             continue;
                         }
-                        float draw = Rnd.Range(0f, 1f); // nosemgrep
+                        float draw = Rnd.Range(0f, 1f);
                         var sector = areas.Sectors[s];
                         if ((counts[a] < alt.MinAmountSpawned || alt.Chance >= draw) && !forced.ContainsKey(s) && MayHave(areas, sector, alt, stretch))
                         {
@@ -75,7 +75,7 @@ public static partial class SeedLocations
         {
             for (int n = list.Count - 1; n > 0; n--)
             {
-                int k = Rnd.Range(0, n + 1); // nosemgrep
+                int k = Rnd.Range(0, n + 1);
                 (list[n], list[k]) = (list[k], list[n]);
             }
         }

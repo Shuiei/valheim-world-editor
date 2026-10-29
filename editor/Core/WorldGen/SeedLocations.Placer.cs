@@ -95,7 +95,7 @@ public static partial class SeedLocations
         /// </summary>
         public void Generate(LocationRule rule)
         {
-            Rnd.InitState(_gen.GetSeed() + StableHash.Of(rule.Prefab)); // nosemgrep
+            Rnd.InitState(_gen.GetSeed() + StableHash.Of(rule.Prefab));
             int have = Instances.Values.Count(p => p.Rule.Prefab == rule.Prefab);
             (_sums, _sumsTotal, _sumsBest) = (0, 0, float.NegativeInfinity);
             if (rule.Unique != 0 && have > 0)

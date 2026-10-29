@@ -175,7 +175,9 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         try
         {
             _listener = new HttpListener();
+#pragma warning disable S5332 // HttpListener serves HTTPS only on a certificate the OS binds to the port; every call needs the token.
             _listener.Prefixes.Add($"http://{_bind.Value}:{_port.Value}/");
+#pragma warning restore S5332
             if (_bind.Value == "127.0.0.1")
             {
                 _listener.Prefixes.Add($"http://localhost:{_port.Value}/");

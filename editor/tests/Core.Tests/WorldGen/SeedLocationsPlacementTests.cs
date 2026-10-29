@@ -60,7 +60,7 @@ public class SeedLocationsPlacementTests
         // Only the kinds laid out first, none an alt biome decides.
         Assert.All(placed, p => Assert.True(p.Rule.Prioritized != 0, p.Rule.Prefab));
         // Unity's Random is put back as it was.
-        ValheimGen.UnityEngine.Random.InitState(42); // nosemgrep
+        ValheimGen.UnityEngine.Random.InitState(42);
         float before = ValheimGen.UnityEngine.Random.Value;
         ValheimGen.UnityEngine.Random.InitState(42);
         SeedLocations.Place(Seed(), SeedLocations.Which.Start, cancel: TestContext.Current.CancellationToken);
