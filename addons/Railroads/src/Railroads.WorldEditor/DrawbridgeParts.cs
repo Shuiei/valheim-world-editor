@@ -125,9 +125,10 @@ public static class DrawbridgeParts
 
     /// <summary>
     /// The chain at the first end on a side, the leaf raised by an angle, seen from the side (along the bridge, up): from
-    /// its eye on the leaf straight to where it meets the sheave, over the sheave, then straight down.
+    /// its eye on the leaf straight to where it meets the sheave, over the sheave, then straight down. A record: equal when
+    /// its values are.
     /// </summary>
-    private readonly struct Chain
+    private readonly record struct Chain
     {
         /// <summary>The chain with its leaf raised by an angle.</summary>
         /// <param name="angle">The leaf's angle up from flat, in radians.</param>
