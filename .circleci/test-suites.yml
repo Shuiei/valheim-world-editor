@@ -1,0 +1,28 @@
+# The test suites CircleCI's testsuite CLI runs (Smarter Testing), one per test project: core-tests
+# and app-tests in .circleci/continue.yml each run "circleci testsuite run" on its suite, after
+# building the project. A test atom is a test class (its full name, a nested one as Outer+Inner):
+#   discover  lists them, one a line, from the built project (.circleci/list-classes.sh)
+#   run       runs a batch of them (on stdin, one a line) through .circleci/run-tests.sh, which gives
+#             each to dotnet test as a --filter-class and writes the results (JUnit) where the CLI asks
+# The options: the CLI keeps the results itself (store-test-results: the Tests tab, the timings, and
+# "Rerun failed tests" running only the failed classes), and the containers take classes from one
+# shared queue as they finish, longest first (dynamic test splitting: paid, above the plan's
+# allowance). Test impact analysis is not on: it needs each test's coverage as LCOV, Go's format or
+# CircleCI's own, which .NET's coverage does not write (it writes Cobertura, for the whole run). Auto
+# rerun (max-auto-rerun) is not on either: a test that fails, then passes, would pass the job unseen.
+# Check a change with "circleci testsuite doctor 'core tests'" (it runs the suite); the scripts' own
+# checks are .circleci/run-tests.test.sh (the code-analysis job runs them).
+---
+name: core tests
+discover: bash .circleci/list-classes.sh editor/tests/Core.Tests/Core.Tests.csproj
+run: bash .circleci/run-tests.sh core editor/tests/Core.Tests/Core.Tests.csproj "<< outputs.junit >>"
+options:
+  store-test-results: true
+  dynamic-test-splitting: true
+---
+name: app tests
+discover: bash .circleci/list-classes.sh editor/tests/Desktop.Tests/Desktop.Tests.csproj
+run: bash .circleci/run-tests.sh app editor/tests/Desktop.Tests/Desktop.Tests.csproj "<< outputs.junit >>"
+options:
+  store-test-results: true
+  dynamic-test-splitting: true

@@ -3,7 +3,8 @@
 # whether the branch is a release pull request's (release_pr: its required checks report at once, no tests).
 #   code-analysis  the editor (Core, Desktop, Sdk) and the plugin's API build with no .NET analyzer
 #                  warning (warnings are errors); every XML file of the repository (projects, coverage
-#                  settings) is well formed (xmllint)
+#                  settings) is well formed (xmllint); the test jobs' scripts pass their checks against a
+#                  stand-in dotnet (.circleci/run-tests.test.sh)
 #   formatting     the editor's projects are formatted as .editorconfig says (dotnet format,
 #                  tools/format-check.sh) on two containers; a branch checks only the projects it
 #                  changed since main (every one when .editorconfig or a build property changed),
@@ -12,14 +13,16 @@
 #                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
 #   app-tests      the app's windows, headless, on six containers, and the visual tests: the real
 #                  editor drawing with OpenGL on a virtual screen (Xvfb, Mesa's software OpenGL),
-#                  driven by the tests. Each builds its test project (editor/tests/Core.Tests, editor/tests/Desktop.Tests)
-#                  with warnings as errors; CircleCI shares the test classes out by their last times
-#                  and can rerun only the failed ones (circleci tests run). Every
+#                  driven by the tests. Each builds its test project (editor/tests/Core.Tests,
+#                  editor/tests/Desktop.Tests) with warnings as errors, then CircleCI's testsuite CLI runs its classes (Smarter
+#                  Testing: .circleci/test-suites.yml, each batch through .circleci/run-tests.sh): the
+#                  containers take classes from one shared queue as they finish, longest first (dynamic
+#                  test splitting), and "Rerun failed tests" reruns only the classes that failed. Every
 #                  test runs, failing or not; a test stuck for 5 minutes (10 under coverage) ends its run.
-#                  On main only, each test container keeps its code coverage for the coverage job;
-#                  branches run the tests without it (several times faster).
-#   coverage       on main only, once core-tests and app-tests have both passed: merges the nine
-#                  containers' coverage into one report and sends it to Codecov (codecov.yml), which
+#                  On main only, each test container keeps its batches' code coverage for the coverage
+#                  job; branches run the tests without it (several times faster).
+#   coverage       on main only, once core-tests and app-tests have both passed: merges every
+#                  container's coverage into one report and sends it to Codecov (codecov.yml), which
 #                  fails its own check (codecov/project) under 95% line coverage. A failed or partial test
 #                  run sends nothing, so Codecov never shows the coverage of part of the tests.
 #   packages       on main only: the Windows, Linux and Mac release packages build, hold no source
@@ -83,18 +86,19 @@ commands:
             # Else main's latest (a branch whose packages changed restores only what it adds).
             - nuget-v2-
 
-  # One test project's classes, shared out between the job's containers by
-  # CircleCI by the time each class took in the last runs (circleci tests run). It also gives the job
-  # "Rerun failed tests": a rerun runs only the classes that failed. Every test runs (a failure does
-  # not stop the others); a test stuck 5 minutes ends the run (with a dump; 10 under coverage, on main),
-  # and silence ends the step a minute after that.
+  # One test project's classes, run by CircleCI's testsuite CLI (the suite in .circleci/test-suites.yml,
+  # which hands each batch to .circleci/run-tests.sh): the job's containers take classes from one
+  # shared queue as they finish (dynamic test splitting), and "Rerun failed tests" reruns only the
+  # classes that failed. Every test runs (a failure does not stop the others); a test stuck 5 minutes
+  # ends the run (with a dump; 10 under coverage, on main), and silence ends the step a minute after that.
   test-classes:
     parameters:
       project:
         type: string
-      what:
+      suite:
+        description: core or app, the suite "<suite> tests" in .circleci/test-suites.yml and the coverage reports' folder.
         type: string
-      results:
+      what:
         type: string
       display:
         description: A virtual screen with OpenGL (Xvfb, Mesa's software renderer) for the visual tests.
@@ -135,85 +139,17 @@ commands:
             # this run (the list is read, then run, in separate processes); the step after deletes them.
             VWE_KEEP_TEST_MODS: "1"
           command: |
-            # A test stuck 5 minutes ends the run with a dump (editor/tests/testconfig.json). On main only, the
-            # coverage of this container's share, kept for the coverage job: it makes the tests several
-            # times slower, so a test is stuck after 10 minutes there (the world generator's tests share
-            # the container's two cores with the others for minutes; one took 300 s on main). VWE_COVERAGE
-            # tells the tests so: the editor's pictures may wait longer (EditorProcess), speeds are not
-            # checked (SeedPreviewTests).
-            coverage=""
-            if [ "$CIRCLE_BRANCH" = main ]; then
-              export VWE_COVERAGE=1
-              coverage="--coverage --coverage-output-format cobertura --coverage-settings $PWD/editor/tests/coverage.runsettings"
-              coverage+=" --coverage-output /tmp/coverage/<< parameters.results >>-$CIRCLE_NODE_INDEX/coverage.cobertura.xml"
-              coverage+=" --hangdump-timeout 10m"
-            fi
             # The virtual screen, where there is one (it starts in the background: a moment): the visual
             # tests draw on it, else they skip.
             if command -v Xvfb > /dev/null; then
               for _ in $(seq 100); do [ -e /tmp/.X11-unix/X99 ] && break; sleep 0.1; done
               export DISPLAY=:99
             fi
-            # Every test's full name (a theory's with its values in brackets), down to its class (a nested
-            # one as Outer+Inner); circleci tests run gives this container's share, each as a --filter-class.
-            # The results (JUnit) for CircleCI; the run's own files (a stuck test's dump: hundreds of MB)
-            # in /tmp/test-runs, out of the artifacts; its output in /tmp/test-runs/output.log, for the
-            # next step.
-            mkdir -p /tmp/test-runs
-            classes=/tmp/test-runs/classes.txt
-            dotnet test --project << parameters.project >> -c Release --no-build --no-ansi --no-progress --list-tests \
-              | sed -n 's/^  \([A-Za-z_]\)/\1/p' | sed 's/(.*//; s/\.[^.]*$//' | sort -u > "$classes"
-            run="sed 's/^/--filter-class=/' \
-              | xargs dotnet test --project << parameters.project >> -c Release --no-build --no-ansi --no-progress --output Detailed \
-                  --results-directory /tmp/test-runs $coverage \
-                  --report-spekt-junit --report-spekt-junit-filename /tmp/test-results/<< parameters.results >>/results.xml"
-            set +e
-            circleci tests run --split-by=timings --timings-type=classname --verbose --command="$run" < "$classes" \
-              2>&1 | tee /tmp/test-runs/output.log
-            status=${PIPESTATUS[0]}
-            # "Rerun failed tests" after a failure that was no test's (a step before the tests stuck, its
-            # container killed): there is no failed test to run again, and circleci tests run gives up. This
-            # container's share runs whole instead.
-            if [ "$status" -ne 0 ] && grep -q "no failed tests could be found" /tmp/test-runs/output.log; then
-              circleci tests split --split-by=timings --timings-type=classname < "$classes" | bash -c "$run" \
-                2>&1 | tee /tmp/test-runs/output.log
-              status=${PIPESTATUS[1]}
-            fi
-            exit "$status"
-      # A test process that crashed, or was stopped stuck, writes no results: one failed test in their
-      # place, so CircleCI shows it and "Rerun failed tests" runs its class again. Its class is the stuck
-      # test's (the hang dump's log: "[00:05:00] WorldEditor.Tests.SomeTests.AMethod"), else the test
-      # class on the crash's stack (in the process's error output: "   at WorldEditor.Tests.SomeTests+<AMethod>d__4.MoveNext()": the
-      # nested part stands in for a method), else TestHost; its text, the end of the run's output.
-      - run:
-          name: A crashed or stuck test process, as a failed test
-          when: on_fail
-          command: |
-            results=/tmp/test-results/<< parameters.results >>
-            log=/tmp/test-runs/output.log
-            if [ -e "$results/results.xml" ] || [ ! -e "$log" ]; then exit 0; fi
-            stuck=$(cat /tmp/test-runs/*_hang.log 2> /dev/null || true)
-            if [ -n "$stuck" ]; then
-              what="A test was stuck: the test process was stopped (with a dump)"
-              class=$(printf '%s\n' "$stuck" | sed -n -E '1s/^\[[0-9:.]+\] +//; 1s/\(.*//; 1s/\.[A-Za-z0-9_]+$//p')
-            else
-              what="The test process crashed ($(grep -m 1 -o '^Exit code: [0-9]*' "$log" || echo 'no exit code'))"
-              class=$(sed -n '/^  Error output: /,$p' "$log" \
-                | grep -E -o '^ +at (TerrainEditor\.Desktop\.Tests|WorldEditor\.Tests)\.[A-Za-z0-9_.+<>]+' \
-                | head -n 1 | sed -E 's/^ +at //; s/\+.*/.x/; s/\.[A-Za-z0-9_]+$//' || true)
-            fi
-            report=$( { printf '%s\n' "$stuck"; tail -n 80 "$log"; } | sed 's/]]>/]]]]><![CDATA[>/g')
-            mkdir -p "$results"
-            cat > "$results/crash.xml" \<<EOF
-            <?xml version="1.0" encoding="utf-8"?>
-            <testsuites>
-              <testsuite name="${class:-TestHost}" tests="1" failures="1" errors="0">
-                <testcase classname="${class:-TestHost}" name="$what" time="0">
-                  <failure message="$what: the tests still running were not finished."><![CDATA[$report]]></failure>
-                </testcase>
-              </testsuite>
-            </testsuites>
-            EOF
+            # The suite's classes (.circleci/test-suites.yml): CircleCI's CLI lists them from the build,
+            # takes this container's share batch by batch, runs each through .circleci/run-tests.sh (a
+            # stuck test is dumped and stopped; on main, the batch's coverage is kept in /tmp/coverage; a
+            # crashed test process shows as one failed test) and keeps the results itself.
+            circleci testsuite run "<< parameters.suite >> tests"
       # The mods the build downloaded for the tests, deleted once every test process has run.
       - run:
           name: Delete the tests' downloaded mods
@@ -228,26 +164,24 @@ commands:
                 key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "editor/Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "editor/Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "editor/tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "editor/tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" }}
                 paths:
                   - ~/.nuget/packages
-      # On main, the coverage of this container's tests, kept for the coverage job (which sends it with
-      # the other containers'). Only when its tests passed: a container with a failed test keeps
-      # nothing, and its job fails, so the coverage job does not run.
+      # On main, the coverage of this container's batches, kept for the coverage job (which sends it with
+      # the other containers'). Only when their tests passed: run-tests.sh fails a batch that passed
+      # without its report, and a container with a failed test fails its job, so the coverage job does
+      # not run. The folder is made even for a container the queue gave no batch (nothing to persist).
       - when:
           condition:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - run:
-                name: This container's coverage report is there
+                name: This container's coverage reports
                 command: |
-                  ls /tmp/coverage/<< parameters.results >>-*/coverage.cobertura.xml \
-                    || { echo "No coverage report: Codecov would get nothing from this container."; exit 1; }
+                  mkdir -p /tmp/coverage/<< parameters.suite >>-$CIRCLE_NODE_INDEX
+                  ls /tmp/coverage/<< parameters.suite >>-$CIRCLE_NODE_INDEX/*/coverage.cobertura.xml 2> /dev/null \
+                    || echo "No batch ran on this container."
             - persist_to_workspace:
                 root: /tmp/coverage
                 paths:
-                  - << parameters.results >>-*/coverage.cobertura.xml
-      - store_test_results:
-          path: /tmp/test-results
-      - store_artifacts:
-          path: /tmp/test-results
+                  - << parameters.suite >>-*
 
 jobs:
   code-analysis:
@@ -263,6 +197,11 @@ jobs:
           command: |
             tools/ci-apt.sh libxml2-utils
             git ls-files -z '*.csproj' '*.props' '*.targets' '*.runsettings' '*.xml' | xargs -0 xmllint --noout
+      # The test jobs' scripts (.circleci/run-tests.sh, list-classes.sh, coverage-reports.sh) against a stand-in
+      # dotnet: a failure there would show only in the test jobs, as tests that never ran.
+      - run:
+          name: The test runner's own checks
+          command: bash .circleci/run-tests.test.sh
       - run:
           name: Analyzers (every warning is an error)
           command: |
@@ -310,8 +249,8 @@ jobs:
     steps:
       - test-classes:
           project: editor/tests/Core.Tests/Core.Tests.csproj
+          suite: core
           what: Core tests (saves, world generator, live mode, SSH tunnel)
-          results: core
 
   app-tests:
     executor: dotnet
@@ -320,13 +259,13 @@ jobs:
     resource_class: large
     # The window tests run one at a time (one UI thread): more containers is what makes them faster.
     # Six keep the job about as long as code-analysis on branches (each container also spends about
-    # 1.5 minutes setting up and building). The coverage job expects this many reports.
+    # 1.5 minutes setting up and building).
     parallelism: 6
     steps:
       - test-classes:
           project: editor/tests/Desktop.Tests/Desktop.Tests.csproj
+          suite: app
           what: App tests (the windows, headless; the real editor drawing, on the virtual screen)
-          results: app
           display: true
 
   # The add-ons (addons/<Name>/), every one found by itself: the editor loading each as a player installs it and
@@ -364,9 +303,9 @@ jobs:
           destination: addons
 
   # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
-  # core-tests and app-tests have both passed (workflows), so Codecov gets all nine containers' coverage
-  # (core-tests' three, app-tests' six) or none. The nine reports are merged here into one
-  # (tools/MergeCoverage, whose total the step prints) and that one file is sent: Codecov, given the
+  # core-tests and app-tests have both passed (workflows), so Codecov gets every container's coverage
+  # (a report per batch of classes a container ran, .circleci/run-tests.sh) or none. The reports are
+  # merged here into one (tools/MergeCoverage, whose total the step prints) and that one file is sent: Codecov, given the
   # reports in one upload, kept only part of the app tests' coverage, and Microsoft's dotnet-coverage
   # merge dropped the lines' branch counts. The orb's fail_on_error does nothing (its
   # set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing
@@ -385,16 +324,9 @@ jobs:
       - run:
           name: Every container's coverage report is there, merged into one
           command: |
-            reports=()
-            # Each test job's containers, as its parallelism says: core-tests 3, app-tests 6.
-            for project in core:3 app:6; do
-              count=${project#*:} project=${project%:*}
-              for node in $(seq 0 $((count - 1))); do
-                report=/tmp/coverage/$project-$node/coverage.cobertura.xml
-                [ -e "$report" ] || { echo "No coverage report from $project-tests' container $node."; exit 1; }
-                reports+=("$report")
-              done
-            done
+            # Each test job's batches (/tmp/coverage/<suite>-<container>/<batch>/), at least one from each suite.
+            list=$(.circleci/coverage-reports.sh /tmp/coverage) || exit 1
+            mapfile -t reports < <(printf '%s\n' "$list")
             mkdir -p /tmp/upload
             # Prints the merged total, as Codecov should show it (lines run with every branch taken, of lines measured).
             dotnet run --project tools/MergeCoverage -c Release -- /tmp/upload/coverage.cobertura.xml "${reports[@]}"
