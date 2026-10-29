@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.114.1 — unreleased
+
+### Fixed
+- **Claude shows you each script before it runs.** With **Claude may run scripts** on, every script Claude writes now
+  opens a window with its code, to run or refuse (a dry run and its run ask once). Text in a world, such as a sign
+  another player wrote, could otherwise talk Claude into running a harmful one unseen.
+
 ## v1.114.0 — unreleased
 
 ### Added

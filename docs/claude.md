@@ -32,7 +32,7 @@ In **Settings** (on the start page), section **Claude**:
 | Setting | What it does |
 |---|---|
 | **Allow Claude to connect** | On: the editor takes Claude's requests, from this computer only (unless **Address** says otherwise), from callers with the token. Off: nothing can connect. |
-| **Claude may run scripts** | On: Claude may run C# scripts, as the [Script](scripting.md) tool does. A script is a program with your rights on this computer, your files included. Off (the default): Claude's scripts are refused; its other tools still work. |
+| **Claude may run scripts** | On: Claude may run C# scripts, as the [Script](scripting.md) tool does, each one shown to you first to run or refuse. A script is a program with your rights on this computer, your files included. Off (the default): Claude's scripts are refused; its other tools still work. |
 | **Address** | Where Claude can connect from: pick one from the list, or type an address. `127.0.0.1 (this computer only)`, the default; `0.0.0.0 (every network)`; or one of this computer's networks with its address (`192.168.1.20 (Ethernet)`): that network only. With every network, a line under the command gives the addresses another computer uses: this computer's name (`http://my-pc.local:5731/mcp`), where the network answers `.local` names (mDNS), and its address on each network (`http://192.168.1.20:5731/mcp`), which always works but changes when the network gives it another. See [Safety](#safety). |
 | **Port** | The port Claude connects to: 5731 at first, 1024 to 65535. Change it if another program uses 5731. |
 | **New token** | Makes another token. Once you **Save**, the old one stops working: add the editor to Claude again with the new command. |
@@ -160,9 +160,14 @@ This works after saving or applying too: the next **Save to world** or **Apply l
   another one.
 - **Pending only.** Claude never saves, applies live, discards, reloads, writes or deletes your files, or connects to
   a live game: no tool does these, and `set_control` refuses those controls.
-- **Scripts need your leave.** `run_script` (dry runs too) and the Script tool's **Run** are refused until you turn on
-  **Claude may run scripts**. Claude's other tools (`flatten`, `road`, `forest`…) run the editor's own code and need
-  no leave.
+- **Scripts need your leave, each one.** `run_script` (dry runs too) and the Script tool's **Run** are refused until you
+  turn on **Claude may run scripts**. Then each script Claude writes is shown to you before it runs: **Run it** or
+  **Refuse** (Enter and Esc refuse). A dry run and then the same script's run in the same area ask once; every
+  other run asks again. Claude's
+  other tools (`flatten`, `road`, `forest`…) run the editor's own code and are not asked.
+- **What a world says is not an order.** Signs, portal tags and names are written by players, and a blueprint or a
+  mod's data by others: Claude is told to treat them as data. A sign that tries to give Claude orders cannot run a
+  script without you seeing it first.
 - **Live with Auto on: nothing.** While the open world is live with **Auto** on, each change would reach the game at
   once, so Claude changes nothing but the View panel and asks you to turn Auto off.
 - **Off is off.** Turn **Allow Claude to connect** off and nothing can connect.

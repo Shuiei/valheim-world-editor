@@ -67,6 +67,7 @@ public sealed partial class MainWindow
         ConfirmSave = text => Dialogs.Ask(this, Lang.T("save.ask.save.title"), text, Lang.T("common.save"));
         Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
         Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
+        ConfirmClaudeScript = code => Dialogs.AskScript(this, code);
         var tools = BuildToolColumn();
         WireShapePanels();
         WireScriptPanel();

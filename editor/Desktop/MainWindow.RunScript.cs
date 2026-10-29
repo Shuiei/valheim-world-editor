@@ -5,6 +5,48 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
+    /// The question before a script Claude wrote runs (run_script, or the Script tool's Run pressed by Claude): its code
+    /// shown, Run it or Refuse; true to run. Tests answer it.
+    /// </summary>
+    internal Func<string, Task<bool>> ConfirmClaudeScript { get; set; }
+
+    /// <summary>
+    /// The script of Claude's the user let run as a dry run, in the area open then: its run there follows without
+    /// asking again, once. Null when none waits.
+    /// </summary>
+    private (EditSession Area, string Code)? _claudeScriptAllowed;
+
+    /// <summary>
+    /// Whether a script Claude wrote may run: the user is shown it and asked. Claude's leave in Settings is not enough on
+    /// its own: text in a world (a sign, a tag, a name) can talk Claude into writing a harmful one, and a script has the
+    /// user's rights on this computer. A dry run's leave also covers that code's next run in the same area (the pair
+    /// asks once); the run uses it up, and another area or other code asks again.
+    /// </summary>
+    /// <param name="code">The script's C# source.</param>
+    /// <param name="dryRun">Whether it only says what it would change.</param>
+    internal async Task<bool> ClaudeMayRun(string code, bool dryRun = false)
+    {
+        if (_claudeScriptAllowed is { } allowed && ReferenceEquals(allowed.Area, Session) && allowed.Code == code)
+        {
+            if (!dryRun)
+            {
+                _claudeScriptAllowed = null;
+            }
+            return true;
+        }
+        _claudeScriptAllowed = null;
+        if (!await ConfirmClaudeScript(code))
+        {
+            return false;
+        }
+        if (dryRun && Session is { } area)
+        {
+            _claudeScriptAllowed = (area, code);
+        }
+        return true;
+    }
+
+    /// <summary>
     /// A script on the open area (the Script tool's Run, Claude's run_script): compiled in the background, run in a
     /// process of its own on a snapshot of the area (ScriptHost.RunInChild: Stop and the 2-minute limit end that
     /// process whatever the script is doing), then what it changed goes in as one undo step, nothing when it fails,
