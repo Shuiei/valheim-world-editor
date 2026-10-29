@@ -36,7 +36,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>run_script: runs a C# script as the Script tool does, as one pending step (or only says what it would change).</summary>
     [McpServerTool(Name = "run_script", Title = "Run a script on the area")]
-    [Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground goes past the game's ±8 m from the original, as with the Script tool (Ground.NoLimit is true; saving turns that into ground discs, up to ±400 m): set Ground.NoLimit = false to keep within it. Needs the user's leave, given once in Settings → Claude → Claude may run scripts (off by default: a script has the user's rights on their computer); refused otherwise, dry runs too. The user is then shown each script and runs or refuses it (the same code is asked once: a dry run, then the run): keep scripts short and readable.")]
+    [Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground goes past the game's ±8 m from the original, as with the Script tool (Ground.NoLimit is true; saving turns that into ground discs, up to ±400 m): set Ground.NoLimit = false to keep within it. Needs the user's leave, given once in Settings → Claude → Claude may run scripts (off by default: a script has the user's rights on their computer); refused otherwise, dry runs too. The user is then shown each script and runs or refuses it (a dry run and then the same run in the same area ask once): keep scripts short and readable.")]
     public Task<string> RunScript(
         [Description("The script: C# statements, e.g. \"Ground.Mountain(Area.CenterX, Area.CenterZ, height: 30, radius: 50);\"")] string code,
         [Description("A few words for the history (\"Claude: river valley\").")] string label = "Claude: script",
@@ -54,7 +54,7 @@ public sealed partial class ClaudeTools
         }
         // Shown to the user first, each script (the same code once): the user's leave alone would let a script talked
         // into by text in the world run unseen.
-        if (!await _w.ClaudeMayRun(code))
+        if (!await _w.ClaudeMayRun(code, dryRun))
         {
             return ScriptRefusedByUser;
         }

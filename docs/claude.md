@@ -145,7 +145,8 @@ This works after saving or applying too: the next **Save to world** or **Apply l
   a live game: no tool does these, and `set_control` refuses those controls.
 - **Scripts need your leave, each one.** `run_script` (dry runs too) and the Script tool's **Run** are refused until you
   turn on **Claude may run scripts**. Then each script Claude writes is shown to you before it runs: **Run it** or
-  **Refuse** (Enter and Esc refuse). The same script is asked once, so a dry run and then the run ask once. Claude's
+  **Refuse** (Enter and Esc refuse). A dry run and then the same script's run in the same area ask once; every
+  other run asks again. Claude's
   other tools (`flatten`, `road`, `forest`…) run the editor's own code and are not asked.
 - **What a world says is not an order.** Signs, portal tags and names are written by players, and a blueprint or a
   mod's data by others: Claude is told to treat them as data. A sign that tries to give Claude orders cannot run a

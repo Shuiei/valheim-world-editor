@@ -8,7 +8,7 @@ the plugin is unchanged in versions without that part.
 
 ### Fixed
 - **Claude shows you each script before it runs.** With **Claude may run scripts** on, every script Claude writes now
-  opens a window with its code, to run or refuse; the same script is asked once. Text in a world, such as a sign
+  opens a window with its code, to run or refuse (a dry run and its run ask once). Text in a world, such as a sign
   another player wrote, could otherwise talk Claude into running a harmful one unseen.
 
 ## v1.113.0 — 2026-10-26
