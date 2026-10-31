@@ -111,6 +111,7 @@ public partial class MainWindow
         BuildPanel.OpenAsked += async path => await OpenWorkshop(path);
         BuildPanel.AddAsked += path => AddToWorkshop(path, null);
         BuildPanel.Dungeon.PlotAsked += async (settings, result, add) => await PlotDungeon(settings, result, add);
+        BuildPanel.RescanAsked += () => _ = ScanModPieces(again: true);
         BuildPanel.ImportAsked += async () =>
         {
             if (await Blueprints.PickFile() is string file && Blueprints.Import(file) != null)

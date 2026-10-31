@@ -25,6 +25,12 @@ public sealed partial class GameBundles : IDisposable
     /// Where the index is kept (null: not kept).
     /// </summary>
     private readonly string? _cacheFile;
+
+    /// <summary>
+    /// The mods' bundles (built by each mod, which writes their paths in lower case): a prefab is found by its name in
+    /// lower case too.
+    /// </summary>
+    private readonly bool _lowerNames;
     /// <summary>
     /// Bundle file name -&gt; its path.
     /// </summary>
@@ -77,10 +83,12 @@ public sealed partial class GameBundles : IDisposable
     /// <param name="cacheFile">Where the index is kept (null: not kept).</param>
     /// <param name="mixedVersions">The bundles were built by different Unity versions (the mods' bundles): the layout
     /// of each kind of object is then read from each bundle, not kept from the first one read (AssetsTools keeps it by
-    /// kind alone, and another version's layout misreads the object).</param>
+    /// kind alone, and another version's layout misreads the object); their prefabs are found by their names in lower
+    /// case too.</param>
     public GameBundles(string dir, string? cacheFile, bool mixedVersions = false)
     {
         _am = new() { UseTemplateFieldCache = !mixedVersions, UseRefTypeManagerCache = true, UseQuickLookup = true };
+        _lowerNames = mixedVersions;
         Folder = dir;
         _cacheFile = cacheFile;
         foreach (string f in Directory.GetFiles(dir))

@@ -25,9 +25,9 @@ public sealed partial class InspectorPanel
         {
             lines.Add(spawn.Nest ? Lang.T("inspect.nest", spawn.Summary()) : Lang.T("inspect.spawnPoint", spawn.Summary()));
         }
-        if (name != null && ModCatalogue.IsModded(name))
+        if (name != null && ModPrefabs.IsModded(name))
         {
-            lines.Add(ModCatalogue.ModOf(name) is string mod ? Lang.T("inspect.fromMod", mod) : Lang.T("inspect.fromAMod"));
+            lines.Add(ModPrefabs.ModOf(name) is string mod ? Lang.T("inspect.fromMod", mod) : Lang.T("inspect.fromAMod"));
         }
         return string.Join("\n", lines);
     }

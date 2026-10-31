@@ -21,7 +21,10 @@ public sealed partial class GameBundles
     {
         lock (_sync)
         {
-            if (!EnsureIndex().TryGetValue(name, out var root))
+            var index = EnsureIndex();
+            // Unity writes a bundle's paths in lower case when the mod's own build makes it: its prefab "M_Wall" is
+            // "m_wall" there.
+            if (!index.TryGetValue(name, out var root) && !(_lowerNames && index.TryGetValue(name.ToLowerInvariant(), out root)))
             {
                 return null;
             }

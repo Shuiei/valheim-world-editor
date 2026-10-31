@@ -7,13 +7,13 @@ public sealed partial class BuildPanel
     /// The mod a piece of the Mods tab is listed under ("Other mods" when the game did not say); empty for the game's
     /// own pieces. A mod that adds many (PlanBuild's plans of every piece) does not bury the others.
     /// </summary>
-    internal static string ModGroup(string prefab) => ModCatalogue.IsModded(prefab) ? ModCatalogue.ModOf(prefab) ?? Lang.T("build.otherMods") : "";
+    internal static string ModGroup(string prefab) => ModPrefabs.IsModded(prefab) ? ModPrefabs.ModOf(prefab) ?? Lang.T("build.otherMods") : "";
 
     /// <summary>
     /// The group a mod's manifest puts a mod piece in (the Mods tab's heading in place of its station); null for the
     /// game's own pieces and when the manifest says none.
     /// </summary>
-    internal static string? PieceGroup(string prefab) => ModCatalogue.IsModded(prefab) ? ModManifests.PrefabOf(prefab)?.Group : null;
+    internal static string? PieceGroup(string prefab) => ModPrefabs.IsModded(prefab) ? ModManifests.PrefabOf(prefab)?.Group : null;
 
     /// <summary>
     /// A station's rank, to list pieces by the station they need, in the order players get them (none first:

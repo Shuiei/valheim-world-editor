@@ -37,6 +37,7 @@ public sealed class BuildPanelModsTests : IDisposable
     public void Dispose()
     {
         ModCatalogue.Forget();
+        ModScan.Forget();
         ModManifests.Forget();
         GameData.UseCopies(Fixtures.Root);
         AppSettings.DataDirOverride = _dataDir;
@@ -213,5 +214,57 @@ public sealed class BuildPanelModsTests : IDisposable
 
         Assert.Equal(BuildPanel.MaxTiles, Listed(p).Count);
         Assert.Contains(p.Tiles.Children.OfType<TextBlock>(), t => t.Text == $"Showing {BuildPanel.MaxTiles} of {all}: search to find the others.");
+    }
+
+    // The installed mods' pieces, read without a live game, are listed under their mod beside those a live game told of.
+    [AvaloniaFact]
+    public void AnInstalledModsPiecesAreListedUnderItsName()
+    {
+        GameData.AddMods(ModPieces(("zzmod_alpha_1", "AlphaMod")));
+        var data = ModScan.Data.Empty;
+        ModScan.Take(data, new Dictionary<string, string>
+        {
+            ["prefabs"] = """{"zzmod_offline":{"p":1,"d":0,"t":2}}""",
+            ["pieces"] = """{"zzmod_offline":{"cat":2,"comfort":0,"snap":[[0,0,0],[2,0,0]]},"zzmod_loose":{"cat":2,"comfort":0,"snap":[[0,0,0]],"loose":1}}""",
+        }, "Installed Mod");
+        GameData.UseModScan(data);
+        var (p, mods) = Panel();
+
+        Click(p.ModsTab);
+
+        Assert.Equal(["AlphaMod 1", "Installed Mod 2"], mods.Children.OfType<Button>().Select(Words));
+        Click(mods.Children.OfType<Button>().Last());
+        Assert.Equal(["zzmod_loose", "zzmod_offline"], Listed(p).Order(StringComparer.Ordinal));
+        Assert.Equal("Installed Mod", BuildPanel.ModGroup("zzmod_offline"));
+        // No recipe known offline: its cost is unknown, not free.
+        p.Choose("zzmod_offline");
+        Assert.Equal("Cost unknown (pieces from mods?)", p.Cost.Text);
+        Assert.Equal("zzmod_offline · Installed Mod", p.Chosen.Text);
+    }
+
+    // While the installed mods are read the tab says so and Rescan mods waits; done, the pieces are listed again.
+    [AvaloniaFact]
+    public void TheTabSaysWhileTheModsAreReadAndRescanAsksForIt()
+    {
+        var (p, _) = Panel();
+        int asked = 0;
+        p.RescanAsked += () => asked++;
+        Click(p.ModsTab);
+        Assert.True(p.RescanButton.IsVisible);
+        Assert.True(p.RescanButton.FindLogicalAncestorOfType<DockPanel>()!.IsVisible);
+
+        p.ShowScanning(true);
+
+        Assert.True(p.ScanningMods);
+        Assert.False(p.RescanButton.IsEnabled);
+        Assert.Equal("Reading your mods' pieces…", p.NoMods.Text);
+        p.ShowScanning(false);
+        Assert.True(p.RescanButton.IsEnabled);
+        Assert.StartsWith("No piece from a mod found.", p.NoMods.Text);
+        Click(p.RescanButton);
+        Assert.Equal(1, asked);
+        // Searching, or on the hammer's tabs: no column of mods.
+        p.Search.Text = "wall";
+        Assert.False(p.RescanButton.FindLogicalAncestorOfType<DockPanel>()!.IsVisible);
     }
 }

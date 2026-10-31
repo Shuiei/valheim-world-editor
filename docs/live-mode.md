@@ -118,7 +118,8 @@ asked once before undoing or redoing them.
 Mods make most of their objects while the game runs, so the editor learns them from the game when a live world
 opens. A modded game's objects then have their names, the [Place](place.md) list offers them, the
 [Workshop](workshop.md)'s Build dock lists the mods' pieces on its **Mod pieces** tab with their cost (one mod at a
-time, chosen in the list down its side; at most 300 pieces show, search for the others), and the inspector says which
+time, chosen in the list down its side; at most 300 pieces show, search for the others; the mods installed on this
+computer are listed there even without a live game, with their cost unknown), and the inspector says which
 mod an object comes from ("From the mod …" when Jötunn is installed, else "From a mod").
 
 What the editor learns is kept (`mod-catalogue.json` in the editor's data folder), so the same server's world

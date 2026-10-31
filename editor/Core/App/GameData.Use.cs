@@ -6,18 +6,19 @@ namespace TerrainEditor.App;
 public static partial class GameData
 {
     /// <summary>
-    /// A kind's data in use, with the mods' prefabs laid over it when it is one of theirs (ModCatalogue.Kinds). Should
-    /// the mods' entries make it fail, the game's own data is used alone.
+    /// A kind's data in use, with the mods' prefabs laid over it when it is one of theirs: what a live game reported
+    /// (ModCatalogue.Kinds), then the installed mods' pieces under that (ModScan.Kinds). Should the mods' entries make it
+    /// fail, the game's own data is used alone.
     /// </summary>
     private static void Use(Kind kind, string json)
     {
-        if (!ModCatalogue.Kinds.ContainsKey(kind.Name))
+        if (!ModCatalogue.Kinds.ContainsKey(kind.Name) && !ModScan.Kinds.Contains(kind.Name))
         {
             kind.Use(json);
             return;
         }
         Own[kind.Name] = json;
-        string merged = ModCatalogue.Merge(kind.Name, json);
+        string merged = ModScan.Merge(kind.Name, ModCatalogue.Merge(kind.Name, json));
         if (ReferenceEquals(merged, json))
         {
             kind.Use(json);
@@ -66,5 +67,46 @@ public static partial class GameData
     {
         using var doc = JsonDocument.Parse(prefabs);
         return doc.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Reads the installed mods' pieces (ModScan: their bundles, kept until they change, and the add-ons' manifests) and
+    /// lays them under the data in use. Returns how many mod pieces there are; 0, read nothing, before the game's data is
+    /// in use.
+    /// </summary>
+    /// <param name="settings">The editor's settings (the plugins folders it knows).</param>
+    /// <param name="again">Read the mods' bundles even when the kept reading is of the same mods.</param>
+    /// <param name="progress">Told the bundles read, of all of them, while it reads them.</param>
+    public static int ScanMods(AppSettings settings, bool again = false, Action<int, int>? progress = null)
+    {
+        string? from;
+        string? prefabs;
+        lock (Lock)
+        {
+            from = _from;
+            prefabs = Own.GetValueOrDefault("prefabs");
+        }
+        if (from == null || from == Copies || prefabs == null)
+        {
+            return 0;
+        }
+        // Read outside the lock: reading the bundles takes a while, and the editor goes on meanwhile.
+        var data = ModScan.Scan(settings, from, PrefabNames(prefabs), again, progress);
+        UseModScan(data);
+        return data.Count;
+    }
+
+    /// <summary>The installed mods' pieces in use (ModScan), laid under the data in use.</summary>
+    internal static void UseModScan(ModScan.Data data)
+    {
+        lock (Lock)
+        {
+            ModScan.Use(data);
+            foreach (var kind in Kinds.Where(k => Own.ContainsKey(k.Name)))
+            {
+                Use(kind, Own[kind.Name]);
+            }
+            _generation++;
+        }
     }
 }

@@ -17,6 +17,7 @@ public sealed partial class BuildPanel
         var list = PiecesShown(q, pieces);
         // The Mod pieces tab with no mod's piece known: how the editor learns them, instead of an empty list.
         NoMods.IsVisible = q.Length == 0 && _tab == Mods && !pieces.Any(p => p.Category == Mods);
+        _modColumn.IsVisible = q.Length == 0 && _tab == Mods;
         if (NoMods.IsVisible)
         {
             return;

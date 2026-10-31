@@ -32,7 +32,7 @@ public static partial class ModManifests
     private static void Read(JsonObject root, Notes notes, (string Folder, string Mod)? from, bool addOn)
     {
         ReadData(root["data"], notes);
-        ReadPrefabs(root["prefabs"], notes);
+        ReadPrefabs(root["prefabs"], notes, from?.Mod);
         ReadExtension(root, from, notes, addOn);
         ReadLinks(root["links"], notes);
         ReadTies(root["ties"], notes);

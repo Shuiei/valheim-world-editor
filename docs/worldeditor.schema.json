@@ -97,9 +97,20 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
-          "hidden": { "type": "boolean", "description": "Not offered in Place or the Workshop's Build panel." },
-          "group": { "$ref": "#/$defs/text", "description": "The heading the piece is listed under in the Build panel's Mods tab." },
-          "data": { "type": "boolean", "description": "Objects of it only hold the mod's data: never drawn, picked or listed, kept by a zone reset that keeps the buildings." }
+          "hidden": { "type": "boolean", "description": "Not offered in Place or the Workshop's Build dock." },
+          "group": { "$ref": "#/$defs/text", "description": "The heading the piece is listed under in the Workshop's Mod pieces tab." },
+          "data": { "type": "boolean", "description": "Objects of it only hold the mod's data: never drawn, picked or listed, kept by a zone reset that keeps the buildings." },
+          "piece": {
+            "type": "object",
+            "description": "A build piece the mod makes in code, which no bundle holds: the Workshop's Mod pieces tab lists it with this name and cost even without a live game.",
+            "properties": {
+              "name": { "type": "string", "minLength": 1, "maxLength": 64, "description": "Its name for the player." },
+              "cost": { "type": "object", "maxProperties": 16, "description": "What it costs: item prefab name to amount.", "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 10000 } },
+              "station": { "type": "string", "minLength": 1, "maxLength": 64, "description": "The crafting station it needs near, by its English name." }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       }

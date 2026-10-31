@@ -24,20 +24,67 @@ public static partial class GameCatalogues
     /// <returns>Each kind's JSON, by kind.</returns>
     public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds, Action<int, int>? progress = null)
     {
-        var scans = kinds.Select(k => (Kind: k, Scan: k switch
-        {
-            "terrain-modifiers" => (IStartScan)new ModifierScan(),
-            "prefabs" => new PrefabScan(),
-            "pieces" => new PieceScan(),
-            "piece-support" => new SupportScan(),
-            "piece-place" => new PlaceScan(),
-            "piece-cost" => new CostScan(Localization.English(bundles.Folder)),
-            "dungeon-rooms" => new DungeonScan(),
-            "wake-draws" => new WakeScan(),
-            _ => throw new ArgumentException($"no kind {k} is read at the start"),
-        })).ToList();
+        var scans = kinds.Select(k => (Kind: k, Scan: NewScan(k, () => Localization.English(bundles.Folder)))).ToList();
         Pass(bundles, [.. scans.Select(s => s.Scan)], progress);
         return scans.ToDictionary(s => s.Kind, s => s.Scan.Json());
+    }
+
+    /// <summary>A kind's reader. Throws ArgumentException for a kind not in <c>AtStart</c>.</summary>
+    /// <param name="kind">The kind, of <c>AtStart</c>.</param>
+    /// <param name="english">The English texts the costs are named from (read only for "piece-cost").</param>
+    /// <param name="loose">Mods' bundles: root prefabs with snap points and no Piece count as pieces (PieceScan.Loose).</param>
+    private static IStartScan NewScan(string kind, Func<Dictionary<string, string>> english, bool loose = false) => kind switch
+    {
+        "terrain-modifiers" => new ModifierScan(),
+        "prefabs" => new PrefabScan(),
+        "pieces" => new PieceScan { Loose = loose },
+        "piece-support" => new SupportScan(),
+        "piece-place" => new PlaceScan(),
+        "piece-cost" => new CostScan(english()),
+        "dungeon-rooms" => new DungeonScan(),
+        "wake-draws" => new WakeScan(),
+        _ => throw new ArgumentException($"no kind {kind} is read at the start"),
+    };
+
+    /// <summary>
+    /// The kinds named (of AtStart) of each bundle of a folder on its own (the mods' bundles: which one a prefab comes
+    /// from tells its mod), as their JSON, by the bundle's file name; root prefabs with snap points and no Piece are
+    /// pieces too ("loose", PieceScan.Loose). A bundle that cannot be read is left out (said in the log).
+    /// </summary>
+    /// <param name="folder">The bundles' folder.</param>
+    /// <param name="kinds">The kinds to read, of <c>AtStart</c>.</param>
+    /// <param name="english">The English texts the costs are named from, by token without "$".</param>
+    /// <param name="progress">Told the bundles read, of all of them, before each.</param>
+    public static Dictionary<string, Dictionary<string, string>> ReadEach(string folder, IReadOnlyList<string> kinds, Dictionary<string, string> english, Action<int, int>? progress = null)
+    {
+        var read = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+        using var game = new Game(folder);
+        game.IndexCabs();
+        int done = 0;
+        foreach (string name in game.Bundles)
+        {
+            progress?.Invoke(done++, game.Bundles.Count);
+            var scans = kinds.Select(k => (Kind: k, Scan: NewScan(k, () => english, loose: true))).ToList();
+            try
+            {
+                using var b = game.Open(name);
+                if (b == null)
+                {
+                    continue;
+                }
+                foreach (var (_, scan) in scans)
+                {
+                    scan.Read(b, game);
+                }
+                read[name] = scans.ToDictionary(s => s.Kind, s => s.Scan.Json());
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or InvalidOperationException or KeyNotFoundException)
+            {
+                // A mod's bundle made in a way the readers do not follow: its pieces are not listed, the others are.
+                Log.Caught(e, $"reading the pieces of the mod bundle {name} (left out)");
+            }
+        }
+        return read;
     }
 
     /// <summary>
