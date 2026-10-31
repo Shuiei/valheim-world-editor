@@ -9,7 +9,14 @@ public static partial class Hammer
     /// editor's own Ctrl + wheel), then snapped (snap: the snap points' search is done). Returns the
     /// position and what it snapped to (null: nothing).
     /// </summary>
-    public static (Vector3 Position, int? SnappedTo) Place(string prefab, Quaternion rotation, Hit hit, IReadOnlyList<Placed> pieces, float lift = 0, bool snap = true)
+    /// <param name="prefab">The piece's prefab name.</param>
+    /// <param name="rotation">Its turn.</param>
+    /// <param name="hit">What the build ray hits.</param>
+    /// <param name="pieces">The pieces already there.</param>
+    /// <param name="lift">The editor's lift, in metres.</param>
+    /// <param name="snap">Whether it snaps.</param>
+    /// <param name="own">Manual snapping: only this snap point of the piece (see <see cref="Snap"/>); null, the game's way.</param>
+    public static (Vector3 Position, int? SnappedTo) Place(string prefab, Quaternion rotation, Hit hit, IReadOnlyList<Placed> pieces, float lift = 0, bool snap = true, int? own = null)
     {
         var data = Get(prefab);
         Vector3 point = hit.Point, normal = hit.Normal;
@@ -23,7 +30,7 @@ public static partial class Hammer
             pos = OffHit(data, point, normal, rotation);
         }
         pos.Y += lift;
-        return snap ? Snap(prefab, rotation, pos, pieces) : (pos, null);
+        return snap ? Snap(prefab, rotation, pos, pieces, own) : (pos, null);
     }
 
     /// <summary>

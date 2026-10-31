@@ -95,7 +95,8 @@ which the editor reads from your Valheim with each piece's real shape (its colli
 two snap points come close, the piece moves so that they meet exactly: walls stand end to end, floors meet edge to
 edge, a wall sits on a floor.
 
-**How the hammer places a piece**, which the Workshop's Build panel and building in a dungeon follow step by step:
+**How the hammer places a piece**, which the Workshop's Build dock and building in a dungeon follow step by step (its
+**Auto** snapping):
 
 1. The cursor's line meets the nearest thing: the ground, or a piece's real shape (not its box).
 2. The piece, turned as you set it, is moved so that the point of its shape nearest the hit touches it. Rugs and
@@ -106,6 +107,11 @@ edge, a wall sits on a floor.
 
 A lift (`Ctrl` + wheel) is added before the snap, so a lifted piece snaps to points near its new height. A grid rounds
 only points on the ground: a piece pointed at another piece snaps as usual.
+
+The Workshop's building bar has two more ways. **Manual** keeps step 3 to one snap point of the piece, the one `Q` and
+`E` choose (marked on the piece), and lets it reach 1.5 m: in a crowded corner, where the closest pair is the wrong
+edge, pick the point that should meet. **Free**, or holding `Alt` in any mode, skips step 3: the piece stays where it
+touches, and with `Alt` its place across is rounded to a quarter metre from the plot's middle.
 
 The other tools snap by the same snap points, each in its own way:
 

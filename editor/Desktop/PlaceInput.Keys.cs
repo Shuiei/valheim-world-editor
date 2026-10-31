@@ -19,6 +19,10 @@ public sealed partial class PlaceInput
             case Avalonia.Input.Key.PageDown:
                 Message?.Invoke(Tool.NudgeElevation((key == Avalonia.Input.Key.PageUp ? 1 : -1) * (shift ? 0.1f : 0.5f)));
                 return true;
+            // Snapping by hand: Q and E choose the piece's snap point (E is Select otherwise).
+            case Avalonia.Input.Key.Q or Avalonia.Input.Key.E when Tool.Building && Tool.SnapMode == PlaceTool.SnapModes.Manual:
+                CycleSnap(key == Avalonia.Input.Key.E ? 1 : -1);
+                return true;
             case Avalonia.Input.Key.R:
                 Tool.NewLayout();
                 return true;
@@ -32,5 +36,16 @@ public sealed partial class PlaceInput
             default:
                 return EditKey(key, shape);
         }
+    }
+
+    /// <summary>
+    /// Manual snapping: the piece's next (1) or previous (-1) snap point is the one that meets the others; the preview
+    /// follows.
+    /// </summary>
+    public void CycleSnap(int step)
+    {
+        Tool.SnapPoint += step;
+        Refresh();
+        Tool.Notify();
     }
 }

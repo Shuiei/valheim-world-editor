@@ -13,8 +13,11 @@ public sealed partial class BuildPanel
     /// <summary>The piece tiles of the tab or search, with a heading where the station changes.</summary>
     internal WrapPanel Tiles { get; } = new() { ItemSpacing = 6, LineSpacing = 6 };
 
-    /// <summary>Snap to the snap points of the pieces already there.</summary>
-    internal CheckBox SnapBox { get; } = new CheckBox { Content = Lang.T("build.label.snap"), FontSize = 12, IsChecked = true, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
+    /// <summary>How the piece snaps: Auto (as the hammer), Manual (one snap point, Q and E) or Free; one button each, tagged with its mode.</summary>
+    internal StackPanel SnapModes { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+
+    /// <summary>Snapping by hand: which of the piece's snap points meets the others ("Point 2 of 8").</summary>
+    internal TextBlock SnapPointText { get; } = new() { FontSize = 11.5, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
 
     /// <summary>The grid step for pieces not snapped (Off, 0.5, 1 or 2 m).</summary>
     internal ComboBox GridBox { get; } = new() { ItemsSource = new[] { Lang.T("build.grid.off"), "0.5 m", "1 m", "2 m" }, SelectedIndex = 0, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };

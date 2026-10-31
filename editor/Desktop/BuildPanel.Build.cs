@@ -27,10 +27,16 @@ public sealed partial class BuildPanel
             HammerTabs.Children.Add(b);
         }
         Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Render(); } };
-        SnapBox.IsCheckedChanged += (_, _) => { Tool.SnapTo = SnapBox.IsChecked == true; Tool.Notify(); };
+        foreach (var mode in Enum.GetValues<PlaceTool.SnapModes>())
+        {
+            var b = new Button { Content = Lang.T("build.snap." + mode.ToString().ToLowerInvariant()), FontSize = 11.5, Padding = new Thickness(8, 2), Tag = mode };
+            b.Tip("build.snap" + mode);
+            b.Click += (_, _) => SetSnapMode(mode);
+            SnapModes.Children.Add(b);
+        }
+        Tool.Changed += ShowSnapPoint;
         GridBox.SelectionChanged += (_, _) => { Tool.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)]; Tool.Notify(); };
         TurnBox.SelectionChanged += (_, _) => _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
-        SnapBox.Tip("build.snap");
         GridBox.Tip("build.grid");
         TurnBox.Tip("build.turn");
         Search.Tip("build.search");
@@ -97,6 +103,7 @@ public sealed partial class BuildPanel
         // The toolbar comes and goes with the dock (in the Workshop's Build, building in a dungeon).
         Card.PropertyChanged += (_, e) => { if (e.Property == Visual.IsVisibleProperty) { Toolbar.IsVisible = Card.IsVisible; } };
         Fold(false);
+        SetSnapMode(PlaceTool.SnapModes.Auto);
         ShowLibrary(false);
     }
 
@@ -130,7 +137,10 @@ public sealed partial class BuildPanel
         t.Tilt = 0;
         t.SizeMin = t.SizeMax = 100;
         t.Elevation = PlaceTool.Elevations.Ground;
-        t.SnapTo = SnapBox.IsChecked == true;
+        t.SnapMode = SnapMode;
+        t.SnapTo = SnapMode != PlaceTool.SnapModes.Free;
+        t.SnapPoint = 0;
+        t.Fine = false;
         t.OnTop = false;
         t.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)];
         _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
@@ -157,6 +167,8 @@ public sealed partial class BuildPanel
     {
         Tool.Chosen.Clear();
         Tool.Chosen.Add(prefab);
+        // Another piece: its own snap points, counted from its first.
+        Tool.SnapPoint = 0;
         Tool.Notify();
         string mod = ModGroup(prefab);
         Chosen.Text = PieceCost.PieceName(prefab) + (mod.Length > 0 ? " · " + mod : "");

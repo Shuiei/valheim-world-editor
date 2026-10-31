@@ -130,7 +130,7 @@ public sealed class BuildPanelDockTests
         Assert.False(p.Toolbar.IsVisible);
         p.Card.IsVisible = true;
         Assert.True(p.Toolbar.IsVisible);
-        Assert.Contains(p.SnapBox, p.Toolbar.GetLogicalDescendants());
+        Assert.Contains(p.SnapModes, p.Toolbar.GetLogicalDescendants());
         Assert.Contains(p.GridBox, p.Toolbar.GetLogicalDescendants());
         Assert.Contains(p.TurnBox, p.Toolbar.GetLogicalDescendants());
         Assert.Contains(p.LiftReset, p.Toolbar.GetLogicalDescendants());

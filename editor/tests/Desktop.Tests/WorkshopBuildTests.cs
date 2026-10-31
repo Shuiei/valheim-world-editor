@@ -65,12 +65,12 @@ public class WorkshopBuildTests
         Assert.Equal(22.5f, t.Preview(new Vector2(c, c)).Single().Rotation.Y, 2);
         // The grid rounds the ground's point (Off by default, as in the game).
         t.Rotation = 0;
-        w.BuildPanel.SnapBox.IsChecked = false;
+        w.BuildPanel.SetSnapMode(PlaceTool.SnapModes.Free);
         w.BuildPanel.GridBox.SelectedIndex = 3;
         Aim(5.4f, 0);
         Assert.Equal(mid.X + 6, t.Preview(new Vector2(c, c)).Single().Position.X, 2);
         w.BuildPanel.GridBox.SelectedIndex = 0;
-        w.BuildPanel.SnapBox.IsChecked = true;
+        w.BuildPanel.SetSnapMode(PlaceTool.SnapModes.Auto);
         // Ctrl + wheel: half a metre a notch; two half notches make one; Shift: 0.1 m.
         t.Rotation = 0;
         void Wheel(double dy, Avalonia.Input.KeyModifiers mods) => w.Surface.RaiseEvent(new Avalonia.Input.PointerWheelEventArgs(w.Surface,

@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.116.0 — 2026-10-31
+
+### Added
+- **Snap Auto, Manual or Free in the Workshop.** The building bar's **Snap** replaces the Snap to pieces switch:
+  **Auto** as the game's hammer, **Free** without snapping, and **Manual**, where `Q` and `E` choose which snap point of
+  the piece meets the others (marked on it), reaching further: for crowded corners where the hammer picks the wrong
+  edge. See [Snapping](docs/concepts/objects.md#snapping).
+- **Fine placing with Alt.** Holding `Alt` while building places the piece by a quarter metre, without snapping.
+
 ## v1.115.0 — 2026-10-31
 
 ### Changed

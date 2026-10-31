@@ -56,6 +56,7 @@ public sealed partial class BuildPanel
     {
         _prefs = prefs;
         _body.Height = Math.Clamp(prefs.Get("build.dockHeight", DefaultHeight), MinHeight, MaxHeight);
+        SetSnapMode(Enum.TryParse(prefs.Get("build.snapMode", ""), out PlaceTool.SnapModes mode) ? mode : PlaceTool.SnapModes.Auto);
         _recent.Clear();
         _recent.AddRange(prefs.Get<string[]>("build.recent", []).Where(p => p.Length > 0).Distinct(StringComparer.Ordinal).Take(MaxRecent));
         RenderRecent();
@@ -212,7 +213,7 @@ public sealed partial class BuildPanel
             Spacing = 12,
             Children =
             {
-                SnapBox,
+                Labelled(Lang.T("build.label.snapMode"), SnapModes, SnapPointText),
                 Sep(),
                 Labelled(Lang.T("build.label.grid"), GridBox),
                 Labelled(Lang.T("build.label.turnBy"), TurnBox),

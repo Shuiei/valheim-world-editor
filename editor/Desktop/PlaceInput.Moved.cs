@@ -9,10 +9,15 @@ public sealed partial class PlaceInput
     /// The mouse moved: follows the cursor, starts a drag past 6 px, drags points, figures and grid boxes, or draws
     /// freehand (a point every 2 m).
     /// </summary>
-    public void Moved(Point at, Size size)
+    /// <param name="at">The pointer on the view, in pixels.</param>
+    /// <param name="size">The view's size.</param>
+    /// <param name="alt">Alt is held (building: the fine step, no snapping).</param>
+    public void Moved(Point at, Size size, bool alt = false)
     {
         _pointer = at;
         _size = size;
+        // Building: Alt held places by a fine step, without snapping.
+        Tool.Fine = Tool.Building && alt;
         var hit = _view.GridAt(at, size);
         // Building: the build ray itself (the piece goes where it hits, a piece or the ground).
         if (Tool.Building)

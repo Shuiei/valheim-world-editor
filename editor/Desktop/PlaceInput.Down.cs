@@ -40,7 +40,8 @@ public sealed partial class PlaceInput
         }
         // Building: where the cursor points (on a piece, or the ground), as the preview shows it.
         var hit = Tool.Building && _at != null ? _at : _view.GridAt(at, size);
-        if (alt && !shift)
+        // Building has no elevation to pick: Alt places by the fine step (see Moved).
+        if (alt && !shift && !Tool.Building)
         {
             if (_view.WorldAt(at, size) is { } w)
             {
