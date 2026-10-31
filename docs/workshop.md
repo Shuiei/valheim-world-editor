@@ -94,7 +94,18 @@ tab says how (see [Live mode](live-mode.md#modded-games)).
 | A piece's tile | Picks it. Its name and cost show at the dock's foot (`Wood Wall · Costs Wood 2 (needs Workbench)`), with its mod's name for a mod's piece. Point at a tile for its prefab name. |
 | **Recent** | The last 12 pieces you picked, newest first, at the dock's foot: click one to pick it again. Kept for the next time. |
 
-Each click puts down one piece; dragging does not paint more. With no piece picked, the Workshop picks the wooden wall.
+Each click puts down one piece. With no piece picked, the Workshop picks the wooden wall.
+
+**Quick ways** while **Build** is on:
+
+| Mouse | What it does |
+|---|---|
+| Drag | Lays a row of the piece from where you pressed: copies edge to edge, one piece's length apart (a wall's width, a floor's side), along whichever of the piece's sides is nearer the drag, at the first one's height, up to 64. A wall rows only along its width: turn it first to row it the other way. Let go to put the row down, one undo step. |
+| `Shift` + right click | Takes away the piece under the pointer (`Ctrl+Z` brings it back). A right drag still turns the view, and `Shift` + right drag still slides it. |
+| Middle click | Builds with the kind of the piece under the pointer, like an eyedropper: it is picked in the dock and first under **Recent**. A middle drag still slides the view. |
+
+![A row of walls being dragged out beside the hut](images/workshop-row.jpg)
+*A drag from the left: a row of wooden walls laid end to end, see-through until the button is let go.*
 
 ### The building bar
 
@@ -273,6 +284,9 @@ known recipe (from mods) are listed apart; with none known, it reads `Cost unkno
 | `Q` | With **Snap** on **Manual** in Build: the previous snap point. |
 | `Esc` | View. |
 | Click | Put the piece down. |
+| Drag | Lay a row of the piece. |
+| `Shift` + right click | Take away the piece under the pointer. |
+| Middle click | Build with the kind of the piece under the pointer. |
 | `,` `.` or `Alt` + wheel | Turn the piece by the **Turn by** step (`Shift`: 1°). |
 | `Ctrl` + wheel | Lift or lower the piece 0.5 m (`Shift`: 0.1 m). |
 | Hold `Alt` | Place the piece by a quarter metre, without snapping. |

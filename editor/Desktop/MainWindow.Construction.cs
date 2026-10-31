@@ -59,6 +59,7 @@ public sealed partial class MainWindow
         WirePlacePanel();
         PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
         View.PasteClicked += PasteAt;
+        WireBuildClicks();
         Title = $"Valheim World Editor {BuildInfo.Version}";
         Icon = AppIcon();
         Width = Options.WindowWidth > 0 ? Options.WindowWidth : 1500;

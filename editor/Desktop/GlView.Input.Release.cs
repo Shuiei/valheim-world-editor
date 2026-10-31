@@ -22,6 +22,7 @@ public sealed partial class GlView
         UpMod(at, mods);
         EndDrawing(at, size);
         EndPress(at, size, mods, click);
+        BuildClick(at, size, mods, click);
         _pressAt = null;
         _dragFrom = null;
         _pickSwallow = false;

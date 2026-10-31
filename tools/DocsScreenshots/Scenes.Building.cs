@@ -197,8 +197,8 @@ public sealed partial class Scenes
     /// The Workshop's pictures, with blueprints made as a player has them from friends (files opened in the Workshop,
     /// then saved to the library): workshop-save-dialog.jpg (the Save blueprint dialog over a small hut),
     /// workshop-overview.jpg (the hut on the plot, the Build dock on the wooden pieces), workshop-snap-manual.jpg (Manual
-    /// snapping: a wall beside the hut's, its second snap point marked), workshop.jpg (a tall stone
-    /// and wood house tinted by the support check, its overhang red), workshop-library.jpg (the Library searching
+    /// snapping: a wall beside the hut's, its second snap point marked), workshop-row.jpg (a row of walls being dragged
+    /// out), workshop.jpg (a tall stone and wood house tinted by the support check, its overhang red), workshop-library.jpg (the Library searching
     /// "hut": two huts with their pictures), workshop-cut.jpg (the house cut at 3 m, seen from above) and
     /// start-workshop.jpg (the start page's Workshop with the three blueprints).
     /// </summary>
@@ -207,6 +207,18 @@ public sealed partial class Scenes
         e.Send($"workshop {SmallHut()}");
         e.Send("wait 1500");
         WoodPieces(e);
+        // A row of walls dragged out beside the hut, shown before the button is let go.
+        PlotCamera(e, 2, 0, 200, 40, 20, -10, 0);
+        e.Send("mouse move 9 -9");
+        e.Send("mouse down 9 -9");
+        e.Send("mouse move 14 -9");
+        e.Send("mouse move 21 -9");
+        e.Send("wait 500");
+        e.Shot(Out("workshop-row.jpg"));
+        e.Send("mouse up 21 -9");
+        e.Send("wait 300");
+        // Taken back: the hut is saved as it was opened.
+        e.Send("key Z ctrl");
         // The hut right of where the dialog stands.
         PlotCamera(e, 9, 5, 200, 35, 24, -5, 5);
         SaveBlueprint(e, "A hut with a fire pit", "house, wood", Out("workshop-save-dialog.jpg"));
