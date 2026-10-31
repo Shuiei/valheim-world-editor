@@ -70,7 +70,7 @@ public sealed partial class BuildPanel
         _body.IsVisible = !folded;
         ShowViewParts(library: _library.IsVisible || _dungeon.IsVisible);
         CollapseButton.Content = folded ? "▴" : "▾";
-        ToolTip.SetTip(CollapseButton, Lang.T(folded ? "tip.build.expand" : "tip.build.collapse"));
+        CollapseButton.Tip(folded ? "build.expand" : "build.collapse");
         _prefs.Set("build.dockFolded", folded);
     }
 

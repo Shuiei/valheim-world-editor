@@ -149,7 +149,7 @@ public sealed partial class MainWindow
         }
         BuildPanel.Card.PropertyChanged += (_, e) =>
         {
-            if (e.Property == Visual.IsVisibleProperty || e.Property == Visual.BoundsProperty)
+            if (e.Property == IsVisibleProperty || e.Property == BoundsProperty)
             {
                 Fit();
             }

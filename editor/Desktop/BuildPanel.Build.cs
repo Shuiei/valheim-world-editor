@@ -29,8 +29,14 @@ public sealed partial class BuildPanel
         Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Render(); } };
         foreach (var mode in Enum.GetValues<PlaceTool.SnapModes>())
         {
-            var b = new Button { Content = Lang.T("build.snap." + mode.ToString().ToLowerInvariant()), FontSize = 11.5, Padding = new Thickness(8, 2), Tag = mode };
-            b.Tip("build.snap" + mode);
+            var (label, tip) = mode switch
+            {
+                PlaceTool.SnapModes.Manual => ("build.snap.manual", "build.snapManual"),
+                PlaceTool.SnapModes.Free => ("build.snap.free", "build.snapFree"),
+                _ => ("build.snap.auto", "build.snapAuto"),
+            };
+            var b = new Button { Content = Lang.T(label), FontSize = 11.5, Padding = new Thickness(8, 2), Tag = mode };
+            b.Tip(tip);
             b.Click += (_, _) => SetSnapMode(mode);
             SnapModes.Children.Add(b);
         }
