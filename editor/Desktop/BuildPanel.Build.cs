@@ -13,19 +13,18 @@ public sealed partial class BuildPanel
     public BuildPanel(PlaceInput input)
     {
         _input = input;
-        foreach (int cat in Tabs)
+        foreach (int cat in Tabs.Where(c => c != Mods))
         {
             string name = TabName(cat);
-            var b = new Button { Content = name, FontSize = 11, Padding = new Thickness(7, 2), Tag = cat };
+            var b = new Button { Content = name, FontSize = 11, Padding = new Thickness(8, 2), Tag = cat };
             ToolTip.SetTip(b, cat switch
             {
                 Plants => Lang.T("build.tab.plants"),
                 Feasts => Lang.T("build.tab.feasts"),
-                Mods => Lang.T("build.tab.mods"),
                 _ => Lang.T("build.tab.hammer", name),
             });
             b.Click += (_, _) => { _tab = cat; Search.Text = ""; Render(); };
-            _tabs.Children.Add(b);
+            HammerTabs.Children.Add(b);
         }
         Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Render(); } };
         SnapBox.IsCheckedChanged += (_, _) => { Tool.SnapTo = SnapBox.IsChecked == true; Tool.Notify(); };
@@ -38,16 +37,17 @@ public sealed partial class BuildPanel
         LiftReset.Tip("build.lift");
         LiftReset.Click += (_, _) => { _input.Lift(-Tool.HeightNudge); ShowLift(); };
         ShowLift();
-        static Control Row(string label, Control c) => new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("90,*"),
-            Children = { new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(c, 1) },
-        };
-        PiecesTab.Click += (_, _) => ShowLibrary(false);
+        PiecesTab.Click += (_, _) => ShowPieces(mods: false);
+        ModsTab.Click += (_, _) => ShowPieces(mods: true);
         LibraryTab.Click += (_, _) => ShowLibrary(true);
         PiecesTab.Tip("build.piecesTab");
+        ModsTab.Tip("build.modsTab");
         LibraryTab.Tip("build.libraryTab");
+        CollapseButton.Tip("build.collapse");
+        CollapseButton.Click += (_, _) => Fold(!Folded);
         LibrarySearch.Tip("build.librarySearch");
+        LibrarySearch.Width = 240;
+        LibrarySearch.VerticalAlignment = VerticalAlignment.Center;
         ImportButton.Tip("blueprints.import");
         ImportButton.Click += (_, _) => ImportAsked?.Invoke();
         GenerateButton.Tip("build.generate");
@@ -55,74 +55,48 @@ public sealed partial class BuildPanel
         BackToLibrary.Tip("build.backToLibrary");
         BackToLibrary.Click += (_, _) => ShowLibrary(true);
         LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { RenderLibrary(again: false); } };
-        _library = new StackPanel
+        Toolbar = BuildToolbar();
+        _library = new Grid
         {
-            Spacing = 6,
+            RowDefinitions = new RowDefinitions("*,Auto"),
             IsVisible = false,
             Children =
             {
-                LibrarySearch,
-                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ImportButton, GenerateButton } },
-                new ScrollViewer { MaxHeight = 530, Content = LibraryList },
-                new TextBlock
-                {
-                    Text = Lang.T("build.hint.library"),
-                    FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-                },
+                new ScrollViewer { Content = LibraryList },
+                InRow(new TextBlock { Text = Lang.T("build.hint.library"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) }, 1),
             },
         };
-        _dungeon = new StackPanel
-        {
-            Spacing = 6,
-            IsVisible = false,
-            Children =
-            {
-                new DockPanel { Children = { BackToLibrary, new TextBlock { Text = Lang.T("build.head.generate"), FontSize = 13, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) } } },
-                new ScrollViewer { MaxHeight = 560, Content = Dungeon.View },
-                Dungeon.Actions,
-            },
-        };
+        var dungeonHead = new DockPanel { Children = { BackToLibrary, new TextBlock { Text = Lang.T("build.head.generate"), FontSize = 13, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) } } };
         DockPanel.SetDock(BackToLibrary, Dock.Left);
-        _pieces = new StackPanel
+        _dungeon = new Grid
         {
-            Spacing = 6,
+            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
+            RowSpacing = 6,
+            IsVisible = false,
+            Children = { dungeonHead, InRow(new ScrollViewer { Content = Dungeon.View }, 1), InRow(Dungeon.Actions, 2) },
+        };
+        _pieces = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+            ColumnSpacing = 10,
             Children =
             {
-                Search,
-                _tabs,
-                _modRow,
-                new ScrollViewer { MaxHeight = 360, Content = Tiles },
-                Chosen,
-                Cost,
-                SnapBox,
-                Row(Lang.T("build.label.grid"), GridBox),
-                Row(Lang.T("build.label.turnBy"), TurnBox),
-                Row(Lang.T("build.label.lift"), new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { LiftText, LiftReset } }),
-                new TextBlock
-                {
-                    Text = Lang.T("build.hint.hammer"),
-                    FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-                },
+                new ScrollViewer { Content = ModList, Width = 200 },
+                Ui.Col(new Grid { Children = { NoMods, new ScrollViewer { Content = Tiles } } }, 1),
             },
         };
-        Card = Ui.Card(new StackPanel
+        _body = new Grid { Height = DefaultHeight, Margin = new Thickness(0, 8, 0, 0), Children = { _pieces, _library, _dungeon } };
+        _footer = Footer();
+        Card = Ui.Card(new DockPanel
         {
-            Width = 340,
-            Spacing = 6,
-            Children =
-            {
-                new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
-                    ColumnSpacing = 4,
-                    Children = { Ui.Title(Lang.T("rail.label.build"), HelpTopics.Workshop), Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
-                },
-                _pieces,
-                _library,
-                _dungeon,
-            },
+            Children = { Grip(), Header(), _footer, _body },
         });
+        Card.Margin = new Thickness(10, 0, 10, 58);
+        Card.VerticalAlignment = VerticalAlignment.Bottom;
         Card.IsVisible = false;
+        // The toolbar comes and goes with the dock (in the Workshop's Build, building in a dungeon).
+        Card.PropertyChanged += (_, e) => { if (e.Property == Visual.IsVisibleProperty) { Toolbar.IsVisible = Card.IsVisible; } };
+        Fold(false);
         ShowLibrary(false);
     }
 
@@ -174,6 +148,7 @@ public sealed partial class BuildPanel
         }
         t.Notify();
         Render();
+        RenderRecent();
     }
 
     /// <summary>Makes a piece the one the Place tool puts down, and shows its name and cost.</summary>
@@ -183,9 +158,10 @@ public sealed partial class BuildPanel
         Tool.Chosen.Clear();
         Tool.Chosen.Add(prefab);
         Tool.Notify();
-        Chosen.Text = PieceCost.PieceName(prefab);
+        string mod = ModGroup(prefab);
+        Chosen.Text = PieceCost.PieceName(prefab) + (mod.Length > 0 ? " · " + mod : "");
         Cost.Text = Lang.T("build.costs", PieceCost.Of([prefab]).Describe(6));
-        foreach (var b in Tiles.Children.OfType<Button>())
+        foreach (var b in Tiles.Children.OfType<Button>().Concat(RecentRow.Children.OfType<Button>()))
         {
             b.Classes.Set("on", b.Tag as string == prefab);
         }

@@ -14,13 +14,14 @@ beside it, as in [Your first edit](first-edit.md).
 *The start page's **The Workshop**: **Open the Workshop**, whether Homestead is installed, and your blueprints (three
 here; yours is empty the first time).*
 
-**What you should see:** a flat, empty plot of meadow, the **Build** panel open on the left with its **Pieces** tab,
-and the top bar saying "No pieces yet". The rail holds only **Build**, **Select** and **View**.
+**What you should see:** a flat, empty plot of meadow, the **Build** dock along the bottom on its **Pieces** tab, and
+the top bar saying "No pieces yet". The rail holds only **Build**, **Select** and **View**, with the building bar
+beside it.
 
 ## 2. Lay a floor
 
-1. In the **Build** panel, type `wood floor` in **Search pieces**.
-2. Click the wooden floor's tile. Its name and cost show under the list.
+1. In the **Build** dock, type `wood floor` in **Search pieces**.
+2. Click the wooden floor's tile. Its name and cost show at the dock's foot, and it joins **Recent** there.
 3. Click in the middle of the plot. The floor goes down.
 4. Point next to the floor's edge and click again. The new floor snaps to the first, edge to edge, as with the game's
    hammer. Put down four floors in a square.

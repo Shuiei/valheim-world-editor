@@ -124,13 +124,22 @@ public sealed partial class Scenes
         e.Send("click Pieces");
         e.Send("click Building");
         e.Send("wait 500");
-        e.Scroll(270, 400, -60);
-        e.Scroll(270, 400, 29);
+        // A few wooden pieces picked, as a player building a hut does: they line up under Recent, the wall last.
+        e.Send("type Search pieces|wood");
+        foreach (string piece in new[] { "Wood Floor 2x2", "Wood Beam 2 m", "Wood Door", "Wood Wall" })
+        {
+            e.Send($"click {piece}");
+        }
+        e.Send("type Search pieces|");
+        e.Send("wait 300");
+        // The Building tab scrolled down to the wooden pieces.
+        e.Scroll(720, 700, 9);
     }
 
     /// <summary>
     /// The camera on x, z of the plot (yaw, pitch and distance as for <see cref="Camera"/>), and the pointer on the plot
-    /// at gx, gz, a point hidden behind the Build panel, so the piece that follows the pointer is not in the picture.
+    /// at gx, gz, a point near the camera that the Build dock hides, so the piece that follows the pointer is not in the
+    /// picture.
     /// </summary>
     private static void PlotCamera(Editor e, double x, double z, double yaw, double pitch, double distance, double gx, double gz)
     {
@@ -198,9 +207,9 @@ public sealed partial class Scenes
         e.Send("wait 1500");
         WoodPieces(e);
         // The hut right of where the dialog stands.
-        PlotCamera(e, 9, 0, 200, 35, 24, 28, 0);
+        PlotCamera(e, 9, 5, 200, 35, 24, -5, 5);
         SaveBlueprint(e, "A hut with a fire pit", "house, wood", Out("workshop-save-dialog.jpg"));
-        PlotCamera(e, 4, 0, 200, 40, 20, 18, 0);
+        PlotCamera(e, -2, 0, 200, 40, 20, -14, 0);
         e.Shot(Out("workshop-overview.jpg"));
         e.Send($"workshop {StoneHut()}");
         e.Send("wait 1500");
@@ -217,7 +226,7 @@ public sealed partial class Scenes
         e.Send("click Save");
         e.Send("wait 1000");
         WoodPieces(e);
-        PlotCamera(e, 4, 2, 30, 12, 40, -30, -10);
+        PlotCamera(e, 4, 2, 30, 12, 40, 38, 2);
         e.Shot(Out("workshop.jpg"));
         e.Send("click Library");
         e.Send("type Search blueprints|hut");
@@ -225,7 +234,7 @@ public sealed partial class Scenes
         e.Shot(Out("workshop-library.jpg"));
         WoodPieces(e);
         e.Send("set Cut: off|3");
-        PlotCamera(e, 6, 0, 200, 55, 26, 26, 0);
+        PlotCamera(e, -2, 0, 200, 55, 26, -13, 0);
         e.Shot(Out("workshop-cut.jpg"));
         e.Send("click Start");
         e.Send("wait 1500");
@@ -266,7 +275,7 @@ public sealed partial class Scenes
     /// <summary>
     /// workshop-dungeon.jpg: a dungeon of one level made of building pieces by the generator, opened on the
     /// Workshop's plot and cut at 3 m: its entrance hall with the portal where players arrive, and the rooms beyond,
-    /// the Build panel back on its Pieces tab. The picture leaves out the top bar, which a dungeon's long cost line
+    /// the Build dock back on its Pieces tab. The picture leaves out the top bar, which a dungeon's long cost line
     /// pushes past the window's edge.
     /// </summary>
     private void WorkshopDungeon(Editor e)
@@ -287,7 +296,7 @@ public sealed partial class Scenes
         WoodPieces(e);
         e.Send("set Cut: off|3");
         // Above the entrance hall: its portal stands at 11, -50 (the same seed makes the same dungeon).
-        PlotCamera(e, 15, -38, 200, 58, 52, 48, -40);
+        PlotCamera(e, 15, -38, 200, 58, 52, -6, -38);
         e.Send("wait 1000");
         string full = Out("workshop-dungeon-full.jpg");
         e.Shot(full);

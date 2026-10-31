@@ -47,7 +47,7 @@ public sealed partial class MainWindow
     /// </summary>
     private void LayOutRightPanels()
     {
-        foreach (var right in new[] { ViewPanelCard, History.Card, Inspector.Card, HelpCard })
+        foreach (var right in new[] { ViewPanelCard, History.Card, Inspector.Card, HelpCard, Materials.Card })
         {
             right.Margin = new Thickness(10, 70, 10, 58);
             right.HorizontalAlignment = HorizontalAlignment.Right;

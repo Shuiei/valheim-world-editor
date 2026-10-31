@@ -4,6 +4,23 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.115.0 — 2026-10-31
+
+### Changed
+- **A roomier Workshop.** The Build panel is now a dock along the bottom of the window, so the plot keeps the rest:
+  bigger piece pictures in rows, the station before each group, **Pieces**, **Mod pieces** and **Library** tabs, the
+  search at the right. Drag its top edge to make it taller, or fold it down to its tabs; both are kept. The snapping,
+  grid, turn and lift settings sit in a bar beside the tool rail, and the blueprints show side by side as cards.
+  See [Workshop](docs/workshop.md#the-build-dock).
+
+### Added
+- **Recent pieces.** The dock's foot keeps the last 12 pieces you picked, newest first: click one to pick it again.
+- **Materials panel.** The Workshop shows what the building costs at the right, as it changes: every material with how
+  many, the stations needed nearby, the pieces with no known recipe (by mod) and those only the editor can place.
+  **Materials** in the top bar closes or opens it. See [Materials](docs/workshop.md#materials).
+- **Mod pieces tab.** Your mods' pieces have a tab of their own, with the mods down its side and their number of pieces;
+  with none known yet, it says how the editor learns them.
+
 ## v1.114.5 — 2026-10-29
 
 ### Fixed

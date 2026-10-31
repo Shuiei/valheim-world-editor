@@ -190,6 +190,12 @@ public sealed partial class MainWindow : Window
     /// Save to world, Apply live, or in the Workshop Save blueprint.
     /// </summary>
     internal Button SaveButton { get; } = new Button { Content = Lang.T("save.label.save"), FontSize = 12.5, IsEnabled = false }.Classed("primary");
+    /// <summary>The Workshop's Materials panel's button in the top bar (shown in the Workshop only).</summary>
+    internal Button MaterialsButton { get; } = new Button { Content = Icons.With("materials", Lang.T("materials.title")), FontSize = 12.5, IsVisible = false }.Classed("ghost");
+
+    /// <summary>The Workshop's Materials panel: what the building on the plot costs in game.</summary>
+    internal MaterialsPanel Materials { get; } = new();
+
     /// <summary>
     /// Opens the History panel.
     /// </summary>

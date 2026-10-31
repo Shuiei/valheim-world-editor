@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
 using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
@@ -12,9 +13,14 @@ public sealed partial class BuildPanel
         Tiles.Children.Clear();
         string q = Search.Text?.Trim() ?? "";
         var pieces = Pieces;
-        UpdateTabButtons(q, pieces);
+        UpdateTabButtons(q);
         var list = PiecesShown(q, pieces);
-        _waiting.Clear();
+        // The Mod pieces tab with no mod's piece known: how the editor learns them, instead of an empty list.
+        NoMods.IsVisible = q.Length == 0 && _tab == Mods && !pieces.Any(p => p.Category == Mods);
+        if (NoMods.IsVisible)
+        {
+            return;
+        }
         if (list.Count == 0)
         {
             Tiles.Children.Add(new TextBlock { Text = Lang.T("build.noMatch"), FontSize = 11, Foreground = Ui.Muted });
@@ -26,7 +32,7 @@ public sealed partial class BuildPanel
         string? group = "?";
         foreach (var (prefab, name, _) in list)
         {
-            // A heading where the station changes (on the Mods tab, the mod or the station).
+            // A heading where the station changes (on the Mod pieces tab, the mod's group or the station).
             string heading = StationHeading(prefab);
             if (heading != group)
             {
@@ -37,26 +43,21 @@ public sealed partial class BuildPanel
         }
         if (all > list.Count)
         {
-            Tiles.Children.Add(new TextBlock { Text = Lang.T("build.showing", list.Count, all), Width = 320, FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(2, 4, 0, 0), TextWrapping = TextWrapping.Wrap });
+            Tiles.Children.Add(new TextBlock { Text = Lang.T("build.showing", list.Count, all), Width = 320, FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(2, 4, 0, 0), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
         }
     }
 
-    /// <summary>Marks the tab on (none while a search runs), and shows the Mods tab only when the game has mods' pieces.</summary>
+    /// <summary>Marks the hammer's tab on (none while a search runs).</summary>
     /// <param name="q">The search, trimmed (empty: none).</param>
-    /// <param name="pieces">Every piece.</param>
-    private void UpdateTabButtons(string q, List<(string Prefab, string Name, int Category)> pieces)
+    private void UpdateTabButtons(string q)
     {
-        foreach (var b in _tabs.Children.OfType<Button>())
+        foreach (var b in HammerTabs.Children.OfType<Button>())
         {
             b.Classes.Set("on", q.Length == 0 && (int)b.Tag! == _tab);
-            if ((int)b.Tag! == Mods)
-            {
-                b.IsVisible = pieces.Any(p => p.Category == Mods);
-            }
         }
     }
 
-    /// <summary>The pieces the tiles list: the tab's, or those matching the search across all tabs; on the Mods tab, one mod's.</summary>
+    /// <summary>The pieces the tiles list: the tab's, or those matching the search across all tabs; on the Mod pieces tab, one mod's.</summary>
     /// <param name="q">The search, trimmed (empty: none).</param>
     /// <param name="pieces">Every piece.</param>
     /// <returns>The pieces, in their order.</returns>
@@ -66,7 +67,7 @@ public sealed partial class BuildPanel
             ? q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => p.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || p.Prefab.Contains(w, StringComparison.OrdinalIgnoreCase))
             : p.Category == _tab).ToList();
         ShowMods(q.Length == 0 && _tab == Mods ? list : []);
-        if (_modRow.IsVisible)
+        if (ModList.IsVisible)
         {
             list = [.. list.Where(p => ModGroup(p.Prefab) == _mod)];
         }

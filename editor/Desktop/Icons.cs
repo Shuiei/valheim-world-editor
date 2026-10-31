@@ -54,6 +54,7 @@ public static class Icons
         ["globe"] = "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18",
         ["reload"] = "M20 12a8 8 0 1 1-3-6.2M20 4v5h-5",
         ["trash"] = "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
+        ["materials"] = "M4 9h16v11H4zM4 9l3-5h10l3 5M10 13h4",
     };
 
     /// <summary>An icon in the colour of the text around it (a button's, for example).</summary>
