@@ -40,12 +40,25 @@ public static partial class GameCatalogues
         private readonly Dictionary<string, List<Ref>> _tables = [];
 
         /// <summary>
+        /// Whether a mod's root prefabs with snap points and no Piece count as pieces too (<see cref="ReadLoose"/>): mods
+        /// that add the Piece in code when the game starts ship their pieces without one.
+        /// </summary>
+        public bool Loose { get; init; }
+
+        /// <summary>The pieces found without a Piece (<see cref="Loose"/>), by name.</summary>
+        private readonly HashSet<string> _loose = new(StringComparer.Ordinal);
+
+        /// <summary>
         /// Reads the bundle's pieces (category, comfort, snap points, box) and the build tools' menus in it.
         /// </summary>
         public void Read(Bundle b, Game game)
         {
             var pieces = PieceRoots(b, game);
             PieceTrees(b, game);
+            if (Loose)
+            {
+                ReadLoose(b, game, [.. pieces.Select(p => p.Pid)]);
+            }
             foreach (var (f, pid, go, piece) in pieces)
             {
                 string name = go["m_Name"].AsString;
@@ -98,6 +111,11 @@ public static partial class GameCatalogues
                         ((Dict)_entries[n]!)["tool"] = tool;
                     }
                 }
+            }
+            // Without a Piece, the mod puts them on the hammer itself (as Jötunn and PieceManager do).
+            foreach (string n in _loose)
+            {
+                ((Dict)_entries[n]!)["tool"] = "hammer";
             }
             return CatalogueJson.Write(_entries, new CatalogueJson.Style());
         }

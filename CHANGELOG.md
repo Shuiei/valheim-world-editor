@@ -4,6 +4,19 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.118.0 — 2026-10-31
+
+### Added
+- **Your installed mods' pieces in the Workshop, without a live game.** The **Mod pieces** tab reads the mods installed
+  in your Valheim and mod manager profiles from their files: their pieces are listed under each mod with their
+  pictures, drawn on the plot with their own models and snap like the game's. Their cost is unknown until a live game
+  tells it. **Rescan mods** reads them again. Railroads' track, stations and trains are listed by name through its
+  add-on. See [Workshop](docs/workshop.md#the-build-dock).
+
+### Fixed
+- **Mod pieces drawn without a live game.** A mod's piece no live game had reported was drawn as a grey box even with
+  the mod installed; it is drawn with its own model now.
+
 ## v1.117.0 — 2026-10-31
 
 ### Added

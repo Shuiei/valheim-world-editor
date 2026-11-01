@@ -85,8 +85,19 @@ In each tab the pieces are grouped by the crafting station they need, in the ord
 stonecutter, forge, artisan table, black forge, galdr table), then by name. Each group starts with the station's name.
 
 **Mod pieces** lists the pieces your mods add, one mod at a time: pick the mod in the list down its left side (with
-its number of pieces). The headings are the mod's own groups. The editor learns them from a live game: until then the
-tab says how (see [Live mode](live-mode.md#modded-games)).
+its number of pieces). The headings are the mod's own groups. The pieces come from two places:
+
+- **The mods installed on this computer**, in the BepInEx folders the editor knows (your Valheim's, your mod manager
+  profiles', those added in Settings). The Workshop reads their files the first time it opens, without the game, and
+  again only when they change; **Rescan mods** reads them again now. Their names and pictures come from the mods'
+  own files. A piece read this way snaps by its own snap points, but its cost is not known (the mods set it when the
+  game starts): it reads `Cost unknown`, and [Materials](#materials) lists it under **No known recipe**.
+- **A live game** running the mods with WorldEditorBridge (see [Live mode](live-mode.md#modded-games)): it tells their
+  real names and costs, which win over what the files say.
+
+Mods that make their pieces in code (Railroads) are listed through their [add-on](modding.md), which names them.
+
+<!-- picture: workshop-mod-pieces.jpg, the Mod pieces tab with Moonforged Build Pieces and Railroads installed: the two mods down its side, Moonforged's walls with their pictures, two of them snapped together on the plot -->
 
 | Setting | What it does |
 |---|---|

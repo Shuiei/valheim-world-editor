@@ -18,7 +18,8 @@ public partial class MainWindow
         }
         var kinds = Workshop.Kinds(s.Scene);
         var cost = Homestead.Cost(kinds);
-        WorkshopCost = cost.Describe(5);
+        // Only pieces whose recipe is not known (a mod's): not free, unknown.
+        WorkshopCost = cost.Materials.Count == 0 && kinds.Keys.Any(MaterialsPanel.NoRecipe) ? Lang.T("cost.unknown") : cost.Describe(5);
         if (Materials.Card.IsVisible)
         {
             Materials.Show(kinds);

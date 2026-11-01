@@ -88,6 +88,9 @@ public static partial class GameData
     /// catalogues are empty (no item, no piece is known).
     /// </summary>
     public static bool InUse => _from != null;
+
+    /// <summary>Whether the data in use was read from a Valheim on this computer (not the tests' copies).</summary>
+    public static bool FromGame => _from is string from && from != Copies;
     /// <summary>Backs <see cref="Generation"/>.</summary>
     private static volatile int _generation;
     /// <summary>

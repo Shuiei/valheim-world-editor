@@ -52,7 +52,23 @@ public static partial class ModManifests
     /// Objects of it only hold the mod's data (no model): never drawn, picked or listed in an area, and kept by a zone reset
     /// that keeps the buildings.
     /// </param>
-    public sealed record PrefabNote(bool Hidden, string? Group, bool Data = false);
+    /// <param name="Piece">
+    /// A build piece the mod makes in code, which the game's files do not hold ("piece"): the Workshop lists it with this
+    /// name and cost even before a live game told the editor of it; null for none.
+    /// </param>
+    /// <param name="Mod">The mod whose manifest says it (its folder's name), when it is one's.</param>
+    public sealed record PrefabNote(bool Hidden, string? Group, bool Data = false, PieceNote? Piece = null, string? Mod = null);
+
+    /// <summary>
+    /// A build piece a manifest describes ("piece" of a prefab).
+    /// </summary>
+    /// <param name="Name">Its name for the player.</param>
+    /// <param name="Cost">What it costs, item prefab name and amount (none: not known).</param>
+    /// <param name="Station">The crafting station it needs near, by its English name; null for none.</param>
+    public sealed record PieceNote(string Name, IReadOnlyList<(string Item, int Amount)> Cost, string? Station);
+
+    /// <summary>The build pieces the manifests describe, by prefab name, with what they say of each.</summary>
+    public static IEnumerable<(string Prefab, PrefabNote Note)> Pieces => _notes.Prefabs.Where(p => p.Value.Piece != null).Select(p => (p.Key, p.Value));
 
     /// <summary>
     /// What the manifests say.

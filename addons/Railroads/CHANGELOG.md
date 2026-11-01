@@ -3,6 +3,13 @@
 Changes to the Railroads add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.4.0 — 2026-10-31
+
+### Added
+- **Railroads' pieces in the Workshop without a live game.** With Railroads installed, the Workshop's **Mod pieces**
+  tab lists its track, stations and trains by their names in the game, even before a live game told the editor of
+  them. Their cost is not known offline: the Materials panel lists them under "No known recipe".
+
 ## v0.3.0 — 2026-10-29
 
 ### Added

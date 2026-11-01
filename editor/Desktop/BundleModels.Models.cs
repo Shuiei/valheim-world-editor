@@ -20,15 +20,23 @@ internal sealed partial class BundleModels
         bool room = Editing.Dungeons.RoomOf(name) != null || _game.KindOf(name) is { Location: true };
         if (_game.LoadModel(name, room) is not { } m)
         {
-            return ModCatalogue.ModelOf(name) is { } reported ? ModModel(name, reported) : null;
+            if (ModCatalogue.ModelOf(name) is { } reported)
+            {
+                return ModModel(name, reported);
+            }
+            // An installed mod's prefab no live game reported: its own model, as its bundle holds it.
+            return _mods.Value?.LoadModel(name, room: false) is { } own ? ViewModel(name, own, Mod.ToString()) : null;
         }
         return ViewModel(name, m);
     }
 
-    /// <summary>A game model's parts placed in the view's space.</summary>
-    private static ModelStore.Model ViewModel(string name, GameBundles.Model m)
+    /// <summary>A model's parts placed in the view's space.</summary>
+    /// <param name="name">The prefab name.</param>
+    /// <param name="m">Its model, as a bundles' reader read it.</param>
+    /// <param name="from">What its meshes' and materials' ids start with: none for the game's, <see cref="Mod"/> for the mods'.</param>
+    private static ModelStore.Model ViewModel(string name, GameBundles.Model m, string from = "")
     {
-        var parts = m.Parts.Select(p => new ModelStore.Part(p.Mesh.Key, p.Sub, p.Material?.Key ?? "", ViewMatrix(p.Matrix))).ToList();
+        var parts = m.Parts.Select(p => new ModelStore.Part(from + p.Mesh.Key, p.Sub, p.Material is { } mat ? from + mat.Key : "", ViewMatrix(p.Matrix))).ToList();
         return new ModelStore.Model(name, parts, new Vector3(m.RootScale[0], m.RootScale[1], m.RootScale[2]));
     }
 

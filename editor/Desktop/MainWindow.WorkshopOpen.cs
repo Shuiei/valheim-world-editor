@@ -62,6 +62,7 @@ public partial class MainWindow
         ShowWorkshopCost();
         Tools.ChooseMode(ToolMode.Place);
         BuildPanel.Card.IsVisible = true;
+        _ = ScanModPieces();
         RefreshSupport();
         UpdateSaveBar();
         Msg(msg);

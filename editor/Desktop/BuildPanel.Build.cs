@@ -93,7 +93,7 @@ public sealed partial class BuildPanel
             ColumnSpacing = 10,
             Children =
             {
-                new ScrollViewer { Content = ModList, Width = 200 },
+                ModColumn(),
                 Ui.Col(new Grid { Children = { NoMods, new ScrollViewer { Content = Tiles } } }, 1),
             },
         };
@@ -178,7 +178,7 @@ public sealed partial class BuildPanel
         Tool.Notify();
         string mod = ModGroup(prefab);
         Chosen.Text = PieceCost.PieceName(prefab) + (mod.Length > 0 ? " · " + mod : "");
-        Cost.Text = Lang.T("build.costs", PieceCost.Of([prefab]).Describe(6));
+        Cost.Text = MaterialsPanel.NoRecipe(prefab) ? Lang.T("cost.unknown") : Lang.T("build.costs", PieceCost.Of([prefab]).Describe(6));
         foreach (var b in Tiles.Children.OfType<Button>().Concat(RecentRow.Children.OfType<Button>()))
         {
             b.Classes.Set("on", b.Tag as string == prefab);
