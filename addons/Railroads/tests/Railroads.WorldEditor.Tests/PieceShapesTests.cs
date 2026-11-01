@@ -179,4 +179,21 @@ public sealed class PieceShapesTests : IDisposable
             _mod.Put(part, ModelBytes.Triangle("iron", Vector3.Zero));
         }
     }
+
+    // The fitted track: the 1 m straight bent along its line; without a far end, its own model as the game shows it.
+    [Fact]
+    public void AFittedTrackIsDrawnBentAlongItsLine()
+    {
+        _mod.Put("track_fit", ModelBytes.Write([("iron", [Vector3.Zero, Vector3.UnitZ, Vector3.UnitX], [0, 1, 2])]));
+        _mod.Put(FittedTrack.RailModelName, ModelBytes.Write([("stone", [new Vector3(0.7f, 0.3f, 0), new Vector3(0.7f, 0.3f, 1), new Vector3(0.7f, 0.4f, 0)], [0, 1, 2])]));
+        var fit = new FakeObject(RailroadsMod.FittedTrack);
+
+        Assert.Equal([PieceShapes.Iron], Shapes(RailroadsMod.FittedTrack, fit).Select(s => s.Color));
+
+        fit.Vectors[RailroadsMod.Keys.FitEnd] = new Vector3(0, 0, 6);
+        var shape = Assert.Single(Shapes(RailroadsMod.FittedTrack, fit));
+        Assert.Equal(PieceShapes.Stone, shape.Color);
+        Assert.Equal(3 * 6, shape.Vertices.Length);
+        Assert.Equal(6, shape.Vertices.Max(v => v.Z), 3);
+    }
 }

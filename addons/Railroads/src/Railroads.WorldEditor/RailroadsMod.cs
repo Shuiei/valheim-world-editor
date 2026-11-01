@@ -6,7 +6,7 @@ namespace Railroads.WorldEditor;
 /// Railroads, the mod of stone track, trains and stations (by VladasZ), as the editor knows it: its plugin file, its
 /// pieces and the models it builds them from, and the data keys it keeps on them.
 /// </summary>
-/// <remarks>Followed: Railroads 0.3.6.</remarks>
+/// <remarks>Followed: Railroads 0.4.0.</remarks>
 public static class RailroadsMod
 {
     /// <summary>The mod's plugin file, under a BepInEx plugins folder; its models are in <see cref="MeshFolder"/> beside it.</summary>
@@ -32,6 +32,12 @@ public static class RailroadsMod
     /// (<see cref="Keys.BridgeUp"/>), drawn from <see cref="DrawbridgeParts"/>.
     /// </summary>
     public const string Drawbridge = "bf_track_drawbridge";
+
+    /// <summary>
+    /// The prefab of the fitted track (0.4.0): one piece joining two free track ends that do not line up, its shape in
+    /// its values (<see cref="Keys.FitEnd"/>), drawn and laid out by <see cref="WorldEditor.FittedTrack"/>.
+    /// </summary>
+    public const string FittedTrack = "bf_track_fit";
 
     /// <summary>
     /// The prefab of the object the server keeps the count of numbered trains on (<see cref="Keys.TrainCount"/>): one
@@ -72,6 +78,7 @@ public static class RailroadsMod
         Track("bf_track_junction_t", "track_junction_t"),
         Track("bf_track_junction_x", "track_junction_x"),
         Track(Drawbridge, "track_drawbridge"),
+        Track(FittedTrack, "track_fit"),
         new(OldStation, "station", RailKind.Station),
         new(Sign, "station_sign", RailKind.Station),
         new("bf_train_console", "train_console", RailKind.Station),
@@ -272,6 +279,15 @@ public static class RailroadsMod
 
         /// <summary>A drawbridge's leaves are up, or swinging up (bool).</summary>
         public const string BridgeUp = "bf_bridge_up";
+
+        /// <summary>A fitted track's far end (vec3), from the piece's place along the world's axes.</summary>
+        public const string FitEnd = "bf_fit_end";
+
+        /// <summary>The way a fitted track leaves its first end, the piece's place (vec3, along the world's axes).</summary>
+        public const string FitWayA = "bf_fit_way_a";
+
+        /// <summary>The way a fitted track reaches its far end (vec3, along the world's axes).</summary>
+        public const string FitWayB = "bf_fit_way_b";
 
         /// <summary>How far up a drawbridge's leaves were when they last began to swing, 0 down to 1 up (float).</summary>
         public const string BridgeFrom = "bf_bridge_from";

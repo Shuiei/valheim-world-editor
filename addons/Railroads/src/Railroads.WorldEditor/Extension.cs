@@ -25,7 +25,9 @@ public sealed class Extension : IWorldEditorExtension
         registry.AddDecoder(RailroadsMod.Keys.Self, ids);
         registry.AddDecoder(RailroadsMod.Keys.Legs, new TripLegs());
         registry.AddCopyRewriter(new PastedCopies(), PastedCopies.Keys);
-        registry.AddPlacer(new RailPlacer(models), RailPlacer.Prefabs);
+        // Editors before 1.119.0 cannot turn a copy back (ICopy.SetTurn).
+        bool canTurn = Version.TryParse(registry.EditorVersion, out var editor) && editor >= new Version(1, 119, 0);
+        registry.AddPlacer(new RailPlacer(models, canTurn), RailPlacer.Prefabs);
         registry.Log($"ready (editor {registry.EditorVersion}, API {registry.ApiVersion})");
     }
 }

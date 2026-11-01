@@ -55,6 +55,20 @@ public sealed class EditSessionPlacersTests : IDisposable
         }
     }
 
+    /// <summary>Places rocks unturned, as a mod that keeps its objects unturned does (ICopy.SetTurn).</summary>
+    private sealed class Unturner : IWorldEditorExtension, IObjectPlacer
+    {
+        public void Register(IExtensionRegistry registry) => registry.AddPlacer(this, "Rock_4");
+
+        public void Place(IReadOnlyList<ICopy> placed, IAreaView area)
+        {
+            foreach (var p in placed)
+            {
+                p.SetTurn(Quaternion.Identity);
+            }
+        }
+    }
+
     private static (NewObject, bool) New(int prefab, Vector3 at) => (new NewObject(0, prefab, at, Vector3.Zero, 0), false);
 
     private static int? X(EditSession s, int index) =>
@@ -144,6 +158,21 @@ public sealed class EditSessionPlacersTests : IDisposable
 
         var made = s.Commit("Put", null, [], [New(Rock, new Vector3(10, 30, 5))]);
 
+        Assert.Null(X(s, made[0]));
+    }
+
+    // A placer may turn an object it places: it is made with that turn (and nothing else of it changes).
+    [Fact]
+    public void APlacersTurnIsKept()
+    {
+        ModExtensions.UseForTests(("Unturn", new Unturner()));
+        var s = TestScenes.Flat(1);
+
+        var made = s.Commit("Put", null, [], [(new NewObject(0, Rock, new Vector3(10, 30, 5), new Vector3(0, 90, 0), 0), false),
+            (new NewObject(0, StableHash.Of("Beech1"), new Vector3(12, 30, 5), new Vector3(0, 90, 0), 0), false)]);
+
+        Assert.Equal(Vector3.Zero, s.Scene.Things[made[0]].Rotation);
+        Assert.Equal(new Vector3(0, 90, 0), s.Scene.Things[made[1]].Rotation);
         Assert.Null(X(s, made[0]));
     }
 }

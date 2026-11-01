@@ -39,4 +39,15 @@ public class DataCopyTests
         Assert.Equal(4, c.Id);
         Assert.Same(z, c.Data);
     }
+
+    [Fact]
+    public void ATurnIsTakenInDegrees()
+    {
+        var c = new DataCopy("thing", Vector3.Zero, new Vector3(0, 30, 0), new ZdoData());
+
+        c.SetTurn(Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2));
+
+        Assert.Equal(90, c.Rotation.Y, 3);
+        Assert.True(Quaternion.Dot(Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2), c.Orientation) > 0.9999f);
+    }
 }

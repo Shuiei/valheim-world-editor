@@ -3,6 +3,19 @@
 Changes to the Railroads add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.5.0 — 2026-10-31
+
+### Added
+- **Fitted track.** Follows Railroads 0.4.0, whose new fitted track joins 2 track ends that do not line up, up to
+  32 m: it is drawn bent between its ends as the game builds it, trains placed on it stand on its line, and it is listed
+  in the Workshop under Track. Pasted or moved turned, it keeps its shape, turned with it (needs the editor 1.119.0).
+  Its far end and the ways it leaves and reaches its ends show in the inspector.
+
+### Changed
+- Railroads 0.3.7 and 0.3.8 change nothing the add-on reads: a station sign's turn now picks the side of the ghost
+  train in the game, and tame boars and carts ride on a flatbed with the same keys as the pieces built on it, which the
+  editor already moves, pastes and keeps with their flatbed.
+
 ## v0.4.0 — 2026-10-31
 
 ### Added

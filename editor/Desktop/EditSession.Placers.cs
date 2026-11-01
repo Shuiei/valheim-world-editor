@@ -12,7 +12,7 @@ public sealed partial class EditSession
 {
     /// <summary>
     /// A step's new objects with what the running placers set on those of their prefabs, as values added to each one's
-    /// own (applied last, whatever it is made from). An object standing exactly where a thing the step takes away of
+    /// own (applied last, whatever it is made from), and the turn a placer gives one. An object standing exactly where a thing the step takes away of
     /// its kind stood, turned the same, is changed in place (the inspector, a tool's edit): no placement.
     /// </summary>
     /// <param name="remove">The things the step takes away, indices into the scene's things.</param>
@@ -48,10 +48,11 @@ public sealed partial class EditSession
         foreach (var (index, before, view) in views)
         {
             var changes = view.Data.Where(f => !before.Contains(f)).ToList();
-            if (changes.Count > 0)
+            var n = placed[index].Object;
+            // A placer may turn the object back to how its mod makes it (ICopy.SetTurn).
+            if (changes.Count > 0 || view.Rotation != n.Rotation)
             {
-                var n = placed[index].Object;
-                placed[index] = (n with { Data = [.. n.Data ?? [], .. changes] }, placed[index].Piece);
+                placed[index] = (n with { Rotation = view.Rotation, Data = changes.Count > 0 ? [.. n.Data ?? [], .. changes] : n.Data }, placed[index].Piece);
             }
         }
         return placed;

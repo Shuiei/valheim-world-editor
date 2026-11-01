@@ -64,6 +64,8 @@ internal sealed class FakeObject(string prefab, Vector3 position = default, Quat
 
     public void SetString(string key, string? value) => throw new NotSupportedException();
 
+    public void SetTurn(Quaternion turn) => throw new NotSupportedException();
+
     public void SetBytes(string key, byte[]? value)
     {
         if (value == null)

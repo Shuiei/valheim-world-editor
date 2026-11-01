@@ -68,4 +68,22 @@ public sealed class ToolCommitTests
         Assert.Equal(12, ToolCommit.SourceOf(s, 12));
         Assert.Equal(-999, ToolCommit.SourceOf(s, -999));
     }
+
+    // A tool may turn what it adds or changes (ICopy.SetTurn): it is made with that turn.
+    [Fact]
+    public void ATurnSetByTheToolIsKept()
+    {
+        var s = TestScenes.Flat(1);
+        var holder = new ZdoData { Prefab = StableHash.Of(ExampleMod.Fleet) };
+        var fleet = new ObjectView(ExampleMod.Fleet, new Vector3(5, 30, 5), new Vector3(0, 45, 0), holder) { Id = 12 };
+        var quarter = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2);
+        var edit = new ToolEdit()
+            .Add(ExampleMod.Fleet, new Vector3(3, 30, 3), Vector3.Zero, c => c.SetTurn(quarter))
+            .Change(fleet, c => c.SetTurn(Quaternion.Identity));
+
+        var plan = ToolCommit.PlanOf(s, edit);
+
+        Assert.Equal(90, plan.AddHidden[0].Rotation.Y, 3);
+        Assert.Equal(Vector3.Zero, plan.AddHidden[1].Rotation);
+    }
 }

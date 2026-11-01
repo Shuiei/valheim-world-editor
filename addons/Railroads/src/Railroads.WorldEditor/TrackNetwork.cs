@@ -5,7 +5,7 @@ namespace Railroads.WorldEditor;
 
 /// <summary>
 /// The lines of track in a place as the mod lays them out while the game runs: each track piece's centre lines (from
-/// its model), placed and turned as the piece stands. The mod names a line by its two ends and finds a vehicle's or a
+/// its model), placed and turned as the piece stands; a fitted track's from its values (<see cref="FittedTrack"/>). The mod names a line by its two ends and finds a vehicle's or a
 /// stop's place on it by the nearest point.
 /// </summary>
 public sealed class TrackNetwork
@@ -24,8 +24,20 @@ public sealed class TrackNetwork
         int piece = 0;
         foreach (var obj in pieces)
         {
-            if (RailroadsMod.Pieces.FirstOrDefault(p => p.Prefab == obj.Prefab && p.Kind == RailKind.Track) is not { } track
-                || models.Get(track.Model) is not { } model)
+            if (RailroadsMod.Pieces.FirstOrDefault(p => p.Prefab == obj.Prefab && p.Kind == RailKind.Track) is not { } track)
+            {
+                continue;
+            }
+            // The fitted track's line is in its values, along the world's axes from its place (the mod builds it unturned).
+            if (track.Prefab == RailroadsMod.FittedTrack)
+            {
+                if (FittedTrack.LineOf(obj) is { } fitted)
+                {
+                    network._lines.Add(new TrackLine(piece++, track.Model, [.. fitted.Select(p => obj.Position + p)]));
+                }
+                continue;
+            }
+            if (models.Get(track.Model) is not { } model)
             {
                 continue;
             }

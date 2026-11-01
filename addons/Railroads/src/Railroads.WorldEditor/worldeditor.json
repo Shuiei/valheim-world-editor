@@ -55,6 +55,9 @@
     "bf_bridge_up": { "label": "Raised", "help": "The drawbridge's leaves are up, for ships: trains stop before it. The mod raises it only with no train on it." },
     "bf_bridge_from": { "label": "Swing from", "readOnly": true, "help": "How far up the leaves were when they last began to swing: 0 down, 1 up." },
     "bf_bridge_since": { "label": "Swing began at", "readOnly": true, "help": "When the leaves last began to swing, in the game's ticks. A swing takes 8 seconds." },
+    "bf_fit_end": { "label": "Far end", "readOnly": true, "help": "A fitted track's far end, from the piece along the world's axes (x east, y up, z north), in metres." },
+    "bf_fit_way_a": { "label": "Way at the first end", "readOnly": true, "help": "Which way a fitted track leaves the end it was built from (where the piece stands)." },
+    "bf_fit_way_b": { "label": "Way at the far end", "readOnly": true, "help": "Which way a fitted track reaches its far end." },
     "bf_sent_by": { "label": "Sent by", "readOnly": true, "help": "The player who sent the train, told when a raised drawbridge holds it." }
   },
   "ties": [
@@ -87,6 +90,7 @@
     "bf_track_junction_t": { "group": "Track", "piece": { "name": "T junction" } },
     "bf_track_junction_x": { "group": "Track", "piece": { "name": "X junction" } },
     "bf_track_drawbridge": { "group": "Track", "piece": { "name": "Drawbridge" } },
+    "bf_track_fit": { "group": "Track", "piece": { "name": "Fitted track" } },
     "bf_track_switch_right": { "hidden": true },
     "bf_track_switch_left": { "hidden": true },
     "bf_station": { "group": "Stations", "piece": { "name": "Train station" } },

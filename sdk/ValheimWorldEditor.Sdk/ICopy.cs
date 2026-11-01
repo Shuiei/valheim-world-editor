@@ -29,4 +29,12 @@ public interface ICopy : IObjectView
 
     /// <summary>Sets a byte-array value (null: takes it away).</summary>
     void SetBytes(string key, byte[]? value);
+
+    /// <summary>
+    /// Turns the object as it will be made (<see cref="IObjectView.Orientation"/> then reads it): for a mod that keeps its
+    /// own objects unturned and their shape in its values, a placer (<see cref="IObjectPlacer"/>) turns those values and
+    /// the object back to how the mod makes it. Since editor 1.119.0.
+    /// </summary>
+    /// <param name="turn">The object's new turn.</param>
+    void SetTurn(Quaternion turn);
 }
