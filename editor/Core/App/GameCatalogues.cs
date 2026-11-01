@@ -59,7 +59,15 @@ public static partial class GameCatalogues
     {
         var read = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
         using var game = new Game(folder);
-        game.IndexCabs();
+        try
+        {
+            game.IndexCabs();
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Mods' bundles, made by each mod its own way: without the index, a bundle's scripts are still found in it.
+            Log.Caught(e, "indexing the mods' bundles (each bundle is read on its own)");
+        }
         int done = 0;
         foreach (string name in game.Bundles)
         {
@@ -78,7 +86,7 @@ public static partial class GameCatalogues
                 }
                 read[name] = scans.ToDictionary(s => s.Kind, s => s.Scan.Json());
             }
-            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or InvalidOperationException or KeyNotFoundException)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // A mod's bundle made in a way the readers do not follow: its pieces are not listed, the others are.
                 Log.Caught(e, $"reading the pieces of the mod bundle {name} (left out)");

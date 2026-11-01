@@ -49,7 +49,13 @@ public sealed partial class PlaceTool
         // Alt: a fine step across, on the ground or a piece alike (the height where the ray meets it).
         if (Fine)
         {
-            hit = hit with { Point = new Vector3(Round(hit.Point.X, mx, FineStep), hit.Point.Y, Round(hit.Point.Z, mz, FineStep)) };
+            var fp = new Vector3(Round(hit.Point.X, mx, FineStep), hit.Point.Y, Round(hit.Point.Z, mz, FineStep));
+            // On the ground outside, the ground's height where the point now is; on a piece or a room's floor, the hit's.
+            if (hit.Piece == null && hit.Point.Y < GlView.InteriorHeight)
+            {
+                fp.Y = HeightAt(s, new Vector2(fp.X - ox, fp.Z - oz));
+            }
+            hit = hit with { Point = fp };
         }
         float yaw = (Rotation % 360 + 360) % 360;
         var rotation = BlueprintFormats.FromEuler(new Vector3(0, yaw, 0));
