@@ -2,7 +2,8 @@
 
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
-the plugin is unchanged in versions without that part.
+the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
+**Mods**.
 
 ## v1.119.0 — 2026-10-31
 
@@ -10,6 +11,11 @@ the plugin is unchanged in versions without that part.
 - **Mod extensions can turn what they place.** An add-on placing its mod's objects can now give one the turn the mod
   builds it with (`SetTurn` in the SDK): the Railroads add-on uses it so a fitted track pasted or moved turned keeps its
   shape. See [Mods and the editor](docs/modding.md).
+
+### Mods
+- **Railroads 0.4.0** (Railroads add-on 0.5.0): its new fitted track is drawn bent between its ends as the game builds
+  it, trains placed on it stand on its line, it is listed in the Workshop under Track, and pasted or moved turned it
+  keeps its shape. Railroads 0.3.7 and 0.3.8 change nothing the add-on reads.
 
 ## v1.118.1 — 2026-10-31
 
@@ -27,12 +33,15 @@ the plugin is unchanged in versions without that part.
 - **Your installed mods' pieces in the Workshop, without a live game.** The **Mod pieces** tab reads the mods installed
   in your Valheim and mod manager profiles from their files: their pieces are listed under each mod with their
   pictures, drawn on the plot with their own models and snap like the game's. Their cost is unknown until a live game
-  tells it. **Rescan mods** reads them again. Railroads' track, stations and trains are listed by name through its
-  add-on. See [Workshop](docs/workshop.md#the-build-dock).
+  tells it. **Rescan mods** reads them again. See [Workshop](docs/workshop.md#the-build-dock).
 
 ### Fixed
 - **Mod pieces drawn without a live game.** A mod's piece no live game had reported was drawn as a grey box even with
   the mod installed; it is drawn with its own model now.
+
+### Mods
+- **Railroads** (Railroads add-on 0.4.0): its track, stations and trains are listed in the Workshop's **Mod pieces**
+  tab by their names in the game, without a live game.
 
 ## v1.117.0 — 2026-10-31
 
