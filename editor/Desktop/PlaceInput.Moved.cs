@@ -31,13 +31,17 @@ public sealed partial class PlaceInput
             if (!s.Dragging && Point.Distance(at, s.From) > 6)
             {
                 s.Dragging = true;
-                // Painting: the ground under the click gets the preview too, then the brush adds more. Building keeps
-                // its one piece where it is: the click puts it, however far the mouse went (EndStroke).
+                // Painting: the ground under the click gets the preview too, then the brush adds more. Building lays a
+                // row from the piece the press put down (DragRow).
                 if (!s.Erase && !Tool.Building)
                 {
                     s.Added.AddRange(s.Stamp);
                     s.Stamp.Clear();
                 }
+            }
+            if (s.Dragging && !s.Erase && Tool.Building)
+            {
+                DragRow(s);
             }
             return;
         }
@@ -63,5 +67,21 @@ public sealed partial class PlaceInput
             return;
         }
         Refresh();
+    }
+
+    /// <summary>
+    /// Building, dragged: the row from the piece the press put down to where the piece would go now (where the pointer
+    /// points), shown as the stroke's placements.
+    /// </summary>
+    private void DragRow(Stroke s)
+    {
+        if (s.Stamp.Count == 0 || Tool.Preview(_at) is not [var now, ..])
+        {
+            return;
+        }
+        s.Added.Clear();
+        s.Added.AddRange(PlaceTool.Row(s.Stamp[0], now.Position));
+        Shown = [.. s.Added];
+        _view.LassoChanged();
     }
 }

@@ -208,14 +208,27 @@ public class PlaceInputTests
         r.T.Building = true;
         r.In.Moved(r.At(64, 64), r.Size);
         Assert.Single(r.In.Shown);
-        // A click (even dragged a little) puts the one the preview shows; dragging paints no more.
+        // A click puts the one the preview shows.
         r.In.Down(r.At(64, 64), r.Size, false, false, false, 1);
-        r.In.Moved(r.At(74, 64), r.Size);
-        r.Paint();
-        r.In.Up(r.At(74, 64), r.Size);
+        r.In.Up(r.At(64, 64), r.Size);
         Assert.Equal(1, r.S.Pending.Added);
         Assert.StartsWith("Placed ", r.Last);
         Assert.EndsWith(". Ctrl+Z takes it back.", r.Last);
+        r.S.Undo();
+        // Dragged 10 m along the wall: a row of walls end to end (the paint steps add nothing), one undo step.
+        int steps = r.S.UndoList.Count;
+        r.In.Moved(r.At(64, 64), r.Size);
+        r.In.Down(r.At(64, 64), r.Size, false, false, false, 1);
+        r.In.Moved(r.At(74, 64), r.Size);
+        int row = r.In.Shown.Length;
+        Assert.Equal(1 + (int)MathF.Round(10 / PlaceTool.Length(Wall, Vector3.UnitX)), row);
+        r.Paint();
+        Assert.Equal(row, r.In.Shown.Length);
+        r.In.Up(r.At(74, 64), r.Size);
+        Assert.Equal(row, r.S.Pending.Added);
+        Assert.Equal($"Built a row of {row} × Wood Wall.", r.Last);
+        Assert.Equal(steps + 1, r.S.UndoList.Count);
+        r.S.Undo();
         // Beside the one just built, and on the grid.
         r.Click(65, 64);
         r.T.GridStep = 2;

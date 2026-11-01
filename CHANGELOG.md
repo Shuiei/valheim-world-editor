@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.117.0 — 2026-10-31
+
+### Added
+- **Quick building in the Workshop.** Drag to lay a row of the piece, edge to edge; `Shift` + right click takes a piece
+  away; a middle click builds with the kind of the piece under the pointer. See [Workshop](docs/workshop.md#the-build-dock).
+
 ## v1.116.0 — 2026-10-31
 
 ### Added

@@ -12,7 +12,8 @@ public sealed partial class PlaceInput
     /// <param name="s">The finished stroke.</param>
     private void EndPlace(EditSession session, Stroke s)
     {
-        var list = s.Dragging && !Tool.Building ? s.Added : s.Stamp;
+        // Building: a drag lays the row it showed (a drag back to the start, the one piece).
+        var list = !s.Dragging ? s.Stamp : !Tool.Building ? s.Added : s.Added.Count > 0 ? s.Added : s.Stamp;
         if (list.Count > 0)
         {
             var names = list.Select(o => o.Name).Distinct().ToList();
@@ -21,6 +22,7 @@ public sealed partial class PlaceInput
         }
         // Nothing fitted (a forest already full, the mask): no step, so nothing for Ctrl+Z to take back either.
         Message?.Invoke(list.Count == 0 ? Said.Of("place.msg.nothingPlaced")
+            : Tool.Building && list.Count > 1 ? Said.Of("place.msg.builtRow", list.Count, PieceCost.PieceName(list[0].Name))
             : Tool.Building ? Built(string.Join(", ", list.Select(o => PieceCost.PieceName(o.Name)).Distinct()), Tool.Snapped)
             : Said.Of("place.msg.placedSave", list.Count));
     }
