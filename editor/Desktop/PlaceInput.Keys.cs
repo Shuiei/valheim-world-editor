@@ -48,4 +48,18 @@ public sealed partial class PlaceInput
         Refresh();
         Tool.Notify();
     }
+
+    /// <summary>
+    /// Building: Alt pressed (true) or let go, whether the pointer moved or not; the preview follows, so the next click
+    /// places what it shows.
+    /// </summary>
+    public void Alt(bool held)
+    {
+        if (!Tool.Building || Tool.Fine == held)
+        {
+            return;
+        }
+        Tool.Fine = held;
+        Refresh();
+    }
 }

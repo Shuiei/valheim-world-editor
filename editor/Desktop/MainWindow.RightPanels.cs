@@ -33,6 +33,11 @@ public sealed partial class MainWindow
         ViewPanelCard.IsVisible = panel == ViewPanelCard;
         HelpCard.IsVisible = panel == HelpCard;
         Materials.Card.IsVisible = panel == Materials.Card;
+        // Shown again (its button, the Inspector closing, the Workshop opening): what was built meanwhile is counted.
+        if (Materials.Card.IsVisible)
+        {
+            ShowWorkshopCost();
+        }
         MaterialsButton.Classes.Set("on", Materials.Card.IsVisible);
         if (History.Card.IsVisible != (panel == History.Card))
         {
@@ -127,10 +132,6 @@ public sealed partial class MainWindow
     {
         Prefs.Set("workshop.materials", on);
         ShowRight(on ? Materials.Card : null);
-        if (on)
-        {
-            ShowWorkshopCost();
-        }
     }
 
     /// <summary>

@@ -45,6 +45,10 @@ public sealed partial class GlView
         {
             return;
         }
+        if (e.Key is Key.LeftAlt or Key.RightAlt && Mode == ToolMode.Place)
+        {
+            Place?.Alt(true);
+        }
         if (Ctrl(e.KeyModifiers) || e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
             lock (_keys)
@@ -69,6 +73,10 @@ public sealed partial class GlView
     /// <param name="e">The key event.</param>
     private void OnWindowKeyUp(KeyEventArgs e)
     {
+        if (e.Key is Key.LeftAlt or Key.RightAlt && Mode == ToolMode.Place)
+        {
+            Place?.Alt(false);
+        }
         lock (_keys)
         {
             _keys.Remove(e.Key);

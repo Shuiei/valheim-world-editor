@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.118.1 — 2026-10-31
+
+### Fixed
+- **Alt in the Workshop takes effect at once.** Pressing or letting go of `Alt` without moving the mouse now changes
+  the piece that follows it, and a click places what it shows; a piece placed with `Alt` on sloping ground stands on
+  the ground where it goes.
+- **The Materials panel counts what was built while it was hidden** (behind the Inspector), when it shows again.
+- **One damaged mod no longer hides every mod's pieces** in the Workshop's **Mod pieces** tab: it is left out, the
+  others are listed.
+
 ## v1.118.0 — 2026-10-31
 
 ### Added

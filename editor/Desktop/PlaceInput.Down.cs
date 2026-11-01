@@ -38,6 +38,8 @@ public sealed partial class PlaceInput
             }
             return;
         }
+        // Building: Alt as the press has it (pressed or let go since the last move), the preview made again to match.
+        Alt(alt);
         // Building: where the cursor points (on a piece, or the ground), as the preview shows it.
         var hit = Tool.Building && _at != null ? _at : _view.GridAt(at, size);
         // Building has no elevation to pick: Alt places by the fine step (see Moved).

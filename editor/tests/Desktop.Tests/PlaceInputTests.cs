@@ -251,4 +251,36 @@ public class PlaceInputTests
         r.In.Lift(-0.5f);
         Assert.Equal("Lift: none (where the cursor points).", r.Last);
     }
+
+    // Alt pressed or let go without the pointer moving: the preview follows at once, and a press places what Alt says
+    // then (not what the last move had).
+    [AvaloniaFact]
+    public void BuildingFollowsAltWithoutAMove()
+    {
+        var r = new Rig(PlaceTool.Modes.Brush, true);
+        r.T.Chosen.Clear();
+        r.T.Chosen.Add(Wall);
+        r.T.Building = true;
+        var s = r.S.Scene;
+        float mx = s.OriginX + (s.W - 1) / 2f;
+        static bool OnQuarter(float v) => MathF.Abs(v * 4 - MathF.Round(v * 4)) < 1e-3f;
+        r.In.Moved(r.At(64.37f, 64.1f), r.Size);
+        Assert.False(OnQuarter(r.In.Shown.Single().Position.X - mx));
+
+        r.In.Alt(true);
+        Assert.True(r.T.Fine);
+        Assert.True(OnQuarter(r.In.Shown.Single().Position.X - mx));
+        r.In.Alt(false);
+        Assert.False(OnQuarter(r.In.Shown.Single().Position.X - mx));
+
+        // Pressed with Alt held, the last move without: the piece goes by the quarter metre.
+        r.In.Down(r.At(64.37f, 64.1f), r.Size, false, false, true, 1);
+        r.In.Up(r.At(64.37f, 64.1f), r.Size);
+        var placed = r.S.Scene.Things.Last(t => !t.Gone);
+        Assert.True(OnQuarter(placed.Position.X - mx));
+        // Not building: Alt leaves the tool alone.
+        r.T.Building = false;
+        r.In.Alt(false);
+        Assert.True(r.T.Fine);
+    }
 }

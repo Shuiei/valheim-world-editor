@@ -92,4 +92,28 @@ public class MainWindowRightPanelsTests
             w.Close();
         }
     }
+
+    // The Materials list is made again whenever the card comes back: pieces built while the Inspector stood in its place
+    // are counted when the Inspector closes.
+    [AvaloniaFact]
+    public async Task TheMaterialsCountWhatWasBuiltWhileTheyWereHidden()
+    {
+        using var r = new BlueprintsPanelRun();
+        var w = r.W;
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        await w.OpenWorkshop(null);
+        Assert.True(w.Materials.Card.IsVisible);
+        Assert.Equal("", w.Materials.Count.Text);
+        // The Inspector's place: the card hidden, a wall built meanwhile.
+        w.ShowRight(w.Inspector.Card);
+        Assert.False(w.Materials.Card.IsVisible);
+        w.Session!.Commit("A wall", null, [], [(new Editing.NewObject(0, StableHash.Of("woodwall"), new System.Numerics.Vector3(0, Workshop.Ground, 0), System.Numerics.Vector3.Zero, 0f), false)]);
+        w.AfterClaudeEdit(Said.Empty);
+        Assert.Equal("", w.Materials.Count.Text);
+
+        w.Inspector.Close();
+
+        Assert.True(w.Materials.Card.IsVisible);
+        Assert.Equal("1 piece(s)", w.Materials.Count.Text);
+    }
 }
