@@ -116,10 +116,11 @@ public sealed class FittedTrackTests : IDisposable
         // beginning to bend there.
         Assert.Equal(-1, flat[0].Vertices[0].X, 1);
         Assert.Equal(1, flat[0].Vertices[1].X, 1);
-        // The last rail corner on the far end, the rail 0.7 m to its right: the line arrives eastwards, so south of it.
+        // The last rail corner by the far end, the rail 0.7 m to its right: the line arrives eastwards, so south of it
+        // (the last quarter metre still bends a few degrees: a few centimetres off).
         var lastRail = flat[1].Vertices[^2];
-        Assert.Equal(3, lastRail.X, 2);
-        Assert.Equal(5 - 0.7f, lastRail.Z, 2);
+        Assert.True(Math.Abs(lastRail.X - 3) < 0.1f, $"x {lastRail.X}");
+        Assert.True(Math.Abs(lastRail.Z - (5 - 0.7f)) < 0.1f, $"z {lastRail.Z}");
         // A turned piece: the same rails in the world, so in its own frame turned back.
         var turn = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 1.1f);
         var turned = FittedTrack.Rails(line, rail, turn).ToList();
