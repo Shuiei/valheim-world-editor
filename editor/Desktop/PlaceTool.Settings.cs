@@ -122,6 +122,37 @@ public sealed partial class PlaceTool
     /// <summary>Building pieces one by one (the Workshop's Build): no brush circle, no painting by dragging.</summary>
     public bool Building { get; set; }
 
+    /// <summary>How a building piece snaps (see <see cref="SnapMode"/>).</summary>
+    public enum SnapModes
+    {
+        /// <summary>As the game's hammer: the closest pair of snap points within half a metre meets.</summary>
+        Auto,
+
+        /// <summary>Only the piece's snap point <see cref="SnapPoint"/> (Q and E change it), reaching further.</summary>
+        Manual,
+
+        /// <summary>No snapping: the piece stays where it touches what the cursor points at.</summary>
+        Free,
+    }
+
+    /// <summary>Building: how the piece snaps to the pieces already there. Free also turns <see cref="SnapTo"/> off.</summary>
+    public SnapModes SnapMode { get; set; }
+
+    /// <summary>Building, manual snapping: which of the piece's snap points meets the others (wrapped to its number).</summary>
+    public int SnapPoint { get; set; }
+
+    /// <summary>The step Alt places a building piece by, in metres from the area's middle, without snapping.</summary>
+    public const float FineStep = 0.25f;
+
+    /// <summary>Building: Alt is held (no snapping, the point rounded to <see cref="FineStep"/>).</summary>
+    public bool Fine { get; set; }
+
+    /// <summary>
+    /// Building, manual snapping: where the piece's chosen snap point is in the world as the preview shows it, and its
+    /// number and how many the piece has (1-based); null when not snapping by hand or the piece has none.
+    /// </summary>
+    public (Vector3 At, int Number, int Count)? ActiveSnap { get; private set; }
+
     /// <summary>
     /// Building: the build ray (world space: origin, direction, where it meets the ground). The piece goes where the
     /// game's hammer would put it (Hammer).

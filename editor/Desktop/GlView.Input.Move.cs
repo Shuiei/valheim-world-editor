@@ -41,7 +41,7 @@ public sealed partial class GlView
         }
         if (Mode == ToolMode.Place)
         {
-            Place?.Moved(at, _surfaceSize);
+            Place?.Moved(at, _surfaceSize, _modKeys.HasFlag(KeyModifiers.Alt));
         }
         if (Mode == ToolMode.Mod)
         {

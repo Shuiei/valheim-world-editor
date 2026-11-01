@@ -115,7 +115,7 @@ public class WorkshopWindowTests
         // Everything players build: the cultivator's and the serving tray's pieces too.
         Assert.Contains(BuildPanel.Pieces, p => p.Category == BuildPanel.Plants);
         Assert.Contains(BuildPanel.Pieces, p => p.Category == BuildPanel.Feasts);
-        w.BuildPanel.SnapBox.IsChecked = false;
+        w.BuildPanel.SetSnapMode(PlaceTool.SnapModes.Free);
         Assert.False(w.PlaceTool.SnapTo);
         await w.LeaveWorkshop();
         Assert.False(w.Tools.Workshop);

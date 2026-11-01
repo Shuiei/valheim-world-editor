@@ -17,6 +17,12 @@ public static partial class Hammer
     /// <summary>Snap points this close (metres) meet; pieces whose reach comes this close (metres) are searched.</summary>
     public const float SnapDistance = 0.5f, SnapRadius = 10f;
 
+    /// <summary>
+    /// Manual snapping (the editor's own): how far the one snap point chosen reaches for another, in metres, further
+    /// than the game's half metre so the pointer steers it.
+    /// </summary>
+    public const float ManualSnapDistance = 1.5f;
+
     /// <summary>A piece's collider, in the piece's own frame.</summary>
     public abstract record Shape;
     /// <summary>A box collider: centre, half size, rotation.</summary>

@@ -72,6 +72,14 @@ public sealed partial class GlView
         {
             Strip([.. new[] { a, new Vector2(b.X, a.Y), b, new Vector2(a.X, b.Y), a }.Select(t.Xf)]);
         }
+        // Snapping by hand: the piece's chosen snap point, the one that meets the others.
+        if (t.Building && t.ActiveSnap is { At: var at })
+        {
+            var (vx, vz) = GridToView(s, at.X - ox, at.Z - oz);
+            var c = new Vector3(vx, at.Y, vz);
+            float r = Marker(data, c);
+            data.AddRange([c.X, c.Y - r * 3, c.Z, c.X, c.Y + r * 3, c.Z]);
+        }
         if (t.Mode is PlaceTool.Modes.Line or PlaceTool.Modes.Zone)
         {
             foreach (var p in pl.ShownPoints())

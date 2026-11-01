@@ -24,7 +24,8 @@ To build a hut and keep it:
    rail, then **New in Workshop**; a world with unsaved changes asks first.)
 2. In the **Build** dock along the bottom, pick a piece on the **Pieces** tab.
 3. Click on the plot to put it down. It snaps to the pieces already there, like the hammer.
-4. Turn the piece with `,` and `.`; lift it with `Ctrl` + wheel. To move or delete pieces, press `E` (Select).
+4. Turn the piece with `,` and `.`; lift it with `Ctrl` + wheel; hold `Alt` to place it freely by a quarter metre. To
+   move or delete pieces, press `E` (Select).
 5. Watch the **Support check** colours and the "would fall" count in the top bar, and what it costs in the
    **Materials** panel at the right.
 6. Click **Save blueprint** (`Ctrl+S`), and give it a name, a description and tags.
@@ -101,10 +102,17 @@ The bar beside the tool rail holds how the piece goes down. It shows while **Bui
 
 | Setting | What it does |
 |---|---|
-| **Snap to pieces** | On: the piece snaps to the pieces already there, like the hammer. Off: it stays where it touches what you point at (like holding `Alt` in game). See [Snapping](concepts/objects.md#snapping). |
+| **Snap** | **Auto** (the default): the piece snaps to the pieces already there, like the hammer. **Manual**: only one of its snap points meets the others, reaching 1.5 m; `Q` and `E` choose which, marked on the piece, and the bar says which (`Point 2 of 8 · Q / E`). **Free**: it stays where it touches what you point at. Kept for the next time. See [Snapping](concepts/objects.md#snapping). |
 | **Grid** | **Off** (as in game), **0.5 m**, **1 m** or **2 m**: a point on the ground is rounded to this grid, counted from the plot's middle. A piece pointed at another piece snaps as usual. |
 | **Turn by** | How far `,` and `.` (or `Alt` + wheel) turn the piece: **1°**, **15°**, **22.5°** (the game's step, the default), **45°** or **90°**. |
 | **Lift** | `Ctrl` + wheel lifts or lowers the piece by 0.5 m a notch before it snaps (`Shift`: 0.1 m). The bar shows the lift (`+1.5 m`); **Reset** takes it back to none. |
+
+Hold `Alt` to place a piece by a quarter metre, without snapping, whatever the **Snap** setting (like holding `Alt` in
+game, with a step).
+
+![Manual snapping: a wall following the pointer beside the hut's wall, its second snap point marked](images/workshop-snap-manual.jpg)
+***Snap** on **Manual**, `E` pressed once: the bar reads `Point 2 of 4 · Q / E`, and the see-through wall that follows
+the pointer meets the hut's wall by its top corner, marked with a cross.*
 
 ### Library tab
 
@@ -261,11 +269,13 @@ known recipe (from mods) are listed apart; with none known, it reads `Cost unkno
 | Key or mouse | What it does |
 |---|---|
 | `T` | Build. |
-| `E` | Select: move, turn, delete pieces. |
+| `E` | Select: move, turn, delete pieces (with **Snap** on **Manual** in Build: the next snap point). |
+| `Q` | With **Snap** on **Manual** in Build: the previous snap point. |
 | `Esc` | View. |
 | Click | Put the piece down. |
 | `,` `.` or `Alt` + wheel | Turn the piece by the **Turn by** step (`Shift`: 1°). |
 | `Ctrl` + wheel | Lift or lower the piece 0.5 m (`Shift`: 0.1 m). |
+| Hold `Alt` | Place the piece by a quarter metre, without snapping. |
 | `Ctrl+S` | Save blueprint. |
 | `Ctrl+Z` | Undo. |
 | `Ctrl+Y` or `Ctrl+Shift+Z` | Redo. |

@@ -196,7 +196,8 @@ public sealed partial class Scenes
     /// <summary>
     /// The Workshop's pictures, with blueprints made as a player has them from friends (files opened in the Workshop,
     /// then saved to the library): workshop-save-dialog.jpg (the Save blueprint dialog over a small hut),
-    /// workshop-overview.jpg (the hut on the plot, the Build panel on the wooden pieces), workshop.jpg (a tall stone
+    /// workshop-overview.jpg (the hut on the plot, the Build dock on the wooden pieces), workshop-snap-manual.jpg (Manual
+    /// snapping: a wall beside the hut's, its second snap point marked), workshop.jpg (a tall stone
     /// and wood house tinted by the support check, its overhang red), workshop-library.jpg (the Library searching
     /// "hut": two huts with their pictures), workshop-cut.jpg (the house cut at 3 m, seen from above) and
     /// start-workshop.jpg (the start page's Workshop with the three blueprints).
@@ -211,6 +212,14 @@ public sealed partial class Scenes
         SaveBlueprint(e, "A hut with a fire pit", "house, wood", Out("workshop-save-dialog.jpg"));
         PlotCamera(e, -2, 0, 200, 40, 20, -14, 0);
         e.Shot(Out("workshop-overview.jpg"));
+        // Snapping by hand: the wall's second snap point chosen (E), marked on the wall that follows the pointer beside the
+        // hut's wall.
+        e.Send("click Manual");
+        PlotCamera(e, 2, -2, 200, 30, 11, 4.6, -1.2);
+        e.Send("key E");
+        e.Send("wait 500");
+        e.Shot(Out("workshop-snap-manual.jpg"));
+        e.Send("click Auto");
         e.Send($"workshop {StoneHut()}");
         e.Send("wait 1500");
         SaveBlueprint(e, "A stone footing, a bed and a chest", "house, stone");

@@ -13,6 +13,7 @@ public sealed partial class PlaceTool
         var s = Scene();
         var names = Chosen.ToList();
         Snapped = null;
+        ActiveSnap = null;
         if (s == null || names.Count == 0 || Mode == Modes.Brush && at == null)
         {
             return [];
