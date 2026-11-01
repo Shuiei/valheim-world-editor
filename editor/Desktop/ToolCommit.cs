@@ -39,10 +39,11 @@ internal static class ToolCommit
         foreach (var (prefab, position, rotation, data) in edit.Added)
         {
             var z = new ZdoData { Prefab = StableHash.Of(prefab) };
-            data?.Invoke(new DataCopy(prefab, position, rotation, z));
-            // From its prefab as made, once the tool's values are set.
+            var copy = new DataCopy(prefab, position, rotation, z);
+            data?.Invoke(copy);
+            // From its prefab as made, once the tool's values are set (and its turn, should the tool turn it).
             z.BaseFlags = SavedFlags(z.Prefab);
-            AddNew(plan, new NewObject(0, z.Prefab, position, rotation, 1, Fresh: false, Raw: z.Serialize()));
+            AddNew(plan, new NewObject(0, z.Prefab, position, copy.Rotation, 1, Fresh: false, Raw: z.Serialize()));
         }
         foreach (var (obj, change) in edit.Changed)
         {
@@ -51,8 +52,9 @@ internal static class ToolCommit
                 continue;
             }
             var z = ZdoData.Parse(view.Data.Serialize());
-            change(new DataCopy(view.Prefab, view.Position, view.Rotation, z, view.Scale));
-            AddNew(plan, new NewObject(0, z.Prefab, view.Position, view.Rotation, view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize()));
+            var copy = new DataCopy(view.Prefab, view.Position, view.Rotation, z, view.Scale);
+            change(copy);
+            AddNew(plan, new NewObject(0, z.Prefab, view.Position, copy.Rotation, view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize()));
         }
         foreach (var obj in edit.Removed)
         {

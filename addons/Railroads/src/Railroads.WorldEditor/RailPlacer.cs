@@ -9,7 +9,8 @@ namespace Railroads.WorldEditor;
 /// them (the mod itself works it out only when a player builds them with the hammer, or as the world loads):
 /// <list type="bullet">
 /// <item>track and the old station keep their turn as their exact turn (<see cref="Keys.Turn"/>), which the mod gives
-/// them back as the world loads: without it they would turn back;</item>
+/// them back as the world loads: without it they would turn back; a fitted track takes its turn into its far end and
+/// ways and stands unturned, as the mod builds it (<see cref="FittedTrack"/>);</item>
 /// <item>a vehicle stands on the line of track nearest it, within 1.5 m, at that point of it and facing its way
 /// (<see cref="Keys.Line"/>, <see cref="Keys.At"/>, <see cref="Keys.Dir"/>), as the mod puts a vehicle just built; with
 /// none that near, on none (the mod puts it on track when a player first comes near). It stops: its trip, the lines its
@@ -20,7 +21,11 @@ namespace Railroads.WorldEditor;
 /// Track placed in the same step counts (a station pasted with its track), track the step moves away does not.
 /// </summary>
 /// <param name="models">The mod's models, for the track's lines.</param>
-public sealed class RailPlacer(ModelLibrary models) : IObjectPlacer
+/// <param name="canTurn">
+/// The editor turns copies as a placer asks (<see cref="ICopy.SetTurn"/>, editor 1.119.0 on): a turned fitted track is
+/// then left unturned in the editor too, so that turning it again turns its values once more by that turn only.
+/// </param>
+public sealed class RailPlacer(ModelLibrary models, bool canTurn = true) : IObjectPlacer
 {
     /// <summary>How far from track the mod puts a vehicle on it, in metres.</summary>
     public const float VehicleReach = 1.5f;
@@ -39,7 +44,14 @@ public sealed class RailPlacer(ModelLibrary models) : IObjectPlacer
     {
         foreach (var copy in placed.Where(c => Kind(c) == RailKind.Track || c.Prefab == RailroadsMod.OldStation))
         {
-            copy.SetQuaternion(Keys.Turn, copy.Orientation);
+            if (copy.Prefab == RailroadsMod.FittedTrack)
+            {
+                Unturn(copy);
+            }
+            else
+            {
+                copy.SetQuaternion(Keys.Turn, copy.Orientation);
+            }
         }
         if (!placed.Any(c => Kind(c) == RailKind.Vehicle || c.Prefab == RailroadsMod.Sign))
         {
@@ -93,4 +105,30 @@ public sealed class RailPlacer(ModelLibrary models) : IObjectPlacer
 
     /// <summary>What a placed object is, null for what is not one of the mod's pieces.</summary>
     private static RailKind? Kind(IObjectView obj) => RailroadsMod.Pieces.FirstOrDefault(p => p.Prefab == obj.Prefab)?.Kind;
+
+    /// <summary>
+    /// A fitted track turned (pasted or moved turned): the mod builds it unturned with its far end and ways along the
+    /// world's axes, so the turn goes into them, and the piece is unturned, as the mod would have built it there; its
+    /// exact turn (which the mod gives it back as the world loads) is none.
+    /// </summary>
+    private void Unturn(ICopy copy)
+    {
+        var turn = copy.Orientation;
+        foreach (string key in new[] { Keys.FitEnd, Keys.FitWayA, Keys.FitWayB })
+        {
+            if (copy.TryGetVector3(key, out var v))
+            {
+                copy.SetVector3(key, Vector3.Transform(v, turn));
+            }
+        }
+        copy.SetQuaternion(Keys.Turn, Quaternion.Identity);
+        if (canTurn)
+        {
+            TurnBack(copy);
+        }
+    }
+
+    /// <summary>The copy unturned (apart, so an older editor without <see cref="ICopy.SetTurn"/> never reaches it).</summary>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static void TurnBack(ICopy copy) => copy.SetTurn(Quaternion.Identity);
 }

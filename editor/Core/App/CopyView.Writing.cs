@@ -28,4 +28,7 @@ public sealed partial class CopyView
 
     /// <inheritdoc/>
     public void SetBytes(string key, byte[]? value) => Put("bytes", key, value == null ? null : Convert.ToBase64String(value));
+
+    /// <inheritdoc/>
+    public void SetTurn(Quaternion turn) => Turn(turn);
 }

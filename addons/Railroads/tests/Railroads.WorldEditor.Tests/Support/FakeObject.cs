@@ -65,6 +65,8 @@ internal sealed class FakeObject(string prefab) : ICopy
 
     public void SetBytes(string key, byte[]? value) => PutRef(Bytes, key, value);
 
+    public void SetTurn(Quaternion turn) => Orientation = turn;
+
     private static void Put<T>(Dictionary<string, T> values, string key, T? value)
         where T : struct
     {

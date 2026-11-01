@@ -167,4 +167,78 @@ public sealed class RailPlacerTests : IDisposable
 
         Assert.Equal(Quaternion.Identity, track.Quaternions[RailroadsMod.Keys.Turn]);
     }
+
+    /// <summary>A fitted track from a place, its far end and ways as given, turned.</summary>
+    private static FakeObject Fit(Vector3 at, Vector3 end, Quaternion turn)
+    {
+        var fit = new FakeObject(RailroadsMod.FittedTrack) { Position = at, Orientation = turn };
+        fit.Vectors[RailroadsMod.Keys.FitEnd] = end;
+        fit.Vectors[RailroadsMod.Keys.FitWayA] = Vector3.UnitZ;
+        fit.Vectors[RailroadsMod.Keys.FitWayB] = Vector3.UnitZ;
+        return fit;
+    }
+
+    // Turned, a fitted track takes the turn into its far end and ways and stands unturned, as the mod builds it; turned
+    // again later, only by that turn.
+    [Fact]
+    public void ATurnedFitTakesItsTurnIntoItsValues()
+    {
+        var fit = Fit(new Vector3(5, 0, 5), new Vector3(0, 1, 8), Quarter);
+        fit.Quaternions[RailroadsMod.Keys.Turn] = Quarter;
+
+        _placer.Place([fit], new ObjectsArea());
+
+        Assert.True(Vector3.Distance(Vector3.Transform(new Vector3(0, 1, 8), Quarter), fit.Vectors[RailroadsMod.Keys.FitEnd]) < 1e-4f);
+        Assert.True(Vector3.Distance(Vector3.Transform(Vector3.UnitZ, Quarter), fit.Vectors[RailroadsMod.Keys.FitWayA]) < 1e-4f);
+        Assert.True(Vector3.Distance(Vector3.Transform(Vector3.UnitZ, Quarter), fit.Vectors[RailroadsMod.Keys.FitWayB]) < 1e-4f);
+        Assert.Equal(Quaternion.Identity, fit.Orientation);
+        Assert.Equal(Quaternion.Identity, fit.Quaternions[RailroadsMod.Keys.Turn]);
+        // Turned once more: from where it was.
+        fit.Orientation = Quarter;
+        _placer.Place([fit], new ObjectsArea());
+        Assert.True(Vector3.Distance(new Vector3(0, 1, -8), fit.Vectors[RailroadsMod.Keys.FitEnd]) < 1e-4f);
+        // Not turned: as it was; without values, unturned all the same.
+        var still = Fit(Vector3.Zero, new Vector3(2, 0, 6), Quaternion.Identity);
+        var bare = new FakeObject(RailroadsMod.FittedTrack) { Orientation = Quarter };
+        _placer.Place([still, bare], new ObjectsArea());
+        Assert.Equal(new Vector3(2, 0, 6), still.Vectors[RailroadsMod.Keys.FitEnd]);
+        Assert.Equal(Quaternion.Identity, bare.Orientation);
+        Assert.Equal(Quaternion.Identity, bare.Quaternions[RailroadsMod.Keys.Turn]);
+    }
+
+    // An editor that cannot turn a copy back: the values still take the turn, the piece keeps its turn in the editor.
+    [Fact]
+    public void WithoutTurningBackTheValuesStillTakeTheTurn()
+    {
+        var placer = new RailPlacer(new ModelLibrary(new FakeHost { Plugin = _mod.Plugin }, Assert.Fail), canTurn: false);
+        var fit = Fit(Vector3.Zero, new Vector3(0, 0, 8), Quarter);
+
+        placer.Place([fit], new ObjectsArea());
+
+        Assert.True(Vector3.Distance(Vector3.Transform(new Vector3(0, 0, 8), Quarter), fit.Vectors[RailroadsMod.Keys.FitEnd]) < 1e-4f);
+        Assert.Equal(Quarter, fit.Orientation);
+        Assert.Equal(Quaternion.Identity, fit.Quaternions[RailroadsMod.Keys.Turn]);
+    }
+
+    // Vehicles stand on a fitted track's line (from its place, along the world's axes whatever its turn in the editor);
+    // a station sign never stops trains on it.
+    [Fact]
+    public void VehiclesStandOnAFitAndSignsDoNotStopOnIt()
+    {
+        var fit = Fit(new Vector3(20, 0, 0), new Vector3(0, 0, 8), Quarter);
+        fit.Orientation = Quarter;
+        var wagon = new FakeObject("bf_wagon") { Position = new Vector3(20.5f, 0.4f, 4) };
+        var sign = new FakeObject(RailroadsMod.Sign) { Position = new Vector3(22, 0, 4) };
+        var area = new ObjectsArea(fit);
+
+        _placer.Place([wagon, sign], area);
+
+        Assert.True(wagon.Floats.TryGetValue(RailroadsMod.Keys.At, out float at));
+        Assert.Equal(4, at, 1);
+        Assert.False(sign.Vectors.ContainsKey(RailroadsMod.Keys.Stop));
+        var network = TrackNetwork.Of([fit], new ModelLibrary(new FakeHost { Plugin = _mod.Plugin }, Assert.Fail));
+        var line = Assert.Single(network.Lines);
+        Assert.Equal(new Vector3(20, 0, 0), line.A);
+        Assert.Equal(new Vector3(20, 0, 8), line.B);
+    }
 }

@@ -7,8 +7,8 @@ namespace Railroads.WorldEditor;
 /// One of the mod's pieces drawn as the mod builds it while the game runs, from its own models (<see cref="ModelLibrary"/>):
 /// its body, and for a vehicle its wheels under each axle (the locomotive's big driving wheels too), its couplers
 /// standing straight out and the hand cart's pump handle as it leans, for the old station its legs unless it was built
-/// without, for the drawbridge its leaves, chains and weights raised or lowered (<see cref="DrawbridgeParts"/>). Each
-/// part in its material's colour. The levers, rods, lamps and loads the mod adds to its vehicles are left out.
+/// without, for the drawbridge its leaves, chains and weights raised or lowered (<see cref="DrawbridgeParts"/>), the
+/// fitted track's rails bent along its line (<see cref="FittedTrack"/>). Each part in its material's colour. The levers, rods, lamps and loads the mod adds to its vehicles are left out.
 /// </summary>
 /// <param name="piece">The piece.</param>
 /// <param name="models">The mod's models.</param>
@@ -42,6 +42,11 @@ public sealed class PieceShapes(RailPiece piece, ModelLibrary models) : IShapePr
     /// <inheritdoc/>
     public IEnumerable<Shape> ShapesOf(IObjectView obj, IWorldView world)
     {
+        // Bent to its values; without a far end, its own model as the game shows it then.
+        if (piece.Prefab == RailroadsMod.FittedTrack && FittedTrack.LineOf(obj) is { } line && models.Get(FittedTrack.RailModelName) is { } rail)
+        {
+            return [.. FittedTrack.Rails(line, rail, obj.Orientation)];
+        }
         var shapes = new List<Shape>(Fixed());
         if (piece.Prefab == RailroadsMod.OldStation && !(obj.TryGetInt(RailroadsMod.Keys.Bare, out int bare) && bare != 0)
             && models.Get(RailroadsMod.StationLegs) is { } legs)

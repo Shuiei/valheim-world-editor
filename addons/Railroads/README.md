@@ -61,7 +61,7 @@ would go by it for good. 0.2.7 to 0.2.9 change none of the track, the placing of
 add-on sets (checked by comparing the two versions); of the models, only the locomotive's (its name boards) and the
 portal wagon's (no posts on its open side), which the add-on reads from your copy of the mod as they are.
 
-Then on the same server and world running Railroads 0.3.6, the version the add-on follows: a railway with 2
+Then on the same server and world running Railroads 0.3.6: a railway with 2
 drawbridges, the first raised by its lever, which held a train sent past it until it was lowered again, a wagon the
 mod put on the second, and a feedback post; after a restart both bridges kept the state they were saved in. The add-on puts vehicles on
 the drawbridge's line as the mod does, and keeps a sign's stop off it. 0.3.0 to 0.3.6 change none of the track the
@@ -69,7 +69,19 @@ add-on knew, the placing of vehicles and signs or the data it set (checked by co
 the drawbridge and the feedback post, take the couplers off the vehicles' models (the mod builds them apart, from a
 model of their own) and put the old station back on the hammer.
 
+Railroads 0.4.0 is the version the add-on follows. 0.3.7 to 0.4.0 change none of the models, the track, the placing of
+vehicles and signs or the data the add-on knew (checked by comparing the versions' files, model by model, and their
+data keys): a station sign's turn now picks the side of the ghost train, which the mod works out from the turn and keeps
+nowhere; tame boars and vanilla carts ride on a flatbed under the keys of the pieces built on it. 0.4.0 adds the fitted
+track, whose shape is in its values, as the mod's own code builds it: drawn and laid out as the mod does from those
+values, it was not yet built in a game for these tests.
+
 ## Good to know
+
+- **Fitted track.** Since Railroads 0.4.0 one piece joins 2 track ends that do not line up, up to 32 m: the mod builds it
+  unturned, its far end and the ways it leaves and reaches its ends in its values, and bends 1 m straights between them.
+  Pasted or moved turned, the editor turns those values and leaves the piece unturned, as the mod would have built it
+  there (with an editor before 1.119.0 the piece keeps its turn in the editor, so turn it once only before saving).
 
 - **A train follows its track.** A train moved or turned as a block lands where you put it, and the game then lays
   its wagons out behind the locomotive along the track, as it does while the train runs: put it down on track that
@@ -91,7 +103,7 @@ model of their own) and put the old station back on the hammer.
 
 ## Install
 
-1. The Valheim World Editor 1.111.0 or later.
+1. The Valheim World Editor 1.111.0 or later (1.119.0 or later to turn a fitted track more than once before saving).
 2. From the editor's [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page,
    `ValheimWorldEditor-addon-Railroads-<version>.zip`: unpack it into the `addons` folder next to the editor (on
    macOS, next to `ValheimWorldEditor.app`), so that you have `addons/Railroads/worldeditor.json`.
@@ -109,7 +121,7 @@ dotnet test --project addons/Railroads/tests/Railroads.WorldEditor.Tests
 tools/addons.sh dist                    # dist/ValheimWorldEditor-addon-Railroads-<version>.zip
 ```
 
-Building the tests downloads Railroads 0.3.6, the version the add-on follows, from Thunderstore (never kept in the
+Building the tests downloads Railroads 0.4.0, the version the add-on follows, from Thunderstore (never kept in the
 repository): every model of it is read and drawn. The tests also replay objects the real mod made on a local server
 (`tests/Railroads.WorldEditor.Tests/fixtures/railroads-reference.txt`: track, a station sign, a train sent to it with
 a wagon and a flatbed carrying a floor, a hand cart), and track and an old station a player built, with their prices

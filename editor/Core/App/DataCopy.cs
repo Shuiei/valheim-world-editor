@@ -35,4 +35,7 @@ public sealed class DataCopy(string prefab, Vector3 position, Vector3 rotation, 
 
     /// <inheritdoc/>
     public void SetBytes(string key, byte[]? value) => Data.SetBytesOrNone(StableHash.Of(key), value);
+
+    /// <inheritdoc/>
+    public void SetTurn(Quaternion turn) => Turn(turn);
 }

@@ -18,11 +18,15 @@ public abstract class PlacedView(string prefab, Vector3 position, Vector3 rotati
     /// <summary>Where it is.</summary>
     public Vector3 Position => position;
 
-    /// <summary>Its turn, Unity Euler degrees.</summary>
-    public Vector3 Rotation => rotation;
+    /// <summary>Its turn, Unity Euler degrees (a copy's, as a placer or a tool may have turned it: <see cref="Turn"/>).</summary>
+    public Vector3 Rotation { get; private set; } = rotation;
 
     /// <summary>Its turn as a quaternion (BlueprintFormats.FromEuler).</summary>
-    public Quaternion Orientation => BlueprintFormats.FromEuler(rotation);
+    public Quaternion Orientation => BlueprintFormats.FromEuler(Rotation);
+
+    /// <summary>Turns it (a copy, before it is made: ICopy.SetTurn).</summary>
+    /// <param name="turn">Its new turn.</param>
+    protected void Turn(Quaternion turn) => Rotation = BlueprintFormats.ToEuler(turn);
 
     /// <summary>Its size: the given one, or 1 when none (0 or less means the prefab's own).</summary>
     public float Scale => scale > 0 ? scale : 1;

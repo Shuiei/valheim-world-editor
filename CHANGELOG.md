@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.119.0 — 2026-10-31
+
+### Added
+- **Mod extensions can turn what they place.** An add-on placing its mod's objects can now give one the turn the mod
+  builds it with (`SetTurn` in the SDK): the Railroads add-on uses it so a fitted track pasted or moved turned keeps its
+  shape. See [Mods and the editor](docs/modding.md).
+
 ## v1.118.1 — 2026-10-31
 
 ### Fixed

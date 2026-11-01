@@ -37,6 +37,10 @@ internal sealed class RecordCopy : FakeObject, ICopy
     {
     }
 
+    public void SetTurn(Quaternion turn)
+    {
+    }
+
     public void SetLong(string key, long? value)
     {
     }
