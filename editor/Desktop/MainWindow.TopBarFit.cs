@@ -24,7 +24,7 @@ public sealed partial class MainWindow
     /// The words of the top bar's buttons that can do without them (the icon stays).
     /// </summary>
     private IEnumerable<TextBlock> TopBarWords() =>
-        new[] { MapButton, ReloadButton, HistoryButton, ViewButton }.Select(b => b.Content).OfType<Panel>().SelectMany(p => p.Children.OfType<TextBlock>());
+        new[] { MapButton, ReloadButton, MaterialsButton, HistoryButton, ViewButton }.Select(b => b.Content).OfType<Panel>().SelectMany(p => p.Children.OfType<TextBlock>());
 
     /// <summary>
     /// After each layout: the word buttons drop their words when the names would have less than

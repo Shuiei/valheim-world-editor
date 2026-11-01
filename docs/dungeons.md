@@ -166,8 +166,8 @@ spawners...) goes with it, and so do the doors where it met other rooms. The roo
 
 ## Build inside a dungeon
 
-**Build here** gives the Workshop's [Build panel](workshop.md) over the dungeon, its **Pieces** tab only (the
-**Library**'s blueprints go onto the Workshop's plot): pick a piece, then click on a room's floor or wall, or on a
+**Build here** gives the Workshop's [Build dock](workshop.md#the-build-dock) and building bar over the dungeon, its
+**Pieces** and **Mod pieces** tabs only (the **Library**'s blueprints go onto the Workshop's plot): pick a piece, then click on a room's floor or wall, or on a
 piece already there. Pieces snap as with the hammer, and the cursor goes through what the cut hides. Pick another tool
 to stop building.
 
@@ -193,7 +193,7 @@ follow them: see [Edit a world made with Expand World, Riverheim or Tunnelheim](
 ## Open it in the Workshop
 
 ![A generated dungeon of building pieces on the Workshop's plot, cut open, its entrance hall with the portal](images/workshop-dungeon.jpg)
-*A generated dungeon (one level) opened on the Workshop's plot and cut at 3 m, the Build panel back on its **Pieces**
+*A generated dungeon (one level) opened on the Workshop's plot and cut at 3 m, the Build dock back on its **Pieces**
 tab: at the top, the entrance hall with its portal where players arrive; below it, the boss's arena.*
 
 **Open in the Workshop** writes the dungeon as a blueprint in Homestead's folder and opens it, to change it: open a

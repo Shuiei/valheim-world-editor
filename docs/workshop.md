@@ -22,10 +22,11 @@ To build a hut and keep it:
 
 1. On the start page, click **The Workshop**, then **Open the Workshop**. (From a world: **Blueprints** on the tool
    rail, then **New in Workshop**; a world with unsaved changes asks first.)
-2. In the **Build** panel, pick a piece on the **Pieces** tab.
+2. In the **Build** dock along the bottom, pick a piece on the **Pieces** tab.
 3. Click on the plot to put it down. It snaps to the pieces already there, like the hammer.
 4. Turn the piece with `,` and `.`; lift it with `Ctrl` + wheel. To move or delete pieces, press `E` (Select).
-5. Watch the **Support check** colours and the "would fall" count in the top bar.
+5. Watch the **Support check** colours and the "would fall" count in the top bar, and what it costs in the
+   **Materials** panel at the right.
 6. Click **Save blueprint** (`Ctrl+S`), and give it a name, a description and tags.
 7. Click **Start** to go back to the start page.
 
@@ -42,60 +43,82 @@ The plot is not part of any world: 3 × 3 zones (192 m across) of flat meadow at
 level, is the blueprint's **anchor**, the point Homestead measures every piece from.
 
 - The tool rail has only **Build** (`T`), **Select** (`E`) and **View**. The ground tools are for worlds.
+- Beside the rail, the **building bar**: **Snap to pieces**, **Grid**, **Turn by** and **Lift** (see
+  [The building bar](#the-building-bar)).
+- Along the bottom, the **Build dock**: the pieces, your mods' pieces and your blueprints (see
+  [The Build dock](#the-build-dock)).
+- At the right, the **Materials** panel: what the building costs (see [Materials](#materials)).
 - There is no Mask, no View panel and no zone borders, and buildings are drawn solid.
-- The top bar has **Start**, the **Support check** switch, the **Cut** slider and **Save blueprint**. It counts the
-  pieces, says how many would fall and whether the building is saved
+- The top bar has **Start**, the **Support check** switch, the **Cut** slider, **Save blueprint** and **Materials**.
+  It counts the pieces, says how many would fall and whether the building is saved
   (`12 piece(s) · 2 would fall · not saved as a blueprint`).
-- Under the title: what the building costs in game; a long line ends in "…". Point at it for every material, the
-  crafting stations needed nearby and the pieces with no known recipe.
+- Under the title: what the building costs in game, in short; a long line ends in "…".
 
 There is no **Discard**: undo, or open the blueprint again. Leaving with a building not saved as a blueprint
 (**Start**, opening another, quitting) asks first.
 
 ![The Workshop with a small wooden hut on the plot and the Build panel on its wooden pieces](images/workshop-overview.jpg)
-*The Workshop with a small hut on the plot: the rail with only **Build**, **Select** and **View**; the top bar with
-**Start**, **Support check**, **Cut**, the piece count and **Save blueprint**; the cost under the title.*
+*The Workshop with a small hut on the plot: the rail with only **Build**, **Select** and **View**, the building bar
+beside it; the top bar with **Start**, **Support check**, **Cut**, the piece count, **Save blueprint** and
+**Materials**; the **Materials** panel at the right; the Build dock along the bottom on the **Building** tab, with the
+four pieces picked last under **Recent** and the wooden wall chosen.*
 
 ## Settings
 
-### Pieces tab
+### The Build dock
 
-The **Build** panel has two tabs at its top: **Pieces** and **Library**. **Pieces** lists everything players build,
-each with a small picture from the game's model:
+The **Build** dock spans the bottom of the window, so the plot keeps the rest. Its top row holds three tabs,
+**Pieces**, **Mod pieces** and **Library**, then the tab's own choices and its search. Drag its top edge up or down
+to make it taller or shorter, and click **▾** at its right end to fold it down to that row (**▴** opens it again).
+Both are kept for the next time.
+
+**Pieces** lists everything players build, each with a picture from the game's model:
 
 | Tab | What it holds |
 |---|---|
 | **Building**, **Heavy building**, **Furniture**, **Crafting**, **Misc**, **More** | The hammer's own tabs, in the game's order. |
 | **Plants** | The cultivator's pieces: crops, saplings and flowers. |
 | **Feasts** | The serving tray's pieces. |
-| **Mods** | The pieces your mods add: a row of buttons picks one mod (with its number of pieces), and the headings are the mod's own groups. Shown once the editor has learned them from a live game (see [Live mode](live-mode.md)). |
 
 In each tab the pieces are grouped by the crafting station they need, in the order players get them (none, workbench,
-stonecutter, forge, artisan table, black forge, galdr table), then by name.
+stonecutter, forge, artisan table, black forge, galdr table), then by name. Each group starts with the station's name.
+
+**Mod pieces** lists the pieces your mods add, one mod at a time: pick the mod in the list down its left side (with
+its number of pieces). The headings are the mod's own groups. The editor learns them from a live game: until then the
+tab says how (see [Live mode](live-mode.md#modded-games)).
 
 | Setting | What it does |
 |---|---|
-| **Search pieces** | Finds pieces in every tab by name or prefab (`stone floor`, `woodwall`). Every word must match. |
-| A piece's tile | Picks it. Its name and cost show under the list (`Costs Wood 2 (needs Workbench)`). Point at a tile for its prefab name. |
+| **Search pieces** | Finds pieces in every tab, the mods' too, by name or prefab (`stone floor`, `woodwall`). Every word must match. |
+| A piece's tile | Picks it. Its name and cost show at the dock's foot (`Wood Wall · Costs Wood 2 (needs Workbench)`), with its mod's name for a mod's piece. Point at a tile for its prefab name. |
+| **Recent** | The last 12 pieces you picked, newest first, at the dock's foot: click one to pick it again. Kept for the next time. |
+
+Each click puts down one piece; dragging does not paint more. With no piece picked, the Workshop picks the wooden wall.
+
+### The building bar
+
+The bar beside the tool rail holds how the piece goes down. It shows while **Build** is on.
+
+| Setting | What it does |
+|---|---|
 | **Snap to pieces** | On: the piece snaps to the pieces already there, like the hammer. Off: it stays where it touches what you point at (like holding `Alt` in game). See [Snapping](concepts/objects.md#snapping). |
 | **Grid** | **Off** (as in game), **0.5 m**, **1 m** or **2 m**: a point on the ground is rounded to this grid, counted from the plot's middle. A piece pointed at another piece snaps as usual. |
 | **Turn by** | How far `,` and `.` (or `Alt` + wheel) turn the piece: **1°**, **15°**, **22.5°** (the game's step, the default), **45°** or **90°**. |
-| **Lift** | `Ctrl` + wheel lifts or lowers the piece by 0.5 m a notch before it snaps (`Shift`: 0.1 m). The line shows the lift (`+1.5 m`); **Reset** takes it back to none. |
-
-Each click puts down one piece; dragging does not paint more. With no piece picked, the Workshop picks the wooden wall.
+| **Lift** | `Ctrl` + wheel lifts or lowers the piece by 0.5 m a notch before it snaps (`Shift`: 0.1 m). The bar shows the lift (`+1.5 m`); **Reset** takes it back to none. |
 
 ### Library tab
 
 ![The Library tab with two blueprints and a search](images/workshop-library.jpg)
-*The **Library** tab searching "hut": **Import file…** and **Generate dungeon…** at the top, then the two huts (the
-tall house is left out), each with its own picture, pieces, cost, **Open** and **Add**.*
+*The **Library** tab searching "hut": the search, **Import file…** and **Generate dungeon…** in the dock's top row,
+then the two huts side by side (the tall house is left out), each with its own picture, pieces, cost, **Open** and
+**Add**.*
 
 | Setting | What it does |
 |---|---|
 | **Search blueprints** | Keeps the blueprints with every word you type in their name, description or tags. |
 | **Open** | The blueprint alone on the plot, to change it (asks first when the plot is not saved). **Save blueprint** writes it back. |
 | **Add** | Adds the blueprint to the plot, in its middle. One undo step. |
-| Drag a row onto the plot | Adds the blueprint where you drop it. |
+| Drag a blueprint onto the plot | Adds the blueprint where you drop it. |
 | Drop files on the plot | `.blueprint` and `.vbuild` files from your file manager are imported, then added where they land. Dropped on a world, they are only imported. |
 | **Import file…** | Imports a `.blueprint` (Homestead, PlanBuild) or `.vbuild` file into the library. |
 | **Generate dungeon…** | Shows the dungeon generator (building pieces only; see [Dungeon](dungeons.md)). **Open on the plot** puts the dungeon there alone, **Add to the plot** adds it in the middle; either way its blueprint is kept in the library, without a `.png` picture beside it. **← Library** goes back. |
@@ -105,6 +128,19 @@ Homestead blueprint keeps its anchor at the plot's middle; other files are centr
 height, so the building stands as before when Homestead builds it. Pieces from mods you do not have are left out, and
 the message lists them. A blueprint opened from outside Homestead's folder asks before saving over a library blueprint
 of the same name.
+
+### Materials
+
+The **Materials** panel at the right lists what the building on the plot costs in game, and follows every change:
+
+| Part | What it lists |
+|---|---|
+| **Materials** | Each material with how many, most first. |
+| **Stations needed nearby** | The crafting stations that must be near to build it. |
+| **No known recipe** | Pieces the editor knows no recipe for (a mod's, before a live game told it), by mod. They are not counted. |
+| **Only the editor can place** | Statues, props, ships and creatures: Homestead's hammer skips them, so they are not counted. |
+
+**Materials** in the top bar (or the panel's **✕**) closes and opens it; the Workshop remembers which.
 
 ### Support check
 
@@ -232,6 +268,7 @@ known recipe (from mods) are listed apart; with none known, it reads `Cost unkno
 | `Ctrl` + wheel | Lift or lower the piece 0.5 m (`Shift`: 0.1 m). |
 | `Ctrl+S` | Save blueprint. |
 | `Ctrl+Z` | Undo. |
+| `Ctrl+Y` or `Ctrl+Shift+Z` | Redo. |
 
 All the editor's keys are in [Shortcuts](help/shortcuts.md).
 

@@ -54,7 +54,7 @@ public sealed partial class MainWindow
             Margin = new Thickness(10, 70, 10, 58),
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
-            Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ModToolPanel.Card, DungeonPanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, Blueprints.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Card, MaskPanel.Card },
+            Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ModToolPanel.Card, DungeonPanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, Blueprints.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Toolbar, MaskPanel.Card },
         };
         // Every panel of the column scrolls when the window is too short for it (a bar only then).
         foreach (var card in tools.Children.OfType<Border>())

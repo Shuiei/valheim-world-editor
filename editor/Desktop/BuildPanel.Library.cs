@@ -6,7 +6,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class BuildPanel
 {
     /// <summary>The Pieces, Library and generator views, one shown at a time.</summary>
-    private readonly StackPanel _pieces, _library, _dungeon;
+    private readonly Grid _pieces, _library, _dungeon;
 
     // ---- The Library tab: Homestead's blueprints, opened on the plot, added to it, or dragged onto it.
     /// <summary>Shows the pieces.</summary>
@@ -21,8 +21,8 @@ public sealed partial class BuildPanel
     /// <summary>Imports another mod's blueprint file (the window handles it).</summary>
     internal Button ImportButton { get; } = BlueprintsPanel.ImportFileButton();
 
-    /// <summary>The blueprint rows.</summary>
-    internal StackPanel LibraryList { get; } = new() { Spacing = 4 };
+    /// <summary>The blueprints, side by side as cards.</summary>
+    internal WrapPanel LibraryList { get; } = new() { ItemSpacing = 8, LineSpacing = 8 };
 
     /// <summary>Generate dungeon: the Dungeon panel's generator, made of building pieces, onto the plot.</summary>
     internal Button GenerateButton { get; } = new() { Content = Lang.T("build.label.generate"), FontSize = 12 };
@@ -33,17 +33,20 @@ public sealed partial class BuildPanel
     /// <summary>The dungeon generator, in its Workshop form.</summary>
     internal DungeonGenPanel Dungeon { get; } = new(inWorkshop: true);
 
-    /// <summary>Shows the Library (true, listed again) or the pieces (false).</summary>
+    /// <summary>Shows the Library (true, listed again) or the pieces (false: the tab they were on, hammer or mods).</summary>
     public void ShowLibrary(bool on)
     {
         _library.IsVisible = on;
         _pieces.IsVisible = !on;
         _dungeon.IsVisible = false;
-        PiecesTab.Classes.Set("on", !on);
-        LibraryTab.Classes.Set("on", on);
+        ShowViewParts(library: on);
         if (on)
         {
             RenderLibrary();
+        }
+        else
+        {
+            Render();
         }
     }
 
@@ -52,7 +55,21 @@ public sealed partial class BuildPanel
     {
         _library.IsVisible = _pieces.IsVisible = false;
         _dungeon.IsVisible = true;
-        PiecesTab.Classes.Set("on", false);
-        LibraryTab.Classes.Set("on", true);
+        ShowViewParts(library: true);
+    }
+
+    /// <summary>
+    /// Lights the tab shown, and shows what goes with it: the search and the hammer's tabs with the pieces (the hammer's
+    /// tabs not on Mod pieces), the Library's own row and no foot with the blueprints.
+    /// </summary>
+    private void ShowViewParts(bool library)
+    {
+        PiecesTab.Classes.Set("on", !library && _tab != Mods);
+        ModsTab.Classes.Set("on", !library && _tab == Mods);
+        LibraryTab.Classes.Set("on", library);
+        Search.IsVisible = !library;
+        _tabsBar.IsVisible = !library && _tab != Mods;
+        _libraryBar.IsVisible = library;
+        _footer.IsVisible = !library && !Folded;
     }
 }

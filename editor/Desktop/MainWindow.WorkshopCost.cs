@@ -16,8 +16,13 @@ public partial class MainWindow
         {
             return;
         }
-        var cost = Homestead.Cost(Workshop.Kinds(s.Scene));
+        var kinds = Workshop.Kinds(s.Scene);
+        var cost = Homestead.Cost(kinds);
         WorkshopCost = cost.Describe(5);
+        if (Materials.Card.IsVisible)
+        {
+            Materials.Show(kinds);
+        }
         SubtitleText.Text = Workshop.Pieces(s.Scene) == 0 ? Lang.T("workshop.blankPlot") : Lang.T("blueprints.cost", WorkshopCost);
         ToolTip.SetTip(SubtitleText, cost.Materials.Count == 0 ? null
             : string.Join("\n", cost.Materials.Select(m => $"{m.Name}: {m.Amount}")) + (cost.Stations.Count > 0 ? "\n" + Lang.T("workshop.near", string.Join(", ", cost.Stations)) : "")

@@ -9,6 +9,9 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class BuildPanel
 {
+    /// <summary>A blueprint's card's width in the Library, in pixels.</summary>
+    internal const double LibraryCardWidth = 380;
+
     /// <summary>Lists the blueprints in the folder that match the search.</summary>
     /// <param name="again">Reads the folder again; false (the search changed): the blueprints read last are searched.</param>
     internal void RenderLibrary(bool again = true)
@@ -67,7 +70,10 @@ public sealed partial class BuildPanel
         }
         var row = new Border
         {
-            Padding = new Thickness(4),
+            Width = LibraryCardWidth,
+            Padding = new Thickness(6),
+            BorderBrush = Ui.Line,
+            BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(6),
             Background = Brushes.Transparent,
             Cursor = new Cursor(StandardCursorType.Hand),

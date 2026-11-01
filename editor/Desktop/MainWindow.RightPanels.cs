@@ -15,21 +15,25 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// The right-hand panel chosen last (remembered between runs; null: none): what comes back when the Inspector, which
-    /// takes its place for a while, closes.
+    /// takes its place for a while, closes. In the Workshop, its Materials panel when it was left open.
     /// </summary>
-    internal Control? ChosenRight() => Prefs.Get("panel.right", "view") switch { "help" => HelpCard, "history" => History.Card, "none" => null, _ => ViewPanelCard };
+    internal Control? ChosenRight() => _kept != null ? (Prefs.Get("workshop.materials", true) ? Materials.Card : null)
+        : Prefs.Get("panel.right", "view") switch { "help" => HelpCard, "history" => History.Card, "none" => null, _ => ViewPanelCard };
 
     /// <summary>
     /// The right-hand panels share the place under the top bar: one at a time (null: none). The choice is remembered.
     /// </summary>
     internal void ShowRight(Control? panel)
     {
-        if (panel == ViewPanelCard || panel == HelpCard || panel == History.Card || panel == null)
+        // Remembered for the worlds only: the Workshop's own choice (Materials or none) is kept apart (ShowMaterials).
+        if (_kept == null && (panel == ViewPanelCard || panel == HelpCard || panel == History.Card || panel == null))
         {
             Prefs.Set("panel.right", panel == ViewPanelCard ? "view" : panel == HelpCard ? "help" : panel == History.Card ? "history" : "none");
         }
         ViewPanelCard.IsVisible = panel == ViewPanelCard;
         HelpCard.IsVisible = panel == HelpCard;
+        Materials.Card.IsVisible = panel == Materials.Card;
+        MaterialsButton.Classes.Set("on", Materials.Card.IsVisible);
         if (History.Card.IsVisible != (panel == History.Card))
         {
             History.Toggle();
@@ -72,6 +76,9 @@ public sealed partial class MainWindow
         ViewButton.Tip("top.view");
         HelpButton.Click += (_, _) => ShowRight(HelpCard.IsVisible ? null : HelpCard);
         HelpButton.Tip("top.help");
+        MaterialsButton.Click += (_, _) => ShowMaterials(!Materials.Card.IsVisible);
+        MaterialsButton.Tip("top.materials");
+        Materials.Closed += () => ShowMaterials(false);
         RedoButton.Click += async (_, _) => await Redo();
         SaveButton.Click += async (_, _) => await Save();
         SaveButton.Tip("top.save");
@@ -87,7 +94,7 @@ public sealed partial class MainWindow
             Orientation = Orientation.Horizontal,
             Spacing = 4,
             VerticalAlignment = VerticalAlignment.Center,
-            Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, SupportBox, CutBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
+            Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, SupportBox, CutBox, _pendingPill, DiscardButton, SaveButton, Sep(), MaterialsButton, HistoryButton, ViewButton, HelpButton },
         };
         Grid.SetColumn(right, 1);
         bar.Children.Add(left);
@@ -112,4 +119,40 @@ public sealed partial class MainWindow
     /// Where the pointer last was on the 3D view (null: off it), so the readout can follow a stroke's changes.
     /// </summary>
     private Point? _cursorAt;
+
+    /// <summary>
+    /// Shows the Workshop's Materials panel (true) or closes it; the choice is kept for the next time the Workshop opens.
+    /// </summary>
+    internal void ShowMaterials(bool on)
+    {
+        Prefs.Set("workshop.materials", on);
+        ShowRight(on ? Materials.Card : null);
+        if (on)
+        {
+            ShowWorkshopCost();
+        }
+    }
+
+    /// <summary>
+    /// Keeps the right-hand panels above the Build dock while it is shown (it spans the bottom of the view), and back down
+    /// to the status bar when it goes.
+    /// </summary>
+    private void KeepRightPanelsAboveDock()
+    {
+        void Fit()
+        {
+            double bottom = BuildPanel.Card.IsVisible ? BuildPanel.Card.Margin.Bottom + BuildPanel.Card.Bounds.Height + Ui.Gap : 58;
+            foreach (var right in new[] { ViewPanelCard, History.Card, Inspector.Card, HelpCard, Materials.Card })
+            {
+                right.Margin = new Thickness(right.Margin.Left, right.Margin.Top, right.Margin.Right, bottom);
+            }
+        }
+        BuildPanel.Card.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == IsVisibleProperty || e.Property == BoundsProperty)
+            {
+                Fit();
+            }
+        };
+    }
 }

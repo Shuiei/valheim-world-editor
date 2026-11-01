@@ -19,8 +19,9 @@ public partial class MainWindow
         CutSlider.Value = CutOff;
         // Solid pieces (the View panel and its See-through switch are away).
         View.SeeThroughBuildings = false;
-        ShowRight(null);
         ViewButton.IsVisible = false;
+        MaterialsButton.IsVisible = true;
+        ShowRight(ChosenRight());
         MaskPanel.Card.IsVisible = false;
         BuildPanel.Start();
     }
@@ -43,6 +44,9 @@ public partial class MainWindow
         View.ShowNewMarkers = UnsavedBox.IsChecked == true;
         View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
         ViewButton.IsVisible = true;
+        MaterialsButton.IsVisible = false;
+        // The worlds' own right-hand panel again (the Workshop's choice is kept apart).
+        ShowRight(ChosenRight());
         BuildPanel.Card.IsVisible = false;
         PlacePanel.Fill();
         PlaceTool.Notify();

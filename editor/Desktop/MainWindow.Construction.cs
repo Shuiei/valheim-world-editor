@@ -54,6 +54,7 @@ public sealed partial class MainWindow
         View.Place = PlaceInput;
         PlacePanel = new PlacePanel(PlaceInput, () => View.Scene, NameOfPrefab);
         BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
+        BuildPanel.Remember(Prefs);
         SetUpLibrary();
         WirePlacePanel();
         PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
@@ -84,7 +85,8 @@ public sealed partial class MainWindow
         KeepNoteBesideTools(tools);
         ViewPanelCard = ViewPanel();
         LayOutRightPanels();
-        _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, TopBar(), StatusBar() } };
+        _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, BuildPanel.Card, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, Materials.Card, TopBar(), StatusBar() } };
+        KeepRightPanelsAboveDock();
         _busy.Child = _busyText;
         _pages.Content = _editorPage;
         Content = new Grid { Children = { _pages, _busy } };
