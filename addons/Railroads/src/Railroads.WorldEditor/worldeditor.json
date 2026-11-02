@@ -58,7 +58,9 @@
     "bf_fit_end": { "label": "Far end", "readOnly": true, "help": "A fitted track's far end, from the piece along the world's axes (x east, y up, z north), in metres." },
     "bf_fit_way_a": { "label": "Way at the first end", "readOnly": true, "help": "Which way a fitted track leaves the end it was built from (where the piece stands)." },
     "bf_fit_way_b": { "label": "Way at the far end", "readOnly": true, "help": "Which way a fitted track reaches its far end." },
-    "bf_sent_by": { "label": "Sent by", "readOnly": true, "help": "The player who sent the train, told when a raised drawbridge holds it." }
+    "bf_sent_by": { "label": "Sent by", "readOnly": true, "help": "The player who sent the train, told when a raised drawbridge holds it." },
+    "bf_load": { "label": "Load", "readOnly": true, "help": "What the train carries, by the game's weight: its wagons' items and the pieces on its flatbeds. The server weighs it again every second (Railroads 0.4.1)." },
+    "bf_trip_coal": { "label": "Trip's coal rate", "readOnly": true, "help": "How fast the sent train burns coal on this trip, by its load as it was sent: 1 for an empty train (Railroads 0.4.1)." }
   },
   "ties": [
     { "name": "train", "root": "bf_wagons", "member": "bf_self", "idBytes": 12 },

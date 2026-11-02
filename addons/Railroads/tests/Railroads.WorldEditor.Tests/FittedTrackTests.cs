@@ -77,6 +77,7 @@ public sealed class FittedTrackTests : IDisposable
     [InlineData(1e7f, 0, 0)]
     [InlineData(0, 0, float.NaN)]
     [InlineData(70, 0, 0)]
+    [InlineData(0, 3, 33)]
     public void AFarEndNoFitHasGivesNoLine(float x, float y, float z)
     {
         var fit = new FakeObject(RailroadsMod.FittedTrack);
@@ -93,6 +94,13 @@ public sealed class FittedTrackTests : IDisposable
         Assert.NotNull(FittedTrack.LineOf(fit));
         fit.Vectors[RailroadsMod.Keys.FitWayA] = new Vector3(0, 0, 1000);
         Assert.Null(FittedTrack.LineOf(fit));
+        // The mod lays none for a way shorter than half a metre or longer than one and a half (Railroads 0.4.1).
+        fit.Vectors[RailroadsMod.Keys.FitWayA] = new Vector3(0, 0, 1.6f);
+        Assert.Null(FittedTrack.LineOf(fit));
+        fit.Vectors[RailroadsMod.Keys.FitWayA] = new Vector3(0.4f, 0, 0);
+        Assert.Null(FittedTrack.LineOf(fit));
+        fit.Vectors[RailroadsMod.Keys.FitWayA] = new Vector3(0, 0, 1.5f);
+        Assert.NotNull(FittedTrack.LineOf(fit));
         fit.Vectors[RailroadsMod.Keys.FitWayA] = Vector3.UnitZ;
         fit.Vectors[RailroadsMod.Keys.FitWayB] = new Vector3(float.PositiveInfinity, 0, 0);
         Assert.Null(FittedTrack.LineOf(fit));

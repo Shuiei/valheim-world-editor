@@ -86,6 +86,7 @@ public sealed class RailPlacer(ModelLibrary models, bool canTurn = true) : IObje
         copy.SetInt(Keys.Way, null);
         copy.SetFloat(Keys.Stop, null);
         copy.SetFloat(Keys.Speed, null);
+        copy.SetFloat(Keys.TripCoal, null);
         copy.SetString(Keys.Destination, null);
         copy.SetLong(Keys.SentBy, null);
         copy.SetString(Keys.Line, null);

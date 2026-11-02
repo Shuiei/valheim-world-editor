@@ -69,12 +69,20 @@ add-on knew, the placing of vehicles and signs or the data it set (checked by co
 the drawbridge and the feedback post, take the couplers off the vehicles' models (the mod builds them apart, from a
 model of their own) and put the old station back on the hammer.
 
-Railroads 0.4.0 is the version the add-on follows. 0.3.7 to 0.4.0 change none of the models, the track, the placing of
+Railroads 0.3.7 to 0.4.0 change none of the models, the track, the placing of
 vehicles and signs or the data the add-on knew (checked by comparing the versions' files, model by model, and their
 data keys): a station sign's turn now picks the side of the ghost train, which the mod works out from the turn and keeps
 nowhere; tame boars and vanilla carts ride on a flatbed under the keys of the pieces built on it. 0.4.0 adds the fitted
 track, whose shape is in its values, as the mod's own code builds it: drawn and laid out as the mod does from those
 values, it was not yet built in a game for these tests.
+
+Railroads 0.4.1 is the version the add-on follows. It changes none of the models, the track, the placing of vehicles
+and signs or the data the add-on knew (checked by comparing the versions' files, model by model, and their data keys).
+It lays no line for a fitted track with a shape no game builds (a far end more than 33 m away, a way shorter than half a
+metre or longer than one and a half): the add-on draws such a piece as its own model and puts no vehicle on it, as the
+game does. It adds 2 gauges on the locomotive's boiler, which the add-on leaves out with the levers and rods, and keeps
+on the locomotive the train's load (which the server weighs again every second) and a sent train's coal rate for its
+trip, which a pasted or moved train leaves behind with the rest of its trip.
 
 ## Good to know
 
@@ -121,7 +129,7 @@ dotnet test --project addons/Railroads/tests/Railroads.WorldEditor.Tests
 tools/addons.sh dist                    # dist/ValheimWorldEditor-addon-Railroads-<version>.zip
 ```
 
-Building the tests downloads Railroads 0.4.0, the version the add-on follows, from Thunderstore (never kept in the
+Building the tests downloads Railroads 0.4.1, the version the add-on follows, from Thunderstore (never kept in the
 repository): every model of it is read and drawn. The tests also replay objects the real mod made on a local server
 (`tests/Railroads.WorldEditor.Tests/fixtures/railroads-reference.txt`: track, a station sign, a train sent to it with
 a wagon and a flatbed carrying a floor, a hand cart), and track and an old station a player built, with their prices

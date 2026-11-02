@@ -25,7 +25,7 @@ public sealed class PastedCopies : ICopyRewriter
         RailroadsMod.Keys.After, RailroadsMod.Keys.Legs, RailroadsMod.Keys.Moving, RailroadsMod.Keys.Speed, RailroadsMod.Keys.Driver,
         RailroadsMod.Keys.Destination, RailroadsMod.Keys.Switch, RailroadsMod.Keys.Gear, RailroadsMod.Keys.Way, RailroadsMod.Keys.Stop,
         RailroadsMod.Keys.Front, RailroadsMod.Keys.Back, RailroadsMod.Keys.DeckPos, RailroadsMod.Keys.DeckRot, RailroadsMod.Keys.TrainNumber,
-        RailroadsMod.Keys.SentBy,
+        RailroadsMod.Keys.SentBy, RailroadsMod.Keys.TripCoal,
     ];
 
     /// <summary>The lines a vehicle keeps (bytes now; text in the mod's first versions): set again where it lands.</summary>
@@ -48,6 +48,7 @@ public sealed class PastedCopies : ICopyRewriter
         copy.SetVector3(RailroadsMod.Keys.Stop, null);
         copy.SetFloat(RailroadsMod.Keys.At, null);
         copy.SetFloat(RailroadsMod.Keys.Speed, null);
+        copy.SetFloat(RailroadsMod.Keys.TripCoal, null);
         foreach (string key in new[]
         {
             RailroadsMod.Keys.Dir, RailroadsMod.Keys.Moving, RailroadsMod.Keys.Switch, RailroadsMod.Keys.Gear, RailroadsMod.Keys.Way,
