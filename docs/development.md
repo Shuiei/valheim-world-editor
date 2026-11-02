@@ -156,11 +156,13 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
 
 1. Open a release pull request titled **`Release v<version>`** (`VERSION`'s version): it dates the
    `CHANGELOG.md` headings to release (`## v1.25.1 — 2026-10-12` instead of `— unreleased`), when
-   they are not dated yet. Optionally, write the GitHub release's notes in
+   they are not dated yet. When main has changes since the last release but `VERSION` is still that
+   release's (pull requests that bumped no version, such as an add-on's or a dependency update), it
+   raises `VERSION` too, a patch, with a dated section for it. Optionally, write the GitHub release's notes in
    `docs/releases/v<version>.md`; without it the notes are the CHANGELOG's sections since the last
    release (after "This release covers <first> to <version>" when there are several). The plugin's changelog on
    Thunderstore and Hexium is every release's notes, so write them for players. Make its branch from main and name it `release/v<version>`: when it changes only
-   `CHANGELOG.md` and `docs/releases/`, its pipeline runs no tests (its code is main's, tested as each
+   `VERSION`, `CHANGELOG.md` and `docs/releases/`, its pipeline runs no tests (its code is main's, tested as each
    pull request merged) and the checks main's ruleset requires pass at once.
 2. Merge it (squash: main's commit is then `Release v<version> (#<number>)`). On main, that commit,
    with a dated heading for `VERSION` and no `v<version>` tag yet, makes the pipeline a release one:
