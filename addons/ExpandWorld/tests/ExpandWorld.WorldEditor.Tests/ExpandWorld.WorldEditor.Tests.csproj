@@ -22,7 +22,7 @@
     <PackageReference Include="JunitXml.TestLogger" Version="8.1.0" />
     <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="18.11.0" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
-    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.2" />
     <!-- A copy of YamlDotNet to stand in for the one a BepInEx folder has: the add-on ships none and loads the player's. -->
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
