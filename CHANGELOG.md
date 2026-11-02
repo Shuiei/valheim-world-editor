@@ -5,6 +5,13 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.119.1 — 2026-11-02
+
+### Mods
+- **Railroads 0.4.1** (Railroads add-on 0.5.1): a fitted track with a shape no game builds is drawn as the game shows
+  it, the piece's own model unbent, with no train on it. A train's load and a sent train's coal rate show in the
+  inspector, read-only; a pasted or moved train leaves the coal rate behind with its trip.
+
 ## v1.119.0 — 2026-10-31
 
 ### Added
