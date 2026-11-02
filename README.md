@@ -1,3 +1,5 @@
+<img src="editor/Desktop/Assets/icon.png" alt="Valheim World Editor icon" width="128" align="right">
+
 # Valheim World Editor
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Shuiei/valheim-world-editor/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Shuiei/valheim-world-editor/tree/main)
