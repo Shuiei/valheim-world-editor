@@ -8,7 +8,7 @@ namespace Railroads.WorldEditor;
 /// its body, and for a vehicle its wheels under each axle (the locomotive's big driving wheels too), its couplers
 /// standing straight out and the hand cart's pump handle as it leans, for the old station its legs unless it was built
 /// without, for the drawbridge its leaves, chains and weights raised or lowered (<see cref="DrawbridgeParts"/>), the
-/// fitted track's rails bent along its line (<see cref="FittedTrack"/>). Each part in its material's colour. The levers, rods, lamps and loads the mod adds to its vehicles are left out.
+/// fitted track's rails bent along its line (<see cref="FittedTrack"/>). Each part in its material's colour. The levers, rods, gauges, lamps and loads the mod adds to its vehicles are left out.
 /// </summary>
 /// <param name="piece">The piece.</param>
 /// <param name="models">The mod's models.</param>

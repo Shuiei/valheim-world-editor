@@ -26,17 +26,21 @@ public static class FittedTrack
     /// <summary>The way an end leaves when the piece does not say: forward (north).</summary>
     private static readonly Vector3 Forward = Vector3.UnitZ;
 
-    /// <summary>The farthest far end drawn, in metres: twice the mod's longest fitted track (32 m).</summary>
-    public const float MaxReach = 64;
+    /// <summary>The farthest far end the mod lays (since Railroads 0.4.1), in metres: its longest fitted track (32 m) and a metre.</summary>
+    public const float MaxReach = 33;
 
-    /// <summary>The longest way drawn: the mod's ways are directions, a metre long.</summary>
-    public const float MaxWay = 2;
+    /// <summary>The shortest way the mod lays (since 0.4.1): its ways are directions, a metre long.</summary>
+    public const float MinWay = 0.5f;
+
+    /// <summary>The longest way the mod lays (since 0.4.1).</summary>
+    public const float MaxWay = 1.5f;
 
     /// <summary>
     /// The piece's line from its own place (along the world's axes), as its values give it; null without a far end, or
-    /// with values no fitted track the mod builds has (a far end past <see cref="MaxReach"/>, a way longer than
-    /// <see cref="MaxWay"/>, a value that is no number): a damaged world or blueprint must not make a line of millions of
-    /// points.
+    /// with values the mod lays no line for (since Railroads 0.4.1, a shape no game builds: a far end past
+    /// <see cref="MaxReach"/>, a way shorter than <see cref="MinWay"/> or longer than <see cref="MaxWay"/>, a value that
+    /// is no number). The mod then shows the piece's own model and runs no train on it; and a damaged world or blueprint
+    /// makes no line of millions of points.
     /// </summary>
     /// <param name="obj">The fitted track.</param>
     public static Vector3[]? LineOf(IObjectView obj)
@@ -46,14 +50,14 @@ public static class FittedTrack
             return null;
         }
         Vector3 wayA = Way(obj, RailroadsMod.Keys.FitWayA), wayB = Way(obj, RailroadsMod.Keys.FitWayB);
-        return Within(end, MaxReach) && Within(wayA, MaxWay) && Within(wayB, MaxWay) ? Line(end, wayA, wayB) : null;
+        return Within(end, 0, MaxReach) && Within(wayA, MinWay, MaxWay) && Within(wayB, MinWay, MaxWay) ? Line(end, wayA, wayB) : null;
     }
 
-    /// <summary>Whether a vector is a number no longer than a length.</summary>
-    private static bool Within(Vector3 v, float most)
+    /// <summary>Whether a vector is a number of a length from one to another.</summary>
+    private static bool Within(Vector3 v, float least, float most)
     {
         float length = v.Length();
-        return !float.IsNaN(length) && !float.IsInfinity(length) && length <= most;
+        return !float.IsNaN(length) && !float.IsInfinity(length) && length >= least && length <= most;
     }
 
     /// <summary>The way a piece says an end leaves, else forward.</summary>

@@ -297,6 +297,15 @@ public static class RailroadsMod
 
         /// <summary>The player who sent a train (long), told when a raised drawbridge holds it.</summary>
         public const string SentBy = "bf_sent_by";
+
+        /// <summary>
+        /// What a train carries, on its locomotive (float, the game's weight units): its wagons' and flatbeds' items, and
+        /// each piece on a flatbed. The server weighs it again every second (Railroads 0.4.1).
+        /// </summary>
+        public const string Load = "bf_load";
+
+        /// <summary>How fast a sent train burns coal on its trip, set as it is sent (float, 1 for an empty train; Railroads 0.4.1).</summary>
+        public const string TripCoal = "bf_trip_coal";
     }
 }
 

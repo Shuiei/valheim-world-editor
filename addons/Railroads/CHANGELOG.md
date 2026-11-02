@@ -3,6 +3,17 @@
 Changes to the Railroads add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.5.1 — 2026-11-02
+
+### Fixed
+- **A fitted track the game ignores is drawn as the game shows it.** Follows Railroads 0.4.1, which lays no line for a
+  fitted track with a shape no game builds (a far end more than 33 m away, or a way not about a metre long): the editor
+  draws it as the piece's own model, unbent, and puts no train on it.
+
+### Changed
+- Railroads 0.4.1's train load and a sent train's coal rate show in the inspector, read-only; a pasted or moved train
+  leaves the coal rate behind with its trip. The 2 new gauges on the boiler are not drawn, like the levers and rods.
+
 ## v0.5.0 — 2026-10-31
 
 ### Added

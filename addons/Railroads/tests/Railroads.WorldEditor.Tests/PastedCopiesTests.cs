@@ -20,6 +20,7 @@ public class PastedCopiesTests
         new("float", RailroadsMod.Keys.Speed), new("long", RailroadsMod.Keys.Driver), new("string", RailroadsMod.Keys.Destination),
         new("int", RailroadsMod.Keys.Switch), new("int", RailroadsMod.Keys.Gear), new("int", RailroadsMod.Keys.Way),
         new("float", RailroadsMod.Keys.Stop), new("int", RailroadsMod.Keys.TrainNumber), new("long", RailroadsMod.Keys.SentBy),
+        new("float", RailroadsMod.Keys.TripCoal),
     ];
 
     /// <summary>A value of a type under a key.</summary>

@@ -59,6 +59,7 @@ public sealed class RailPlacerTests : IDisposable
         train.Floats[RailroadsMod.Keys.Speed] = 9;
         train.Ints[RailroadsMod.Keys.Coal] = 12;
         train.Longs[RailroadsMod.Keys.SentBy] = 77;
+        train.Floats[RailroadsMod.Keys.TripCoal] = 1.4f;
 
         _placer.Place([train], new ObjectsArea(track));
 

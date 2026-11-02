@@ -40,8 +40,12 @@ public class RealModTests
         var known = Models().Select(m => m.Data).ToHashSet();
         var files = Directory.GetFiles(Path.Combine(Folder, RailroadsMod.MeshFolder), "*.bfm").Select(Path.GetFileNameWithoutExtension).ToList();
 
-        // The levers, rods, coal and loads the add-on leaves out.
-        string[] notDrawn = ["cargo_1", "cargo_2", "cargo_3", "cargo_4", "coal", "crosshead", "lever", "rod_eccentric", "rod_main", "rod_valve", "whistle_lever"];
+        // The levers, rods, coal and loads the add-on leaves out, and the locomotive's 2 gauges (Railroads 0.4.1).
+        string[] notDrawn =
+        [
+            "cargo_1", "cargo_2", "cargo_3", "cargo_4", "coal", "crosshead", "lever", "rod_eccentric", "rod_main", "rod_valve", "whistle_lever",
+            "gauge_cap", "gauge_face", "gauge_icon_load", "gauge_icon_speed", "gauge_marks", "gauge_marks_end", "gauge_needle", "gauge_rim",
+        ];
         Assert.Equal(files.Order(StringComparer.Ordinal), known.Concat(notDrawn).Order(StringComparer.Ordinal));
     }
 
