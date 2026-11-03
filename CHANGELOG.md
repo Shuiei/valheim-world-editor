@@ -5,6 +5,13 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.119.2 — 2026-11-03
+
+### Mods
+- **ValheimRAFT 5.1.3** (ValheimRAFT add-on 0.2.0, unchanged): checked on a server running it, saved and live.
+  Vehicles are drawn, pasted, moved and deleted as the mod builds them, and the ropes 5.1.3 ties again between pieces
+  of one vehicle are drawn where the mod ties them.
+
 ## v1.119.1 — 2026-11-02
 
 ### Mods
