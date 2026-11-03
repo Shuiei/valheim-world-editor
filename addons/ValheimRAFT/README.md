@@ -17,8 +17,8 @@ with it. ValheimRAFT itself is unchanged and stays in `BepInEx/plugins`; this re
     own turn;
   - what a vehicle **carries** (a cart, an animal) where it was saved.
 
-  Checked on a server running ValheimRAFT 5.1.1, as on 5.0.9 before it: on tilted ships, every piece the editor draws
-  stands where the mod built it, to a few hundredths of a millimetre.
+  Checked on a server running ValheimRAFT 5.1.3, as on 5.1.1 and 5.0.9 before it: on tilted ships, every piece the
+  editor draws stands where the mod built it, to a few hundredths of a millimetre.
 - **Moves, copies and deletes them whole.** Selecting any piece takes the whole vehicle, as with any
   [linked objects](../../docs/select.md#ships-and-other-linked-objects): moving, turning, deleting, the Area tool's
   Remove objects, copies and blueprints. What a vehicle carries goes with it. Each pasted vehicle gets ids of its own;
@@ -58,7 +58,8 @@ What the game's saved data cannot tell:
 - **A docked vehicle** names its dock clamp by the id the game gives that object while the world runs, given again
   each time the world loads: the inspector shows it, the editor does not follow it.
 - **Live, with a player near the vehicle**: not checked (there was no game client). The bridge then makes the objects
-  again where they go instead of moving them, as for a paste, which was checked.
+  again where they go instead of moving them, as for a paste; with ValheimRAFT 5.1.3, that was checked on a server
+  holding the vehicle's area loaded: the mod built the moved ship where the editor draws it.
 
 The first rafts (`MBRaft`, removed from the mod in 3.0) are not loaded by the mod any more. Pieces whose turn older
 versions kept as a quaternion are read.
@@ -90,6 +91,9 @@ where the mod built it. Both were recorded on ValheimRAFT 5.0.9. On 5.1.1, the s
 two ships on a local server, which saved the world and loaded it again: every piece stood where the add-on puts it
 (within 0.04 mm), on the swivels' platforms, the sail on its mast's yard and the parked land vehicle too; the rope
 anchor's, dock clamp's, rope ladder's and swivel's prefab values, and the tie points on a Karve and a boar, were
-unchanged. The first ship's ropes were not tied: 5.1 saves and loads ropes as before, but no longer ties a new rope from
-an anchor on a vehicle to a piece on a vehicle, unless that piece is another anchor. The add-on's version is `VERSION` here, its changes
-`CHANGELOG.md`: it goes out with every editor release, under its own version.
+unchanged. The first ship's ropes were not tied: 5.1.1 saves and loads ropes as before, but no longer ties a new rope
+from an anchor on a vehicle to a piece on a vehicle. On 5.1.3, which ties them again (it refuses only a dock clamp's
+rope between two vehicles), the same two ships and a copy the editor pasted were built and loaded again the same way,
+every piece within 0.07 mm of where the editor draws it, saved and live; the first ship's ropes were tied to the chest
+and the other anchor, where the add-on draws them, and the copy's to its own pieces. The add-on's version is `VERSION`
+here, its changes `CHANGELOG.md`: it goes out with every editor release, under its own version.
