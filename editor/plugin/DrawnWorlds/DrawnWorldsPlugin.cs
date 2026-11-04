@@ -29,7 +29,7 @@ public sealed partial class DrawnWorldsPlugin : BaseUnityPlugin
     public const string LandVersion = "1";
 
     /// <summary>The plugin's log.</summary>
-    internal static ManualLogSource Log;
+    internal static ManualLogSource Log { get; private set; }
 
     /// <summary>The maps of the worlds read from their files, by world.</summary>
     private static readonly ConditionalWeakTable<World, byte[]> Maps = new();
@@ -38,13 +38,13 @@ public sealed partial class DrawnWorldsPlugin : BaseUnityPlugin
     /// The land of the world running, or null (a world not drawn, the main menu's): what the patched generator answers
     /// from. Set before the generator lays the world's water out (WorldGenerator.Initialize).
     /// </summary>
-    internal static DrawnLand Land;
+    internal static DrawnLand Land { get; private set; }
 
     /// <summary>The map <see cref="Land"/> was made of (so the same map is not laid out twice).</summary>
     private static byte[] _landOf;
 
     /// <summary>The start the map draws, as the zone the start temple is looked for from; null for the middle.</summary>
-    internal static Vector2s? StartZone;
+    internal static Vector2s? StartZone { get; private set; }
 
     /// <summary>Patches the game.</summary>
     private void Awake()
