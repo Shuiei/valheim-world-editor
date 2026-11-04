@@ -168,6 +168,43 @@ public sealed partial class DrawnWorldsPlugin
     }
 
     /// <summary>
+    /// A location kind of a biome the drawing does not have is skipped: the game would fail picking a point of that
+    /// biome, and stop laying out every kind after it. Each kind draws from its own seed, so the others are laid out as
+    /// they would be (and as the editor lays them out: SeedLocations.Placer skips the same kinds).
+    /// </summary>
+    [HarmonyPatch(typeof(ZoneSystem), "GenerateLocationsTimeSliced", [typeof(ZoneSystem.ZoneLocation), typeof(System.Diagnostics.Stopwatch), typeof(ZPackage)])]
+    private static class MissingBiome
+    {
+        private static bool Prefix(ZoneSystem.ZoneLocation location, ZPackage iterationsPkg, ref System.Collections.IEnumerator __result)
+        {
+            if (Land == null || location.m_centerFirst || !Lacks(location.m_biome))
+            {
+                return true;
+            }
+            Log.LogInfo($"{location.m_prefab.Name}: not laid out, the drawn world has none of its biome ({location.m_biome}).");
+            // As a kind that tried nothing: no tries made (the game reads them back for its progress).
+            iterationsPkg.Write(0);
+            iterationsPkg.SetPos(0);
+            __result = Array.Empty<object>().GetEnumerator();
+            return false;
+        }
+
+        /// <summary>Whether one of these biomes has no point at all on the world's biome map.</summary>
+        private static bool Lacks(Heightmap.Biome biomes)
+        {
+            var points = ZNet.World.m_biomeData.Biomes;
+            for (int bit = 1; bit != 0 && bit <= (int)biomes; bit <<= 1)
+            {
+                if (((int)biomes & bit) != 0 && (!points.TryGetValue((Heightmap.Biome)bit, out var info) || info.AllPoints.Count == 0))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /// <summary>
     /// The start temple, the one kind the game lays out from the middle out, looked for from the start drawn: the same
     /// draws, around the start's zone (ZoneSystem.GetRandomZone serves only such kinds).
     /// </summary>
