@@ -92,7 +92,7 @@ Fixed names, so pages can link to each other. A tool page keeps its file name (l
 | `start/first-build.md` | Getting started | The Workshop: a small hut, the support check, save it as a blueprint, paste it into a world. |
 | `guides/*.md` | How-to | One task each (list in `README.md`). |
 | `editor-basics.md` | Tool reference | The window: start page, top bar, rail, panels, camera, Walk and Fly, the area and Follow, saving, Discard, History, View panel. |
-| `map.md`, `terrain.md` (sculpt and paint brushes), `shape.md`, `mountain.md`, `path.md`, `masks.md`, `measure.md`, `area.md`, `place.md`, `select.md`, `workshop.md`, `dungeons.md`, `new-world.md`, `live-mode.md`, `scripting.md`, `claude.md` | Tool reference | One tool or screen each, on the template. |
+| `map.md`, `terrain.md` (sculpt and paint brushes), `shape.md`, `mountain.md`, `path.md`, `masks.md`, `measure.md`, `area.md`, `place.md`, `select.md`, `workshop.md`, `dungeons.md`, `new-world.md`, `draw-world.md`, `live-mode.md`, `scripting.md`, `claude.md` | Tool reference | One tool or screen each, on the template. |
 | `concepts/areas-and-zones.md` | Concept | `## Zones`, `## The area`, `## The locked edge`, `## Follow` |
 | `concepts/saving-and-history.md` | Concept | `## Pending changes`, `## Saving a world`, `## Applying live`, `## History`, `## Backups` |
 | `concepts/ground-limits.md` | Concept | `## The game's 8 m limit`, `## No limit`, `## Locations level the ground`, `## Limit marks` |

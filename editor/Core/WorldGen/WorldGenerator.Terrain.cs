@@ -53,6 +53,13 @@ public sealed partial class WorldGenerator
         nearEdge *= 1.0 - GenMath.Clamp01(Math.Abs(px) / _v.AshlandsWidth);
         // Down to the sea floor at the world's edge.
         double inside = 1.0 - GenMath.Clamp01((GenMath.Length(px, pz) - _v.AshlandsSink) / 600.0);
+        if (_land != null)
+        {
+            // A drawn world's Ashlands are wherever the player drew them: all of them as craggy as the game's are along
+            // its edge, none sunk (the drawing's own sea makes their coasts).
+            nearEdge = 1.0;
+            inside = 1.0;
+        }
         px += (double)(100000f + _v.DetailX);
         pz += (double)(100000f + _offsetDetail);
         double cells = 0.0, weight = 1.0, freq = (double)0.33f;

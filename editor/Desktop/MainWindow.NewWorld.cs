@@ -55,6 +55,18 @@ public sealed partial class MainWindow
         _pages.Content = page.View;
     }
 
+    /// <summary>The Draw a world page, or null when it is not shown.</summary>
+    internal DrawWorldPage? DrawWorld { get; private set; }
+
+    /// <summary>Shows a new Draw a world page.</summary>
+    internal void ShowDrawWorld()
+    {
+        var page = DrawWorld = new DrawWorldPage();
+        page.BackRequested += () => { page.Dispose(); DrawWorld = null; ShowStart(); };
+        Title = Lang.T("world.title.drawWorld", BuildInfo.Version);
+        _pages.Content = page.View;
+    }
+
     /// <summary>
     /// Makes a world in <paramref name="folder"/> and opens it; on failure the New world page says why.
     /// </summary>

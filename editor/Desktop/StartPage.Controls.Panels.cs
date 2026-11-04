@@ -19,6 +19,10 @@ public sealed partial class StartPage
     internal Button NewWorldButton { get; } = new Button { Content = Lang.T("start.label.newWorld"), FontSize = 13, HorizontalAlignment = HorizontalAlignment.Left }.Classed("primary");
     /// <summary>Make a new world was clicked.</summary>
     public event Action? NewWorldRequested;
+    /// <summary>Draw a world on a master map.</summary>
+    internal Button DrawWorldButton { get; } = new Button { Content = Lang.T("start.label.drawWorld"), FontSize = 13, HorizontalAlignment = HorizontalAlignment.Left };
+    /// <summary>Draw a world was clicked.</summary>
+    public event Action? DrawWorldRequested;
     /// <summary>Open the Workshop on a blank plot.</summary>
     internal Button NewBuildingButton { get; } = new Button { Content = Lang.T("start.label.openWorkshop"), FontSize = 13, HorizontalAlignment = HorizontalAlignment.Left }.Classed("primary");
     /// <summary>The Workshop page's copy of Homestead's state.</summary>

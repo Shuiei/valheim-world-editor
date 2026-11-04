@@ -14,15 +14,15 @@ public static partial class SeedLocations
 
         /// <summary>
         /// A zone whose corner lies within reach of the middle (and inside the world: the rules' radius, the game's
-        /// 10000 m).
+        /// 10000 m); with <paramref name="around"/>, within reach of that zone instead (a drawn world's start).
         /// </summary>
-        internal (int X, int Y) ZoneNearMiddle(float reach)
+        internal (int X, int Y) ZoneNearMiddle(float reach, (int X, int Y) around = default)
         {
             int n = (int)reach / 64;
             float radius = _gen.Rules.Radius;
             while (true)
             {
-                var zone = (X: Rnd.Range(-n, n), Y: Rnd.Range(-n, n));
+                var zone = (X: around.X + Rnd.Range(-n, n), Y: around.Y + Rnd.Range(-n, n));
                 float cx = zone.X * 64f, cy = zone.Y * 64f;
                 if (MathF.Sqrt(cx * cx + cy * cy) < radius)
                 {
