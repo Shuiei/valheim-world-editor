@@ -130,13 +130,13 @@ public sealed partial class WorldGenerator
     /// the rules turn the gap off). In the generator's coordinates.
     /// </summary>
     private double AshlandsGap(float x, float z) =>
-        EdgeGap(x, z + _v.AshlandsYOffset, Wave(x, z), _v.AshlandsMinDistance, _v.AshlandsGapWidth, _v.AshlandsGap);
+        _land != null ? 1.0 : EdgeGap(x, z + _v.AshlandsYOffset, Wave(x, z), _v.AshlandsMinDistance, _v.AshlandsGapWidth, _v.AshlandsGap);
 
     /// <summary>
     /// The same for the Deep North's edge (the game's CreateDeepNorthGap).
     /// </summary>
     public double CreateDeepNorthGap(float x, float z) =>
-        EdgeGap(x, z + _v.DeepNorthGapShift, Wave(x, z), _v.DeepNorthGapRadius, _v.DeepNorthGapWidth, _v.DeepNorthGap);
+        _land != null ? 1.0 : EdgeGap(x, z + _v.DeepNorthGapShift, Wave(x, z), _v.DeepNorthGapRadius, _v.DeepNorthGapWidth, _v.DeepNorthGap);
 
     /// <summary>
     /// 0 on an edge circle, rising (eased) to 1 within <paramref name="width"/> m to either side; 1 everywhere when

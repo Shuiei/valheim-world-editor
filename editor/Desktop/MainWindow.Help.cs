@@ -22,6 +22,10 @@ public partial class MainWindow
         {
             return HelpTopics.NewWorld;
         }
+        if (DrawWorld != null && page == DrawWorld.View)
+        {
+            return HelpTopics.DrawWorld;
+        }
         if (Inspector.Card.IsVisible)
         {
             return HelpTopics.Inspector;

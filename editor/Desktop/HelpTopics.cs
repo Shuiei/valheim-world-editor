@@ -15,6 +15,9 @@ public static class HelpTopics
     /// <summary>A new world: a seed's world before it exists.</summary>
     public static HelpTarget NewWorld { get; } = new("new-world.md");
 
+    /// <summary>Draw a world: a master map painted, and the world it makes.</summary>
+    public static HelpTarget DrawWorld { get; } = new("draw-world.md");
+
     /// <summary>The 3D editor's window: the top bar, the rail, the camera.</summary>
     public static HelpTarget Editor { get; } = new("editor-basics.md");
 

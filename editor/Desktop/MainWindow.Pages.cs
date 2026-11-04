@@ -18,6 +18,7 @@ public sealed partial class MainWindow
             StartPage.OpenRequested += async (open, what) => await OpenWorld(open, what);
             StartPage.WorkshopRequested += async path => await OpenWorkshop(path);
             StartPage.NewWorldRequested += ShowNewWorld;
+            StartPage.DrawWorldRequested += ShowDrawWorld;
             StartPage.OpenUrl = Launcher.LaunchUriAsync;
             StartPage.SettingsRequested += async () =>
             {

@@ -111,7 +111,7 @@ public static partial class SeedLocations
                 (int X, int Y) zone;
                 if (rule.CenterFirst != 0)
                 {
-                    zone = ZoneNearMiddle(reach++);
+                    zone = ZoneNearMiddle(reach++, ZoneOf(StartOf(rule)));
                 }
                 else if (_map().RandomPoint(biomes, rule.MinAltitude >= 0f) is { } point)
                 {

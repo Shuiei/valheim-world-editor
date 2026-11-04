@@ -66,6 +66,7 @@ from a task below. In the editor, `F1` or the small **?** at the top of a panel 
 - [The Workshop](workshop.md): build on a blank plot and keep it as a blueprint.
 - [Dungeons](dungeons.md): generate a dungeon, or edit the game's rooms one by one.
 - [A new world](new-world.md): see a seed's world before it exists, and make it.
+- [Draw a world](draw-world.md): paint the biomes, rivers, lakes and seas of your own world.
 - [Live mode](live-mode.md): Apply live, Auto, Reload and the players, while the game runs.
 - [Script](scripting.md): shape, paint and fill an area with C# scripts.
 - [Claude](claude.md): what Claude can do in the editor, and its limits.

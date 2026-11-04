@@ -119,6 +119,8 @@ public sealed partial class StartPage
         NewBuildingButton.Click += (_, _) => WorkshopRequested?.Invoke(null);
         NewWorldButton.Tip("start.new");
         NewWorldButton.Click += (_, _) => NewWorldRequested?.Invoke();
+        DrawWorldButton.Tip("start.drawWorld");
+        DrawWorldButton.Click += (_, _) => DrawWorldRequested?.Invoke();
 
         // Home: the game when it runs, then what was opened last.
         HomePanel.Children.Add(_running);
@@ -135,6 +137,8 @@ public sealed partial class StartPage
         // A new world.
         NewWorldPanel.Children.Add(NewWorldButton);
         NewWorldPanel.Children.Add(Hint(Lang.T("start.hint.newWorld")));
+        NewWorldPanel.Children.Add(DrawWorldButton);
+        NewWorldPanel.Children.Add(Hint(Lang.T("start.hint.drawWorld")));
 
         var footer = new StackPanel
         {

@@ -5,6 +5,13 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.120.0 — unreleased
+
+### Added
+- **Draw a world.** Under A new world, paint your own world's biomes, rivers, lakes, seas and start point on a map
+  (or open a picture drawn elsewhere), and see the world the game will make from it, with where its altars and traders
+  go. See [Draw a world](docs/draw-world.md).
+
 ## v1.119.2 — 2026-11-03
 
 ### Mods

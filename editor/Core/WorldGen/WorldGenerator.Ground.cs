@@ -22,7 +22,7 @@ public sealed partial class WorldGenerator
             return _continent;
         }
         // Expand World Size's altitude transform (its postfix on the game's GetBaseHeight) lies over the shape.
-        float h = _v.Altitude(WorkOutContinent(x, z));
+        float h = _v.Altitude(_land != null ? DrawnContinent(x, z) : WorkOutContinent(x, z));
         (_continentOf, _continentX, _continentZ, _continent) = (_number, bx, bz, h);
         return h;
     }
@@ -83,6 +83,25 @@ public sealed partial class WorldGenerator
             h = GenMath.Lerp(GenMath.Lerp(0.28f, 0.38f, t), h, GenMath.Step((float)(_mountainFreeRadius - 400.0), _mountainFreeRadius, fromMiddle));
         }
         return h * 1f + 0f;
+    }
+
+    /// <summary>
+    /// The continents of a drawn world (<see cref="_land"/>): the drawing's inside the world, then sunk past its edge as
+    /// the game sinks its own.
+    /// </summary>
+    private float DrawnContinent(float x, float z)
+    {
+        float h = _land!.Continent(x, z);
+        float fromMiddle = GenMath.Length(x, z);
+        if (fromMiddle > _v.WorldSize)
+        {
+            h = GenMath.Lerp(h, -0.2f, GenMath.Step(_v.WorldSize, _v.EdgeOfWorld, fromMiddle));
+            if (fromMiddle > _v.EdgeInner)
+            {
+                h = GenMath.Lerp(h, -2f, Utils.LerpStep(_v.EdgeInner, _v.EdgeOfWorld, fromMiddle));
+            }
+        }
+        return h;
     }
 
     /// <summary>
