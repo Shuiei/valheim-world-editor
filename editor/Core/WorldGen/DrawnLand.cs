@@ -176,7 +176,7 @@ public sealed class DrawnLand
     /// </summary>
     private static float[] Distances(byte[] cells, Func<byte, bool> feature, out int[] nearest)
     {
-        const double far = 1e12;
+        const double Far = 1e12;
         int n = Size, count = n * n;
         double[] d2 = new double[count];
         nearest = new int[count];
@@ -187,7 +187,7 @@ public sealed class DrawnLand
         }
         for (int i = 0; i < count; i++)
         {
-            d2[i] = isFeature[cells[i]] ? 0.0 : far;
+            d2[i] = isFeature[cells[i]] ? 0.0 : Far;
             nearest[i] = i;
         }
         double[] f = new double[n], outD = new double[n], z = new double[n + 1];
@@ -217,7 +217,7 @@ public sealed class DrawnLand
         float[] d = new float[count];
         for (int i = 0; i < count; i++)
         {
-            d[i] = d2[i] >= far ? (float)far : (float)Math.Sqrt(d2[i]);
+            d[i] = d2[i] >= Far ? (float)Far : (float)Math.Sqrt(d2[i]);
         }
         return d;
     }
@@ -225,11 +225,11 @@ public sealed class DrawnLand
     /// <summary>One line of the distance transform: out[q] = min over p of (q - p)² + f[p], and the feature p carried.</summary>
     private static void Envelope(double[] f, int[] fIdx, int n, double[] outD, int[] outIdx, int[] v, double[] z)
     {
-        const double far = 1e12;
+        const double Far = 1e12;
         int k = -1;
         for (int q = 0; q < n; q++)
         {
-            if (f[q] >= far)
+            if (f[q] >= Far)
             {
                 continue;
             }
@@ -253,7 +253,7 @@ public sealed class DrawnLand
         {
             for (int q = 0; q < n; q++)
             {
-                outD[q] = far;
+                outD[q] = Far;
                 outIdx[q] = fIdx[q];
             }
             return;

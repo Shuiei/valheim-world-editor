@@ -2464,7 +2464,7 @@
   "tip.drawWorld.tool.brush": "Paint with the kind chosen in the legend.",
   "tip.drawWorld.tool.fill": "Fill the area clicked (all of it of one kind, touching) with the kind chosen in the legend.",
   "tip.drawWorld.tool.start": "Put the start point where you click.",
-  "tip.drawWorld.kind": "{0} ({1} in the picture)",
+  "drawWorld.kindTip": "{0} ({1} in the picture)",
   "tip.drawWorld.new": "Start again on an empty sea (Undo brings the drawing back).",
   "tip.drawWorld.open": "Open a master map saved as a PNG picture (from here, or drawn in another program with the legend's colours).",
   "tip.drawWorld.save": "Save the drawing as a PNG picture, to come back to it or share it.",

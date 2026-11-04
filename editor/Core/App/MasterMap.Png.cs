@@ -7,6 +7,9 @@ public sealed partial class MasterMap
     /// <summary>How far (in RGB, straight-line) a pixel's colour may be from the legend's to count as it.</summary>
     public const int Tolerance = 48;
 
+    /// <summary>A start pixel, among a picture's pixels snapped to the legend's kinds (no kind is this high).</summary>
+    private const byte StartMark = 255;
+
     /// <summary>A picture read as a master map, with what the reading noticed.</summary>
     /// <param name="Map">The map.</param>
     /// <param name="Unknown">Pixels of a colour too far from every colour of the legend (each taken as the nearest).</param>
@@ -28,8 +31,7 @@ public sealed partial class MasterMap
         {
             throw new InvalidDataException(Lang.T("masterMap.error.notSquare", img.Width, img.Height));
         }
-        // Each pixel of the picture snapped once (start = 255).
-        const byte startMark = 255;
+        // Each pixel of the picture snapped once (the start's pixels StartMark).
         int n = img.Width;
         byte[] snapped = new byte[n * n];
         int unknown = 0;
@@ -39,7 +41,7 @@ public sealed partial class MasterMap
             byte r = img.Rgb[i * 3], g = img.Rgb[i * 3 + 1], b = img.Rgb[i * 3 + 2];
             if (Distance2(r, g, b, StartColour.R, StartColour.G, StartColour.B) <= Tolerance * Tolerance)
             {
-                snapped[i] = startMark;
+                snapped[i] = StartMark;
                 continue;
             }
             var (kind, d2) = Nearest(r, g, b);
@@ -58,11 +60,11 @@ public sealed partial class MasterMap
             {
                 int sx = (int)((long)col * n / Size);
                 byte c = snapped[sy * n + sx];
-                cells[row * Size + col] = c == startMark ? Around(snapped, n, sx, sy, startMark) : c;
+                cells[row * Size + col] = c == StartMark ? Around(snapped, n, sx, sy) : c;
             }
         }
         // Start pixels that touch are one start (drawn bigger than a pixel); groups apart are several.
-        var (groups, middle) = StartGroups(snapped, n, startMark);
+        var (groups, middle) = StartGroups(snapped, n);
         (int, int)? start = middle is var (mx, my) ? ((int)((mx + 0.5) * Size / n), (int)((my + 0.5) * Size / n)) : null;
         return new Reading(new MasterMap(cells, start), unknown, firstUnknown, groups > 1 ? groups : 0);
     }
@@ -71,7 +73,7 @@ public sealed partial class MasterMap
     /// The groups of touching start pixels (sideways, up and down or across a corner), counted up to 100 (plenty to say
     /// there are too many), and the middle of the first one (in the picture's pixels), or null when there is none.
     /// </summary>
-    private static (int Groups, (double X, double Y)? First) StartGroups(byte[] snapped, int n, byte startMark)
+    private static (int Groups, (double X, double Y)? First) StartGroups(byte[] snapped, int n)
     {
         bool[] seen = new bool[snapped.Length];
         int groups = 0;
@@ -79,7 +81,7 @@ public sealed partial class MasterMap
         var todo = new Stack<int>();
         for (int i = 0; i < snapped.Length && groups < 100; i++)
         {
-            if (snapped[i] != startMark || seen[i])
+            if (snapped[i] != StartMark || seen[i])
             {
                 continue;
             }
@@ -97,7 +99,7 @@ public sealed partial class MasterMap
                     for (int dx = -1; dx <= 1; dx++)
                     {
                         int nx = x + dx, ny = y + dy;
-                        if (nx >= 0 && ny >= 0 && nx < n && ny < n && snapped[ny * n + nx] == startMark && !seen[ny * n + nx])
+                        if (nx >= 0 && ny >= 0 && nx < n && ny < n && snapped[ny * n + nx] == StartMark && !seen[ny * n + nx])
                         {
                             seen[ny * n + nx] = true;
                             todo.Push(ny * n + nx);
@@ -111,7 +113,7 @@ public sealed partial class MasterMap
     }
 
     /// <summary>The kind most of the pixels round a start pixel are (the Meadows when all are start pixels).</summary>
-    private static byte Around(byte[] snapped, int n, int x, int y, byte startMark)
+    private static byte Around(byte[] snapped, int n, int x, int y)
     {
         Span<int> votes = stackalloc int[Legend.Count];
         for (int r = 1; r <= 4; r++)
@@ -121,7 +123,7 @@ public sealed partial class MasterMap
                 for (int dx = -r; dx <= r; dx++)
                 {
                     int px = x + dx, py = y + dy;
-                    if (px >= 0 && py >= 0 && px < n && py < n && snapped[py * n + px] is var c && c != startMark)
+                    if (px >= 0 && py >= 0 && px < n && py < n && snapped[py * n + px] is var c && c != StartMark)
                     {
                         votes[c]++;
                     }
