@@ -180,6 +180,8 @@ public sealed partial class DrawWorldPage
                 new WrapPanel { Children = { drawing, world }, ItemSpacing = 6 },
                 Ui.Hint(Lang.T("drawWorld.hint.world")),
                 Facts,
+                new TextBlock { Text = Lang.T("drawWorld.head.checks"), FontSize = 13, FontWeight = FontWeight.SemiBold },
+                Checks,
                 CreateRows(),
             },
         });
@@ -259,6 +261,7 @@ public sealed partial class DrawWorldPage
             int count = n[(int)e.Kind];
             _shares[e.Kind].Text = count == 0 ? "" : of > 0 && count * 1000L / of == 0 ? "<0.1%" : $"{count * 100.0 / of:0.#}%";
         }
+        ScheduleChecks();
     }
 
     /// <summary>
