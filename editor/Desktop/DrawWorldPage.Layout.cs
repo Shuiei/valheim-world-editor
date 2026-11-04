@@ -169,6 +169,7 @@ public sealed partial class DrawWorldPage
                 new WrapPanel { Children = { drawing, world }, ItemSpacing = 6 },
                 Ui.Hint(Lang.T("drawWorld.hint.world")),
                 Facts,
+                CreateRows(),
             },
         });
 
@@ -269,7 +270,7 @@ public sealed partial class DrawWorldPage
         }
         else
         {
-            Facts.Children.Add(new TextBlock { Text = Lang.T("drawWorld.msg.notPlaced", string.Join(", ", missing)), FontSize = 12, Foreground = Ui.Warn, TextWrapping = TextWrapping.Wrap });
+            Facts.Children.Add(new TextBlock { Text = Lang.T("drawWorld.msg.notPlaced", string.Join(", ", missing.Select(NewWorldPage.LandmarkName))), FontSize = 12, Foreground = Ui.Warn, TextWrapping = TextWrapping.Wrap });
         }
         Facts.Children.Add(Ui.Hint(Lang.T("drawWorld.hint.marks")));
     }

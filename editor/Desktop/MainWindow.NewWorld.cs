@@ -63,6 +63,7 @@ public sealed partial class MainWindow
     {
         var page = DrawWorld = new DrawWorldPage();
         page.BackRequested += () => { page.Dispose(); DrawWorld = null; ShowStart(); };
+        page.CreateRequested += async (folder, name, seed, rules) => await CreateWorld(folder, name, seed, rules);
         Title = Lang.T("world.title.drawWorld", BuildInfo.Version);
         _pages.Content = page.View;
     }
@@ -93,11 +94,17 @@ public sealed partial class MainWindow
             {
                 p.Problem.Text = failed.Shown;
             }
+            if (DrawWorld is { } d)
+            {
+                d.Problem.Text = failed.Shown;
+            }
             return failed.English;
         }
         Busy(null);
         NewWorld?.Dispose();
         NewWorld = null;
+        DrawWorld?.Dispose();
+        DrawWorld = null;
         await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), Lang.T("newWorld.msg.opening", name));
         var made = Said.Of("newWorld.msg.made", name, seed);
         // Opened: on its map, where the status bar is not shown.

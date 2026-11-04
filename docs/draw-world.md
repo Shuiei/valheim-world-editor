@@ -12,9 +12,9 @@ You draw the master map: the whole world seen from above, north up, one pixel ab
 land's shape and where each biome is. Everything else stays the game's: the hills, rocks and trees of each biome, the
 rivers and lakes it adds, and where it puts the start temple, the bosses' altars, the traders and the dungeons.
 
-> [!NOTE]
-> Making the world itself (**Create world**) is not there yet: a drawn world needs a small mod on the server and on
-> every player's game, which comes next. For now you can draw, save the drawing, and see the world it makes.
+> [!IMPORTANT]
+> A drawn world plays only with the **DrawnWorlds** mod, on the server and on every player's game: each game makes its
+> own ground from the drawing. See [Play a drawn world](#play-a-drawn-world).
 
 ## Use it
 
@@ -26,6 +26,8 @@ rivers and lakes it adds, and where it puts the start temple, the bosses' altars
 5. Press **World** to see the world your drawing makes, with where the game will put its places. Press **Drawing** to
    paint again.
 6. Press **Save…** to keep the drawing as a PNG picture.
+7. Type the world's **Name**, choose where it is **Saved in**, and press **Create world**. The editor writes the world
+   and opens its map.
 
 ## Settings
 
@@ -42,6 +44,9 @@ rivers and lakes it adds, and where it puts the start temple, the bosses' altars
 | **Undo**, **Redo** | Takes back the last changes, or makes them again. |
 | **Seed** | Where the world's small things come from: bumps, trees, rocks, which spot each place takes. The drawing stays the same. |
 | **Drawing**, **World** | Shows the drawing to paint on, or the world it makes. |
+| **Name** | The world's name, as the game lists it (also its folder's name). |
+| **Saved in** | Which of the game's world folders it goes in, as on [A new world](new-world.md#settings). |
+| **Create world** | Makes the world and opens its map. A world of the same name already there is never written over. |
 
 ## The legend
 
@@ -81,6 +86,21 @@ and the traders' spots (yellow). It takes a few seconds.
 The game still lays out its places by its own rules: each altar, trader and dungeon only goes on its biome, at a height
 it accepts, at its distance from the middle of the world. When one has nowhere to go, the World card names it: draw
 more of its biome, or bigger areas of it. The places are shown once the editor has read your Valheim's files.
+
+## Play a drawn world
+
+The drawing is kept inside the world's file: copy the world's folder and the drawing comes with it.
+
+1. Install **DrawnWorlds** (`DrawnWorlds-<version>.zip` on the editor's
+   [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page) on the server, or in your own game if you
+   host, the same way as any BepInEx mod: `DrawnWorlds.dll` into `BepInEx/plugins`.
+2. Every player who joins installs it too. The server sends them the drawing as they join.
+3. Start the world. The first start takes a little longer: the game lays out its places, as for any new world.
+
+Without the mod, the game refuses the world (it says its version is not supported) rather than making a different
+one. A server with the mod turns away players who do not have it.
+
+Once made, a drawn world opens in the editor like any other world: shape it, build on it, edit it live.
 
 ## Tips and limits
 

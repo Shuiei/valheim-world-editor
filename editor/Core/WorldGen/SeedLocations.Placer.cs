@@ -103,6 +103,12 @@ public static partial class SeedLocations
                 return;
             }
             var biomes = (Heightmap.Biome)rule.Biome;
+            if (rule.CenterFirst == 0 && _gen.Rules.Generator is { Land: not null } && _map().LacksAny(biomes))
+            {
+                // A drawn world without one of the kind's biomes: the DrawnWorlds mod skips the kind (the game would
+                // fail picking a point of it). Each kind draws from its own seed, so the others are as they were.
+                return;
+            }
             float margin = MathF.Max(rule.ExteriorRadius, rule.InteriorRadius);
             // Kinds laid out from the middle out (the start temple): the reach grows a metre a try.
             float reach = rule.MinDistance;

@@ -71,6 +71,11 @@ public sealed class ModGenerator(IWorldGenerator generator, Action<Exception>? f
     /// <param name="gamePluginVersion">The mod's version a live game runs; null when not live, or unknown.</param>
     public GeneratorRules Rules(GeneratorSettings settings, string? gamePluginVersion)
     {
+        if (generator is DrawnWorldGenerator && settings.Value is MasterMap map)
+        {
+            // A drawn world: the map's land under the game's own generator, no layout of the generator's.
+            return MasterMapWorlds.Generator(map, settings);
+        }
         var layout = Call<IWorldLayout, InvalidOperationException>(() => generator.Open(settings, gamePluginVersion), "getting ready to lay out a world", why => throw new InvalidOperationException(why));
         return new GeneratorRules(Id, Name, layout.Version, settings.Description)
         {
