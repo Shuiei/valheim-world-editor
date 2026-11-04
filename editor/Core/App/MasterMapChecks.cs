@@ -43,7 +43,7 @@ public static class MasterMapChecks
         {
             if (counts[(int)e.Kind] == 0)
             {
-                said.Add(Said.Of("masterMap.check.missing", Lang.T(e.Key), Lang.T("masterMap.check.holds." + e.Kind)));
+                said.Add(Said.Of("masterMap.check.missing", Lang.T(e.Key), Lang.T(HoldsKey(e.Kind))));
             }
         }
         if (counts[(int)K.BlackForest] > 0)
@@ -60,6 +60,18 @@ public static class MasterMapChecks
         }
         return said;
     }
+
+    /// <summary>The text key of what the game keeps in a biome (its boss, trader, metal and dungeons).</summary>
+    private static string HoldsKey(K kind) => kind switch
+    {
+        K.Meadows => "masterMap.check.holds.Meadows",
+        K.BlackForest => "masterMap.check.holds.BlackForest",
+        K.Swamp => "masterMap.check.holds.Swamp",
+        K.Mountain => "masterMap.check.holds.Mountain",
+        K.Plains => "masterMap.check.holds.Plains",
+        K.Mistlands => "masterMap.check.holds.Mistlands",
+        _ => "masterMap.check.holds.AshLands",
+    };
 
     /// <summary>How many cells of a kind are within <see cref="CoastCells"/> of water (any of the legend's).</summary>
     internal static int Coast(MasterMap map, K kind)
