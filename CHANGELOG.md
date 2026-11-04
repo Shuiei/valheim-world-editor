@@ -5,6 +5,14 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.123.0 — unreleased
+
+### Added
+- **Draw a world checks your world before you make it.** It says when the start is on water or out of the Meadows,
+  when a biome is missing (and what that costs: its boss, trader, metal and dungeons), when no Black Forest touches
+  water (no tin), and, once the world is laid out, which dungeons the game places none or few of, and whether there
+  will be iron and black metal. See [Draw a world](docs/draw-world.md#checks).
+
 ## v1.122.0 — unreleased
 
 ### Added
