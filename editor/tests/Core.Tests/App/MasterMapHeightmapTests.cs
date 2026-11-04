@@ -41,7 +41,7 @@ public class MasterMapHeightmapTests
         Assert.Equal(K.Mountain, map.At(middle, middle));
         Assert.Null(map.Start);
         // Between, on land, the game's own biomes.
-        K ring = map.At(middle + MasterMap.Size / 6, middle);
+        K ring = map.At(middle + MasterMap.Size / 4, middle);
         Assert.False(MasterMap.IsWater(ring));
         Assert.NotEqual(K.Mountain, ring);
     }
@@ -75,15 +75,19 @@ public class MasterMapHeightmapTests
     {
         var map = Map.Value.Copy();
         int middle = MasterMap.Size / 2;
-        // Land painted in the deep sea, and a lake on the peak.
-        map.Disc(40, middle, 20, K.Meadows);
+        // Land painted in the deep sea, a lake on the peak, a mountain on low land.
+        map.Disc(100, middle, 60, K.Meadows);
         map.Disc(middle, middle, 20, K.Lake);
-        var gen = SeedPreview.Generator("Seed1", MasterMapWorlds.Rules(map));
+        map.Disc(middle + MasterMap.Size / 4, middle, 40, K.Mountain);
+        var land = MasterMapWorlds.Rules(map).Generator!.Land!;
 
-        var (landX, landZ) = MasterMap.CenterOf(40, middle);
+        // The continents the drawing gives the game (its own rivers then cut through them as anywhere).
+        var (landX, landZ) = MasterMap.CenterOf(100, middle);
         var (lakeX, lakeZ) = MasterMap.CenterOf(middle, middle);
-        Assert.True(gen.GetHeight(landX, landZ) > gen.Rules.WaterLevel);
-        Assert.True(gen.GetHeight(lakeX, lakeZ) < gen.Rules.WaterLevel);
+        var (peakX, peakZ) = MasterMap.CenterOf(middle + MasterMap.Size / 4, middle);
+        Assert.True(land.Continent(landX, landZ) > 0.2f, $"{land.Continent(landX, landZ)}");
+        Assert.True(land.Continent(lakeX, lakeZ) < 0.15f, $"{land.Continent(lakeX, lakeZ)}");
+        Assert.True(land.Continent(peakX, peakZ) > 0.4f, $"{land.Continent(peakX, peakZ)}");
     }
 
     [Fact]

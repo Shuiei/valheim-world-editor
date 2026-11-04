@@ -31,6 +31,15 @@ public sealed class DrawnLand
     /// <summary>The continents' height at the coast (just under the game's waterline, 0.15).</summary>
     private const double Coast = 0.13;
 
+    /// <summary>The continents' height along a river or a lake (just over the game's waterline, 0.15).</summary>
+    private const double Bank = 0.17;
+
+    /// <summary>
+    /// The lowest continents of land painted over a heightmap: enough over the waterline (0.15) that the game's hills and
+    /// grain, which go down as well as up, never take it under the water.
+    /// </summary>
+    private const double PaintedLand = 0.21;
+
     /// <summary>The continents' height where the mountains begin (the game's Mountain threshold).</summary>
     private const double MountainFoot = 0.4;
 
@@ -74,9 +83,11 @@ public sealed class DrawnLand
         }
         _noise = noise;
         int count = Size * Size;
-        // Distances, in cells: from land to the nearest water, from water to the nearest land (and which), from the
-        // foot of the mountains and from inside them to their edge, and from the deep sea to shallower water.
-        float[] toWater = Distances(cells, k => k >= River, out _);
+        // Distances, in cells: from land to the nearest sea and to the nearest river or lake, from water to the nearest
+        // land (and which), from the foot of the mountains and from inside them to their edge, and from the deep sea to
+        // shallower water.
+        float[] toSea = Distances(cells, k => k is Sea or DeepSea, out _);
+        float[] toInland = Distances(cells, k => k is River or Lake, out _);
         float[] toLand = Distances(cells, k => k < River, out int[] nearestLand);
         float[] toMountain = Distances(cells, k => k == Mountain, out _);
         float[] toLowland = Distances(cells, k => k != Mountain, out _);
@@ -93,7 +104,10 @@ public sealed class DrawnLand
             }
             else if (k < River)
             {
-                v = Coast + (Inland(k) - Coast) * Ease(toWater[i] * Cell / 500.0);
+                // Down to the sea over 500 m; along rivers and lakes only over the last 150 m, and to just above the
+                // water (their banks stay dry, the land round them as high as it is elsewhere).
+                v = Coast + (Inland(k) - Coast) * Ease(toSea[i] * Cell / 500.0);
+                v = Math.Min(v, Bank + (v - Bank) * Ease(toInland[i] * Cell / 150.0));
                 double foothills = 1.0 - Ease(toMountain[i] * Cell / 800.0);
                 if (v < MountainFoot)
                 {
@@ -121,7 +135,7 @@ public sealed class DrawnLand
             {
                 double h = ContinentOf(heights[i]);
                 v = k == Mountain ? Math.Max(h, MountainFoot + 0.01)
-                    : k < River ? Math.Max(h, Coast + 0.04)
+                    : k < River ? Math.Max(h, PaintedLand)
                     : Math.Min(h, v);
             }
             raw[i] = (float)v;
