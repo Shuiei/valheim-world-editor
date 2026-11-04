@@ -85,9 +85,10 @@ public sealed partial class DrawWorldPage
             brushText.Text = Lang.T("drawWorld.metres", (int)Canvas.BrushMetres);
         };
         var tools = new WrapPanel();
-        foreach (var (tool, key) in new[] { (MasterMapCanvas.Tool.Brush, "brush"), (MasterMapCanvas.Tool.Fill, "fill"), (MasterMapCanvas.Tool.Start, "start") })
+        foreach (var (tool, key) in new[] { (MasterMapCanvas.Tool.Brush, "drawWorld.tool.brush"), (MasterMapCanvas.Tool.Fill, "drawWorld.tool.fill"), (MasterMapCanvas.Tool.Start, "drawWorld.tool.start") })
         {
-            var b = new ToggleButton { Content = Lang.T("drawWorld.tool." + key), FontSize = 12, Margin = new Thickness(0, 0, 6, 0), IsChecked = tool == Canvas.Using }.Tip("drawWorld.tool." + key);
+            // The same key names the button and its tip.
+            var b = new ToggleButton { Content = Lang.T(key), FontSize = 12, Margin = new Thickness(0, 0, 6, 0), IsChecked = tool == Canvas.Using }.Tip(key);
             b.Click += (_, _) => Choose(tool);
             _tools[tool] = b;
             tools.Children.Add(b);
@@ -124,7 +125,7 @@ public sealed partial class DrawWorldPage
                     },
                 },
             };
-            ToolTip.SetTip(swatch, Lang.T("tip.drawWorld.kind", Lang.T(e.Key), e.Hex));
+            ToolTip.SetTip(swatch, Lang.T("drawWorld.kindTip", Lang.T(e.Key), e.Hex));
             var kind = e.Kind;
             swatch.Click += (_, _) => ChooseKind(kind);
             _swatches[kind] = swatch;
