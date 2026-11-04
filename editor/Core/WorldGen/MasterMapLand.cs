@@ -38,23 +38,23 @@ internal sealed class MasterMapLand : IDrawnLand
         _n = n;
         _half = half;
         _cell = 2 * half / n;
-        const byte river = 8, lake = 9, sea = 10, deepSea = 11, mountain = 3;
-        static bool Water(byte k) => k >= river;
+        const byte River = 8, Lake = 9, Sea = 10, DeepSea = 11, Mountain = 3;
+        static bool Water(byte k) => k >= River;
         int count = n * n;
         // Distances, in cells: from land to the nearest water, from water to the nearest land (and which), from the
         // foot of the mountains and from inside them to their edge, and from the deep sea to shallower water.
         float[] toWater = Distances(cells, n, Water, out _);
         float[] toLand = Distances(cells, n, k => !Water(k), out int[] nearestLand);
-        float[] toMountain = Distances(cells, n, k => k == mountain, out _);
-        float[] toLowland = Distances(cells, n, k => k != mountain, out _);
-        float[] toShallow = Distances(cells, n, k => k != deepSea, out _);
+        float[] toMountain = Distances(cells, n, k => k == Mountain, out _);
+        float[] toLowland = Distances(cells, n, k => k != Mountain, out _);
+        float[] toShallow = Distances(cells, n, k => k != DeepSea, out _);
         float[] raw = new float[count];
         _biome = new Heightmap.Biome[count];
         for (int i = 0; i < count; i++)
         {
             byte k = cells[i];
             float v;
-            if (k == mountain)
+            if (k == Mountain)
             {
                 v = MountainFoot + 0.35f * Ease(toLowland[i] * _cell / 2000f);
             }
@@ -67,16 +67,16 @@ internal sealed class MasterMapLand : IDrawnLand
                     v += (MountainFoot - v) * foothills * foothills;
                 }
             }
-            else if (k == sea)
+            else if (k == Sea)
             {
                 v = Coast + (-0.02f - Coast) * Ease(toLand[i] * _cell / 500f);
             }
-            else if (k == deepSea)
+            else if (k == DeepSea)
             {
                 float shallow = Coast + (-0.02f - Coast) * Ease(toLand[i] * _cell / 500f);
                 v = shallow + (-0.25f - shallow) * Ease(toShallow[i] * _cell / 1500f);
             }
-            else if (k == lake)
+            else if (k == Lake)
             {
                 v = 0.12f + (0f - 0.12f) * Ease(toLand[i] * _cell / 200f);
             }
@@ -91,7 +91,7 @@ internal sealed class MasterMapLand : IDrawnLand
         _land = Blur(Blur(raw, n, 2), n, 2);
         for (int i = 0; i < count; i++)
         {
-            if (cells[i] is river or lake && raw[i] < _land[i])
+            if (cells[i] is River or Lake && raw[i] < _land[i])
             {
                 _land[i] = raw[i];
             }
@@ -156,7 +156,7 @@ internal sealed class MasterMapLand : IDrawnLand
     /// </summary>
     private static float[] Distances(byte[] cells, int n, Func<byte, bool> feature, out int[] nearest)
     {
-        const float far = 1e12f;
+        const float Far = 1e12f;
         int count = n * n;
         float[] d2 = new float[count];
         nearest = new int[count];
@@ -167,7 +167,7 @@ internal sealed class MasterMapLand : IDrawnLand
         }
         for (int i = 0; i < count; i++)
         {
-            d2[i] = isFeature[cells[i]] ? 0f : far;
+            d2[i] = isFeature[cells[i]] ? 0f : Far;
             nearest[i] = i;
         }
         float[] f = new float[n], outD = new float[n];
@@ -200,7 +200,7 @@ internal sealed class MasterMapLand : IDrawnLand
         float[] d = new float[count];
         for (int i = 0; i < count; i++)
         {
-            d[i] = d2[i] >= far ? far : MathF.Sqrt(d2[i]);
+            d[i] = d2[i] >= Far ? Far : MathF.Sqrt(d2[i]);
         }
         return d;
     }
@@ -210,11 +210,11 @@ internal sealed class MasterMapLand : IDrawnLand
     /// </summary>
     private static void Envelope(float[] f, int[] fIdx, int n, float[] outD, int[] outIdx, int[] v, float[] z)
     {
-        const float far = 1e12f;
+        const float Far = 1e12f;
         int k = -1;
         for (int q = 0; q < n; q++)
         {
-            if (f[q] >= far)
+            if (f[q] >= Far)
             {
                 continue;
             }
@@ -238,7 +238,7 @@ internal sealed class MasterMapLand : IDrawnLand
         {
             for (int q = 0; q < n; q++)
             {
-                outD[q] = far;
+                outD[q] = Far;
                 outIdx[q] = fIdx[q];
             }
             return;
