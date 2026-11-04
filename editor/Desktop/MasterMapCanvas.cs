@@ -280,6 +280,8 @@ public sealed class MasterMapCanvas : Control, IDisposable
                 InvalidateVisual();
                 Changed?.Invoke();
                 break;
+            default:
+                throw new InvalidOperationException($"No such tool: {Using}.");
         }
         e.Handled = true;
     }

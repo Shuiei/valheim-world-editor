@@ -21,7 +21,7 @@ public sealed partial class DrawnWorldsPlugin
     private static readonly HashSet<ZRpc> WithMod = [];
 
     /// <summary>The map the server sent (on a player's game), or null: the world it joins is not drawn.</summary>
-    internal static byte[] Received;
+    internal static byte[] Received { get; private set; }
 
     /// <summary>A connection: the mod's calls, and (joining a server) the word that this game has the mod.</summary>
     [HarmonyPatch(typeof(ZNet), "OnNewConnection")]
