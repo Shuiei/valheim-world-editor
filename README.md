@@ -10,37 +10,97 @@
 
 **A world editor for Valheim, in the spirit of Minecraft's MCEdit, WorldEdit and WorldPainter:** open a world, saved
 or running, in a 3D window drawn with the game's own terrain, textures and models; shape it, build, and save it back
-or watch it change in game as you work.
+or watch it change in game as you work. Free and open source.
 
 ![The 3D editor showing a base, with the tool rail, tool panel and View panel](docs/images/overview.jpg)
 
 ## Download
 
-**[Download the latest release](https://github.com/Shuiei/valheim-world-editor/releases/latest)** for Windows or
-Linux, or macOS on Apple silicon (experimental). Unpack it and start it: nothing else to install.
+| What | For | Where |
+|---|---|---|
+| **The editor** | Everyone: a program, not a mod. Windows, Linux, or macOS on Apple silicon (experimental). Unpack it and start it: nothing else to install, and it finds your Steam copy of Valheim by itself. | [GitHub releases](https://github.com/Shuiei/valheim-world-editor/releases/latest) · [Nexus Mods](https://www.nexusmods.com/valheim/mods/4348) |
+| **WorldEditorBridge** | Live editing only: a BepInEx plugin for the game or server that hosts the world. Players who join need nothing. | [Thunderstore](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) · [Hexium](https://valheim.hexium.gg/mods/Tie/WorldEditorBridge) · [Nexus Mods](https://www.nexusmods.com/valheim/mods/4348) · [GitHub releases](https://github.com/Shuiei/valheim-world-editor/releases/latest) |
+| **Add-ons** | Worlds made or changed by some mods (see [Mods](#mods)). | [GitHub releases](https://github.com/Shuiei/valheim-world-editor/releases/latest) · [Nexus Mods](https://www.nexusmods.com/valheim/mods/4348) |
 
-Also on [Nexus Mods](https://www.nexusmods.com/valheim/mods/4348) (the editor and its plugin). The WorldEditorBridge
-plugin, for live editing and mod managers, is on [Thunderstore](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/)
-and [Hexium](https://valheim.hexium.gg/mods/Tie/WorldEditorBridge).
+Use the plugin and add-ons of the same release as the editor. Step by step: [Install the editor](docs/start/install.md).
 
 ## What you can do
 
+**Shape the land**
+
 - **Sculpt and paint the ground** with brushes that raise, lower, flatten, smooth, erode, naturalize or restore it,
-  and paint dirt, cultivated soil or paved stone.
-- **Go past the game's ±8 m limit**: raise mountains, ridges and volcanoes or dig canyons. Players need no mod,
-  console players included.
-- **Draw roads, ramps, rivers and caves** along a line.
-- **Place anything the game has**, trees, rocks, crops and building pieces, with a brush, lines, grids or whole
-  zones; select, move, turn, copy and delete objects, whole buildings included.
-- **Look inside objects and change them**: chest contents, sign texts, portal tags. Search the whole world for an
-  object, an item in any chest, or a sign's text.
-- **Build in the Workshop** with every piece of the hammer, cultivator and serving tray, with the game's snapping and
-  support check, and keep it as a [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprint to
-  build in game or paste into any world.
-- **Generate a whole dungeon**, or edit Frost Caves, crypts and other dungeons room by room.
-- **See a seed's world before it exists**, find a seed with what you want near the start, and make the world.
-- **Edit live**: your own game or a dedicated server while people play, and see each change in game at once.
-- **Undo anything**, take out one change from the middle, or restore an area from a backup to undo griefing.
+  and paint dirt, cultivated soil or paved stone ([Sculpt and paint](docs/terrain.md)).
+- **Go past the game's ±8 m limit**: raise peaks, ridges, ranges, mesas and volcanoes in one click, or dig canyons.
+  Players need no mod to see it, console players included ([Mountain](docs/mountain.md),
+  [Ground limits](docs/concepts/ground-limits.md)).
+- **Draw roads, ramps, rivers and caves** along a line ([Path](docs/path.md)); hills, craters, terraces or your own
+  height formula in one click ([Shape](docs/shape.md)).
+- **Keep any tool to some ground**: a biome, a height, a slope or a paint ([Mask](docs/masks.md)); measure distances
+  and slopes ([Measure](docs/measure.md)).
+
+**Fill and change the world**
+
+- **Place anything the game has**, trees, rocks, crops, building pieces and spawn points, with a brush, along lines,
+  in grids or over whole zones ([Place](docs/place.md)).
+- **Select, move, turn, copy and delete** objects, whole buildings included ([Select](docs/select.md)).
+- **Look inside objects and change them**: chest contents, sign texts, portal tags. **Search the whole world** for an
+  object, an item in any chest, or a sign's text ([World map](docs/map.md)).
+- **Work on a box or polygon at once**: level, clear, replace or regrow it, copy and paste it, or **restore it from a
+  backup** to undo griefing without rolling the whole world back ([Area](docs/area.md)).
+
+**Build, generate, create**
+
+- **Build in the Workshop** with every piece of the hammer, cultivator and serving tray, with the game's snapping
+  (Auto, Manual or Free), its support check, and a running bill of materials. Keep it as a
+  [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprint to build in game, or paste it into
+  any world ([Workshop](docs/workshop.md)).
+- **Generate a whole dungeon** for any biome and style, with its monsters, loot and an optional boss behind a locked
+  gate, or edit the game's own dungeons room by room ([Dungeons](docs/dungeons.md)).
+- **See a seed's world before it exists**: biomes, the start, bosses' altars and traders; search many seeds for one
+  with what you want near the start, then make the world ([A new world](docs/new-world.md)).
+
+**Edit live, and undo anything**
+
+- **Edit your own game or a dedicated server while people play**: apply your changes when you like, or turn on Auto
+  and every stroke shows in game at once ([Live mode](docs/live-mode.md)).
+- **Undo anything**, take out one change from the middle of the history, even after saving and closing the editor
+  ([Saving and history](docs/concepts/saving-and-history.md)).
+
+**For power users**
+
+- **C# scripts** shape, paint and fill an area by rule, compiled by the editor itself ([Script](docs/scripting.md)).
+- **Claude** (off by default) can shape, plant and build in the area you have open while you watch; what it does
+  stays pending until you save ([Claude](docs/claude.md)).
+
+| | | |
+|---|---|---|
+| ![A volcano raised with the Mountain tool](docs/images/mountain-volcano.jpg) | ![A house in the Workshop, tinted by the support check](docs/images/workshop.jpg) | ![A generated dungeon, cut open](docs/images/dungeon-rooms.jpg) |
+| A volcano, far past the 8 m limit | The Workshop and its support check | A dungeon of the game's own rooms |
+| ![A seed's world on the New world page](docs/images/new-world.jpg) | ![The editor connected to a running server](docs/images/live.jpg) | ![The world map's search](docs/images/map-search.jpg) |
+| A seed's world before it exists | Live on a server while people play | Searching the whole world |
+
+## Mods
+
+**Building mods work without anything to set up.** Connected to a modded game, the editor learns the mods' pieces and
+draws them with their own models; the Workshop's **Mod pieces** tab also reads the mods installed in your Valheim and
+mod manager profiles, without a running game ([Modded games](docs/live-mode.md#modded-games)).
+
+**Add-ons** teach the editor about mods that change how worlds are made or what they keep:
+
+| Add-on | What it does |
+|---|---|
+| [Expand World](addons/ExpandWorld/README.md) | Wider or stretched worlds, other altitudes, custom biomes, rivers and locations: the ground, the map and the predictions follow the Expand World mods' settings and data. |
+| [Riverheim](addons/Riverheim/README.md) | Opens and makes Riverheim worlds, drawn by your own copy of the mod. |
+| [Tunnelheim](addons/Tunnelheim/README.md) | Draws its tunnels as the game rebuilds them, and adds a Tunnel tool: dig, bore, rooms, shafts, stairs. |
+| [Railroads](addons/Railroads/README.md) | Draws track, stations and trains, and places, pastes and moves them as the game builds them. |
+| [ValheimRAFT](addons/ValheimRAFT/README.md) | Draws ships and land vehicles whole, and moves, copies and deletes each as one. |
+
+![The New world page with Riverheim as the generator, showing a Riverheim seed's world](docs/images/new-world-riverheim.jpg)
+*A new Riverheim world, seen before it exists, with the Riverheim add-on.*
+
+Each add-on reads the mod's own files and the data it keeps in a world: none holds a mod's code. Mod authors can tell
+the editor more with a `worldeditor.json` file, or write an extension or add-on against the SDK:
+[For mod authors](docs/modding.md).
 
 ## Quick start
 
@@ -66,10 +126,6 @@ The same documentation is in the editor (**Documentation** on the start page): s
   [ground limits](docs/concepts/ground-limits.md), [safety](docs/concepts/safety.md).
 - **Help**: [troubleshooting](docs/help/troubleshooting.md), [questions](docs/help/faq.md),
   [shortcuts](docs/help/shortcuts.md), [glossary](docs/help/glossary.md).
-- **Mods**: [Expand World](addons/ExpandWorld/README.md), [Railroads](addons/Railroads/README.md),
-  [Riverheim](addons/Riverheim/README.md), [Tunnelheim](addons/Tunnelheim/README.md) and
-  [ValheimRAFT](addons/ValheimRAFT/README.md) add-ons;
-  [for mod authors](docs/modding.md).
 
 What changed and when: [CHANGELOG.md](CHANGELOG.md).
 
@@ -85,6 +141,51 @@ view go to your Claude app).
 Keep your own copy of a world you care about anyway: see
 [Back up a world before editing](docs/guides/back-up-a-world.md). The details: [Safety](docs/concepts/safety.md).
 Found a security problem? Report it privately, see [SECURITY.md](SECURITY.md).
+
+## Stable and kept up to date
+
+- **Tested on every change**: thousands of automated tests run on CircleCI at every push, the app's own drawing
+  included, and the readers of world, blueprint and other files are fuzzed with millions of damaged inputs.
+- **Released often**: new tools and fixes land in small releases, each written up in the [changelog](CHANGELOG.md).
+- **Following the game and the mods**: a new version of a supported mod is checked on a server running it before the
+  editor says it supports it; the changelog lists each one under **Mods**.
+
+## Support
+
+- **Bugs and ideas**: [open an issue](https://github.com/Shuiei/valheim-world-editor/issues), with the editor's log
+  (**Open log** on the start page). See [The log and bug reports](docs/help/troubleshooting.md#the-log-and-bug-reports).
+- **Questions**: [Questions](docs/help/faq.md) first, then an issue or the
+  [Nexus Mods page](https://www.nexusmods.com/valheim/mods/4348).
+- **Translations**: the editor is in English for now; a language is one JSON file
+  ([Translating](docs/translating.md)).
+- **Support the project**: [Buy Me a Coffee](https://buymeacoffee.com/tieboo).
+
+## How it works
+
+For the curious and for contributors; the full picture is in [docs/architecture.md](docs/architecture.md).
+
+- **One program, nothing of the game inside.** .NET 10, an Avalonia window, the 3D view and the map drawn with OpenGL
+  through Silk.NET. The game's models, textures, terrain shader and data tables are read at run time from the
+  player's own Valheim install (AssetsTools.NET), never shipped.
+- **The save format, read and written directly.** The world's chunked save (`_main.<n>.chunks`, the `.chunk` files of
+  objects, `.db2`, `.fwl2`), kept in the save format each file had. Every save is written as a new save number, its
+  `.ok` marker last as the game does, then read back and compared with what was meant before anything old goes.
+- **The world generator, matching the game to the bit.** Written for the editor from the game's formulas (no Valheim
+  code), down to Unity's random numbers and Perlin noise, so that edits sit exactly on the ground the game makes and a
+  seed's world can be shown before it exists. Mods that change generation hook into it through add-ons.
+- **Ground past ±8 m without a mod.** The game keeps edits within 8 m, but levels the ground under its locations
+  without a limit. On save, the editor turns ground past the limit into **ground discs**, invisible locations of the
+  game's own, and fits their heights to your shape: every player's game builds the same ground.
+- **Live mode.** The WorldEditorBridge plugin (BepInEx, .NET Framework 4.7.2) answers HTTP on the host's own computer,
+  with a token; the editor reaches a dedicated server through its own SSH tunnel. Each apply sends only what changed,
+  so undo after applying works.
+- **Extensible.** An SDK (netstandard2.0) for mods' editor extensions and add-ons, a `worldeditor.json` file for what
+  a mod can simply declare, and an API for a mod's own plugin to take part in live mode
+  ([For mod authors](docs/modding.md)). Scripts are compiled with Roslyn and run in a process of their own. Claude
+  connects through an MCP server inside the editor, with a token, from this computer only unless you choose otherwise.
+- **Checked and signed.** xUnit tests of the core and of the app (in Avalonia's headless mode, and drawing with
+  OpenGL), fuzzing with SharpFuzz and libFuzzer, CodeQL, coverage on Codecov. The Windows program, the plugin and the
+  add-ons are code-signed, and every release file carries a Sigstore signature.
 
 ## For developers
 

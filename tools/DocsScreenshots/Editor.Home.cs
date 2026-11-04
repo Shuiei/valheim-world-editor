@@ -55,8 +55,9 @@ public sealed partial class Editor
     /// folders it names next to its program are in the stand-in home ("~").
     /// </summary>
     /// <param name="app">The app's dll or executable; null for the Debug build in editor/Desktop/bin.</param>
+    /// <param name="addOn">An add-on's folder (unpacked from its release zip) to install in the copy's addons folder.</param>
     /// <returns>The copy to run.</returns>
-    private string AppInHome(string? app)
+    private string AppInHome(string? app, string? addOn = null)
     {
         app ??= Path.Combine(Repo, "editor", "Desktop", "bin", "Debug", "net10.0", "ValheimWorldEditor.dll");
         string from = Path.GetDirectoryName(Path.GetFullPath(app))!;
@@ -68,10 +69,31 @@ public sealed partial class Editor
         }
         foreach (string d in Directory.GetDirectories(from))
         {
+            // An add-on to install gets an addons folder of its own, not a link to the program's.
+            if (addOn != null && Path.GetFileName(d) == "addons")
+            {
+                continue;
+            }
             Directory.CreateSymbolicLink(Path.Combine(to, Path.GetFileName(d)), d);
+        }
+        if (addOn != null)
+        {
+            // Installed as a player unpacks its zip: addons/<Name>/ with its worldeditor.json and DLL.
+            string into = Path.Combine(to, "addons", Path.GetFileName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(addOn))));
+            Directory.CreateDirectory(into);
+            foreach (string f in Directory.GetFiles(addOn))
+            {
+                File.Copy(f, Path.Combine(into, Path.GetFileName(f)));
+            }
         }
         return Path.Combine(to, Path.GetFileName(app));
     }
+
+    /// <summary>Riverheim.dll in a BepInEx folder's plugins (in a mod manager's subfolder or not); throws when it is not there.</summary>
+    /// <param name="bepInEx">The BepInEx folder.</param>
+    public static string RiverheimDll(string bepInEx) =>
+        Directory.GetFiles(Path.Combine(bepInEx, "plugins"), "Riverheim.dll", SearchOption.AllDirectories).FirstOrDefault()
+            ?? throw new FileNotFoundException($"no Riverheim.dll under {bepInEx}/plugins");
 
     /// <summary>The stand-in home's data folder: what the app keeps there (its settings.json) for a scene to read.</summary>
     public string DataFolder => Path.Combine(_home, ".local", "share", "ValheimWorldEditor");

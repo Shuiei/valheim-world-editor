@@ -160,6 +160,10 @@ you choose it. Wishes for traders or bosses make the search a few times slower.
 - Nothing is made until **Create world**: **Start** and closing the page leave no trace. To remove a world you made,
   delete its folder from the world folder it was saved in.
 
+![A new world, Generator Riverheim 1.2.1 with its note, and a Riverheim seed's world with the start, bosses and traders](images/new-world-riverheim.jpg)
+*With the Riverheim add-on in use, **Generator** reads Riverheim and its version, and the note under it says what a
+Riverheim world asks of its players. The map and the facts are Riverheim's own world for this seed.*
+
 ## Related
 
 - [Find a seed with what you want near the start](guides/find-a-seed.md)

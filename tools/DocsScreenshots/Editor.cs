@@ -52,9 +52,13 @@ public sealed partial class Editor : IDisposable
     /// <param name="valheim">Whether the stand-in home has Valheim (false: the start page asks for its folder).</param>
     /// <param name="appInHome">Run a copy of the app from the stand-in home's ValheimWorldEditor folder, so the
     /// folders shown next to the program (Settings' add-ons) read "~/ValheimWorldEditor".</param>
+    /// <param name="riverheim">A BepInEx folder with Riverheim installed (its core, and Riverheim.dll under plugins),
+    /// copied into the stand-in game, and the Riverheim add-on's folder to install next to the program (the app is then
+    /// run from the stand-in home).</param>
     public Editor(string? app = null, int width = 1440, int height = 900, string? gameWorld = null,
         IReadOnlyList<string>? worlds = null, string? homestead = null, IReadOnlyList<string>? recent = null,
-        IReadOnlyList<string>? extra = null, bool valheim = true, bool appInHome = false)
+        IReadOnlyList<string>? extra = null, bool valheim = true, bool appInHome = false,
+        (string BepInEx, string AddOn)? riverheim = null)
     {
         _home = Directory.CreateTempSubdirectory("vwe-docs-home-").FullName;
         _width = width;
@@ -98,7 +102,21 @@ public sealed partial class Editor : IDisposable
             Directory.CreateDirectory(plugins);
             File.Copy(homestead, Path.Combine(plugins, "Homestead.dll"), overwrite: true);
         }
-        _p = StartApp(appInHome ? AppInHome(app) : app, width, height, extra, data);
+        if (riverheim is var (from, _))
+        {
+            // Riverheim as a mod manager installs it, in the stand-in game's BepInEx, with BepInEx's own DLLs it loads
+            // against (core).
+            string to = Path.Combine(game, "BepInEx");
+            Directory.CreateDirectory(Path.Combine(to, "core"));
+            foreach (string f in Directory.GetFiles(Path.Combine(from, "core"), "*.dll"))
+            {
+                File.Copy(f, Path.Combine(to, "core", Path.GetFileName(f)), overwrite: true);
+            }
+            string plugins = Path.Combine(to, "plugins", "Gurebu-Riverheim");
+            Directory.CreateDirectory(plugins);
+            File.Copy(RiverheimDll(from), Path.Combine(plugins, "Riverheim.dll"), overwrite: true);
+        }
+        _p = StartApp(appInHome || riverheim != null ? AppInHome(app, riverheim?.AddOn) : app, width, height, extra, data);
         // Its error output is read and dropped (unread, a full pipe would block it).
         _p.ErrorDataReceived += (_, _) => { };
         _p.BeginErrorReadLine();
