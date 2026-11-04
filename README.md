@@ -95,6 +95,9 @@ mod manager profiles, without a running game ([Modded games](docs/live-mode.md#m
 | [Railroads](addons/Railroads/README.md) | Draws track, stations and trains, and places, pastes and moves them as the game builds them. |
 | [ValheimRAFT](addons/ValheimRAFT/README.md) | Draws ships and land vehicles whole, and moves, copies and deletes each as one. |
 
+![The New world page with Riverheim as the generator, showing a Riverheim seed's world](docs/images/new-world-riverheim.jpg)
+*A new Riverheim world, seen before it exists, with the Riverheim add-on.*
+
 Each add-on reads the mod's own files and the data it keeps in a world: none holds a mod's code. Mod authors can tell
 the editor more with a `worldeditor.json` file, or write an extension or add-on against the SDK:
 [For mod authors](docs/modding.md).

@@ -130,6 +130,8 @@ public sealed partial class Scenes
             // Live mode (live-mode.md), with $DOCS_LIVE.
             ("live", Live),
             ("new-world", NewWorld),
+            // With $RIVERHEIM_BEPINEX and $RIVERHEIM_ADDON (new-world.md).
+            ("new-world-riverheim", NewWorldRiverheim),
         ];
         Drawn =
         [

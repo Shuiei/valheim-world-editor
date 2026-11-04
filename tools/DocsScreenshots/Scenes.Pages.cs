@@ -476,6 +476,31 @@ public sealed partial class Scenes
         e.Shot(Out("new-world-find.jpg"));
     }
 
+    /// <summary>
+    /// new-world-riverheim.jpg: the New world page with the Riverheim add-on in use and Riverheim installed: the
+    /// generator set to Riverheim, its note, and a Riverheim seed's world with the start, the bosses' altars and the
+    /// traders. The generator's name carries the mod's version, read from its DLL as the add-on reads it.
+    /// </summary>
+    private void NewWorldRiverheim(Editor e)
+    {
+        var v = System.Reflection.AssemblyName.GetAssemblyName(Editor.RiverheimDll(Environment.GetEnvironmentVariable("RIVERHEIM_BEPINEX")!)).Version
+            ?? throw new InvalidOperationException("Riverheim.dll has no version");
+        WaitForLook(e);
+        e.Send("click A new world");
+        e.Send("click Make a new world");
+        e.Send("wait 1500");
+        e.Send($"choose Riverheim {v.Major}.{v.Minor}.{v.Build}");
+        e.Send("type My world|Elvheim");
+        e.Send("type Up to 10|MG4e6X9YU7");
+        e.Send("click Generate world");
+        // Riverheim lays the whole world out first: slower than the game's generator.
+        e.Send("wait 45000");
+        // One notch out: the whole world in the map, beside the switches over its top right corner.
+        e.Send("click −");
+        e.Send("wait 3000");
+        e.Shot(Out("new-world-riverheim.jpg"));
+    }
+
     // ---- The start page and its settings (no world opened).
 
     /// <summary>
