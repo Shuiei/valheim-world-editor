@@ -120,7 +120,14 @@ public sealed partial class MasterMap
     }
 
     /// <summary>A copy (for the painter's undo).</summary>
-    public MasterMap Copy() => new((byte[])Cells.Clone(), Start);
+    public MasterMap Copy() => new((byte[])Cells.Clone(), Start) { Heights = Heights };
+
+    /// <summary>
+    /// The land's height at each cell from a heightmap (<see cref="DrawnWorlds.DrawnLand.HeightOf"/>: the game's
+    /// continents, quantized), or null: the heights come from the kinds alone. Never changed in place (a new array
+    /// replaces it), so copies share it.
+    /// </summary>
+    public ushort[]? Heights { get; set; }
 
     /// <summary>The kind at a cell.</summary>
     public Kind At(int column, int row) => (Kind)Cells[row * Size + column];
@@ -222,6 +229,13 @@ public sealed partial class MasterMap
         {
             h = (h ^ (ulong)s.Column) * 1099511628211UL;
             h = (h ^ (ulong)s.Row) * 1099511628211UL;
+        }
+        if (Heights != null)
+        {
+            foreach (ushort q in Heights)
+            {
+                h = (h ^ q) * 1099511628211UL;
+            }
         }
         return h.ToString("x16");
     }

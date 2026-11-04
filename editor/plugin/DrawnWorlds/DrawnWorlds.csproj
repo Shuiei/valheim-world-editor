@@ -4,7 +4,8 @@
     <AssemblyName>DrawnWorlds</AssemblyName>
     <TargetFramework>net472</TargetFramework>
     <LangVersion>12.0</LangVersion>
-    <Nullable>disable</Nullable>
+    <!-- Annotations only: the shared DrawnLand.cs marks what may be null, as the editor does. -->
+    <Nullable>annotations</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Unity calls Awake, and Harmony the patches' Prefix, Postfix and Finalizer, by name. -->
     <NoWarn>$(NoWarn);IDE0051</NoWarn>

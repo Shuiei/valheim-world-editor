@@ -150,6 +150,13 @@ public sealed partial class DrawWorldPage : IDisposable
         {
             byte[] bytes = await File.ReadAllBytesAsync(path);
             read = await Task.Run(() => MasterMap.Read(bytes));
+            // The heights saved beside it, when there are some.
+            string heights = HeightsPath(path);
+            if (File.Exists(heights))
+            {
+                byte[] kept = await File.ReadAllBytesAsync(heights);
+                read.Map.Heights = await Task.Run(() => MasterMap.ReadHeights(kept));
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
@@ -205,6 +212,10 @@ public sealed partial class DrawWorldPage : IDisposable
         {
             byte[] png = await Task.Run(map.ToPng);
             await File.WriteAllBytesAsync(path, png);
+            if (map.Heights != null)
+            {
+                await File.WriteAllBytesAsync(HeightsPath(path), await Task.Run(map.HeightsPng));
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -215,6 +226,59 @@ public sealed partial class DrawWorldPage : IDisposable
         _file = path;
         Unsaved = false;
         Note(Lang.T("masterMap.msg.saved", Path.GetFileName(path)));
+    }
+
+    /// <summary>Where a master map's heights are saved beside it: its name with "-heights" before ".png".</summary>
+    internal static string HeightsPath(string path) =>
+        Path.Combine(Path.GetDirectoryName(path) ?? "", Path.GetFileNameWithoutExtension(path) + "-heights.png");
+
+    /// <summary>
+    /// Opens a heightmap as a new drawing (Undo brings the one before back): its heights kept, each cell the kind the
+    /// game would give it at that height, for the seed in the seed box.
+    /// </summary>
+    private async Task OpenHeightmap()
+    {
+        if (TopLevel.GetTopLevel(View)?.StorageProvider is not { } storage)
+        {
+            return;
+        }
+        string? path = await Pickers.File(storage, Lang.T("masterMap.title.heightmap"), PngType);
+        if (path != null)
+        {
+            await OpenHeightmap(path);
+        }
+    }
+
+    /// <summary>Opens a heightmap as a new drawing, from a path (tests, the button).</summary>
+    internal async Task OpenHeightmap(string path)
+    {
+        float sea = (float)(SeaLevel.Value ?? 10m) / 100f;
+        string seed = SeedName;
+        MasterMap map;
+        Loading.IsVisible = true;
+        try
+        {
+            byte[] bytes = await File.ReadAllBytesAsync(path);
+            map = await Task.Run(() => MasterMap.FromHeightmap(bytes, sea, seed));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            Log.Caught(ex, "opening a heightmap");
+            Note(Lang.T("masterMap.error.open", Path.GetFileName(path), ex.Message), warn: true);
+            return;
+        }
+        finally
+        {
+            Loading.IsVisible = false;
+        }
+        KeepForUndo();
+        Canvas.Show(map);
+        Canvas.Fit();
+        _file = null;
+        Unsaved = true;
+        Note(Lang.T("masterMap.msg.heightmap", Path.GetFileName(path)));
+        FitButtons();
+        ShowCounts();
     }
 
     /// <summary>The kind of file a master map is saved as.</summary>

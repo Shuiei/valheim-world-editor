@@ -34,6 +34,12 @@ public sealed class DrawnLand
     /// <summary>The continents' height along a river or a lake (just over the game's waterline, 0.15).</summary>
     private const double Bank = 0.17;
 
+    /// <summary>
+    /// The lowest continents of land painted over a heightmap: enough over the waterline (0.15) that the game's hills and
+    /// grain, which go down as well as up, never take it under the water.
+    /// </summary>
+    private const double PaintedLand = 0.21;
+
     /// <summary>The continents' height where the mountains begin (the game's Mountain threshold).</summary>
     private const double MountainFoot = 0.4;
 
@@ -53,7 +59,24 @@ public sealed class DrawnLand
     /// <param name="cells"><see cref="Size"/> × <see cref="Size"/> kinds, row by row from the north, west first.</param>
     /// <param name="noise">Unity's Mathf.PerlinNoise (or the editor's copy of it).</param>
     public DrawnLand(byte[] cells, Func<float, float, float> noise)
+        : this(cells, null, noise)
     {
+    }
+
+    /// <summary>
+    /// The land of a map's cells, with the heights of a heightmap when there are some: each cell's continents are then
+    /// the heightmap's, held to what its kind needs (painted land above the water, mountains at the game's mountain
+    /// height or above, painted water below the land's own water).
+    /// </summary>
+    /// <param name="cells"><see cref="Size"/> × <see cref="Size"/> kinds, row by row from the north, west first.</param>
+    /// <param name="heights">The continents at each cell (<see cref="HeightOf"/>), or null.</param>
+    /// <param name="noise">Unity's Mathf.PerlinNoise (or the editor's copy of it).</param>
+    public DrawnLand(byte[] cells, ushort[]? heights, Func<float, float, float> noise)
+    {
+        if (heights != null && heights.Length != Size * Size)
+        {
+            throw new ArgumentException("a master map's heights are " + Size + " × " + Size, nameof(heights));
+        }
         if (cells.Length != Size * Size)
         {
             throw new ArgumentException("a master map has " + Size + " × " + Size + " cells", nameof(cells));
@@ -108,6 +131,13 @@ public sealed class DrawnLand
             {
                 v = 0.03;
             }
+            if (heights != null)
+            {
+                double h = ContinentOf(heights[i]);
+                v = k == Mountain ? Math.Max(h, MountainFoot + 0.01)
+                    : k < River ? Math.Max(h, PaintedLand)
+                    : Math.Min(h, v);
+            }
             raw[i] = (float)v;
             _biome[i] = k is River or Lake ? cells[nearestLand[i]] is var bank && bank < River ? bank : Meadows : k;
         }
@@ -133,6 +163,19 @@ public sealed class DrawnLand
         DeepNorth => 0.16, // the game raises it by 0.1
         _ => 0.24,
     };
+
+    /// <summary>The lowest and highest continents a height keeps (the game's sea floor to far above its peaks).</summary>
+    private const double LowestHeight = -0.5, HighestHeight = 1.5;
+
+    /// <summary>A continents' height kept as a heightmap's cell (16 bits from <see cref="LowestHeight"/> to <see cref="HighestHeight"/>).</summary>
+    public static ushort HeightOf(double continent)
+    {
+        double t = (continent - LowestHeight) / (HighestHeight - LowestHeight);
+        return (ushort)Math.Round(Math.Max(0.0, Math.Min(1.0, t)) * 65535.0);
+    }
+
+    /// <summary>The continents' height a heightmap's cell keeps.</summary>
+    public static double ContinentOf(ushort height) => LowestHeight + height * ((HighestHeight - LowestHeight) / 65535.0);
 
     /// <summary>0 to 1, eased at both ends (smoothstep), held to 0..1.</summary>
     private static double Ease(double t)
@@ -316,41 +359,50 @@ public sealed class DrawnLand
 
     // ---- The map as a world file keeps it.
 
-    /// <summary>The version of how a map is kept in a world file (<see cref="Encode"/>).</summary>
-    public const int FormatVersion = 1;
+    /// <summary>The newest version of how a map is kept in a world file (<see cref="Encode"/>); 1 has no heights.</summary>
+    public const int FormatVersion = 2;
 
     /// <summary>
-    /// A map as a world file keeps it: the format's version, the side, the start cell (column, row; -1, -1 for none),
-    /// then the cells, deflated (a drawing of large areas of one kind shrinks to a few dozen KB).
+    /// A map as a world file keeps it: the format's version (1 without heights, 2 with), the side, the start cell
+    /// (column, row; -1, -1 for none), the cells deflated (a drawing of large areas of one kind shrinks to a few dozen KB),
+    /// then in version 2 the heights deflated (two bytes a cell, low first).
     /// </summary>
-    public static byte[] Encode(byte[] cells, int startColumn, int startRow)
+    public static byte[] Encode(byte[] cells, int startColumn, int startRow, ushort[]? heights = null)
     {
-        using var packed = new MemoryStream();
-        using (var z = new DeflateStream(packed, CompressionLevel.Optimal, leaveOpen: true))
-        {
-            z.Write(cells, 0, cells.Length);
-        }
         using var o = new MemoryStream();
         using var w = new BinaryWriter(o);
-        w.Write(FormatVersion);
+        w.Write(heights == null ? 1 : 2);
         w.Write(Size);
         w.Write(startColumn);
         w.Write(startRow);
-        w.Write((int)packed.Length);
-        w.Write(packed.ToArray());
+        byte[] packed = Deflate(cells);
+        w.Write(packed.Length);
+        w.Write(packed);
+        if (heights != null)
+        {
+            byte[] bytes = new byte[heights.Length * 2];
+            for (int i = 0; i < heights.Length; i++)
+            {
+                bytes[2 * i] = (byte)heights[i];
+                bytes[2 * i + 1] = (byte)(heights[i] >> 8);
+            }
+            packed = Deflate(bytes);
+            w.Write(packed.Length);
+            w.Write(packed);
+        }
         w.Flush();
         return o.ToArray();
     }
 
-    /// <summary>A map kept by <see cref="Encode"/>: its cells, and its start cell (-1, -1 for none).</summary>
-    /// <exception cref="InvalidDataException">Another format's version, another size, cells cut short, or a cell that is no kind.</exception>
-    public static byte[] Decode(byte[] kept, out int startColumn, out int startRow)
+    /// <summary>A map kept by <see cref="Encode"/>: its cells, its start cell (-1, -1 for none) and its heights (or null).</summary>
+    /// <exception cref="InvalidDataException">A newer format, another size, data cut short, or a cell that is no kind.</exception>
+    public static byte[] Decode(byte[] kept, out int startColumn, out int startRow, out ushort[]? heights)
     {
         using var r = new BinaryReader(new MemoryStream(kept));
         int version = r.ReadInt32();
-        if (version != FormatVersion)
+        if (version is < 1 or > FormatVersion)
         {
-            throw new InvalidDataException("the drawn world's map is of format " + version + ", this one reads " + FormatVersion + " (a newer editor made it)");
+            throw new InvalidDataException("the drawn world's map is of format " + version + ", this one reads up to " + FormatVersion + " (a newer editor made it)");
         }
         if (r.ReadInt32() != Size)
         {
@@ -358,23 +410,54 @@ public sealed class DrawnLand
         }
         startColumn = r.ReadInt32();
         startRow = r.ReadInt32();
-        byte[] packed = r.ReadBytes(r.ReadInt32());
-        byte[] cells = new byte[Size * Size];
-        using var z = new DeflateStream(new MemoryStream(packed), CompressionMode.Decompress);
-        int got = 0, n;
-        while (got < cells.Length && (n = z.Read(cells, got, cells.Length - got)) > 0)
-        {
-            got += n;
-        }
-        if (got != cells.Length)
-        {
-            throw new InvalidDataException("the drawn world's map is cut short");
-        }
+        byte[] cells = Inflate(r.ReadBytes(r.ReadInt32()), Size * Size);
         if (Array.FindIndex(cells, c => c >= Kinds) >= 0)
         {
             throw new InvalidDataException("the drawn world's map has a cell of no kind");
         }
+        heights = null;
+        if (version >= 2)
+        {
+            byte[] bytes = Inflate(r.ReadBytes(r.ReadInt32()), Size * Size * 2);
+            heights = new ushort[Size * Size];
+            for (int i = 0; i < heights.Length; i++)
+            {
+                heights[i] = (ushort)(bytes[2 * i] | (bytes[2 * i + 1] << 8));
+            }
+        }
         return cells;
+    }
+
+    /// <summary>The same, for a caller that needs no heights.</summary>
+    public static byte[] Decode(byte[] kept, out int startColumn, out int startRow) => Decode(kept, out startColumn, out startRow, out _);
+
+    /// <summary>Bytes deflated.</summary>
+    private static byte[] Deflate(byte[] bytes)
+    {
+        using var packed = new MemoryStream();
+        using (var z = new DeflateStream(packed, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            z.Write(bytes, 0, bytes.Length);
+        }
+        return packed.ToArray();
+    }
+
+    /// <summary>Deflated bytes back, exactly <paramref name="length"/> of them.</summary>
+    /// <exception cref="InvalidDataException">Fewer.</exception>
+    private static byte[] Inflate(byte[] packed, int length)
+    {
+        byte[] bytes = new byte[length];
+        using var z = new DeflateStream(new MemoryStream(packed), CompressionMode.Decompress);
+        int got = 0, n;
+        while (got < length && (n = z.Read(bytes, got, length - got)) > 0)
+        {
+            got += n;
+        }
+        if (got != length)
+        {
+            throw new InvalidDataException("the drawn world's map is cut short");
+        }
+        return bytes;
     }
 
     /// <summary>The middle of a cell in the world (x east, z north).</summary>

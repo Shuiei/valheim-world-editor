@@ -2474,5 +2474,11 @@
   "masterMap.error.landVersion": "This drawn world was made by an editor whose land is of version {0}; this one makes version {1}. Update the editor.",
   "masterMap.error.damaged": "The drawn world's map in its file is damaged.",
   "drawWorld.hint.mod": "A drawn world plays only with the DrawnWorlds mod, on the server and on every player's game (it is in the editor's download). The game without it refuses the world, and a server with it turns away players without it.",
-  "tip.drawWorld.create": "Make the drawn world in the game's world folder and open it."
+  "tip.drawWorld.create": "Make the drawn world in the game's world folder and open it.",
+  "masterMap.title.heightmap": "Open a heightmap",
+  "masterMap.msg.heightmap": "Made from the heightmap {0}: its heights are kept, and each place has the biome the game would give it. Paint over it, then save: the heights are saved beside the picture.",
+  "drawWorld.label.heightmap": "From a heightmap…",
+  "drawWorld.label.seaLevel": "Sea level",
+  "tip.drawWorld.heightmap": "Start a drawing from a heightmap (a gray picture of the whole world, black lowest, white highest): its heights are kept, and each place gets the biome the game would give it there.",
+  "tip.drawWorld.seaLevel": "How gray the heightmap is at the sea's surface: darker is under water. Set it before opening the heightmap."
 }

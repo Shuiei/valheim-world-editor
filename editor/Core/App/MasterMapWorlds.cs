@@ -34,7 +34,7 @@ public static class MasterMapWorlds
     internal static GeneratorRules Generator(MasterMap map, ValheimWorldEditor.Sdk.GeneratorSettings settings) =>
         new(Id, Lang.T("masterMap.name"), LandVersion, settings.Description)
         {
-            Land = new MasterMapLand(map.Cells, Biomes),
+            Land = new MasterMapLand(map.Cells, map.Heights, Biomes),
             Start = map.StartPoint,
             Header = new GeneratorHeader(WorldGenerators.Drawn, settings),
         };

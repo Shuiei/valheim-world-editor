@@ -22,6 +22,9 @@ public sealed partial class DrawWorldPage
     /// <summary>The seed the world's small things come from.</summary>
     internal TextBox SeedBox { get; } = new TextBox { PlaceholderText = "Drawn", MaxLength = 10, FontSize = 12 }.Tip("drawWorld.seed");
 
+    /// <summary>The gray of a heightmap at the sea's surface, in percent (black 0, white 100).</summary>
+    internal NumericUpDown SeaLevel { get; } = new NumericUpDown { Minimum = 1, Maximum = 99, Value = 10, Increment = 1, FormatString = "0", Width = 110, FontSize = 12 }.Tip("drawWorld.seaLevel");
+
     internal Button UndoButton { get; } = new Button { Content = Lang.T("drawWorld.label.undo"), FontSize = 12 }.Tip("drawWorld.undo");
     internal Button RedoButton { get; } = new Button { Content = Lang.T("drawWorld.label.redo"), FontSize = 12 }.Tip("drawWorld.redo");
 
@@ -135,6 +138,8 @@ public sealed partial class DrawWorldPage
 
         // The picture: new, open, save, undo, redo.
         var newButton = new Button { Content = Lang.T("drawWorld.label.new"), FontSize = 12 }.Tip("drawWorld.new");
+        var heightmap = new Button { Content = Lang.T("drawWorld.label.heightmap"), FontSize = 12 }.Tip("drawWorld.heightmap");
+        heightmap.Click += async (_, _) => await OpenHeightmap();
         var open = new Button { Content = Lang.T("drawWorld.label.open"), FontSize = 12 }.Tip("drawWorld.open");
         var save = new Button { Content = Lang.T("drawWorld.label.save"), FontSize = 12 }.Classed("primary").Tip("drawWorld.save");
         newButton.Click += (_, _) => NewMap();
@@ -150,6 +155,12 @@ public sealed partial class DrawWorldPage
                 Head("drawWorld.head.picture"),
                 new WrapPanel { Children = { newButton, open, save }, ItemSpacing = 6, LineSpacing = 6 },
                 new WrapPanel { Children = { UndoButton, RedoButton }, ItemSpacing = 6 },
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 8,
+                    Children = { heightmap, new TextBlock { Text = Lang.T("drawWorld.label.seaLevel"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, SeaLevel, new TextBlock { Text = "%", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } },
+                },
                 NoteText,
             },
         });
