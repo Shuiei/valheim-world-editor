@@ -34,6 +34,12 @@ public sealed class DrawnLand
     /// <summary>The continents' height along a river or a lake (just over the game's waterline, 0.15).</summary>
     private const double Bank = 0.17;
 
+    /// <summary>
+    /// The lowest continents of land painted over a heightmap: enough over the waterline (0.15) that the game's hills and
+    /// grain, which go down as well as up, never take it under the water.
+    /// </summary>
+    private const double PaintedLand = 0.21;
+
     /// <summary>The continents' height where the mountains begin (the game's Mountain threshold).</summary>
     private const double MountainFoot = 0.4;
 
@@ -129,7 +135,7 @@ public sealed class DrawnLand
             {
                 double h = ContinentOf(heights[i]);
                 v = k == Mountain ? Math.Max(h, MountainFoot + 0.01)
-                    : k < River ? Math.Max(h, Coast + 0.04)
+                    : k < River ? Math.Max(h, PaintedLand)
                     : Math.Min(h, v);
             }
             raw[i] = (float)v;
