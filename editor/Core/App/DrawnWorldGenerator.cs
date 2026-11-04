@@ -43,8 +43,8 @@ public sealed class DrawnWorldGenerator : IWorldGenerator
         {
             kept[i] = file.ReadByte();
         }
-        byte[] cells = DrawnLand.Decode(kept, out int column, out int row);
-        var map = new MasterMap(cells, column < 0 ? null : (column, row));
+        byte[] cells = DrawnLand.Decode(kept, out int column, out int row, out ushort[]? heights);
+        var map = new MasterMap(cells, column < 0 ? null : (column, row)) { Heights = heights };
         return Settings(map);
     }
 
@@ -52,7 +52,7 @@ public sealed class DrawnWorldGenerator : IWorldGenerator
     public void WriteHeader(IWorldFileWriter file, int fileVersion, GeneratorSettings settings)
     {
         var map = (MasterMap)settings.Value;
-        byte[] kept = DrawnLand.Encode(map.Cells, map.Start?.Column ?? -1, map.Start?.Row ?? -1);
+        byte[] kept = DrawnLand.Encode(map.Cells, map.Start?.Column ?? -1, map.Start?.Row ?? -1, map.Heights);
         file.WriteInt(fileVersion);
         file.WriteString(MasterMapWorlds.LandVersion);
         file.WriteInt(kept.Length);

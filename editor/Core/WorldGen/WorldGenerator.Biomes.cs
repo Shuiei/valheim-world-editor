@@ -72,6 +72,35 @@ public sealed partial class WorldGenerator
     }
 
     /// <summary>
+    /// The biome the game's own layout gives a point whose continents are <paramref name="land"/> instead of the seed's
+    /// (a heightmap's, turned into a master map): the Ashlands and the Deep North past their edges, the sea below the
+    /// continents' sea level, mountains above 0.4, then the swamps, mists, plains and forests by the seed's noise and
+    /// their distances from the middle. The game's own rules only (no world generation mod's).
+    /// </summary>
+    internal Heightmap.Biome BiomeWithLand(float x, float z, float land)
+    {
+        x = Stretched(x);
+        z = Stretched(z);
+        if ((double)GenMath.Length(x, (float)((double)z + (double)_v.AshlandsYOffset)) > (double)_v.AshlandsMinDistance + (double)Wave(x, z) * 100.0)
+        {
+            return Heightmap.Biome.AshLands;
+        }
+        if (land <= 0.02f)
+        {
+            return Heightmap.Biome.Ocean;
+        }
+        if (GenMath.Length(x, (float)((double)z + _v.DeepNorthShift)) > (float)(_v.DeepNorthRadius + (double)(float)((double)Wave(x, z) * 100.0)))
+        {
+            return Heightmap.Biome.DeepNorth;
+        }
+        if (land > 0.4f)
+        {
+            return Heightmap.Biome.Mountain;
+        }
+        return LandBiome(x, z, GenMath.Length(x, z), land, (float)((double)Wave(x, z) * 100.0));
+    }
+
+    /// <summary>
     /// A biome's noise field: wide blobs, a kilometre or so across, placed by the seed (the rules' biome stretch
     /// spreads them: Expand World Size divides the point by it, in float, before the seed's offset is added; the offset
     /// is not divided).

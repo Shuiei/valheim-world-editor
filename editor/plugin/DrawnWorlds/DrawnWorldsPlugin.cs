@@ -81,9 +81,9 @@ public sealed partial class DrawnWorldsPlugin : BaseUnityPlugin
         {
             return;
         }
-        byte[] cells = DrawnLand.Decode(kept, out int column, out int row);
+        byte[] cells = DrawnLand.Decode(kept, out int column, out int row, out ushort[] heights);
         var started = DateTime.UtcNow;
-        Land = new DrawnLand(cells, UnityEngine.Mathf.PerlinNoise);
+        Land = new DrawnLand(cells, heights, UnityEngine.Mathf.PerlinNoise);
         _landOf = kept;
         if (column >= 0)
         {
