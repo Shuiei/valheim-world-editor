@@ -101,7 +101,7 @@ public sealed partial class WorldGenerator
                 h = GenMath.Lerp(h, -2f, Utils.LerpStep(_v.EdgeInner, _v.EdgeOfWorld, fromMiddle));
             }
         }
-        return h;
+        return h * 1f + 0f;
     }
 
     /// <summary>

@@ -2412,7 +2412,7 @@
   "tip.kind.Dungeons": "The rooms of Frost Caves, crypts and other dungeons, high above their entrances (5000 m up, where the game keeps them). Edit them with the Dungeon tool.",
   "tip.kind.Effects": "Mist, music, boss event zones and other effects and markers of the game's (mostly invisible).",
   "tip.kind.Other": "Everything that fits no other kind, such as tombstones.",
-  "masterMap.name": "Master map",
+  "masterMap.name": "Drawn world",
   "masterMap.kind.river": "River",
   "masterMap.kind.lake": "Lake",
   "masterMap.kind.sea": "Sea",
@@ -2450,7 +2450,7 @@
   "drawWorld.label.world": "World",
   "drawWorld.hint.mouse": "Left button: paint. Right or middle button: move the map. Wheel: zoom. Right double click: all of the world.",
   "drawWorld.hint.start": "The start point is drawn in magenta (#FF00FF) in the picture. Without one, the start is at the middle of the world. The dashed circle is the world's edge: past it, everything sinks into the sea.",
-  "drawWorld.hint.world": "World shows the world your drawing makes: the land and biomes you drew, the game's own hills, rivers and lakes on them, and where the game will put the start, the bosses' altars and the traders. The seed only changes the small things. Making the world in the game comes next: it needs a small mod on the server and on every player's game.",
+  "drawWorld.hint.world": "World shows the world your drawing makes: the land and biomes you drew, the game's own hills, rivers and lakes on them, and where the game will put the start, the bosses' altars and the traders. The seed only changes the small things.",
   "drawWorld.hint.noGameData": "Where the game will put its places is shown once the editor has read your Valheim's files (Settings).",
   "drawWorld.hint.marks": "On the map: red, the start; purple, the bosses' altars; yellow, the traders' spots.",
   "drawWorld.msg.making": "Making the world…",
@@ -2470,5 +2470,9 @@
   "tip.drawWorld.save": "Save the drawing as a PNG picture, to come back to it or share it.",
   "tip.drawWorld.drawing": "Show the drawing, to paint on it.",
   "tip.drawWorld.world": "Show the world the drawing makes (a few seconds).",
-  "world.title.drawWorld": "Valheim World Editor {0} · Draw a world"
+  "world.title.drawWorld": "Valheim World Editor {0} · Draw a world",
+  "masterMap.error.landVersion": "This drawn world was made by an editor whose land is of version {0}; this one makes version {1}. Update the editor.",
+  "masterMap.error.damaged": "The drawn world's map in its file is damaged.",
+  "drawWorld.hint.mod": "A drawn world plays only with the DrawnWorlds mod, on the server and on every player's game (it is in the editor's download). The game without it refuses the world, and a server with it turns away players without it.",
+  "tip.drawWorld.create": "Make the drawn world in the game's world folder and open it."
 }

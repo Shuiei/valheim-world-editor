@@ -1,0 +1,9 @@
+{
+  "name": "DrawnWorlds",
+  "version_number": "@VERSION@",
+  "website_url": "https://github.com/Shuiei/valheim-world-editor",
+  "description": "Play worlds drawn with Valheim World Editor's Draw a world: the biomes, seas, rivers and start you painted, the game's own rules for the rest. Needed on the server and every player.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2351"
+  ]
+}

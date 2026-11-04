@@ -48,8 +48,10 @@ public sealed partial class DrawWorldPage : IDisposable
     internal Task Pending { get; private set; } = Task.CompletedTask;
 
     /// <summary>Builds the page, with a blank sea to draw on.</summary>
-    public DrawWorldPage()
+    /// <param name="roots">The world folders Create offers (tests); null for the game's own.</param>
+    public DrawWorldPage(IReadOnlyList<string>? roots = null)
     {
+        WireCreate(roots);
         Canvas.Changing += KeepForUndo;
         Canvas.Changed += () =>
         {

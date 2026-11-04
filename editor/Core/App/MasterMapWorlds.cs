@@ -23,14 +23,19 @@ public static class MasterMapWorlds
     /// </summary>
     /// <param name="map">The map.</param>
     /// <param name="over">The rules the rest follows; null for the game's.</param>
-    public static WorldRules Rules(MasterMap map, WorldRules? over = null)
-    {
-        var land = new MasterMapLand(map.Cells, MasterMap.Size, MasterMap.Half, Biomes);
-        var generator = new GeneratorRules(Id, Lang.T("masterMap.name"), LandVersion, "map " + map.Stamp())
+    public static WorldRules Rules(MasterMap map, WorldRules? over = null) =>
+        (over ?? WorldRules.Vanilla) with { Generator = Generator(map, DrawnWorldGenerator.Settings(map)) };
+
+    /// <summary>
+    /// The generator's rules for a map: its land, its start, and the header a new world's file starts with (the map).
+    /// </summary>
+    /// <param name="map">The map.</param>
+    /// <param name="settings">Its settings (the world file's header, read or to write).</param>
+    internal static GeneratorRules Generator(MasterMap map, ValheimWorldEditor.Sdk.GeneratorSettings settings) =>
+        new(Id, Lang.T("masterMap.name"), LandVersion, settings.Description)
         {
-            Land = land,
+            Land = new MasterMapLand(map.Cells, Biomes),
             Start = map.StartPoint,
+            Header = new GeneratorHeader(WorldGenerators.Drawn, settings),
         };
-        return (over ?? WorldRules.Vanilla) with { Generator = generator };
-    }
 }
