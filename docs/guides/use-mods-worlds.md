@@ -48,9 +48,10 @@ generated as the game does without the mods, and Riverheim worlds are refused.
   `Railroads.dll`, as the mod installs it.
 - Expand World's data files need the YamlDotNet library the mod installs under `BepInEx/plugins`; without it they
   are not read, and the log says so.
-- Your Riverheim must know the world's preset (update it if it is older than the one that made the world). Worlds
-  made with Riverheim's deprecated beta cannot be opened. Live, your Riverheim and the game's must be of the same
-  release.
+- Your Riverheim must know the world's preset (update it if it is older than the one that made the world). Riverheim
+  1.3 and later need Worldhalla beside them, as in the game. Worlds made with Riverheim's deprecated beta cannot be
+  opened. Live, your Riverheim must be the version players joining the game need (the same version since 1.3, the
+  same release before).
 - A Riverheim world needs Riverheim in every player's game, so console players on crossplay cannot join it.
 - Live, Expand World's files are read from the game itself through the plugin: see [Live mode](../live-mode.md).
 

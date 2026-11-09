@@ -5,10 +5,12 @@ using ValheimWorldEditor.Sdk;
 namespace Riverheim.WorldEditor;
 
 /// <summary>
-/// A world laid out by the player's Riverheim (<see cref="RiverheimLibrary"/>), answering as the mod's game side answers
-/// the game: the point given as the game's floats widened to double; the height 30 m above Riverheim's (the game's
-/// water level), in float; the mask's channels its dirt, snow, paving and the larger of its lava and fertility; the
-/// forest factor 2.15 × (1 − its forestation); its biomes, sub-biomes included, as the game's.
+/// A world laid out by the player's Riverheim (<see cref="RiverheimLibrary"/>), answering as the mod's game side
+/// (Worldhalla's since Riverheim 1.3) answers the game: the point given as the game's floats widened to double; the
+/// height 30 m above Riverheim's (the game's water level), in float; the mask's channels its dirt, snow, paving and the
+/// larger of its lava and fertility; the forest factor 2.15 × (1 − its forestation), from the forestation in double before
+/// 1.3 and from the forestation and multiplier in float through Worldhalla (a bit or two apart at a third of the points);
+/// its biomes, sub-biomes included, as the game's.
 /// </summary>
 /// <param name="calls">The renderer's calls.</param>
 /// <param name="renderer">Riverheim's renderer of the world.</param>
@@ -17,8 +19,11 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
     /// <summary>What the mod's game side adds to Riverheim's heights: the game's water level, metres.</summary>
     private const float HeightOffset = 30f;
 
-    /// <summary>The game's forest factor for no forestation (the mod's multiplier).</summary>
+    /// <summary>The game's forest factor for no forestation (the mod's multiplier, in double before Riverheim 1.3).</summary>
     private const double ForestFactor = 2.15;
+
+    /// <summary>The same multiplier as Worldhalla has it, a float.</summary>
+    private const float WorldhallaForestFactor = 2.15f;
 
     /// <inheritdoc/>
     public int Biome(float x, float z) => calls.Biome(calls.BiomeOf(renderer, x, z));
@@ -32,7 +37,10 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
     }
 
     /// <inheritdoc/>
-    public float Forest(float x, float z) => (float)(ForestFactor * (1.0 - calls.Forestation(renderer, x, z)));
+    public float Forest(float x, float z) => calls.ThroughWorldhalla
+        // Worldhalla's float formula as the game's runtime works it out: in double, rounded to float once at the end.
+        ? (float)(WorldhallaForestFactor * (1.0 - (float)calls.Forestation(renderer, x, z)))
+        : (float)(ForestFactor * (1.0 - calls.Forestation(renderer, x, z)));
 
     /// <summary>What Riverheim's renderer gives for a point.</summary>
     /// <param name="Height">The ground's height, metres from the water level.</param>
@@ -78,8 +86,10 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
         /// <param name="renderer">Its WorldRenderer.</param>
         /// <param name="vector">Its Rfloat2 (a point, two doubles).</param>
         /// <param name="biome">Its Biome enum.</param>
-        public Calls(Type renderer, Type vector, Type biome)
+        /// <param name="throughWorldhalla">Whether it is a Worldhalla plugin (Riverheim 1.3 and later).</param>
+        public Calls(Type renderer, Type vector, Type biome, bool throughWorldhalla)
         {
+            ThroughWorldhalla = throughWorldhalla;
             var r = Expression.Parameter(typeof(object), "renderer");
             var x = Expression.Parameter(typeof(double), "x");
             var z = Expression.Parameter(typeof(double), "z");
@@ -105,6 +115,9 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
                 _biomes[Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture)] = game;
             }
         }
+
+        /// <summary>Whether Worldhalla answers the game from the renderer (Riverheim 1.3 and later).</summary>
+        public bool ThroughWorldhalla { get; }
 
         /// <summary>The renderer's RenderPoint at a point.</summary>
         public Func<object, double, double, Point> Point { get; }

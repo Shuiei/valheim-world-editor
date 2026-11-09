@@ -20,7 +20,8 @@ public sealed class FlatlandGenerator : IWorldEditorExtension, IWorldGenerator
     /// <summary>The mod's version the last live game opened with ran; null when none was told.</summary>
     public string? GameVersion { get; private set; }
 
-    public string Id => "test.flatland";
+    /// <summary>The id its worlds' files name ("worldhalla:" and its id for the worlds Worldhalla keeps).</summary>
+    public string Id { get; init; } = "test.flatland";
 
     public string PluginId => "test.flatland.plugin";
 

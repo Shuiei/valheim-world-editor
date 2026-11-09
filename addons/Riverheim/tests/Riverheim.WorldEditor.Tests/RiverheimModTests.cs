@@ -5,7 +5,7 @@ namespace Riverheim.WorldEditor.Tests;
 /// <summary>
 /// Riverheim's header in a world file (after its id): its preset and the game's file version read, written as Riverheim
 /// writes it, a setting the add-on does not know or no preset refused with why; which of its versions lay worlds out
-/// alike.
+/// alike (the same release before 1.3, the same version through Worldhalla).
 /// </summary>
 public class RiverheimModTests
 {
@@ -52,5 +52,8 @@ public class RiverheimModTests
     [InlineData("1.1.1", "1.2.1", false)]
     [InlineData("2.2.1", "1.2.1", false)]
     [InlineData("beta", "1.2.1", false)]
-    public void ARiverheimReleaseIsItsMajorAndMinorVersion(string a, string b, bool same) => Assert.Equal(same, RiverheimMod.SameRelease(a, b));
+    [InlineData("1.3.1", "1.3.1", true)]
+    [InlineData("1.3.1", "1.3.0", false)]
+    [InlineData("1.3.1", "1.2.1", false)]
+    public void ARiverheimReleaseIsItsMajorAndMinorVersionThenItsVersionThroughWorldhalla(string a, string b, bool same) => Assert.Equal(same, RiverheimMod.SameRelease(a, b));
 }

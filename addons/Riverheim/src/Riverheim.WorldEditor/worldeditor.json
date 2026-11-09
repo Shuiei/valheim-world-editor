@@ -5,6 +5,7 @@
   "extension": "Riverheim.WorldEditor.dll",
   "worldGenerators": {
     "dev.gurebu.riverheim.stable": "Riverheim",
+    "worldhalla:dev.gurebu.riverheim": "Riverheim",
     "dev.gurebu.riverheim.unstable": "Riverheim's beta"
   }
 }

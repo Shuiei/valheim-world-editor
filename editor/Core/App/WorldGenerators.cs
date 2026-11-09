@@ -7,12 +7,28 @@ namespace TerrainEditor.App;
 /// <summary>
 /// The world generation mods the editor draws worlds of (IWorldGenerator): those the running extensions register (an
 /// add-on's, a mod's own; Riverheim's comes as the Riverheim add-on). A world file marks a world one of them made: -1
-/// where the game's file version goes, then the generator's id, then its header.
+/// where the game's file version goes, then the generator's id, then its header. Worldhalla, the framework world
+/// generation mods plug into (Riverheim since 1.3), marks its worlds its own way (<see cref="WorldhallaFlag"/>): their
+/// generator is the one registered as <see cref="WorldhallaPrefix"/> and Worldhalla's id for it.
 /// </summary>
 public static class WorldGenerators
 {
     /// <summary>What a world file made with a world generation mod starts with where the game's file version would be (always positive).</summary>
     public const int Marker = -1;
+
+    /// <summary>
+    /// Where the game's file version goes, Worldhalla's mark of a world one of its generators made: this bit, with the
+    /// version of Worldhalla's format in the lowest byte (0; 255, -1 in all, is the mark above, which Worldhalla reads as
+    /// Riverheim's before 1.3). The game's file version follows, then Worldhalla's part, as bytes (an int length first):
+    /// the generator's id, Worldhalla's own settings as bytes, and the generator's settings as bytes.
+    /// </summary>
+    public const uint WorldhallaFlag = 0x80000000;
+
+    /// <summary>The newest version of Worldhalla's format the editor reads (Worldhalla 1.0's).</summary>
+    public const int WorldhallaFormat = 0;
+
+    /// <summary>What the id of the generator drawing a Worldhalla world starts with, before Worldhalla's id for it.</summary>
+    public const string WorldhallaPrefix = "worldhalla:";
 
     /// <summary>
     /// The generator a world file names; null when none in use does. The extensions are run first when which run has not
@@ -59,11 +75,48 @@ public static class WorldGenerators
         header = null;
         if (version != Marker)
         {
-            return version;
+            return ((uint)version & WorldhallaFlag) != 0 ? ReadWorldhalla(pkg, (uint)version, out header) : version;
         }
         string id = pkg.ReadString();
         var generator = Find(id) ?? throw new GeneratorHeaderException(WhyNone(id));
         header = new GeneratorHeader(generator, generator.ReadHeader(pkg, out version));
+        return version;
+    }
+
+    /// <summary>
+    /// The file version and generator header of a world Worldhalla keeps (<see cref="WorldhallaFlag"/>), read as its
+    /// generator's: the one registered as <see cref="WorldhallaPrefix"/> and Worldhalla's id reads the game's file
+    /// version, then the generator's settings, as just after its id in a file it marks itself. Throws
+    /// <see cref="GeneratorHeaderException"/>, with why for the player, for a newer Worldhalla's format or settings (as an
+    /// older Worldhalla refuses them), a generator not in use, settings it cannot read or leaves part of.
+    /// </summary>
+    /// <param name="pkg">The world file's package, just after the mark.</param>
+    /// <param name="mark">The mark, with the format's version.</param>
+    /// <param name="header">Set to the generator's header.</param>
+    private static int ReadWorldhalla(ValheimReader pkg, uint mark, out GeneratorHeader header)
+    {
+        int format = (int)(mark & 0xff);
+        if (format > WorldhallaFormat)
+        {
+            throw new GeneratorHeaderException(Lang.T("worldgen.worldhallaFormat", format));
+        }
+        int version = pkg.ReadInt();
+        using var part = new ValheimReader(new MemoryStream(pkg.ReadByteArray()));
+        string id = WorldhallaPrefix + part.ReadString();
+        // Worldhalla 1.0 has no settings of its own: none, or a count of none.
+        byte[] own = part.ReadByteArray();
+        if (own.Length > 0 && (own.Length < sizeof(int) || BitConverter.ToInt32(own) != 0))
+        {
+            throw new GeneratorHeaderException(Lang.T("worldgen.worldhallaSettings"));
+        }
+        byte[] settings = part.ReadByteArray();
+        var generator = Find(id) ?? throw new GeneratorHeaderException(WhyNone(id));
+        using var read = new ValheimReader(new MemoryStream([.. BitConverter.GetBytes(version), .. settings]));
+        header = new GeneratorHeader(generator, generator.ReadHeader(read, out int fileVersion));
+        if (read.Position != sizeof(int) + settings.Length || fileVersion != version)
+        {
+            throw new GeneratorHeaderException(Lang.T("worldgen.worldhallaUnread", generator.Name));
+        }
         return version;
     }
 

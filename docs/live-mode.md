@@ -152,9 +152,10 @@ folder; the log says what was read. With an older plugin, your local folders are
 ### Riverheim
 
 A live Riverheim world is drawn with your own copy of Riverheim: the [Riverheim add-on](../addons/Riverheim/README.md)
-must be installed and on, and Riverheim installed on this computer. Your Riverheim and the game's must be of the
-same release (the first two numbers of the version); otherwise the editor names both versions and does not open
-the world.
+must be installed and on, and Riverheim installed on this computer (with Worldhalla, for Riverheim 1.3 and later).
+Your Riverheim must be the version a player joining the game needs: since Riverheim 1.3, the same version as the
+game's; before it, the same release (the first two numbers of the version). Otherwise the editor names both versions
+and does not open the world.
 
 ## Plugin settings
 

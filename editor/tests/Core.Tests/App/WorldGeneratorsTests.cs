@@ -7,7 +7,8 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// World generation mods' generators an extension registers (WorldGenerators, ModGenerator), with a made-up one: a world
-/// file naming it read and written by it, its ground laid out in place of the game's; what it refuses said in its
+/// file naming it read and written by it, one Worldhalla keeps read by the one registered for it (a newer Worldhalla's
+/// refused), its ground laid out in place of the game's; what it refuses said in its
 /// words; a fault turning its extension off and said as the add-on failing; the world list marking its worlds, and
 /// refusing those of a generator none draws; new worlds made with it; the rules' few words naming it; the world's Expand
 /// World settings as it is told them. Runs alone (the extensions in use are shared).
@@ -107,6 +108,35 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
         var info = Assert.Single(Worlds.Find(new AppSettings { WorldFolders = { w.Dir } }));
         Assert.Null(info.Generator);
         Assert.Equal((false, Lang.T("worldgen.unknown", "made.up.generator")), (info.Usable, info.Problem));
+    }
+
+    [Fact]
+    public void AWorldWorldhallaKeepsIsReadByTheGeneratorRegisteredForIt()
+    {
+        ModExtensions.UseForTests(("Flatland", new FlatlandGenerator { Id = "worldhalla:test.flatland" }));
+        using var w = new TempWorld();
+        string file = Path.Combine(w.Dir, $"_main.{w.Load().SaveNumber}.fwl2");
+        byte[] height = BitConverter.GetBytes(50f);
+        // Worldhalla 1.0 writes its own settings as none, or a count of none.
+        foreach (byte[] own in new byte[][] { [], BitConverter.GetBytes(0) })
+        {
+            WorldFileHead.WriteWorldhalla(file, "test.flatland", height, own);
+            var head = WorldSave.ReadMetadata(file);
+            Assert.Equal(("worldhalla:test.flatland", 50f, WorldFileHead.Name, WorldFileHead.SeedName), (head.Generator?.Generator.Id, head.Generator?.Settings.Value, head.Name, head.SeedName));
+        }
+        // A newer Worldhalla's format or settings of its own, as an older Worldhalla refuses them.
+        WorldFileHead.WriteWorldhalla(file, "test.flatland", height, format: 1);
+        Assert.Equal(Lang.T("worldgen.worldhallaFormat", 1), Assert.Throws<GeneratorHeaderException>(() => WorldSave.ReadMetadata(file)).Message);
+        WorldFileHead.WriteWorldhalla(file, "test.flatland", height, own: [1, 0, 0, 0, 1, (byte)'x']);
+        Assert.Equal(Lang.T("worldgen.worldhallaSettings"), Assert.Throws<GeneratorHeaderException>(() => WorldSave.ReadMetadata(file)).Message);
+        // Settings the generator does not read whole, and a generator none registers for Worldhalla's worlds.
+        WorldFileHead.WriteWorldhalla(file, "test.flatland", [.. height, 7]);
+        Assert.Equal(Lang.T("worldgen.worldhallaUnread", "Flatland"), Assert.Throws<GeneratorHeaderException>(() => WorldSave.ReadMetadata(file)).Message);
+        WorldFileHead.WriteWorldhalla(file, "made.up", height);
+        Assert.Equal(Lang.T("worldgen.unknown", "worldhalla:made.up"), Assert.Throws<GeneratorHeaderException>(() => WorldSave.ReadMetadata(file)).Message);
+        // Its id is not the one a world names after the -1 a mod marks its own worlds with.
+        WorldFileHead.Write(file, 42, [], "test.flatland");
+        Assert.Equal(Lang.T("worldgen.unknown", "test.flatland"), Assert.Throws<GeneratorHeaderException>(() => WorldSave.ReadMetadata(file)).Message);
     }
 
     [Fact]

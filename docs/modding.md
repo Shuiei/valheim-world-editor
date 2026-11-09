@@ -309,10 +309,17 @@ game does.
 ### World generators
 
 A world generation mod replaces the game's ground, and marks the worlds it makes: their world file starts with -1
-where the game's file version goes, then the generator's id (a string), then whatever the mod keeps (Riverheim: the
-game's file version, then its preset). The editor refuses such a world unless a running extension registers a
+where the game's file version goes, then the generator's id (a string), then whatever the mod keeps (Riverheim before
+1.3: the game's file version, then its preset). The editor refuses such a world unless a running extension registers a
 generator with that id, as the game without the mod refuses it: listed, greyed out, with why (name the ids in your
-manifest's `worldGenerators` for the editor to say what is missing). Your `IWorldGenerator` gives:
+manifest's `worldGenerators` for the editor to say what is missing).
+
+A mod that plugs into [Worldhalla](https://thunderstore.io/c/valheim/p/Gurebu/Worldhalla/) (Riverheim since 1.3) has its
+worlds marked by Worldhalla instead, with the generator's id and settings in Worldhalla's own header. Register a
+generator for them with the id `worldhalla:` followed by your generator's id in Worldhalla (Riverheim's:
+`worldhalla:dev.gurebu.riverheim`): its `ReadHeader` is given the game's file version, then your settings as Worldhalla
+keeps them, and must read them whole. A world whose Worldhalla header is of a newer Worldhalla than 1.0 (its format, or
+settings of Worldhalla's own) is refused with why. Your `IWorldGenerator` gives:
 
 - `Id`, `PluginId` (the mod's BepInEx GUID: in live mode you are told the version the game runs) and `Name`;
 - `ReadHeader(file, out fileVersion)` and `WriteHeader(file, fileVersion, settings)`: what follows the id, read and
