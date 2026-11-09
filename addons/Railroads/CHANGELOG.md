@@ -3,6 +3,18 @@
 Changes to the Railroads add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.6.0 — 2026-11-09
+
+### Added
+- **Crossing lights and barrier.** Follows Railroads 0.4.9, whose crossings (since 0.4.7) are drawn at rest, the lamps
+  unlit and the red-striped arm up, and offered in the Workshop under Other.
+- **Turned wagons stay turned in a pasted train.** Since 0.4.4 a wagon keeps the way it faced when coupled; a pasted
+  train's copy keeps its wagons turned as the original's, and the inspector lists them.
+
+### Changed
+- The feedback post, retired in 0.4.5, is no longer offered in the Workshop; posts in worlds still show. The chains a
+  piece was paid with (0.4.6) show in the inspector, read-only.
+
 ## v0.5.1 — 2026-11-02
 
 ### Fixed
