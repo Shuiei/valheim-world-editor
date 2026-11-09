@@ -5,7 +5,7 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
-## v1.119.3 — unreleased
+## v1.119.3 — 2026-11-09
 
 ### Fixed
 - **Riverheim worlds saved by Riverheim 1.3 open.** Riverheim 1.3 plugs into Worldhalla, which keeps a world's settings
@@ -18,6 +18,9 @@ the plugin is unchanged in versions without that part. Mods newly supported, or 
 - **Riverheim 1.3.1** with **Worldhalla 1.0.0** (Riverheim add-on 0.2.1): checked on a server running them, saved and
   live. The ground, biomes and paint are 1.2's; the forests follow Worldhalla's forest factor to the bit. Riverheim 1.3
   needs Worldhalla in its BepInEx folder, and live, the game's very version, as for players who join.
+- **Railroads 0.4.9** (Railroads add-on 0.6.0): its crossing lights and barrier are drawn at rest, lamps unlit and arm
+  up, and offered in the Workshop under Other. A pasted train keeps its wagons turned as the original's, and the
+  retired feedback post is no longer offered (posts already in worlds still show).
 
 ## v1.119.2 — 2026-11-03
 
