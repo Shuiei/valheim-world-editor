@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Build the plugin's package into <dist>: WorldEditorBridge-<version>.zip, from
+# Build the plugins' packages into <dist>: WorldEditorBridge-<version>.zip, from
 # tools/thunderstore/bridge/ (manifest.json and the mod page's README.md), every release's notes as its GitHub
 # release has them (through tools/thunderstore/package.cs), editor/Desktop/Assets/icon.png, the plugin built here
 # (plugins/WorldEditorBridge.dll, with plugins/WorldEditorBridge.Api.dll, what mods' plugins register with:
 # docs/modding.md#live-mode), tools/plugin-readme.txt (README.txt, for installing by hand) and the
-# repository's LICENSE (MIT).
+# repository's LICENSE (MIT). Then DrawnWorlds-<version>.zip the same way, from tools/thunderstore/drawn/ (the mod
+# drawn worlds need in the game: plugins/DrawnWorlds.dll, tools/drawn-readme.txt as README.txt).
 # The same zip goes to the GitHub release, Thunderstore and Hexium; the editor itself is on GitHub
 # releases only (Thunderstore does not host programs).
 # Usage: ValheimDir=<server> tools/thunderstore.sh <dist>   (needs the .NET 10 SDK and zip; the plugin builds against the
@@ -47,3 +48,9 @@ sed "s/@VERSION@/$version/g" "$repo/tools/plugin-readme.txt" > "$work/WorldEdito
 rm -rf "$repo/editor/plugin/WorldEditorBridge/bin" "$repo/editor/plugin/WorldEditorBridge/obj"
 package WorldEditorBridge bridge
 
+mkdir -p "$work/DrawnWorlds/plugins"
+"${DOTNET:-dotnet}" build "$repo/editor/plugin/DrawnWorlds/DrawnWorlds.csproj" -c Release -p:DebugType=none -o "$work/drawn" >/dev/null
+cp "$work/drawn/DrawnWorlds.dll" "$work/DrawnWorlds/plugins/"
+sed "s/@VERSION@/$version/g" "$repo/tools/drawn-readme.txt" > "$work/DrawnWorlds/README.txt"
+rm -rf "$repo/editor/plugin/DrawnWorlds/bin" "$repo/editor/plugin/DrawnWorlds/obj"
+package DrawnWorlds drawn

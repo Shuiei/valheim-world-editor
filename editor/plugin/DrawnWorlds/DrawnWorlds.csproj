@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The game's side of drawn worlds (the editor's Draw a world): on the server and on every player's game. -->
+  <PropertyGroup>
+    <AssemblyName>DrawnWorlds</AssemblyName>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Unity calls Awake, and Harmony the patches' Prefix, Postfix and Finalizer, by name. -->
+    <NoWarn>$(NoWarn);IDE0051</NoWarn>
+    <!-- As WorldEditorBridge: ValheimDir, a Valheim dedicated server's folder, and BepInExDir, a BepInEx folder (by
+         default the server's own), given as -p:ValheimDir=... or as environment variables. -->
+    <BepInExDir Condition="'$(BepInExDir)' == ''">$(ValheimDir)/BepInEx</BepInExDir>
+    <ManagedDir>$(ValheimDir)/valheim_server_Data/Managed</ManagedDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+    <!-- The land's maths, the very file the editor compiles: both make the same land of a map. -->
+    <Compile Include="../../Core/WorldGen/DrawnLand.cs" Link="DrawnLand.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx"><HintPath>$(BepInExDir)/core/BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExDir)/core/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_valheim"><HintPath>$(ManagedDir)/assembly_valheim.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_utils"><HintPath>$(ManagedDir)/assembly_utils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SoftReferenceableAssets"><HintPath>$(ManagedDir)/SoftReferenceableAssets.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(ManagedDir)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="RequireValheimDir" BeforeTargets="ResolveAssemblyReferences" Condition="'$(ValheimDir)' == ''">
+    <Error Text="Set ValheimDir to a Valheim dedicated server's folder (-p:ValheimDir=... or an environment variable): the plugin builds against its DLLs." />
+  </Target>
+</Project>

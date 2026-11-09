@@ -6,11 +6,12 @@ public static partial class SeedLocations
     internal sealed partial class Placer
     {
         /// <summary>
-        /// Where a kind's distances are measured from: the start the player drew for the start temple of a drawn world
-        /// (GeneratorRules.Start), else the middle of the world.
+        /// Where a kind laid out from the middle out (the start temple) is looked for from: the start the player drew in
+        /// a drawn world (GeneratorRules.Start; the DrawnWorlds mod moves the game's search there), else the middle. Its
+        /// distances are still the middle's, as the game measures them.
         /// </summary>
         internal (float X, float Z) StartOf(LocationRule rule) =>
-            rule.Prefab == StartPrefab && _gen.Rules.Generator is { Land: not null } drawn ? drawn.Start : (0f, 0f);
+            rule.CenterFirst != 0 && _gen.Rules.Generator is { Land: not null } drawn ? drawn.Start : (0f, 0f);
 
         /// <summary>
         /// From the middle of the world: the kind's ring.

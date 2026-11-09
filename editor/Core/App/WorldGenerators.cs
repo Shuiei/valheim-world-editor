@@ -44,7 +44,10 @@ public static class WorldGenerators
     }
 
     /// <summary>The generator in use with this id.</summary>
-    private static ModGenerator? Of(string id) => ModExtensions.Generators.FirstOrDefault(g => g.Id == id);
+    private static ModGenerator? Of(string id) => id == MasterMapWorlds.Id ? Drawn : ModExtensions.Generators.FirstOrDefault(g => g.Id == id);
+
+    /// <summary>The editor's own generator: worlds drawn on a master map (always in use: it needs no add-on).</summary>
+    public static ModGenerator Drawn { get; } = new(new DrawnWorldGenerator(), null);
 
     /// <summary>
     /// The world file's version, and the generator header before it in a world a world generation mod made (null for

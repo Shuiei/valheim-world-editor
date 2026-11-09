@@ -207,6 +207,33 @@ public static partial class SeedLocations
         }
 
         /// <summary>
+        /// Whether one of these biomes has no point at all on the map (a drawn world can lack a biome; the game's own
+        /// worlds have them all). The game would fail picking a point of it: the DrawnWorlds mod skips such a kind.
+        /// </summary>
+        /// <param name="biomes">A kind's biomes (flags).</param>
+        public bool LacksAny(Heightmap.Biome biomes)
+        {
+            for (int bit = 1; bit != 0 && bit <= (int)biomes; bit <<= 1)
+            {
+                if (((int)biomes & bit) == 0)
+                {
+                    continue;
+                }
+                int b = IndexOf((Heightmap.Biome)bit);
+                if (b < 0)
+                {
+                    return true;
+                }
+                List(b);
+                if (All[b].Length == 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
         /// GetRandomPointByBiomes and GetRandomPointByBiomesAboveSeaLevel, in world space.
         /// </summary>
         /// <param name="biomes">The kind's biomes.</param>

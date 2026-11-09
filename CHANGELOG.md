@@ -5,6 +5,13 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.121.0 — unreleased
+
+### Added
+- **Create a drawn world, and play it.** Draw a world now makes the world, and the new DrawnWorlds mod plays it in the
+  game: the biomes, seas, lakes and rivers you drew, with the game's own rules for everything else. The mod goes on the
+  server and on every player's game. See [Draw a world](docs/draw-world.md#play-a-drawn-world).
+
 ## v1.120.0 — unreleased
 
 ### Added
