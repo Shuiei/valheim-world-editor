@@ -6,6 +6,13 @@ public static partial class SeedLocations
     internal sealed partial class Placer
     {
         /// <summary>
+        /// Where a kind's distances are measured from: the start the player drew for the start temple of a drawn world
+        /// (GeneratorRules.Start), else the middle of the world.
+        /// </summary>
+        internal (float X, float Z) StartOf(LocationRule rule) =>
+            rule.Prefab == StartPrefab && _gen.Rules.Generator is { Land: not null } drawn ? drawn.Start : (0f, 0f);
+
+        /// <summary>
         /// From the middle of the world: the kind's ring.
         /// </summary>
         internal static bool AtRightDistance(LocationRule rule, Vector3 spot)

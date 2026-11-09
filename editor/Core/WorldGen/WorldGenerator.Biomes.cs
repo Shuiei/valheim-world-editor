@@ -29,6 +29,11 @@ public sealed partial class WorldGenerator
         // Expand World Size: the world stretched (its prefix on the game's GetBiome divides the point).
         x = Stretched(x);
         z = Stretched(z);
+        if (_land != null)
+        {
+            // A drawn world: the drawing's biomes, the sea past the world's edge.
+            return GenMath.Length(x, z) > _v.WorldSize ? Heightmap.Biome.Ocean : _land.Biome(x, z);
+        }
         if (_v.World != null)
         {
             // Expand World Data's prefix: the rules in place of the game's layout.
@@ -79,7 +84,8 @@ public sealed partial class WorldGenerator
     /// there (the rule the point passes boils). In the generator's coordinates (<see cref="Stretched"/>).
     /// </summary>
     public bool IsAshlands(float x, float z) =>
-        _v.World != null ? Boiling(x, z) > 0f
+        _land != null ? _land.Biome(x, z) == Heightmap.Biome.AshLands
+        : _v.World != null ? Boiling(x, z) > 0f
         : (double)GenMath.Length(x, (float)((double)z + (double)_v.AshlandsYOffset)) > (double)_v.AshlandsMinDistance + (double)Wave(x, z) * 100.0;
 
     /// <summary>
@@ -87,5 +93,6 @@ public sealed partial class WorldGenerator
     /// drawing, which asks with world metres as the game does.
     /// </summary>
     public bool IsDeepnorth(float x, float z) =>
-        GenMath.Length(x, (float)((double)z + _v.DeepNorthShift)) > (float)(_v.DeepNorthRadius + (double)(float)((double)Wave(x, z) * 100.0));
+        _land != null ? _land.Biome(x, z) == Heightmap.Biome.DeepNorth
+        : GenMath.Length(x, (float)((double)z + _v.DeepNorthShift)) > (float)(_v.DeepNorthRadius + (double)(float)((double)Wave(x, z) * 100.0));
 }

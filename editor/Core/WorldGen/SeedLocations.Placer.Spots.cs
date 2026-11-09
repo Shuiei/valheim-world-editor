@@ -18,7 +18,8 @@ public static partial class SeedLocations
                 // Expand World Data puts a kind wider than a zone at the zone's middle (the draws are made all the same).
                 spot = new Vector3(zone.X * 64f, 0f, zone.Y * 64f);
             }
-            if (!AtRightDistance(rule, spot) || !OnRightGround(rule, biomes, ref spot, out float vegetation) || !FlatEnough(rule, spot))
+            var (fromX, fromZ) = StartOf(rule);
+            if (!AtRightDistance(rule, new Vector3(spot.X - fromX, spot.Y, spot.Z - fromZ)) || !OnRightGround(rule, biomes, ref spot, out float vegetation) || !FlatEnough(rule, spot))
             {
                 return false;
             }

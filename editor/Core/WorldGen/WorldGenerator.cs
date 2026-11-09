@@ -68,7 +68,8 @@ public sealed partial class WorldGenerator
             _riverSeed = _v.RiverSeed;
             _streamSeed = _v.StreamSeed;
             // A world generation mod lays its own world out instead (Riverheim's prefix skips the game's Pregenerate).
-            _ground = GroundOf(world);
+            _land = world.Menu ? null : world.Rules.Generator?.Land;
+            _ground = _land == null ? GroundOf(world) : null;
             if (!world.Menu && _ground == null)
             {
                 LayOutWater();
@@ -166,6 +167,12 @@ public sealed partial class WorldGenerator
     /// the game's own.
     /// </summary>
     private readonly ValheimWorldEditor.Sdk.IGroundLayout? _ground;
+
+    /// <summary>
+    /// The land a player drew (<see cref="GeneratorRules.Land"/>), or null: the continents and the biomes come from it,
+    /// the rest stays the game's (the water is laid out on it as the game lays it out).
+    /// </summary>
+    private readonly IDrawnLand? _land;
 
     /// <summary>
     /// Older worlds (the game's generator versions 0 and 1) keep their settings: the radius around the

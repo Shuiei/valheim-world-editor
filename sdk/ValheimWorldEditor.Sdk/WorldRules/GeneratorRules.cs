@@ -22,6 +22,21 @@ public sealed record GeneratorRules(string Id, string Name, string Version, stri
     [JsonIgnore]
     internal Func<int, IGroundLayout> LayOut { get; init; } = _ => throw new InvalidOperationException("No generator to lay the world out.");
 
+    /// <summary>
+    /// The land a player drew (the editor's master map), or null. When set, the generator takes only the continents and
+    /// the biomes from it and keeps everything else the game's: <see cref="LayOut"/> is not asked, and the game's water
+    /// is laid out on that land.
+    /// </summary>
+    [JsonIgnore]
+    internal IDrawnLand? Land { get; init; }
+
+    /// <summary>
+    /// Where the player drew the start (with <see cref="Land"/>; the middle, 0, 0, by default): the start temple is
+    /// looked for from there out, as the game looks for it from the middle out.
+    /// </summary>
+    [JsonIgnore]
+    internal (float X, float Z) Start { get; init; }
+
     /// <summary>Whether laying a world out takes seconds (the New world page looks at fewer seeds at once).</summary>
     [JsonIgnore]
     public bool Slow { get; init; }
