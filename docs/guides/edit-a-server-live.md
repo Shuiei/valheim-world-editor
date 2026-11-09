@@ -3,7 +3,9 @@
 Connect the editor to your dedicated server and change its world while players stay online.
 
 **You need:** an SSH login to the server (a password or a key file), the right to install BepInEx and the
-WorldEditorBridge plugin there and to restart it.
+WorldEditorBridge plugin there and to restart it. A game server rented from a host (a web panel and FTP, no SSH), or
+one that a game panel such as Pterodactyl runs in a container: see
+[Edit a rented or panel-hosted server](edit-a-rented-server.md).
 
 ![The dedicated server form: name, server address and SSH port, user and password, SSH key file, plugin token, the server's Valheim folder, Save password and Connect](../images/start-server.jpg)
 *The form under **A dedicated server**. After the first connection the server is saved above it, for one-click access.*
@@ -75,6 +77,7 @@ each saved server with that address to accept the new identity.
 ## Related
 
 - [Live mode](../live-mode.md): Apply live, Auto, following the game, players
+- [Edit a rented or panel-hosted server](edit-a-rented-server.md): a host's game server, Pterodactyl, Docker
 - [Live editing](../concepts/live-editing.md#how-it-connects): the SSH tunnel and the token
 - [Edit the world you are playing](edit-your-game-live.md)
 - [Back up a world before editing](back-up-a-world.md)

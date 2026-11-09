@@ -25,6 +25,7 @@ from a task below. In the editor, `F1` or the small **?** at the top of a panel 
 - [Open a world that is not in the list](guides/open-a-world.md)
 - [Edit the world you are playing](guides/edit-your-game-live.md)
 - [Edit a dedicated server while people play](guides/edit-a-server-live.md)
+- [Edit a rented or panel-hosted server](guides/edit-a-rented-server.md)
 - [Undo a step, take back one change, or discard everything](guides/undo-changes.md)
 - [Restore one area from a backup](guides/restore-from-backup.md)
 - [Generate zones again](guides/reset-zones.md)

@@ -39,6 +39,13 @@ Yes, in live mode, with the WorldEditorBridge plugin in the game or server: see
 the game or stop the server first: a running game saves over what the editor writes. See
 [The game saved while you were editing](troubleshooting.md#the-game-saved-while-you-were-editing).
 
+## Can I edit a server I rent from a game host?
+
+Yes, but most of the time not live. A game server rented from a host gives a web panel and FTP, not an SSH login to
+the machine, so the editor cannot reach the plugin: stop the server, download its world, edit it, upload it back. A
+server that a game panel such as Pterodactyl runs in a container on your own machine can be edited live, through a
+tunnel you open yourself. See [Edit a rented or panel-hosted server](../guides/edit-a-rented-server.md).
+
 ## The editor asks for a token. Where is it?
 
 In `BepInEx/config/Tie.WorldEditorBridge.cfg` of the game or server, on the `Token` line. The plugin writes that file
