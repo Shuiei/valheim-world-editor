@@ -16,8 +16,11 @@ internal static class Texts
 
     public static string Failed(string dll) => $"Riverheim could not be loaded from {dll}: see the log.";
 
+    public static string NoWorldhalla(string riverheim, string bepInEx) =>
+        $"Your Riverheim {riverheim} needs Worldhalla, which is not in its BepInEx folder ({bepInEx}): install Worldhalla there, as the game needs it too.";
+
     public static string LayOutFailed(string riverheim, string why) => $"Your Riverheim {riverheim} could not lay this world out: {why}";
 
     public static string OtherVersion(string game, string yours) =>
-        $"The game runs Riverheim {game} and yours is {yours}: the editor needs the same release (the first two numbers), as players who join the game do. Install Riverheim {game}.";
+        $"The game runs Riverheim {game} and yours is {yours}: the editor needs what players who join the game need, the same version since Riverheim 1.3 (the same first two numbers before). Install Riverheim {game}.";
 }

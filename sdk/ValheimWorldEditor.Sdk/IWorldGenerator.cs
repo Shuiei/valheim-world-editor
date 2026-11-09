@@ -6,12 +6,17 @@ namespace ValheimWorldEditor.Sdk;
 /// A world generation mod's generator, for the editor to read, draw and make its worlds (register it with
 /// <see cref="IExtensionRegistry.AddWorldGenerator"/>). Such a mod marks the worlds it makes: their world file starts
 /// with -1 where the game's file version goes, then the generator's id (a string, as the game writes one), then what
-/// the generator reads and writes here. The editor refuses a world whose generator no extension in use registers, as
-/// the game without the mod refuses it.
+/// the generator reads and writes here. A mod plugged into Worldhalla has its worlds marked by Worldhalla instead: its
+/// generator here has the id "worldhalla:" and the mod's id in Worldhalla, and reads the game's file version, then the
+/// settings Worldhalla keeps for it. The editor refuses a world whose generator no extension in use registers, as the
+/// game without the mod refuses it.
 /// </summary>
 public interface IWorldGenerator
 {
-    /// <summary>The id the mod writes in its worlds' files, after the -1.</summary>
+    /// <summary>
+    /// The id the mod writes in its worlds' files, after the -1; for the worlds Worldhalla marks, "worldhalla:" and the
+    /// id Worldhalla keeps ("worldhalla:dev.gurebu.riverheim").
+    /// </summary>
     string Id { get; }
 
     /// <summary>The mod's plugin id (its BepInEx GUID), for the version a live game runs (asked of its bridge).</summary>
@@ -21,11 +26,12 @@ public interface IWorldGenerator
     string Name { get; }
 
     /// <summary>
-    /// Reads what follows the id in a world file the mod made: the game's file version and the generator's settings.
-    /// Throws <see cref="System.IO.InvalidDataException"/>, with why for the player, for a header it cannot read (a
+    /// Reads what follows the id in a world file the mod made: the game's file version and the generator's settings (for
+    /// a world Worldhalla marks, the game's file version, then the settings Worldhalla keeps for the mod, to be read
+    /// whole). Throws <see cref="System.IO.InvalidDataException"/>, with why for the player, for a header it cannot read (a
     /// setting it does not know, a damaged file): the world is then not opened.
     /// </summary>
-    /// <param name="file">The world file, just after the id.</param>
+    /// <param name="file">The world file, just after the id (or the game's file version and Worldhalla's settings).</param>
     /// <param name="fileVersion">The game's file version, read from the header.</param>
     GeneratorSettings ReadHeader(IWorldFileReader file, out int fileVersion);
 

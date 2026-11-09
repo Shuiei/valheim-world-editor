@@ -6,10 +6,10 @@ using Xunit;
 namespace Riverheim.WorldEditor.Tests;
 
 /// <summary>
-/// Riverheim's world generator with the real Riverheim (downloaded for the tests, its BepInEx beside it and a stand-in
-/// for Unity's classes): the game's own values to the bit; its beta's worlds, a missing Riverheim, a preset it does not
-/// know, a Riverheim that cannot lay the world out and a live game on another release refused with why; new worlds
-/// given its own preset.
+/// Riverheim's world generator with the real Riverheim (downloaded for the tests, 1.3.1 with Worldhalla and 1.2.1
+/// before it, its BepInEx beside it and a stand-in for Unity's classes): the game's own values to the bit; its beta's
+/// worlds, a missing Riverheim or Worldhalla, a preset it does not know, a Riverheim that cannot lay the world out and a
+/// live game on another release refused with why; new worlds given its own preset.
 /// </summary>
 public sealed class RiverheimGeneratorTests : IDisposable
 {
@@ -30,11 +30,18 @@ public sealed class RiverheimGeneratorTests : IDisposable
         }
     }
 
-    /// <summary>The editor with Riverheim installed in a BepInEx folder (with its core unless left out) and a game folder.</summary>
-    private FakeHost Host(string name, bool core = true)
+    /// <summary>
+    /// The editor with Riverheim (1.3.1 unless another is given) installed in a BepInEx folder, with Worldhalla and
+    /// BepInEx's core unless left out, and a game folder.
+    /// </summary>
+    private FakeHost Host(string name, bool core = true, bool worldhalla = true, TestMods.Package? riverheim = null)
     {
         string bep = Path.Combine(_dir, name, "BepInEx");
-        string dll = TestMods.Install(bep, TestMods.Riverheim);
+        string dll = TestMods.Install(bep, riverheim ?? TestMods.Riverheim);
+        if (worldhalla)
+        {
+            TestMods.Install(bep, TestMods.Worldhalla);
+        }
         if (core)
         {
             TestMods.InstallCore(bep);
@@ -49,13 +56,17 @@ public sealed class RiverheimGeneratorTests : IDisposable
 
     private static string Hex(float v) => BitConverter.SingleToInt32Bits(v).ToString("x8", CultureInfo.InvariantCulture);
 
-    [Fact]
-    public void TheReferenceWorldIsTheGamesToTheBit()
+    [Theory]
+    [InlineData("1.3.1", "riverheim-reference.txt")]
+    [InlineData("1.2.1", "riverheim-reference-1.2.1.txt")]
+    public void TheReferenceWorldIsTheGamesToTheBit(string version, string fixture)
     {
-        var layout = Generator(Host("bep")).Open(Amur, null);
-        Assert.Equal(("1.2.1", true), (layout.Version, layout.Slow));
+        // The worlds Worldhalla keeps are laid out alike (1.3 and later make no other).
+        var host = Host("bep", riverheim: version == "1.2.1" ? TestMods.Riverheim121 : TestMods.Riverheim);
+        var layout = Generator(host, version == "1.2.1" ? RiverheimMod.PluginId : RiverheimMod.WorldhallaId).Open(Amur, null);
+        Assert.Equal((version, true), (layout.Version, layout.Slow));
         var ground = layout.LayOut(Seed);
-        var lines = File.ReadLines(Path.Combine(AppContext.BaseDirectory, "fixtures", "riverheim-reference.txt")).Where(l => l.StartsWith("H ", StringComparison.Ordinal)).ToList();
+        var lines = File.ReadLines(Path.Combine(AppContext.BaseDirectory, "fixtures", fixture)).Where(l => l.StartsWith("H ", StringComparison.Ordinal)).ToList();
         Assert.True(lines.Count > 100);
         Assert.All(lines, line =>
         {
@@ -88,8 +99,8 @@ public sealed class RiverheimGeneratorTests : IDisposable
         var generator = Generator(Host("bep"));
         var settings = RiverheimGenerator.Settings(new RiverheimMod.Tag(preset, version));
         // Said in the world list already, and again as the world opens.
-        Assert.Equal(Texts.Unsupported(preset, version, "1.2.1", words), generator.Problem(settings));
-        Assert.Equal(Texts.Unsupported(preset, version, "1.2.1", words), Assert.Throws<InvalidOperationException>(() => generator.Open(settings, null)).Message);
+        Assert.Equal(Texts.Unsupported(preset, version, "1.3.1", words), generator.Problem(settings));
+        Assert.Equal(Texts.Unsupported(preset, version, "1.3.1", words), Assert.Throws<InvalidOperationException>(() => generator.Open(settings, null)).Message);
         Assert.Null(generator.Problem(Amur));
     }
 
@@ -98,22 +109,39 @@ public sealed class RiverheimGeneratorTests : IDisposable
     {
         // Without BepInEx's assemblies its own scan fails as the world is laid out.
         var layout = Generator(Host("nocore", core: false)).Open(Amur, null);
-        Assert.StartsWith(Texts.LayOutFailed("1.2.1", ""), Assert.Throws<InvalidOperationException>(() => layout.LayOut(Seed)).Message);
+        Assert.StartsWith(Texts.LayOutFailed("1.3.1", ""), Assert.Throws<InvalidOperationException>(() => layout.LayOut(Seed)).Message);
+    }
+
+    [Fact]
+    public void ARiverheimWithoutTheWorldhallaItIsAPluginOfIsSaid()
+    {
+        var host = Host("noworldhalla", worldhalla: false);
+        var generator = Generator(host, RiverheimMod.WorldhallaId);
+        string why = Texts.NoWorldhalla("1.3.1", host.Riverheim!.BepInExFolder);
+        Assert.Equal(why, generator.Problem(Amur));
+        Assert.Equal(why, Assert.Throws<InvalidOperationException>(() => generator.Open(Amur, null)).Message);
+        // Riverheim before 1.3 needs none.
+        Assert.Null(Generator(Host("old", worldhalla: false, riverheim: TestMods.Riverheim121)).Problem(Amur));
     }
 
     [Fact]
     public void ALiveGameOnAnotherReleaseIsRefused()
     {
         var generator = Generator(Host("bep"));
-        Assert.Equal(Texts.OtherVersion("1.1.0", "1.2.1"), Assert.Throws<InvalidOperationException>(() => generator.Open(Amur, "1.1.0")).Message);
-        // Another patch of the same release lays worlds out alike.
-        Assert.Equal("1.2.1", generator.Open(Amur, "1.2.0").Version);
+        Assert.Equal(Texts.OtherVersion("1.2.1", "1.3.1"), Assert.Throws<InvalidOperationException>(() => generator.Open(Amur, "1.2.1")).Message);
+        // Through Worldhalla, players need the generator's very version, another patch too.
+        Assert.Equal(Texts.OtherVersion("1.3.0", "1.3.1"), Assert.Throws<InvalidOperationException>(() => generator.Open(Amur, "1.3.0")).Message);
+        Assert.Equal("1.3.1", generator.Open(Amur, "1.3.1").Version);
+        // Before 1.3, another patch of the same release lays worlds out alike.
+        Assert.Equal("1.2.1", Generator(Host("old", riverheim: TestMods.Riverheim121)).Open(Amur, "1.2.0").Version);
     }
 
     [Fact]
-    public void NewWorldsGetItsOwnPreset()
+    public void NewWorldsGetItsOwnPresetUnderItsOwnHeader()
     {
         var made = Generator(Host("bep")).NewWorldSettings();
         Assert.Equal(("builtin.amur v2", new RiverheimMod.Tag("builtin.amur", 2)), (made?.Description, made?.Value));
+        // Written under Riverheim's own id, which every release opens (1.3 and later through Worldhalla).
+        Assert.Null(Generator(Host("worldhalla"), RiverheimMod.WorldhallaId).NewWorldSettings());
     }
 }

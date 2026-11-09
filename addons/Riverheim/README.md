@@ -11,13 +11,15 @@ carries none of the mod; this repository holds none of its code.
 
 ## Install
 
-1. The Valheim World Editor 1.104.0 or later.
+1. The Valheim World Editor 1.104.0 or later; 1.119.3 or later for the worlds Riverheim 1.3 and later save (in
+   Worldhalla's own header).
 2. From the editor's [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page,
    `ValheimWorldEditor-addon-Riverheim-<version>.zip`: unpack it into the `addons` folder next to the editor (on
    macOS, next to `ValheimWorldEditor.app`), so that you have `addons/Riverheim/worldeditor.json`.
 3. The add-on is used while Riverheim (`Riverheim.dll`) is in one of the BepInEx plugins folders the editor knows.
    **Settings → Add-ons** lists it, with its switch: off, Riverheim worlds are refused, as the game without the mod
-   refuses them.
+   refuses them. Riverheim 1.3 and later are a plugin of [Worldhalla](https://thunderstore.io/c/valheim/p/Gurebu/Worldhalla/)
+   (by Gurebu too), which must be in the same BepInEx folder, as the game needs it.
 
 ## What it does
 
@@ -29,21 +31,30 @@ carries none of the mod; this repository holds none of its code.
   few of the game's Unity files, which are read from there.
 - The ground of the zones the game has not made yet, the biomes, the ground's paint, the forests, the map and the
   predictions (locations, regrowth) are Riverheim's, as the game makes them with the mod: checked point by point
-  against a server running Riverheim 1.2.1.
+  against a server running Riverheim 1.3.1 with Worldhalla 1.0.0, as on 1.2.1 before it. Riverheim 1.3 lays worlds out
+  as 1.2 did; Worldhalla, which answers the game for it since then, works the forest factor out from float values, a
+  bit or two apart at a third of the points, and the add-on does the same for a Riverheim of 1.3 or later.
+- Riverheim 1.3 and later keep a world's settings in Worldhalla's header, which they give every world they make, and
+  an older Riverheim world on its first save: the editor reads both. A new world the editor makes gets Riverheim's own
+  header, which every Riverheim release opens (Worldhalla turns it into its own on the first save).
 - Opening takes a few seconds more: Riverheim lays the whole world out first, as the game does when it loads it.
 - When it cannot be opened, its card stays in the list, greyed out, and says why: the add-on is turned off (Settings →
   Add-ons) or missing, Riverheim is not installed anywhere the editor looks, the world was made with Riverheim's deprecated beta (no Riverheim release opens those), the world
-  file has a Riverheim setting this editor does not know, your Riverheim does not know the world's preset (an older
-  Riverheim than the one that made it: update it), or your Riverheim could not be loaded (the log says why). That your
-  Riverheim could not lay the world out, or is of another release than a live game's, is said as the world opens.
+  file has a Riverheim setting this editor does not know (or Worldhalla settings or a Worldhalla format newer than
+  1.0's), your Riverheim does not know the world's preset (an older Riverheim than the one that made it: update it),
+  your Riverheim 1.3 or later has no Worldhalla beside it, or your Riverheim could not be loaded (the log says why).
+  That your Riverheim could not lay the world out, or is not the version a live game's players need, is said as the
+  world opens.
 
 Worlds made without Riverheim never use it, even with the add-on on and the mod installed.
 
 ## Live mode
 
-A game or server running a Riverheim world is drawn the same way, with your own Riverheim: it must be of the same
-release as the game's (the first two numbers of the version, as for players who join), else the editor says both
-versions and does not open the world. See [Live mode](../../docs/live-mode.md#riverheim).
+A game or server running a Riverheim world is drawn the same way, with your own Riverheim: it must be the version
+players who join need, the same as the game's since Riverheim 1.3 (Worldhalla compares the whole version), the same
+release before it (the first two numbers of the version); else the editor says both versions and does not open the
+world. A game on Riverheim 1.3 and yours on 1.2, or the other way round, are refused: the forest factor differs, and
+1.2 cannot read the worlds 1.3 saves. See [Live mode](../../docs/live-mode.md#riverheim).
 
 ## New worlds
 
@@ -76,9 +87,11 @@ When a setting does something else on a Riverheim world than on the game's, the 
 ## For developers
 
 The add-on (`src/Riverheim.WorldEditor`, net10.0, as the editor runs) registers Riverheim's world generator with the
-editor's SDK (`IWorldGenerator`, see the editor's [modding guide](../../docs/modding.md#world-generators)): the header
-Riverheim keeps in a world file, and your Riverheim.dll loaded in a context of its own (with BepInEx's core and the
-game's Managed folder for the assemblies its plugin classes name) to lay each world out. Its tests
-(`tests/Riverheim.WorldEditor.Tests`) download the real Riverheim and compare its ground with values recorded on a
-server running it (`fixtures/riverheim-reference.txt`), to the bit. The add-on's version is `VERSION` here, its changes
+editor's SDK (`IWorldGenerator`, see the editor's [modding guide](../../docs/modding.md#world-generators)), under
+Riverheim's own id and Worldhalla's (`worldhalla:dev.gurebu.riverheim`): the header Riverheim keeps in a world file
+(or the settings it keeps in Worldhalla's), and your Riverheim.dll loaded in a context of its own (with BepInEx's core,
+Worldhalla and the game's Managed folder for the assemblies its plugin classes name) to lay each world out. Its tests
+(`tests/Riverheim.WorldEditor.Tests`) download the real Riverheim 1.3.1 with Worldhalla 1.0.0, and Riverheim 1.2.1, and
+compare their ground with values recorded on a server running each (`fixtures/riverheim-reference.txt`,
+`fixtures/riverheim-reference-1.2.1.txt`), to the bit. The add-on's version is `VERSION` here, its changes
 `CHANGELOG.md`: it goes out with every editor release, under its own version.

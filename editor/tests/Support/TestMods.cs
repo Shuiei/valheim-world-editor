@@ -5,7 +5,7 @@ using System.Reflection;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The game mods a test installs into its BepInEx folder (Expand World, Riverheim, BepInEx itself): the real packages, downloaded from Thunderstore when
+/// The game mods a test installs into its BepInEx folder (Expand World, Riverheim and Worldhalla, BepInEx itself): the real packages, downloaded from Thunderstore when
 /// the test project builds (editor/tests/TestMods.targets) into the system's temporary folder, deleted when the test run ends.
 /// </summary>
 public static class TestMods
@@ -27,6 +27,12 @@ public static class TestMods
 
     /// <summary>Riverheim.</summary>
     public static readonly Package Riverheim = new("Gurebu-Riverheim", "Riverheim.dll", "BepInEx/plugins");
+
+    /// <summary>Riverheim 1.2.1, the last before Worldhalla.</summary>
+    public static readonly Package Riverheim121 = new("Gurebu-Riverheim-1.2.1", "Riverheim.dll", "BepInEx/plugins");
+
+    /// <summary>Worldhalla, which Riverheim 1.3 and later are a plugin of.</summary>
+    public static readonly Package Worldhalla = new("Gurebu-Worldhalla", "Worldhalla.dll", "BepInEx/plugins/Worldhalla");
 
     /// <summary>BepInEx's own assemblies (its pack's core folder), which Riverheim's plugin classes name.</summary>
     private static string BepInExCore => Path.Combine(Folder, "denikson-BepInExPack_Valheim", "BepInExPack_Valheim", "BepInEx", "core");

@@ -1,5 +1,6 @@
 {
   "mods": [
-    { "package": "Gurebu-Riverheim", "version": "1.2.1" }
+    { "package": "Gurebu-Riverheim", "version": "1.3.1" },
+    { "package": "Gurebu-Worldhalla", "version": "1.0.0" }
   ]
 }

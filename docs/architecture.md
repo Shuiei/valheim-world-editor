@@ -386,16 +386,20 @@ generator's id, then what the mod keeps): `WorldSave.ReadMetadata` reads it thro
 (`IExtensionRegistry.AddWorldGenerator`, wrapped in a `ModGenerator` that turns its extension off on a fault; the
 extensions are run first when the start page lists worlds before any opened) and has it read the rest into
 `WorldSave.Generator` (`GeneratorHeader`); a generator none registers, or a header it cannot read, throws
-`GeneratorHeaderException` (the world list says why). The world list asks the generator's quick `Problem` and marks
+`GeneratorHeaderException` (the world list says why). Worldhalla, the framework world generation mods plug into
+(Riverheim since 1.3), marks its worlds its own way (the high bit with its format's version, the file version, then its
+part: the generator's id, its own settings and the generator's): `ReadVersion` reads that too, refuses a newer format
+or settings of its own, and has the generator registered as `worldhalla:` and that id read the file version and its
+settings. The world list asks the generator's quick `Problem` and marks
 the world; opening it (`WorldSession.TakeGenerator`) gives `WorldRules.Generator` (`GeneratorRules`, from the
 generator's `Open`), and the world generator asks the laid-out world (an SDK `IGroundLayout`) in place of the bodies
 of the game's GetBiome, GetBiomeHeight, GetAshlandsHeight and GetForestFactor, and lays out no water. Expand World
 Size's stretch stays before it, its depth and forest after, as the mods' patches meet in the game. New worlds take
 the first generator that makes them (`WorldGenerators.ForNewWorld`); `WorldCreator` writes its header.
 
-Riverheim's generator comes as an add-on (`addons/Riverheim`, net10.0): its header, and the player's own Riverheim.dll
-found through the host (`IEditorHost.FindPlugin`, `GameManagedFolder`) and loaded in a context of its own to lay the
-worlds out (see its README).
+Riverheim's generator comes as an add-on (`addons/Riverheim`, net10.0): its header (its own and Worldhalla's), and the
+player's own Riverheim.dll found through the host (`IEditorHost.FindPlugin`, `GameManagedFolder`) and loaded in a
+context of its own, with the Worldhalla beside it, to lay the worlds out (see its README).
 
 ## Live mode
 

@@ -5,6 +5,20 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.119.3 — unreleased
+
+### Fixed
+- **Riverheim worlds saved by Riverheim 1.3 open.** Riverheim 1.3 plugs into Worldhalla, which keeps a world's settings
+  in a header of its own: every world Riverheim 1.3 makes, and an older one from its first save. The editor misread
+  that header, so such a world did not open, and live it was drawn with the game's own ground instead of Riverheim's.
+  It now reads Worldhalla's header (as Worldhalla 1.0 writes it) and refuses a newer one with why. Mods plugging into
+  Worldhalla can draw their worlds the same way: see [Mods and the editor](docs/modding.md#world-generators).
+
+### Mods
+- **Riverheim 1.3.1** with **Worldhalla 1.0.0** (Riverheim add-on 0.2.1): checked on a server running them, saved and
+  live. The ground, biomes and paint are 1.2's; the forests follow Worldhalla's forest factor to the bit. Riverheim 1.3
+  needs Worldhalla in its BepInEx folder, and live, the game's very version, as for players who join.
+
 ## v1.119.2 — 2026-11-03
 
 ### Mods

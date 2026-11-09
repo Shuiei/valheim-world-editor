@@ -8,13 +8,15 @@ namespace Riverheim.WorldEditor;
 /// <summary>
 /// The player's Riverheim.dll, loaded to lay worlds out with Riverheim's own generator: the add-on carries none of the
 /// mod (it has no licence to), it calls the copy the player installed. Loaded into its own context from the file's
-/// bytes (the file stays free), its own types driven by name. The plugin's classes in it name BepInEx's and Unity's
-/// (no code of theirs runs): those come from the BepInEx folder's core and the game's Managed folder.
+/// bytes (the file stays free), its own types driven by name. The plugin's classes in it name BepInEx's and Unity's,
+/// and since Riverheim 1.3 Worldhalla's (no code of theirs runs): those come from the BepInEx folder's core, the folder
+/// of the Worldhalla.dll beside it and the game's Managed folder.
 /// </summary>
 /// <remarks>
-/// Followed: Riverheim 1.2.1. The game side of the mod does, for a world: the preset's configuration
-/// (ConfigManager.GetConfig), a pipeline that computes the "Rendering/WorldRenderer" result for the seed, then the
-/// renderer's RenderPoint, GetBiome and GetForestation for each point (<see cref="RiverheimGround"/>).
+/// Followed: Riverheim 1.3.1 (and 1.2.1 before it). The game side of the mod (Worldhalla's since 1.3) does, for a world:
+/// the preset's configuration (ConfigManager.GetConfig), a pipeline that computes the "Rendering/WorldRenderer" result
+/// for the seed, then the renderer's RenderPoint, GetBiome and GetForestation for each point
+/// (<see cref="RiverheimGround"/>).
 /// </remarks>
 internal sealed class RiverheimLibrary
 {
@@ -55,7 +57,9 @@ internal sealed class RiverheimLibrary
         _builder = asm.GetType("Riverheim.Pipeline.GeneratorPipeline+Builder", true)!;
         _renderer = asm.GetType("Riverheim.Rendering.WorldRenderer", true)!;
         var point = asm.GetType("Riverheim.Rfloat2", true)!;
-        Calls = new RiverheimGround.Calls(_renderer, point, asm.GetType("Riverheim.World.Biomes.Biome", true)!);
+        // A Worldhalla plugin (1.3 and later): Worldhalla answers the game from Riverheim's renderer.
+        bool worldhalla = asm.GetReferencedAssemblies().Any(a => a.Name == "Worldhalla");
+        Calls = new RiverheimGround.Calls(_renderer, point, asm.GetType("Riverheim.World.Biomes.Biome", true)!, worldhalla);
         Quiet(asm.GetType("Riverheim.Util.Debug.Logger", true)!);
     }
 
@@ -155,10 +159,37 @@ internal sealed class RiverheimLibrary
         builder = Invoke(_builder, "SetParallel", builder, [true])!;
         builder = Invoke(_builder, "SetClearUnneededCache", builder, [true])!;
         object pipeline = Invoke(_builder, "Build", builder, [])!;
-        pipeline.GetType().GetMethod("Compute", [typeof(int), typeof(object)])!.Invoke(pipeline, [seed, config]);
+        Compute(pipeline, seed, config);
         object renderer = pipeline.GetType().GetMethod("GetResult")!.MakeGenericMethod(_renderer).Invoke(pipeline, [RendererId])!;
         Log($"Riverheim {Version}: seed {seed} laid out with preset {tag.Preset} v{tag.PresetVersion} in {watch.ElapsedMilliseconds} ms.");
         return new RiverheimGround(Calls, renderer);
+    }
+
+    /// <summary>
+    /// The pipeline's Compute for a seed and the preset's configuration (the parameters it has after them, since
+    /// Riverheim 1.3 a cancellation, left at their defaults); the method's own exception is thrown as it is, and
+    /// <c>MissingMethodException</c> when there is no such method (another version than the one followed).
+    /// </summary>
+    private static void Compute(object pipeline, int seed, object config)
+    {
+        var compute = pipeline.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(m =>
+            m.Name == "Compute" && m.GetParameters() is { Length: >= 2 } p && p[0].ParameterType == typeof(int) && p[1].ParameterType == typeof(object)
+            && p.Skip(2).All(o => o.IsOptional)) ?? throw new MissingMethodException(pipeline.GetType().FullName, "Compute");
+        object?[] args = [.. compute.GetParameters().Select((p, i) => i switch
+        {
+            0 => seed,
+            1 => config,
+            _ => p.HasDefaultValue && p.DefaultValue is { } given ? given : p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null,
+        })];
+        try
+        {
+            compute.Invoke(pipeline, args);
+        }
+        catch (TargetInvocationException e) when (e.InnerException != null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(e.InnerException);
+            throw;
+        }
     }
 
     /// <summary>The settings as Riverheim's own record.</summary>

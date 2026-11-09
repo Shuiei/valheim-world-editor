@@ -106,8 +106,8 @@ A greyed-out card under **A saved world** says why in orange. The usual reasons:
 - "Made with a world generation mod (…) that no add-on in use draws", "… the add-on is turned off", or "… draws once
   … is in one of the BepInEx plugins folders": install the add-on, turn it on in **Settings → Add-ons**, or add the
   mod's BepInEx folder in Settings. See [Edit a world made with Expand World, Riverheim or Tunnelheim](../guides/use-mods-worlds.md).
-- A Riverheim world also needs a Riverheim that knows its preset (update an older one); worlds made with Riverheim's
-  deprecated beta cannot be opened.
+- A Riverheim world also needs a Riverheim that knows its preset (update an older one), and Riverheim 1.3 or later
+  needs Worldhalla in the same BepInEx folder; worlds made with Riverheim's deprecated beta cannot be opened.
 
 For a folder you typed under **Another world folder**: "That folder holds worlds; pick one of them (…)" means you
 chose a `worlds_local` folder instead of one world; "No Valheim world in that folder" means it holds no

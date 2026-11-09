@@ -11,7 +11,11 @@
     <TestMod Include="JereKuusela-Expand_World_Size" Owner="JereKuusela" Package="Expand_World_Size" Version="1.45.0" Dll="ExpandWorldSize.dll" />
     <TestMod Include="JereKuusela-Expand_World_Data" Owner="JereKuusela" Package="Expand_World_Data" Version="1.79.0" Dll="ExpandWorldData.dll" />
     <TestMod Include="JereKuusela-Expand_World_Rivers" Owner="JereKuusela" Package="Expand_World_Rivers" Version="1.11.0" Dll="ExpandWorldRivers.dll" />
-    <TestMod Include="Gurebu-Riverheim" Owner="Gurebu" Package="Riverheim" Version="1.2.1" Dll="BepInEx/plugins/Riverheim.dll" />
+    <TestMod Include="Gurebu-Riverheim" Owner="Gurebu" Package="Riverheim" Version="1.3.1" Dll="BepInEx/plugins/Riverheim.dll" />
+    <!-- The Riverheim before it, whose worlds the Riverheim add-on still lays out as that version's game does. -->
+    <TestMod Include="Gurebu-Riverheim-1.2.1" Owner="Gurebu" Package="Riverheim" Version="1.2.1" Dll="BepInEx/plugins/Riverheim.dll" />
+    <!-- Worldhalla, which Riverheim 1.3 and later are a plugin of: the types Riverheim's plugin classes name. -->
+    <TestMod Include="Gurebu-Worldhalla" Owner="Gurebu" Package="Worldhalla" Version="1.0.0" Dll="BepInEx/plugins/Worldhalla/Worldhalla.dll" />
     <!-- BepInEx itself: the BepInEx and Harmony assemblies Riverheim's plugin classes name. -->
     <TestMod Include="denikson-BepInExPack_Valheim" Owner="denikson" Package="BepInExPack_Valheim" Version="5.4.2202" Dll="BepInExPack_Valheim/BepInEx/core/BepInEx.dll" />
   </ItemGroup>
