@@ -66,7 +66,7 @@ public sealed class RiverheimGeneratorTests : IDisposable
         var layout = Generator(host, version == "1.2.1" ? RiverheimMod.PluginId : RiverheimMod.WorldhallaId).Open(Amur, null);
         Assert.Equal((version, true), (layout.Version, layout.Slow));
         var ground = layout.LayOut(Seed);
-        var lines = File.ReadLines(Path.Combine(AppContext.BaseDirectory, "fixtures", fixture)).Where(l => l.StartsWith("H ", StringComparison.Ordinal)).ToList();
+        var lines = File.ReadLines(Path.Combine(AppContext.BaseDirectory, "fixtures", Path.GetFileName(fixture))).Where(l => l.StartsWith("H ", StringComparison.Ordinal)).ToList();
         Assert.True(lines.Count > 100);
         Assert.All(lines, line =>
         {
