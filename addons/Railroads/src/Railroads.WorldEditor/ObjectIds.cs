@@ -4,7 +4,8 @@ using ValheimWorldEditor.Sdk;
 namespace Railroads.WorldEditor;
 
 /// <summary>
-/// Objects named by the game's own object ids (<see cref="RailroadsMod.Keys.Wagons"/>, <see cref="RailroadsMod.Keys.Self"/>):
+/// Objects named by the game's own object ids (<see cref="RailroadsMod.Keys.Wagons"/>, <see cref="RailroadsMod.Keys.Self"/>,
+/// <see cref="RailroadsMod.Keys.Flips"/>):
 /// twelve bytes an id, little-endian, the user's 8 then the id's 4. Shown in the inspector as the game writes them.
 /// </summary>
 public sealed class ObjectIds : IDataDecoder

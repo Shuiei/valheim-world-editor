@@ -52,6 +52,7 @@
     "bf_paid_stone": { "label": "Paid stone", "readOnly": true, "help": "What removing this track gives back." },
     "bf_corewood": { "label": "Paid core wood", "readOnly": true, "help": "What removing this track gives back." },
     "bf_paid_items": { "label": "Paid with", "readOnly": true, "help": "What this piece was paid with, by the game's item names, which removing it gives back. -: nothing." },
+    "bf_paid_chains": { "label": "Paid chains", "readOnly": true, "help": "The chains this piece was paid with, which removing it gives back (Railroads 0.4.6)." },
     "bf_bridge_up": { "label": "Raised", "help": "The drawbridge's leaves are up, for ships: trains stop before it. The mod raises it only with no train on it." },
     "bf_bridge_from": { "label": "Swing from", "readOnly": true, "help": "How far up the leaves were when they last began to swing: 0 down, 1 up." },
     "bf_bridge_since": { "label": "Swing began at", "readOnly": true, "help": "When the leaves last began to swing, in the game's ticks. A swing takes 8 seconds." },
@@ -60,7 +61,8 @@
     "bf_fit_way_b": { "label": "Way at the far end", "readOnly": true, "help": "Which way a fitted track reaches its far end." },
     "bf_sent_by": { "label": "Sent by", "readOnly": true, "help": "The player who sent the train, told when a raised drawbridge holds it." },
     "bf_load": { "label": "Load", "readOnly": true, "help": "What the train carries, by the game's weight: its wagons' items and the pieces on its flatbeds. The server weighs it again every second (Railroads 0.4.1)." },
-    "bf_trip_coal": { "label": "Trip's coal rate", "readOnly": true, "help": "How fast the sent train burns coal on this trip, by its load as it was sent: 1 for an empty train (Railroads 0.4.1)." }
+    "bf_trip_coal": { "label": "Trip's coal rate", "readOnly": true, "help": "How fast the sent train burns coal on this trip, by its load as it was sent: 1 for an empty train (Railroads 0.4.1)." },
+    "bf_flips": { "label": "Turned wagons", "readOnly": true, "help": "The wagons of this train that face its back, as they were turned when coupled: the mod keeps them turned (Railroads 0.4.4)." }
   },
   "ties": [
     { "name": "train", "root": "bf_wagons", "member": "bf_self", "idBytes": 12 },
@@ -104,7 +106,9 @@
     "bf_wagon_portal": { "group": "Trains", "piece": { "name": "Portal wagon" } },
     "bf_wagon_flat": { "group": "Trains", "piece": { "name": "Flatbed wagon" } },
     "bf_handcart": { "group": "Trains", "piece": { "name": "Hand cart" } },
-    "bf_feedback_post": { "group": "Other", "piece": { "name": "Feedback post" } },
+    "bf_feedback_post": { "hidden": true },
+    "bf_crossing_lights": { "group": "Other", "piece": { "name": "Crossing lights" } },
+    "bf_crossing_barrier": { "group": "Other", "piece": { "name": "Crossing barrier" } },
     "bf_rail_world": { "hidden": true, "data": true }
   }
 }

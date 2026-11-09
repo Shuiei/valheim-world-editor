@@ -10,7 +10,10 @@ Edit the world of a running game or dedicated server while people play: they see
 ("Not applied: 1 zone, 40 added", green dots on the new pieces).*
 
 Live mode needs **BepInEx** and the **WorldEditorBridge** plugin in the game that hosts the world. Players who join
-need neither. To set it up and connect, follow [Edit the world you are playing](guides/edit-your-game-live.md) or
+need neither. A dedicated server must also give you **SSH access** to the machine it runs on (a shell login, not only
+SFTP or a web panel's file manager): most game servers rented from a host do not, see
+[Edit a rented or panel-hosted server](guides/edit-a-rented-server.md). To set it up and connect, follow
+[Edit the world you are playing](guides/edit-your-game-live.md) or
 [Edit a dedicated server while people play](guides/edit-a-server-live.md). How the editor talks to the game is in
 [Live editing](concepts/live-editing.md#how-it-connects).
 
@@ -162,7 +165,7 @@ reads either.)
 
 | Setting | Default | What it does |
 |---|---|---|
-| `BindAddress` | `127.0.0.1` | The address the plugin listens on. Keep `127.0.0.1`: the editor reaches a server through its own SSH tunnel. Another address exposes the plugin to the machine's local networks and VPNs (never the internet: callers from elsewhere are refused), with the token unencrypted, and the log warns about it; see [Without SSH](#without-ssh). |
+| `BindAddress` | `127.0.0.1` | The address the plugin listens on. Keep `127.0.0.1`: the editor reaches a server through its own SSH tunnel. Another address exposes the plugin to the machine's local networks and VPNs (never the internet: callers from elsewhere are refused), with the token unencrypted, and the log warns about it; see [Without SSH](#without-ssh). `+` listens on every address of the machine: for a server in a container (a game panel such as Pterodactyl), see [Edit a rented or panel-hosted server](guides/edit-a-rented-server.md#a-server-in-a-container). `0.0.0.0` does not work: the plugin then refuses every request. |
 | `Port` | `5182` | The plugin's port. Change it when another program uses 5182. |
 | `Token` | made on first start | The secret the editor must send, in a header (never in the address): 24 random letters and digits. Anyone with it and access to the port can change the world, so keep it private. Empty the line and restart to get a new one. |
 
@@ -194,11 +197,14 @@ change the world. Fine at home; not on a shared network (a dorm, a café). The r
 another address one day: then the plugin no longer listens until `BindAddress` is changed, unless the router keeps
 the address for it (a "DHCP reservation").
 
-**A computer outside the house** (a friend's, a rented server): the plugin refuses callers from the internet, since
+**A computer outside the house** (a friend's, a rented machine): the plugin refuses callers from the internet, since
 the token would cross it in clear. Either give that computer an SSH server, which the editor's own encrypted tunnel
 then uses (Windows 10 and 11 have one: **Settings** → **Optional features** → **OpenSSH Server**), or put both
 computers on a VPN (Tailscale, ZeroTier, WireGuard), which encrypts the way, and follow the steps above with the
 computer's address on the VPN (Tailscale's `100.x.y.z`).
+
+**A game server rented from a host, or run by a game panel** (Pterodactyl, Pelican, a Docker container): see
+[Edit a rented or panel-hosted server](guides/edit-a-rented-server.md).
 
 ## What the plugin logs
 

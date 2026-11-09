@@ -129,7 +129,9 @@ Then follow [Edit the world you are playing](../guides/edit-your-game-live.md).
 For a **dedicated server**, install BepInEx (following BepInExPack's instructions for dedicated servers) and copy
 `WorldEditorBridge.dll` into the server's `BepInEx/plugins` (or install the plugin in a mod manager's server
 profile), then start the server once so it writes its token. The editor connects to it over SSH, through its own
-encrypted tunnel: see [Edit a dedicated server while people play](../guides/edit-a-server-live.md).
+encrypted tunnel, so the server must give you SSH access to its machine: see
+[Edit a dedicated server while people play](../guides/edit-a-server-live.md). A game server rented from a host often
+has no SSH access: see [Edit a rented or panel-hosted server](../guides/edit-a-rented-server.md).
 
 ## Add-ons for mods
 
