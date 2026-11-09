@@ -16,10 +16,11 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
   the `meshes` folder beside your `Railroads.dll` and draws every piece from them, in wood, stone and iron colours:
   each straight, curve, slope, switch, crossing, loop and junction, the drawbridge (its leaves, chains and
   counterweights lowered or raised, as the mod keeps it), the station signs, consoles, old stations (with their legs)
-  and the feedback post, and the locomotive (with the name boards on its boiler), wagons, flatbed and hand cart on
-  their wheels, with their couplers. The levers, rods, lamps, the words on the boards and signs, the wagons' loads and
-  what hangs on the locomotive's item stand are left out, and couplers stand straight out (in the game they turn
-  towards the next vehicle on slopes). The pieces are picked by what is drawn.
+  and the feedback post, the crossing lights (with their 2 lamps, unlit) and the crossing barrier (its red-striped arm
+  raised, as with no train coming), and the locomotive (with the name boards on its boiler), wagons, flatbed and hand
+  cart on their wheels, with their couplers. The levers, rods and lamps of the vehicles, the words on the boards and
+  signs, the wagons' loads and what hangs on the locomotive's item stand are left out, and couplers stand straight out
+  (in the game they turn towards the next vehicle on slopes). The pieces are picked by what is drawn.
 - **Names the mod's data** in the inspector (station name, train name and number, coal, lamps' fuel, wagon sign,
   restaurant name, whether a drawbridge is raised, what a piece was paid with and the rest), and shows in words what a
   train keeps as bytes: the track lines it stands on and runs along, its wagons and the later legs of its trip. What
@@ -41,12 +42,13 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
 - **Pasted copies are pieces of their own.** The mod names other objects by the game's ids and ids of its own, which
   in a copy would name the originals: a pasted train pulls the copy's own wagons (the mod couples them as it does when
   a world loads) and leaves the original's driver, trip, sender and number behind (it keeps its name, coal, sign and
-  load; the server gives it a number of its own, as to a train just built), a pasted flatbed carries the copy's own deck, a
-  wagon pasted without its locomotive stands loose, and a piece pasted without its flatbed is an ordinary piece where
-  it lands.
+  load, and its wagons turned to face its back stay turned; the server gives it a number of its own, as to a train just
+  built), a pasted flatbed carries the copy's own deck, a wagon pasted without its locomotive stands loose, and a piece
+  pasted without its flatbed is an ordinary piece where it lands.
 - **Groups the pieces** in the Workshop's Build panel (**Mods** tab) as Track, Stations, Trains and Other (the
-  feedback post); the pieces the mod retired (its 6 m switches) are not offered, those in worlds still show. The old
-  station, back on the hammer since Railroads 0.3.5, is offered again.
+  crossing lights and barrier); the pieces the mod retired (its 6 m switches, and the feedback post since Railroads
+  0.4.5) are not offered, those in worlds still show. The old station, back on the hammer since Railroads 0.3.5, is
+  offered again.
 
 Checked on a dedicated server running Railroads 0.2.6 and the editor's plugin, live: the add-on puts vehicles on the
 same lines and at the same points as the mod, and signs' stops at the same place; pasted, moved, turned and deleted
@@ -76,13 +78,24 @@ nowhere; tame boars and vanilla carts ride on a flatbed under the keys of the pi
 track, whose shape is in its values, as the mod's own code builds it: drawn and laid out as the mod does from those
 values, it was not yet built in a game for these tests.
 
-Railroads 0.4.1 is the version the add-on follows. It changes none of the models, the track, the placing of vehicles
-and signs or the data the add-on knew (checked by comparing the versions' files, model by model, and their data keys).
-It lays no line for a fitted track with a shape no game builds (a far end more than 33 m away, a way shorter than half a
-metre or longer than one and a half): the add-on draws such a piece as its own model and puts no vehicle on it, as the
-game does. It adds 2 gauges on the locomotive's boiler, which the add-on leaves out with the levers and rods, and keeps
-on the locomotive the train's load (which the server weighs again every second) and a sent train's coal rate for its
-trip, which a pasted or moved train leaves behind with the rest of its trip.
+Railroads 0.4.1 changes none of the models, the track, the placing of vehicles and signs or the data the add-on
+knew (checked by comparing the versions' files, model by model, and their data keys). It lays no line for a fitted
+track with a shape no game builds (a far end more than 33 m away, a way shorter than half a metre or longer than one
+and a half): the add-on draws such a piece as its own model and puts no vehicle on it, as the game does. It adds 2
+gauges on the locomotive's boiler, which the add-on leaves out with the levers and rods, and keeps on the locomotive
+the train's load (which the server weighs again every second) and a sent train's coal rate for its trip, which a
+pasted or moved train leaves behind with the rest of its trip.
+
+Railroads 0.4.9 is the version the add-on follows. 0.4.2 to 0.4.9 change none of the models the add-on read, the
+track, the fitted track's bounds, the placing of vehicles and signs or the data it knew (checked by comparing the
+versions' files, model by model, and their data keys). 0.4.4 keeps a wagon turned the way it was coupled, by its id on
+the locomotive: a train pasted as the add-on pastes it names the copy's own turned wagons. 0.4.5 retires the feedback
+post, 0.4.6 keeps on track the chains it was paid with, and 0.4.7 adds the crossing lights and barrier, whose lamps and
+arm the mod moves only while a train comes, keeping nothing of it. Then on the local headless server and world of the
+0.3.6 checks, running 0.4.9: the arm and lamps stand at rest where the add-on draws them; on a train written by a probe
+as the add-on pastes it (its wagons with new ids, the last one turned), the mod kept that wagon turned, after a restart
+too, where a copy still naming the original's turned wagon was turned back to face the train's way. The crossings were
+not built in a game: that needs a player.
 
 ## Good to know
 
@@ -108,6 +121,12 @@ trip, which a pasted or moved train leaves behind with the rest of its trip.
   its leaves for ships, and a train stops before a raised one until it is lowered. The editor draws it as it ends its
   swing (a swing takes 8 seconds of the game's time), and **Raised** in the inspector raises or lowers it: the mod
   itself raises it only with no train on it, so lower it before you put a train there.
+- **Crossings.** Since Railroads 0.4.7 the crossing lights and barrier stand beside the track where a road crosses it:
+  the lamps light in turns and the arm comes down across the road only while a train comes (within the server's
+  `CrossingDistance` along the track, 50 m by default), and the mod keeps nothing of it. The editor draws them at
+  rest, the lamps unlit and the arm up.
+- **Turned wagons.** Since Railroads 0.4.4 a wagon keeps the way it faced when it was coupled (a portal wagon can face
+  either side of the track); the locomotive names the turned ones (**Turned wagons** in the inspector).
 
 ## Install
 
@@ -129,7 +148,7 @@ dotnet test --project addons/Railroads/tests/Railroads.WorldEditor.Tests
 tools/addons.sh dist                    # dist/ValheimWorldEditor-addon-Railroads-<version>.zip
 ```
 
-Building the tests downloads Railroads 0.4.1, the version the add-on follows, from Thunderstore (never kept in the
+Building the tests downloads Railroads 0.4.9, the version the add-on follows, from Thunderstore (never kept in the
 repository): every model of it is read and drawn. The tests also replay objects the real mod made on a local server
 (`tests/Railroads.WorldEditor.Tests/fixtures/railroads-reference.txt`: track, a station sign, a train sent to it with
 a wagon and a flatbed carrying a floor, a hand cart), and track and an old station a player built, with their prices

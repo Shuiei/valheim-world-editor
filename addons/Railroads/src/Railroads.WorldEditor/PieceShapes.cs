@@ -8,7 +8,9 @@ namespace Railroads.WorldEditor;
 /// its body, and for a vehicle its wheels under each axle (the locomotive's big driving wheels too), its couplers
 /// standing straight out and the hand cart's pump handle as it leans, for the old station its legs unless it was built
 /// without, for the drawbridge its leaves, chains and weights raised or lowered (<see cref="DrawbridgeParts"/>), the
-/// fitted track's rails bent along its line (<see cref="FittedTrack"/>). Each part in its material's colour. The levers, rods, gauges, lamps and loads the mod adds to its vehicles are left out.
+/// fitted track's rails bent along its line (<see cref="FittedTrack"/>), the crossing barrier's arm raised with its red
+/// stripes and the crossing lights' 2 lamps unlit, as with no train coming. Each part in its material's colour. The
+/// levers, rods, gauges, lamps and loads the mod adds to its vehicles are left out.
 /// </summary>
 /// <param name="piece">The piece.</param>
 /// <param name="models">The mod's models.</param>
@@ -65,11 +67,11 @@ public sealed class PieceShapes(RailPiece piece, ModelLibrary models) : IShapePr
         return shapes;
     }
 
-    /// <summary>The body and its wheels, made again only when one of their models was read again.</summary>
+    /// <summary>The body and its wheels (or a crossing's arm or lamps), made again only when one of their models was read again.</summary>
     private Shape[] Fixed()
     {
         var body = models.Get(piece.Model);
-        RailModel? wheels = null, big = null, coupler = null;
+        RailModel? wheels = null, big = null, coupler = null, arm = null, stripes = null, lamp = null;
         if (piece.Kind == RailKind.Vehicle && body?.Axles.Count > 0)
         {
             wheels = models.Get(piece.Prefab == RailroadsMod.Locomotive ? RailroadsMod.SmallAxle : RailroadsMod.Axle);
@@ -83,7 +85,16 @@ public sealed class PieceShapes(RailPiece piece, ModelLibrary models) : IShapePr
         {
             coupler = models.Get(RailroadsMod.Coupler);
         }
-        RailModel?[] from = [body, wheels, big, coupler];
+        if (piece.Prefab == RailroadsMod.CrossingBarrier)
+        {
+            arm = models.Get(RailroadsMod.CrossingArm);
+            stripes = models.Get(RailroadsMod.CrossingStripes);
+        }
+        if (piece.Prefab == RailroadsMod.CrossingLights)
+        {
+            lamp = models.Get(RailroadsMod.CrossingLamp);
+        }
+        RailModel?[] from = [body, wheels, big, coupler, arm, stripes, lamp];
         lock (_gate)
         {
             if (_fixed is { } made && made.From.SequenceEqual(from))
@@ -115,6 +126,22 @@ public sealed class PieceShapes(RailPiece piece, ModelLibrary models) : IShapePr
             if (big != null)
             {
                 shapes.AddRange(Placed(big, RailroadsMod.BigAxleAt, Quaternion.Identity));
+            }
+            // The stripes are painted on the arm, in its frame.
+            if (arm != null)
+            {
+                shapes.AddRange(Placed(arm, RailroadsMod.ArmAt, RailroadsMod.ArmRaised));
+            }
+            if (stripes != null)
+            {
+                shapes.AddRange(Placed(stripes, RailroadsMod.ArmAt, RailroadsMod.ArmRaised, RailroadsMod.StripesColour));
+            }
+            if (lamp != null)
+            {
+                foreach (var at in RailroadsMod.LampsAt)
+                {
+                    shapes.AddRange(Placed(lamp, at, Quaternion.Identity, RailroadsMod.LampColour));
+                }
             }
             _fixed = (from, shapes.ToArray());
             return _fixed.Value.Shapes;
@@ -167,7 +194,8 @@ public sealed class PieceShapes(RailPiece piece, ModelLibrary models) : IShapePr
     /// <param name="model">The model.</param>
     /// <param name="at">Where its origin is in the piece's frame.</param>
     /// <param name="turn">How it is turned about its origin.</param>
-    public static IEnumerable<Shape> Placed(RailModel model, Vector3 at, Quaternion turn)
+    /// <param name="colour">The colour of every part, as the mod paints it (null: each its material's).</param>
+    public static IEnumerable<Shape> Placed(RailModel model, Vector3 at, Quaternion turn, Vector4? colour = null)
     {
         foreach (var part in model.Parts)
         {
@@ -176,7 +204,7 @@ public sealed class PieceShapes(RailPiece piece, ModelLibrary models) : IShapePr
             {
                 corners[i] = at + Vector3.Transform(part.Positions[i], turn);
             }
-            yield return new Shape(corners, part.Triangles, ColourOf(part.Slot));
+            yield return new Shape(corners, part.Triangles, colour ?? ColourOf(part.Slot));
         }
     }
 }

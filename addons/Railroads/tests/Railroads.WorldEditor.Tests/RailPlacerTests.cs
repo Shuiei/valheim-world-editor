@@ -7,7 +7,7 @@ namespace Railroads.WorldEditor.Tests;
 /// The mod's pieces set right wherever the editor puts them: track keeps the turn it is put with; a vehicle stands on
 /// the nearest line of track within 1.5 m, at its point and facing its way, stopped; a station sign stops trains at the
 /// nearest point of straight track within 10 m; the drawbridge is track vehicles stand on but no stop; track put in the
-/// same step counts.
+/// same step counts; a pasted train's turned wagons are its own.
 /// </summary>
 public sealed class RailPlacerTests : IDisposable
 {
@@ -152,6 +152,55 @@ public sealed class RailPlacerTests : IDisposable
         Assert.True(Vector3.Distance(new Vector3(103, 0, 0), sign.Vectors[RailroadsMod.Keys.Stop]) < 1e-4f);
         Assert.Equal(5, train.Floats[RailroadsMod.Keys.At], 1e-4f);
         Assert.Equal(Quarter, track.Quaternions[RailroadsMod.Keys.Turn]);
+    }
+
+    /// <summary>A locomotive at 20 m east facing east and its 2 wagons behind it, the second turned to face the back, with their ids.</summary>
+    private static (FakeObject Locomotive, FakeObject Wagon, FakeObject Turned) Train((long, uint) first, (long, uint) second)
+    {
+        var locomotive = new FakeObject(RailroadsMod.Locomotive) { Position = new Vector3(20, 0, 0), Orientation = Quarter };
+        locomotive.Bytes[RailroadsMod.Keys.Wagons] = ObjectIds.Write([first, second]);
+        var wagon = new FakeObject("bf_wagon") { Position = new Vector3(12, 0, 0), Orientation = Quarter };
+        wagon.Bytes[RailroadsMod.Keys.Self] = ObjectIds.Write([first]);
+        var turned = new FakeObject("bf_wagon_portal") { Position = new Vector3(4, 0, 0), Orientation = Quaternion.Inverse(Quarter) };
+        turned.Bytes[RailroadsMod.Keys.Self] = ObjectIds.Write([second]);
+        return (locomotive, wagon, turned);
+    }
+
+    // Railroads 0.4.4 keeps a wagon turned as it was coupled, by its id on the locomotive: a pasted train's (whose tie
+    // gave its wagons new ids) names the copy's own turned wagon, by how it faces.
+    [Fact]
+    public void APastedTrainsTurnedWagonsAreItsOwn()
+    {
+        var (locomotive, wagon, turned) = Train((9, 1), (9, 2));
+        locomotive.Bytes[RailroadsMod.Keys.Flips] = ObjectIds.Write([(5, 22)]);
+
+        _placer.Place([locomotive, wagon, turned], new ObjectsArea());
+
+        Assert.Equal(new[] { (9L, 2u) }, ObjectIds.Read(locomotive.Bytes[RailroadsMod.Keys.Flips]));
+    }
+
+    [Fact]
+    public void AMovedTrainKeepsItsTurnedWagons()
+    {
+        var (locomotive, wagon, turned) = Train((5, 21), (5, 22));
+        byte[] flips = ObjectIds.Write([(5, 22)]);
+        locomotive.Bytes[RailroadsMod.Keys.Flips] = flips;
+
+        _placer.Place([locomotive, wagon, turned], new ObjectsArea());
+
+        Assert.Same(flips, locomotive.Bytes[RailroadsMod.Keys.Flips]);
+    }
+
+    [Fact]
+    public void ALocomotivePastedWithoutItsWagonsTurnsNone()
+    {
+        var locomotive = new FakeObject(RailroadsMod.Locomotive) { Position = new Vector3(20, 0, 0), Orientation = Quarter };
+        locomotive.Bytes[RailroadsMod.Keys.Wagons] = [];
+        locomotive.Bytes[RailroadsMod.Keys.Flips] = ObjectIds.Write([(5, 22)]);
+
+        _placer.Place([locomotive], new ObjectsArea());
+
+        Assert.DoesNotContain(RailroadsMod.Keys.Flips, locomotive.Keys);
     }
 
     [Fact]

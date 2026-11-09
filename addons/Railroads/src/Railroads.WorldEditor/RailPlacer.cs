@@ -16,7 +16,8 @@ namespace Railroads.WorldEditor;
 /// none that near, on none (the mod puts it on track when a player first comes near). It stops: its trip, the lines its
 /// wagons stood on, its speed and who sent it go, as when the mod ends a trip;</item>
 /// <item>a station sign stops trains at the nearest point of straight track or of a loop's circle within 10 m
-/// (<see cref="Keys.Stop"/>), as the mod sets it when the sign is built; with none, it is no stop.</item>
+/// (<see cref="Keys.Stop"/>), as the mod sets it when the sign is built; with none, it is no stop;</item>
+/// <item>a pasted train's turned wagons are the copy's own (<see cref="Keys.Flips"/>).</item>
 /// </list>
 /// Track placed in the same step counts (a station pasted with its track), track the step moves away does not.
 /// </summary>
@@ -72,6 +73,52 @@ public sealed class RailPlacer(ModelLibrary models, bool canTurn = true) : IObje
                 copy.SetVector3(Keys.Stop, stop?.Point);
             }
         }
+        foreach (var locomotive in placed.Where(c => c.Prefab == RailroadsMod.Locomotive))
+        {
+            Reflip(locomotive, placed);
+        }
+    }
+
+    /// <summary>
+    /// A pasted train's turned wagons (<see cref="Keys.Flips"/>) named again by the copy's own ids: the copy keeps the
+    /// originals', which the copy's wagons no longer have (the train's tie gave them new ones), so the mod would lay them
+    /// out facing the train's way. A wagon is turned when it faces away from the vehicle ahead of it, as the mod turns
+    /// it as it couples (Railroads 0.4.4). A train whose turned wagons are all its own (moved, not pasted) keeps them.
+    /// </summary>
+    private static void Reflip(ICopy locomotive, IReadOnlyList<ICopy> placed)
+    {
+        if (!locomotive.TryGetBytes(Keys.Flips, out byte[] flipBytes) || ObjectIds.Read(flipBytes) is not { } flips)
+        {
+            return;
+        }
+        var wagons = locomotive.TryGetBytes(Keys.Wagons, out byte[] wagonBytes) ? ObjectIds.Read(wagonBytes) ?? [] : [];
+        if (flips.All(wagons.Contains))
+        {
+            return;
+        }
+        var byId = new Dictionary<(long, uint), ICopy>();
+        foreach (var copy in placed)
+        {
+            if (copy.TryGetBytes(Keys.Self, out byte[] self) && ObjectIds.Read(self) is { Count: 1 } own)
+            {
+                byId[own[0]] = copy;
+            }
+        }
+        var turned = new List<(long User, uint Id)>();
+        IObjectView ahead = locomotive;
+        foreach (var id in wagons)
+        {
+            if (!byId.TryGetValue(id, out var wagon))
+            {
+                continue;
+            }
+            if (Vector3.Dot(Vector3.Transform(Vector3.UnitZ, wagon.Orientation), ahead.Position - wagon.Position) < 0)
+            {
+                turned.Add(id);
+            }
+            ahead = wagon;
+        }
+        locomotive.SetBytes(Keys.Flips, turned.Count > 0 ? ObjectIds.Write(turned) : null);
     }
 
     /// <summary>A vehicle on the track nearest it (or on none), stopped.</summary>
