@@ -9,11 +9,12 @@ namespace ValheimGen;
 /// very file the game's mod compiles, so the editor and the game make the same land.
 /// </summary>
 /// <param name="cells">The master map's kinds, row by row from the north.</param>
+/// <param name="heights">The heights of a heightmap at each cell (DrawnLand.HeightOf), or null.</param>
 /// <param name="biomes">The game's biome of each kind (a river's and a lake's are never asked).</param>
-internal sealed class MasterMapLand(byte[] cells, Heightmap.Biome[] biomes) : IDrawnLand
+internal sealed class MasterMapLand(byte[] cells, ushort[]? heights, Heightmap.Biome[] biomes) : IDrawnLand
 {
     /// <summary>The land.</summary>
-    private readonly DrawnLand _land = new(cells, GenMath.Noise);
+    private readonly DrawnLand _land = new(cells, heights, GenMath.Noise);
 
     /// <inheritdoc/>
     public float Continent(float x, float z) => _land.Continent(x, z);

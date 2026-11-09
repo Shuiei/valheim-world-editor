@@ -42,6 +42,8 @@ rivers and lakes it adds, and where it puts the start temple, the bosses' altars
 | **Open…** | Opens a master map saved as a PNG picture. |
 | **Save…** | Saves the drawing as a PNG picture. |
 | **Undo**, **Redo** | Takes back the last changes, or makes them again. |
+| **From a heightmap…** | Starts a drawing from a heightmap. See [Start from a heightmap](#start-from-a-heightmap). |
+| **Sea level** | How gray the heightmap is at the sea's surface, in percent (black 0, white 100). Set it before opening one. |
 | **Seed** | Where the world's small things come from: bumps, trees, rocks, which spot each place takes. The drawing stays the same. |
 | **Drawing**, **World** | Shows the drawing to paint on, or the world it makes. |
 | **Name** | The world's name, as the game lists it (also its folder's name). |
@@ -77,6 +79,23 @@ here:
 - Colours close to the legend's count as them, so soft or blurred edges are fine. Colours far from all of them are
   counted when you open the picture, and each is taken as the nearest colour of the legend.
 - Several separate start points: only the first (the highest on the picture) is kept, and you are told.
+
+## Start from a heightmap
+
+A heightmap is a gray picture of the whole world, black lowest and white highest, north up: drawn in a paint program,
+made with a terrain tool, or taken from real land. **From a heightmap…** turns one into a drawing:
+
+- The heights are kept: the world's land has the heightmap's shape, and the drawing shows it in relief.
+- Everything darker than the **Sea level** is sea (deep sea well under it).
+- Each place above it gets the biome the game would give it at that height, for the seed in **Seed**: mountains where
+  it is high, then the Meadows, Black Forest, Swamp, Plains and Mistlands by the game's own layout, the Ashlands and
+  the Deep North past their edges.
+
+Then paint over it like any drawing. A kind you paint holds the heights to what it needs: land painted in the sea rises
+above the water, a mountain rises to the mountains' height, a river or a lake sinks under the water.
+
+**Save…** writes the heights beside the picture, as `<name>-heights.png` (a 16-bit gray picture). **Open…** reads them
+back when they are there.
 
 ## The world it makes
 

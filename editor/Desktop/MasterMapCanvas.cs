@@ -120,12 +120,27 @@ public sealed class MasterMapCanvas : Control, IDisposable
             {
                 for (int c = 0; c < w; c++)
                 {
-                    row[c] = Pixels[Map.Cells[r * MasterMap.Size + x + c]];
+                    int i = r * MasterMap.Size + x + c;
+                    row[c] = Map.Heights is { } heights ? Shaded(Pixels[Map.Cells[i]], heights, i) : Pixels[Map.Cells[i]];
                 }
                 System.Runtime.InteropServices.Marshal.Copy(row, 0, fb.Address + r * fb.RowBytes + x * 4, w);
             }
         }
         InvalidateVisual();
+    }
+
+    /// <summary>
+    /// A cell's colour with the relief of the map's heights: lighter higher up, and lit from the north-west (brighter
+    /// on slopes facing it), so the land's shape shows under the kinds' colours.
+    /// </summary>
+    private static int Shaded(int pixel, ushort[] heights, int i)
+    {
+        double h = DrawnWorlds.DrawnLand.ContinentOf(heights[i]);
+        int back = i - MasterMap.Size - 1;
+        double nw = back >= 0 ? DrawnWorlds.DrawnLand.ContinentOf(heights[back]) : h;
+        double f = Math.Clamp(0.85 + (h - 0.15) * 0.4 + (h - nw) * 40.0, 0.5, 1.35);
+        int r = Math.Min(255, (int)(((pixel >> 16) & 0xFF) * f)), g = Math.Min(255, (int)(((pixel >> 8) & 0xFF) * f)), b = Math.Min(255, (int)((pixel & 0xFF) * f));
+        return unchecked((int)0xFF000000) | (r << 16) | (g << 8) | b;
     }
 
     // ---- The view.

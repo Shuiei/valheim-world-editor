@@ -5,6 +5,13 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.122.0 — unreleased
+
+### Added
+- **Draw a world from a heightmap.** Open a gray heightmap of the whole world: its heights become the world's land, and
+  each place gets the biome the game would give it there. Paint over it like any drawing; the heights are saved beside
+  the picture. See [Draw a world](docs/draw-world.md#start-from-a-heightmap).
+
 ## v1.121.0 — unreleased
 
 ### Added
