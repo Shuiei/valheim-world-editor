@@ -70,6 +70,8 @@ public sealed partial class DrawWorldPage : IDisposable
     public void Dispose()
     {
         _making?.Cancel();
+        _dungeons?.Cancel();
+        _checkWait?.Stop();
         Canvas.Dispose();
         Preview.Dispose();
     }
@@ -328,6 +330,7 @@ public sealed partial class DrawWorldPage : IDisposable
                 Preview.Show(p);
                 Preview.Dots = Landmarks(p);
                 ShowWorldFacts(p);
+                CheckWorld(p);
             });
         }, TaskScheduler.Default);
     }

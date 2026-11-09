@@ -106,6 +106,22 @@ The game still lays out its places by its own rules: each altar, trader and dung
 it accepts, at its distance from the middle of the world. When one has nowhere to go, the World card names it: draw
 more of its biome, or bigger areas of it. The places are shown once the editor has read your Valheim's files.
 
+## Checks
+
+The **Checks** under the World card say what would not work, before you make the world. Those about the drawing update
+as you paint:
+
+- the start point on water, or not in the Meadows (the game puts the start temple in the Meadows only);
+- a biome not drawn, with what the game keeps there (its boss, its trader, its metal, its dungeons);
+- no Black Forest along water: tin grows only on Black Forest shores.
+
+Those about the world come once **World** has laid it out (a few seconds more):
+
+- a kind of dungeon the game lays out none of, or few of (under a quarter of what it lays out in a world);
+- no Sunken Crypts (no iron), no Fuling villages (no black metal).
+
+A check is a warning, not a stop: you can still make the world.
+
 ## Play a drawn world
 
 The drawing is kept inside the world's file: copy the world's folder and the drawing comes with it.
