@@ -2,8 +2,9 @@
 
 Connect the editor to your dedicated server and change its world while players stay online.
 
-**You need:** an SSH login to the server (a password or a key file), the right to install BepInEx and the
-WorldEditorBridge plugin there and to restart it. A game server rented from a host (a web panel and FTP, no SSH), or
+**You need:** SSH access to the machine that runs the server (a shell login, with a password or a key file: SFTP or
+a web panel's file manager alone is not enough), the right to install BepInEx and the WorldEditorBridge plugin there
+and to restart it. A game server rented from a host (a web panel and FTP, no SSH), or
 one that a game panel such as Pterodactyl runs in a container: see
 [Edit a rented or panel-hosted server](edit-a-rented-server.md).
 

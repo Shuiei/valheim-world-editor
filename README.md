@@ -62,7 +62,9 @@ Use the plugin and add-ons of the same release as the editor. Step by step: [Ins
 **Edit live, and undo anything**
 
 - **Edit your own game or a dedicated server while people play**: apply your changes when you like, or turn on Auto
-  and every stroke shows in game at once ([Live mode](docs/live-mode.md)).
+  and every stroke shows in game at once ([Live mode](docs/live-mode.md)). A dedicated server needs SSH access to its
+  machine; most game servers rented from a host have none, and their world is edited offline
+  ([Edit a rented or panel-hosted server](docs/guides/edit-a-rented-server.md)).
 - **Undo anything**, take out one change from the middle of the history, even after saving and closing the editor
   ([Saving and history](docs/concepts/saving-and-history.md)).
 

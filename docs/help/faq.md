@@ -41,8 +41,9 @@ the game or stop the server first: a running game saves over what the editor wri
 
 ## Can I edit a server I rent from a game host?
 
-Yes, but most of the time not live. A game server rented from a host gives a web panel and FTP, not an SSH login to
-the machine, so the editor cannot reach the plugin: stop the server, download its world, edit it, upload it back. A
+Yes, but live only if the host gives you SSH access to the machine (a shell login, not only SFTP or a file
+manager): ask the host before you rent. Most game servers rented from a host give a web panel and FTP only, so the
+editor cannot reach the plugin: stop the server, download its world, edit it, upload it back. A
 server that a game panel such as Pterodactyl runs in a container on your own machine can be edited live, through a
 tunnel you open yourself. See [Edit a rented or panel-hosted server](../guides/edit-a-rented-server.md).
 

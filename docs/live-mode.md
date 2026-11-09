@@ -10,7 +10,10 @@ Edit the world of a running game or dedicated server while people play: they see
 ("Not applied: 1 zone, 40 added", green dots on the new pieces).*
 
 Live mode needs **BepInEx** and the **WorldEditorBridge** plugin in the game that hosts the world. Players who join
-need neither. To set it up and connect, follow [Edit the world you are playing](guides/edit-your-game-live.md) or
+need neither. A dedicated server must also give you **SSH access** to the machine it runs on (a shell login, not only
+SFTP or a web panel's file manager): most game servers rented from a host do not, see
+[Edit a rented or panel-hosted server](guides/edit-a-rented-server.md). To set it up and connect, follow
+[Edit the world you are playing](guides/edit-your-game-live.md) or
 [Edit a dedicated server while people play](guides/edit-a-server-live.md). How the editor talks to the game is in
 [Live editing](concepts/live-editing.md#how-it-connects).
 

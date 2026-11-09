@@ -3,10 +3,12 @@
 Edit the world of a server you rent from a game host, or one that a game panel such as Pterodactyl or Pelican runs
 in a container on your own machine.
 
-The editor reaches a dedicated server through SSH, to the plugin listening on the server's own `127.0.0.1` (see
-[Edit a dedicated server while people play](edit-a-server-live.md)). Two kinds of servers do not fit that:
+**Live editing needs SSH access to the machine that runs the server**: a login to its shell, not only SFTP or a file
+manager. The editor reaches the plugin through SSH, on the server's own `127.0.0.1` (see
+[Edit a dedicated server while people play](edit-a-server-live.md)). Before you rent a server to edit it live, ask
+the host whether the plan includes SSH access. Two kinds of servers do not fit that:
 
-- **A game server rented from a host** (you get a web panel and a file manager or FTP/SFTP, but no login to the
+- **A game server rented from a host** (you get a web panel and a file manager or FTP/SFTP, but no SSH access to the
   machine): the editor cannot reach the plugin there. Edit the world's files instead: see
   [A rented game server](#a-rented-game-server).
 - **A game panel on your own machine** (Pterodactyl, Pelican, or any server running in a Docker container): live
