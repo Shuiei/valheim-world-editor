@@ -80,15 +80,20 @@ The message under the form says what went wrong. Messages that start alike are l
 | "The server's identity changed (it was …, now …)." | If you reinstalled the server, empty the `HostKey` line the message names in `servers.cfg`, then connect again. Otherwise do not connect: someone may be pretending to be your server. |
 | "The server answered but refused the token." | Copy the `Token` line of `BepInEx/config/Tie.WorldEditorBridge.cfg` on the server again, whole. |
 | "That token cannot be sent (…)" | The token holds a line break or another stray character: copy it again. |
-| "The tunnel is open, but the plugin does not answer on the server: …" | The server is not running, or not with BepInEx and the plugin. Fill in **Server's Valheim folder (optional)** in the form and connect again for a precise answer (below). |
+| "The tunnel is open, but the plugin does not answer on the server: …" | The server is not running, or not with BepInEx and the plugin. Fill in **Server's Valheim folder (optional)** in the form and connect again for a precise answer (below). A server in a container (a game panel such as Pterodactyl) never answers this way: see [A server in a container](../guides/edit-a-rented-server.md#a-server-in-a-container). |
 | "The plugin answered, but the game it runs in does not host the world" | The plugin is in a game that joined another server. Install it on the server that hosts the world. |
-| "The server answered with an error (…). Is it the WorldEditorBridge plugin?" | Something else answers on the plugin's port: check **More options** → **Plugin port** and `Port` in the plugin's settings. |
+| "The server answered with an error (…). Is it the WorldEditorBridge plugin?" | Something else answers on the plugin's port: check **More options** → **Plugin port** and `Port` in the plugin's settings. With 400, through a tunnel to a `BindAddress` other than `127.0.0.1`: set `BindAddress = +` (see [A server in a container](../guides/edit-a-rented-server.md#a-server-in-a-container)). |
 | "Could not connect: …" | Any other failure; the rest of the message says what. |
 
 With **Server's Valheim folder** filled in, the editor looks there over SSH and says exactly what is missing: "The
 folder … does not exist on the server", "BepInEx is not installed in …", "The plugin is not in …/BepInEx/plugins",
 "The plugin is installed but has never run: restart the server with BepInEx", or "The plugin is installed but does
-not answer: is the server running, and started with BepInEx (not the plain start script)?".
+not answer: is the server running, and started with BepInEx (not the plain start script)?". That last one, on a
+server that does run with BepInEx, usually means it runs in a container (Pterodactyl, Pelican, Docker): see
+[A server in a container](../guides/edit-a-rented-server.md#a-server-in-a-container).
+
+A game server rented from a host, with a web panel and FTP but no SSH login, cannot be reached live: edit its world's
+files instead, as in [A rented game server](../guides/edit-a-rented-server.md#a-rented-game-server).
 
 With **I made my own tunnel**, "Nothing answers on 127.0.0.1:…" or "No answer from 127.0.0.1:… within … s" means your
 tunnel is not open, or the server is not running with the plugin.

@@ -41,6 +41,10 @@ asks each plugin found whether a world is loaded.
 3. It sends the token, which **you** type: the editor never reads it from the server. So an SSH login alone is not
    enough to change the world; whoever connects must also know the plugin's secret.
 
+A server that a game panel (Pterodactyl, Pelican) runs in a Docker container has its own `127.0.0.1`, which the
+tunnel to the machine does not reach, and a game server rented from a host usually gives no SSH login at all: see
+[Edit a rented or panel-hosted server](../guides/edit-a-rented-server.md).
+
 The editor also remembers the server's identity on the first connection. If it ever changes, the editor refuses to
 connect, because someone could be pretending to be your server.
 
