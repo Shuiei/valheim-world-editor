@@ -7,7 +7,8 @@ namespace Railroads.WorldEditor.Tests;
 /// The mod's pieces drawn from their models: each part in its material's colour, in the piece's own frame; a vehicle's
 /// wheels under each axle (the locomotive's small ones and its big driving wheels) and its couplers where its model says;
 /// the old station's legs unless it was built without; the hand cart's pump handle leaning as it was left; the
-/// drawbridge's leaves, chains and weights lowered or raised; nothing without the model.
+/// drawbridge's leaves, chains and weights lowered or raised; the crossing barrier's arm raised, the crossing lights'
+/// lamps unlit; nothing without the model.
 /// </summary>
 public sealed class PieceShapesTests : IDisposable
 {
@@ -195,5 +196,34 @@ public sealed class PieceShapesTests : IDisposable
         Assert.Equal(PieceShapes.Stone, shape.Color);
         Assert.Equal(3 * 6, shape.Vertices.Length);
         Assert.Equal(6, shape.Vertices.Max(v => v.Z), 3);
+    }
+
+    // The crossing barrier (Railroads 0.4.7): its arm along z from its pin, raised upright with its stripes, as with no train coming.
+    [Fact]
+    public void TheCrossingBarriersArmStandsRaisedWithItsRedStripes()
+    {
+        _mod.Put("crossing_barrier", ModelBytes.Triangle("wood", Vector3.Zero));
+        _mod.Put(RailroadsMod.CrossingArm, ModelBytes.Write([("wood", [Vector3.Zero, new Vector3(0, 0, 4.3f), new Vector3(0, 0.1f, 0)], [0, 1, 2])]));
+        _mod.Put(RailroadsMod.CrossingStripes, ModelBytes.Write([("iron", [new Vector3(0, 0, 0.64f), new Vector3(0, 0, 4.24f), new Vector3(0, 0.1f, 1)], [0, 1, 2])]));
+
+        var shapes = Shapes(RailroadsMod.CrossingBarrier);
+
+        Assert.Equal([PieceShapes.Wood, PieceShapes.Wood, RailroadsMod.StripesColour], shapes.Select(s => s.Color));
+        // The arm's tip, 4.3 m along it: straight above its pin, 1.45 m up.
+        Assert.True(Vector3.Distance(new Vector3(0, 1.45f + 4.3f, 0), shapes[1].Vertices[1]) < 1e-4f, shapes[1].Vertices[1].ToString());
+        Assert.True(Vector3.Distance(new Vector3(0, 1.45f + 4.24f, 0), shapes[2].Vertices[1]) < 1e-4f, shapes[2].Vertices[1].ToString());
+        Assert.Empty(_log);
+    }
+
+    [Fact]
+    public void TheCrossingLightsHaveTwoUnlitLamps()
+    {
+        _mod.Put("crossing_lights", ModelBytes.Triangle("wood", Vector3.Zero));
+        _mod.Put(RailroadsMod.CrossingLamp, ModelBytes.Triangle("iron", Vector3.Zero));
+
+        var shapes = Shapes(RailroadsMod.CrossingLights);
+
+        Assert.Equal([PieceShapes.Wood, RailroadsMod.LampColour, RailroadsMod.LampColour], shapes.Select(s => s.Color));
+        Assert.Equal([new Vector3(0, 1.9f, -0.55f), new Vector3(0, 1.9f, 0.55f)], shapes.Skip(1).Select(s => s.Vertices[0]));
     }
 }

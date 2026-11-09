@@ -6,7 +6,7 @@ namespace Railroads.WorldEditor;
 /// Railroads, the mod of stone track, trains and stations (by VladasZ), as the editor knows it: its plugin file, its
 /// pieces and the models it builds them from, and the data keys it keeps on them.
 /// </summary>
-/// <remarks>Followed: Railroads 0.4.0.</remarks>
+/// <remarks>Followed: Railroads 0.4.9.</remarks>
 public static class RailroadsMod
 {
     /// <summary>The mod's plugin file, under a BepInEx plugins folder; its models are in <see cref="MeshFolder"/> beside it.</summary>
@@ -44,6 +44,12 @@ public static class RailroadsMod
     /// in a world, at its centre, with nothing to see. No piece: the mod makes it when it first numbers a train.
     /// </summary>
     public const string Register = "bf_rail_world";
+
+    /// <summary>The prefab of the crossing lights (0.4.7): a post with 2 lamps (<see cref="CrossingLamp"/>) and a bell.</summary>
+    public const string CrossingLights = "bf_crossing_lights";
+
+    /// <summary>The prefab of the crossing barrier (0.4.7): a post with its arm (<see cref="CrossingArm"/>).</summary>
+    public const string CrossingBarrier = "bf_crossing_barrier";
 
     /// <summary>
     /// Every piece the mod adds, with the model it is built from (meshes/&lt;model&gt;.bfm beside the plugin) and what it
@@ -88,7 +94,9 @@ public static class RailroadsMod
         new("bf_wagon_portal", "portal", RailKind.Vehicle),
         new("bf_wagon_flat", "flatbed", RailKind.Vehicle),
         new(Handcart, "handcart", RailKind.Vehicle),
-        new("bf_feedback_post", "feedback_post", RailKind.Other),
+        new("bf_feedback_post", "feedback_post", RailKind.Other, Retired: true),
+        new(CrossingLights, "crossing_lights", RailKind.Other),
+        new(CrossingBarrier, "crossing_barrier", RailKind.Other),
     ];
 
     /// <summary>The old station's legs (unless it keeps <see cref="Keys.Bare"/>), drawn from their own model.</summary>
@@ -123,6 +131,33 @@ public static class RailroadsMod
 
     /// <summary>How far the pump handle leans per unit of <see cref="Keys.Beam"/>, in degrees about its axis.</summary>
     public const float BeamDegrees = 12;
+
+    /// <summary>
+    /// The crossing barrier's arm, turning about <see cref="ArmAt"/>: the mod raises it (<see cref="ArmRaised"/>) and
+    /// lowers it across the road only while a train comes, which it keeps nowhere.
+    /// </summary>
+    public const string CrossingArm = "crossing_arm";
+
+    /// <summary>The red stripes on the crossing barrier's arm, turning with it, in <see cref="StripesColour"/>.</summary>
+    public const string CrossingStripes = "crossing_stripes";
+
+    /// <summary>One of the crossing lights' 2 lamps, at <see cref="LampsAt"/>, in <see cref="LampColour"/> while unlit.</summary>
+    public const string CrossingLamp = "crossing_lamp";
+
+    /// <summary>Where the crossing barrier's arm turns, in its frame.</summary>
+    public static readonly Vector3 ArmAt = new(0, 1.45f, 0);
+
+    /// <summary>The crossing barrier's arm raised, as it stands with no train coming: a quarter turn back about x, upright.</summary>
+    public static readonly Quaternion ArmRaised = Quaternion.CreateFromAxisAngle(Vector3.UnitX, -(float)Math.PI / 2);
+
+    /// <summary>Where the crossing lights' 2 lamps are, in their frame.</summary>
+    public static readonly IReadOnlyList<Vector3> LampsAt = [new(0, 1.9f, -0.55f), new(0, 1.9f, 0.55f)];
+
+    /// <summary>The red the mod paints the stripes of the crossing barrier's arm.</summary>
+    public static readonly Vector4 StripesColour = new(0.62f, 0.06f, 0.03f, 1);
+
+    /// <summary>The colour of an unlit lamp of the crossing lights, as the mod paints it.</summary>
+    public static readonly Vector4 LampColour = new(0.22f, 0.14f, 0.08f, 1);
 
     /// <summary>A piece of track: its prefab, its model, and whether it is retired.</summary>
     private static RailPiece Track(string prefab, string model, bool retired = false) => new(prefab, model, RailKind.Track, retired);
@@ -277,6 +312,9 @@ public static class RailroadsMod
         /// </summary>
         public const string PaidItems = "bf_paid_items";
 
+        /// <summary>The chains a piece was paid with (int, since 0.4.6): what removing it gives back.</summary>
+        public const string PaidChains = "bf_paid_chains";
+
         /// <summary>A drawbridge's leaves are up, or swinging up (bool).</summary>
         public const string BridgeUp = "bf_bridge_up";
 
@@ -306,6 +344,12 @@ public static class RailroadsMod
 
         /// <summary>How fast a sent train burns coal on its trip, set as it is sent (float, 1 for an empty train; Railroads 0.4.1).</summary>
         public const string TripCoal = "bf_trip_coal";
+
+        /// <summary>
+        /// The wagons of a train turned to face its back (bytes, <see cref="ObjectIds"/>), on its locomotive: the mod lays
+        /// them out turned (Railroads 0.4.4).
+        /// </summary>
+        public const string Flips = "bf_flips";
     }
 }
 
@@ -321,7 +365,7 @@ public enum RailKind
     /// <summary>A locomotive, a wagon or the hand cart: it runs on the track.</summary>
     Vehicle,
 
-    /// <summary>A piece of the mod of none of those kinds: the feedback post.</summary>
+    /// <summary>A piece of the mod of none of those kinds: the crossing lights and barrier, the feedback post.</summary>
     Other,
 }
 

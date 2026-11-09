@@ -9,7 +9,7 @@ namespace Railroads.WorldEditor.Tests;
 /// and read whole, in the mod's materials; its track's lines run as its pieces are named, the drawbridge's (0.3.1) as a
 /// 16 m straight's; each piece is drawn, a vehicle on its wheels and with its couplers (apart from its body since 0.3.0),
 /// the locomotive with its name boards (0.2.7), the portal wagon without posts on its open side (0.2.8), the drawbridge
-/// with its leaves, chains and weights.
+/// with its leaves, chains and weights, the crossing barrier with its arm and the crossing lights with their lamps (0.4.7).
 /// </summary>
 public class RealModTests
 {
@@ -21,6 +21,7 @@ public class RealModTests
     public static TheoryData<string> Models() =>
         [.. RailroadsMod.Pieces.Select(p => p.Model)
             .Concat([RailroadsMod.StationLegs, RailroadsMod.Axle, RailroadsMod.SmallAxle, RailroadsMod.BigAxle, RailroadsMod.Beam, RailroadsMod.Coupler])
+            .Concat([RailroadsMod.CrossingArm, RailroadsMod.CrossingStripes, RailroadsMod.CrossingLamp])
             .Concat(DrawbridgeParts.Models)];
 
     [Theory]
@@ -127,6 +128,18 @@ public class RealModTests
         Assert.True(Post(-1, 1) > 0 && Post(-1, -1) > 0);
     }
 
+    [Fact]
+    public void TheCrossingsArmAndLampsAreWhereTheirPostsHoldThem()
+    {
+        // The barrier's pin, across its 2 posts; each lamp under its hood on the lights' crossbar.
+        Assert.Contains(Model("crossing_barrier").Boxes, b => Vector3.Distance(b.Center, RailroadsMod.ArmAt) < 1e-4f);
+        var hoods = Model("crossing_lights").Boxes;
+        Assert.All(RailroadsMod.LampsAt, at => Assert.Contains(hoods, b => Vector3.Distance(b.Center, at + new Vector3(0, 0.17f, 0)) < 1e-4f));
+        // The arm reaches 4.3 m from its pin, its stripes on it.
+        Assert.Equal(4.3f, Model(RailroadsMod.CrossingArm).Parts.SelectMany(p => p.Positions).Max(v => v.Z), 3);
+        Assert.True(Model(RailroadsMod.CrossingStripes).Parts.SelectMany(p => p.Positions).Max(v => v.Z) < 4.3f);
+    }
+
     /// <summary>The corners of a model's wood.</summary>
     private static List<Vector3> Wood(string name) => [.. Model(name).Parts.Where(p => p.Slot == "wood").SelectMany(p => p.Positions)];
 
@@ -156,12 +169,15 @@ public class RealModTests
 
     /// <summary>
     /// The parts drawn besides the body and wheels: a vehicle's couplers, the old station's legs, the hand cart's pump
-    /// handle, the drawbridge's moving parts (one shape a material).
+    /// handle, the drawbridge's moving parts (one shape a material), the crossing barrier's arm and its stripes, the
+    /// crossing lights' 2 lamps.
     /// </summary>
     private static int Extra(RailPiece piece) => piece.Prefab switch
     {
         RailroadsMod.OldStation => Model(RailroadsMod.StationLegs).Parts.Count,
         RailroadsMod.Handcart => Model(RailroadsMod.Beam).Parts.Count,
+        RailroadsMod.CrossingBarrier => Model(RailroadsMod.CrossingArm).Parts.Count + Model(RailroadsMod.CrossingStripes).Parts.Count,
+        RailroadsMod.CrossingLights => RailroadsMod.LampsAt.Count * Model(RailroadsMod.CrossingLamp).Parts.Count,
         RailroadsMod.Drawbridge => DrawbridgeParts.Models.SelectMany(m => Model(m).Parts).Select(p => p.Slot).Distinct().Count(),
         _ => 0,
     } + (piece.Kind == RailKind.Vehicle

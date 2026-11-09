@@ -23,6 +23,7 @@ public sealed class Extension : IWorldEditorExtension
         var ids = new ObjectIds();
         registry.AddDecoder(RailroadsMod.Keys.Wagons, ids);
         registry.AddDecoder(RailroadsMod.Keys.Self, ids);
+        registry.AddDecoder(RailroadsMod.Keys.Flips, ids);
         registry.AddDecoder(RailroadsMod.Keys.Legs, new TripLegs());
         registry.AddCopyRewriter(new PastedCopies(), PastedCopies.Keys);
         // Editors before 1.119.0 cannot turn a copy back (ICopy.SetTurn).
