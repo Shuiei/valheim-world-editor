@@ -4,6 +4,8 @@
 # its minutes of silence (10 for most steps, 5 for some), and a whole container is lost. So each try is cut after a
 # few minutes and made again, three times, with apt's own retries and timeouts for each download; and a line is
 # written every minute while apt-get works, so that a slow mirror is waited for instead of taken for a stuck step.
+# apt-get reads nothing from the step's terminal: timeout runs it in a background process group, and apt-get resetting
+# the terminal after dpkg would stop it there (SIGTTOU) until the timeout killed it, each first try, the packages in.
 set -uo pipefail
 opts=(-qq -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
 ( while sleep 60; do echo "apt-get still working…"; done ) &
@@ -11,7 +13,8 @@ beat=$!
 trap 'pkill -P "$beat" 2> /dev/null; kill "$beat" 2> /dev/null' EXIT
 for try in 1 2 3; do
   echo "Installing $* (try $try of 3)"
-  if timeout 180 apt-get "${opts[@]}" update && timeout 360 apt-get "${opts[@]}" install -y "$@" > /dev/null; then
+  if timeout 180 apt-get "${opts[@]}" update < /dev/null \
+    && timeout 360 apt-get "${opts[@]}" install -y "$@" < /dev/null > /dev/null; then
     exit 0
   fi
   echo "apt-get did not finish (try $try of 3)" >&2
