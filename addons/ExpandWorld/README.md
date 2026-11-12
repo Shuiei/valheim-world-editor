@@ -139,8 +139,10 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - **The mods' quirks** are mirrored as they are (a few are listed in the architecture notes), so that
   what the editor predicts is what the mod does.
 
-Followed: Expand World Size 1.45, Expand World Rivers 1.11, Expand World Data 1.79. A later version that
-adds a setting or a field is read with its defaults until the editor follows it.
+Followed: Expand World Size 1.45, Expand World Rivers 1.11, Expand World Data 1.80. A later version that
+adds a setting or a field is read with its defaults until the editor follows it. Data 1.80 adds persistent events
+(`expand_persistent_events.yaml`, with its "Persistent event data" switch), which the game runs while it is played and
+which change no ground, location or vegetation: the add-on does not read them.
 
 ## With Riverheim
 
