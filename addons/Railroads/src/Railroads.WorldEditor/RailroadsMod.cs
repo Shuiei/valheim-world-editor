@@ -6,7 +6,7 @@ namespace Railroads.WorldEditor;
 /// Railroads, the mod of stone track, trains and stations (by VladasZ), as the editor knows it: its plugin file, its
 /// pieces and the models it builds them from, and the data keys it keeps on them.
 /// </summary>
-/// <remarks>Followed: Railroads 0.4.9.</remarks>
+/// <remarks>Followed: Railroads 0.5.0.</remarks>
 public static class RailroadsMod
 {
     /// <summary>The mod's plugin file, under a BepInEx plugins folder; its models are in <see cref="MeshFolder"/> beside it.</summary>
@@ -40,6 +40,12 @@ public static class RailroadsMod
     public const string FittedTrack = "bf_track_fit";
 
     /// <summary>
+    /// The prefab of the buffer stop (0.4.15): a beam at the end of a line, snapped onto a free track end, with 0.6 m of
+    /// track up to its beam, where a train stops with its front against it.
+    /// </summary>
+    public const string BufferStop = "bf_track_buffer";
+
+    /// <summary>
     /// The prefab of the object the server keeps the count of numbered trains on (<see cref="Keys.TrainCount"/>): one
     /// in a world, at its centre, with nothing to see. No piece: the mod makes it when it first numbers a train.
     /// </summary>
@@ -50,6 +56,12 @@ public static class RailroadsMod
 
     /// <summary>The prefab of the crossing barrier (0.4.7): a post with its arm (<see cref="CrossingArm"/>).</summary>
     public const string CrossingBarrier = "bf_crossing_barrier";
+
+    /// <summary>
+    /// The prefab of the train workshop (0.5.0): a shed whose window changes the torches of a locomotive or wagon near it
+    /// (<see cref="Keys.Light0"/>); it keeps nothing of its own.
+    /// </summary>
+    public const string TrainWorkshop = "bf_train_workshop";
 
     /// <summary>
     /// Every piece the mod adds, with the model it is built from (meshes/&lt;model&gt;.bfm beside the plugin) and what it
@@ -85,6 +97,7 @@ public static class RailroadsMod
         Track("bf_track_junction_x", "track_junction_x"),
         Track(Drawbridge, "track_drawbridge"),
         Track(FittedTrack, "track_fit"),
+        Track(BufferStop, "track_buffer"),
         new(OldStation, "station", RailKind.Station),
         new(Sign, "station_sign", RailKind.Station),
         new("bf_train_console", "train_console", RailKind.Station),
@@ -97,6 +110,7 @@ public static class RailroadsMod
         new("bf_feedback_post", "feedback_post", RailKind.Other, Retired: true),
         new(CrossingLights, "crossing_lights", RailKind.Other),
         new(CrossingBarrier, "crossing_barrier", RailKind.Other),
+        new(TrainWorkshop, "train_workshop", RailKind.Other),
     ];
 
     /// <summary>The old station's legs (unless it keeps <see cref="Keys.Bare"/>), drawn from their own model.</summary>
@@ -269,6 +283,15 @@ public static class RailroadsMod
 
         /// <summary>When the second lamp's fuel was last counted (long, the game's ticks).</summary>
         public const string Torch1Time = "bf_torch1_time";
+
+        /// <summary>
+        /// What stands at a vehicle's first lamp (int, 0.5.0, changed at the train workshop): 0 a wood torch (also when
+        /// the key is missing), 1 none, 2 a wisp torch, which burns no fuel.
+        /// </summary>
+        public const string Light0 = "bf_light0";
+
+        /// <summary>What stands at a vehicle's second lamp (int, as <see cref="Light0"/>).</summary>
+        public const string Light1 = "bf_light1";
 
         /// <summary>A wagon's sign (string).</summary>
         public const string Sign = "bf_sign";

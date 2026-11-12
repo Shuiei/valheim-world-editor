@@ -14,15 +14,17 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
 - **Draws track, stations and trains** in the 3D view. The mod builds them while the game runs from model files of
   its own, which no asset bundle holds, so the editor cannot find them by itself: the add-on reads those files from
   the `meshes` folder beside your `Railroads.dll` and draws every piece from them, in wood, stone and iron colours:
-  each straight, curve, slope, switch, crossing, loop and junction, the drawbridge (its leaves, chains and
-  counterweights lowered or raised, as the mod keeps it), the station signs, consoles, old stations (with their legs)
-  and the feedback post, the crossing lights (with their 2 lamps, unlit) and the crossing barrier (its red-striped arm
-  raised, as with no train coming), and the locomotive (with the name boards on its boiler), wagons, flatbed and hand
-  cart on their wheels, with their couplers. The levers, rods and lamps of the vehicles, the words on the boards and
+  each straight, curve, slope, switch, crossing, loop and junction, the buffer stop, the drawbridge (its leaves, chains
+  and counterweights lowered or raised, as the mod keeps it), the station signs, consoles, old stations (with their
+  legs) and the feedback post, the crossing lights (with their 2 lamps, unlit) and the crossing barrier (its
+  red-striped arm raised, as with no train coming), the train workshop, and the locomotive (with the name boards on its
+  boiler), wagons, flatbed and hand cart on their wheels, with their couplers. The levers, rods and lamps (wood or wisp
+  torches) of the vehicles, the words on the boards and
   signs, the wagons' loads and what hangs on the locomotive's item stand are left out, and couplers stand straight out
   (in the game they turn towards the next vehicle on slopes). The pieces are picked by what is drawn.
 - **Names the mod's data** in the inspector (station name, train name and number, coal, lamps' fuel, wagon sign,
-  restaurant name, whether a drawbridge is raised, what a piece was paid with and the rest), and shows in words what a
+  restaurant name, whether a drawbridge is raised, the torch at each of a vehicle's lamps, what a piece was paid with
+  and the rest), and shows in words what a
   train keeps as bytes: the track lines it stands on and runs along, its wagons and the later legs of its trip. What
   the mod sets itself is shown but not editable.
 - **Keeps pieces right wherever you put them.** The mod works some things out only when a player builds a piece
@@ -45,8 +47,8 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
   load, and its wagons turned to face its back stay turned; the server gives it a number of its own, as to a train just
   built), a pasted flatbed carries the copy's own deck, a wagon pasted without its locomotive stands loose, and a piece
   pasted without its flatbed is an ordinary piece where it lands.
-- **Groups the pieces** in the Workshop's Build panel (**Mods** tab) as Track, Stations, Trains and Other (the
-  crossing lights and barrier); the pieces the mod retired (its 6 m switches, and the feedback post since Railroads
+- **Groups the pieces** in the Workshop's Build panel (**Mods** tab) as Track (with the buffer stop), Stations, Trains
+  and Other (the crossing lights and barrier, the train workshop); the pieces the mod retired (its 6 m switches, and the feedback post since Railroads
   0.4.5) are not offered, those in worlds still show. The old station, back on the hammer since Railroads 0.3.5, is
   offered again.
 
@@ -86,7 +88,7 @@ gauges on the locomotive's boiler, which the add-on leaves out with the levers a
 the train's load (which the server weighs again every second) and a sent train's coal rate for its trip, which a
 pasted or moved train leaves behind with the rest of its trip.
 
-Railroads 0.4.9 is the version the add-on follows. 0.4.2 to 0.4.9 change none of the models the add-on read, the
+Railroads 0.4.9: 0.4.2 to 0.4.9 change none of the models the add-on read, the
 track, the fitted track's bounds, the placing of vehicles and signs or the data it knew (checked by comparing the
 versions' files, model by model, and their data keys). 0.4.4 keeps a wagon turned the way it was coupled, by its id on
 the locomotive: a train pasted as the add-on pastes it names the copy's own turned wagons. 0.4.5 retires the feedback
@@ -96,6 +98,18 @@ arm the mod moves only while a train comes, keeping nothing of it. Then on the l
 as the add-on pastes it (its wagons with new ids, the last one turned), the mod kept that wagon turned, after a restart
 too, where a copy still naming the original's turned wagon was turned back to face the train's way. The crossings were
 not built in a game: that needs a player.
+
+Railroads 0.5.0 is the version the add-on follows. 0.4.10 to 0.5.0 change none of the models the add-on read, the
+track, the placing of vehicles and signs or the data it knew (checked by comparing the versions' files, model by model,
+and their data keys). 0.4.13 changes where new supports end (on rocks, trees and pieces too), which the add-on never
+builds; 0.4.14 lets track be paid with core wood, kept as before. 0.4.15 adds the buffer stop, track of its own: a beam
+over the end of 0.6 m of track, which it lays from where it snaps onto a free track end. 0.5.0 adds the train workshop,
+which keeps nothing, and the torch at each lamp of a locomotive or wagon (`bf_light0`, `bf_light1`: a wood torch,
+none, or a wisp torch), which the workshop changes. Then on the local headless server and world of the 0.3.6 checks,
+running 0.5.0, with track written as the editor writes it (an 8 m straight turned 30°, a buffer stop at each end, one
+turned to face away): the mod laid each buffer stop's track where the add-on lays it, joined to the straight and
+ending there, and offered neither end to a fitted track, after a restart too; a train workshop and a wagon with a wisp
+torch and none were kept as written. No train was driven against a buffer stop: that needs a player.
 
 ## Good to know
 
@@ -125,6 +139,13 @@ not built in a game: that needs a player.
   the lamps light in turns and the arm comes down across the road only while a train comes (within the server's
   `CrossingDistance` along the track, 50 m by default), and the mod keeps nothing of it. The editor draws them at
   rest, the lamps unlit and the arm up.
+- **Buffer stops.** Since Railroads 0.4.15 a buffer stop closes a line: put it on a free track end, facing away from
+  the track, and a train stops with its front against its beam. Its 0.6 m of track counts as the line's last piece
+  (a vehicle can stand on it), and the mod offers its far end to no fitted track.
+- **Torches.** Since Railroads 0.5.0 the train workshop changes the torches on a locomotive's or wagon's lamps: a wood
+  torch, none, or a wisp torch, which burns no fuel and clears the mist round the train. **First lamp's torch** and
+  **Second lamp's torch** in the inspector say which (0 wood, 1 none, 2 wisp; not set is wood) and change it, at no
+  price: a torn down vehicle gives back the torches it has, as the mod pays for them.
 - **Turned wagons.** Since Railroads 0.4.4 a wagon keeps the way it faced when it was coupled (a portal wagon can face
   either side of the track); the locomotive names the turned ones (**Turned wagons** in the inspector).
 
@@ -148,7 +169,7 @@ dotnet test --project addons/Railroads/tests/Railroads.WorldEditor.Tests
 tools/addons.sh dist                    # dist/ValheimWorldEditor-addon-Railroads-<version>.zip
 ```
 
-Building the tests downloads Railroads 0.4.9, the version the add-on follows, from Thunderstore (never kept in the
+Building the tests downloads Railroads 0.5.0, the version the add-on follows, from Thunderstore (never kept in the
 repository): every model of it is read and drawn. The tests also replay objects the real mod made on a local server
 (`tests/Railroads.WorldEditor.Tests/fixtures/railroads-reference.txt`: track, a station sign, a train sent to it with
 a wagon and a flatbed carrying a floor, a hand cart), and track and an old station a player built, with their prices

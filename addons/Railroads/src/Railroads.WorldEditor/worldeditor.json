@@ -39,6 +39,8 @@
     "bf_torch1": { "label": "Second lamp's fuel", "help": "The fuel left in this vehicle's second lamp." },
     "bf_torch0_time": { "label": "First lamp counted at", "readOnly": true, "help": "When the first lamp's fuel was last counted, in the game's ticks." },
     "bf_torch1_time": { "label": "Second lamp counted at", "readOnly": true, "help": "When the second lamp's fuel was last counted, in the game's ticks." },
+    "bf_light0": { "label": "First lamp's torch", "help": "What stands at this vehicle's first lamp: 0 a wood torch (also when not set), 1 none, 2 a wisp torch, which needs no fuel (Railroads 0.5.0)." },
+    "bf_light1": { "label": "Second lamp's torch", "help": "What stands at this vehicle's second lamp: 0 a wood torch (also when not set), 1 none, 2 a wisp torch, which needs no fuel (Railroads 0.5.0)." },
     "bf_sign": { "label": "Wagon sign" },
     "bf_cafe": { "label": "Restaurant name" },
     "bf_train_name": { "label": "Train name", "help": "On the boards on the boiler, the map and the train console. Empty: the train goes by its number. The game takes up to 30 characters." },
@@ -95,6 +97,7 @@
     "bf_track_junction_x": { "group": "Track", "piece": { "name": "X junction" } },
     "bf_track_drawbridge": { "group": "Track", "piece": { "name": "Drawbridge" } },
     "bf_track_fit": { "group": "Track", "piece": { "name": "Fitted track" } },
+    "bf_track_buffer": { "group": "Track", "piece": { "name": "Buffer stop" } },
     "bf_track_switch_right": { "hidden": true },
     "bf_track_switch_left": { "hidden": true },
     "bf_station": { "group": "Stations", "piece": { "name": "Train station" } },
@@ -109,6 +112,7 @@
     "bf_feedback_post": { "hidden": true },
     "bf_crossing_lights": { "group": "Other", "piece": { "name": "Crossing lights" } },
     "bf_crossing_barrier": { "group": "Other", "piece": { "name": "Crossing barrier" } },
+    "bf_train_workshop": { "group": "Other", "piece": { "name": "Train workshop" } },
     "bf_rail_world": { "hidden": true, "data": true }
   }
 }
