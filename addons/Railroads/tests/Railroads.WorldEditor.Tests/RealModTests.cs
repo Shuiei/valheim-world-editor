@@ -9,7 +9,8 @@ namespace Railroads.WorldEditor.Tests;
 /// and read whole, in the mod's materials; its track's lines run as its pieces are named, the drawbridge's (0.3.1) as a
 /// 16 m straight's; each piece is drawn, a vehicle on its wheels and with its couplers (apart from its body since 0.3.0),
 /// the locomotive with its name boards (0.2.7), the portal wagon without posts on its open side (0.2.8), the drawbridge
-/// with its leaves, chains and weights, the crossing barrier with its arm and the crossing lights with their lamps (0.4.7).
+/// with its leaves, chains and weights, the crossing barrier with its arm and the crossing lights with their lamps (0.4.7);
+/// the buffer stop's track (0.4.15) runs up to its beam; the train workshop (0.5.0) is drawn whole.
 /// </summary>
 public class RealModTests
 {
@@ -70,6 +71,45 @@ public class RealModTests
 
         Assert.Equal(Assert.Single(Model("track_straight_16").Lines), bridge);
         Assert.Equal(new Vector3(0, 0, DrawbridgeParts.Length), bridge[^1]);
+    }
+
+    // The buffer stop (Railroads 0.4.15) stands where it snaps onto a free track end and lays 0.6 m of track from there,
+    // ending under its beam: a train standing at that end has its front against the beam.
+    [Fact]
+    public void TheBufferStopsTrackRunsFromTheTrackEndToItsBeam()
+    {
+        var model = Model("track_buffer");
+        var line = Assert.Single(model.Lines);
+
+        Assert.Equal(Vector3.Zero, line[0]);
+        Assert.Equal(new Vector3(0, 0, 0.6f), line[^1]);
+        // The beam (its 2 timbers across the rails, over 1 m up) faces the track's end.
+        Assert.Equal(2, model.Boxes.Count(b => b.Size.X > 2 && b.Center.Y > 1 && Math.Abs(b.Center.Z - (b.Size.Z / 2) - line[^1].Z) < 0.01f));
+    }
+
+    // As Railroads 0.5.0 laid them on a local server, from track written as the editor writes it (and again after a
+    // restart): an 8 m straight turned 30 degrees, a buffer stop at each end, the one at its start turned to face away.
+    [Fact]
+    public void BufferStopsLayTheirTrackWhereTheModLaysIt()
+    {
+        var models = new ModelLibrary(new FakeHost { Plugin = Path.Combine(Folder, RailroadsMod.DllName) }, Assert.Fail);
+        var turn = Quaternion.CreateFromYawPitchRoll((float)Math.PI / 6, 0, 0);
+        var start = new Vector3(37.5f, 40, -21.25f);
+        FakeObject[] pieces =
+        [
+            new("bf_track_straight_8") { Position = start, Orientation = turn },
+            new(RailroadsMod.BufferStop) { Position = new Vector3(41.5f, 40, -14.3217964f), Orientation = turn },
+            new(RailroadsMod.BufferStop) { Position = start, Orientation = turn * Quaternion.CreateFromYawPitchRoll((float)Math.PI, 0, 0) },
+        ];
+
+        var lines = TrackNetwork.Of(pieces, models).Lines;
+
+        Assert.Equal(3, lines.Count);
+        Assert.True(Vector3.Distance(new Vector3(41.5f, 40, -14.3217964f), lines[0].B) < 1e-4f, lines[0].B.ToString());
+        Assert.Equal(lines[0].B, lines[1].A);
+        Assert.True(Vector3.Distance(new Vector3(41.8f, 40, -13.8021812f), lines[1].B) < 1e-4f, lines[1].B.ToString());
+        Assert.Equal(start, lines[2].A);
+        Assert.True(Vector3.Distance(new Vector3(37.2f, 40, -21.7696152f), lines[2].B) < 1e-4f, lines[2].B.ToString());
     }
 
     [Fact]

@@ -3,6 +3,14 @@
 Changes to the Railroads add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.7.0 — 2026-11-12
+
+### Added
+- **Buffer stop and train workshop.** Follows Railroads 0.5.0: the buffer stop (0.4.15) is drawn and offered under
+  Track, its 0.6 m of track laid as the mod lays it, and the train workshop (0.5.0) under Other.
+- **Torches on vehicles.** The torch at each of a locomotive's or wagon's lamps (0.5.0: a wood torch, none, or a wisp
+  torch) shows in the inspector, where it can be changed.
+
 ## v0.6.0 — 2026-11-09
 
 ### Added
