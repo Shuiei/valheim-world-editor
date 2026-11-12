@@ -153,6 +153,7 @@ In `BepInEx/config/Tie.WorldEditorBridge.cfg`:
 - [The editor's documentation](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/README.md)
 - [Edit a dedicated server while people play](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/guides/edit-a-server-live.md)
 - [Report a problem or suggest an idea](https://github.com/Shuiei/valheim-world-editor/issues)
+- [Ask a question or chat on Discord](https://discord.com/channels/1167153871546744842/1563001733813243914)
 - [What changed in each version](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md)
 
 ## Support
