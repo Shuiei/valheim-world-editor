@@ -5,6 +5,20 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.119.4 — 2026-11-12
+
+### Changed
+- **A Discord channel** for questions and chat:
+  [join it](https://discord.com/channels/1167153871546744842/1563001733813243914), linked from the README and the mod
+  pages.
+
+### Mods
+- **Railroads 0.5.0** (Railroads add-on 0.7.0): the buffer stop is drawn and offered in the Workshop under Track, its
+  short track laid as the mod lays it, and the train workshop under Other. The torch at each of a locomotive's or
+  wagon's lamps (a wood torch, none, or a wisp torch) shows in the inspector, where it can be changed.
+- **Expand World Data 1.80.0** (Expand World add-on, unchanged): followed. Its new persistent events run while the game
+  is played and change no ground, location or vegetation, so worlds are drawn and made as with 1.79.
+
 ## v1.119.3 — 2026-11-09
 
 ### Fixed
