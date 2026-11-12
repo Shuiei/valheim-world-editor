@@ -9,7 +9,7 @@
   </PropertyGroup>
   <ItemGroup Condition="'$(TestModsOwnList)' != 'true'">
     <TestMod Include="JereKuusela-Expand_World_Size" Owner="JereKuusela" Package="Expand_World_Size" Version="1.45.0" Dll="ExpandWorldSize.dll" />
-    <TestMod Include="JereKuusela-Expand_World_Data" Owner="JereKuusela" Package="Expand_World_Data" Version="1.79.0" Dll="ExpandWorldData.dll" />
+    <TestMod Include="JereKuusela-Expand_World_Data" Owner="JereKuusela" Package="Expand_World_Data" Version="1.80.0" Dll="ExpandWorldData.dll" />
     <TestMod Include="JereKuusela-Expand_World_Rivers" Owner="JereKuusela" Package="Expand_World_Rivers" Version="1.11.0" Dll="ExpandWorldRivers.dll" />
     <TestMod Include="Gurebu-Riverheim" Owner="Gurebu" Package="Riverheim" Version="1.3.1" Dll="BepInEx/plugins/Riverheim.dll" />
     <!-- The Riverheim before it, whose worlds the Riverheim add-on still lays out as that version's game does. -->

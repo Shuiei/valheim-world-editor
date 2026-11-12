@@ -13,7 +13,7 @@ namespace ExpandWorld.WorldEditor;
 /// </summary>
 /// <remarks>
 /// Followed: Expand World Size 1.45 (expand_world_size.cfg; WorldSettings: the keys), Expand World Rivers 1.11
-/// (expand_world_rivers.cfg), Expand World Data 1.79 (expand_world_data.cfg and the expand_world folder: the biome,
+/// (expand_world_rivers.cfg), Expand World Data 1.80 (expand_world_data.cfg and the expand_world folder: the biome,
 /// world, territory, location, vegetation and alt biome files). The parts: this file (the mods in a BepInEx folder),
 /// ExpandWorldMod.Resolve (a world's rules and the log), ExpandWorldMod.Live (a live world's, the files through the game's
 /// bridge), ExpandWorldMod.Editor (what the readers take from the editor's host), ExpandWorldMod.Rules (the rules from the keys and
