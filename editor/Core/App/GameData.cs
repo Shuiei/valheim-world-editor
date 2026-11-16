@@ -37,7 +37,6 @@ public static partial class GameData
         new("piece-support", null, Editing.Stability.Use),
         new("piece-place", null, Editing.Hammer.Use),
         new("zdo-keys", (valheim, _) => GameCatalogues.ZdoKeysJson(valheim), ZdoKeys.Use),
-        new("cave-rocks", (_, bundles) => GameCatalogues.CaveRocksJson(bundles), CaveRocks.Use),
         new("piece-cost", null, PieceCost.Use, TrimPieceCost),
         new("vegetation", (_, bundles) => GameCatalogues.VegetationJson(bundles), Regrow.Use, TrimVegetation),
         new("room-themes", (valheim, _) => GameCatalogues.RoomThemesJson(valheim), Editing.Dungeons.UseThemes),

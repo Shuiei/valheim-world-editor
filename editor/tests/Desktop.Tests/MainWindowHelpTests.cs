@@ -44,7 +44,7 @@ public class MainWindowHelpTests
             w.Tools.ChooseMode(ToolMode.Path);
             Assert.Equal(new HelpTarget("path.md"), w.HelpTopic());
             w.Tools.Choose(BrushTool.PaintDirt);
-            Assert.Equal(new HelpTarget("terrain.md", "paint-brushes"), w.HelpTopic());
+            Assert.Equal(new HelpTarget("terrain.md", "paint-brush"), w.HelpTopic());
             w.Tools.ChooseMode(ToolMode.View);
             Assert.Equal(HelpTopics.Tool(ToolMode.View), w.HelpTopic());
             w.Inspector.Card.IsVisible = true;

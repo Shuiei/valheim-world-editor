@@ -6,35 +6,11 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Path panel's logic: a cave preset fills its values and says so, the rows follow the action, and the refresh
+/// The Path panel's logic: the rows follow the action, and the refresh
 /// with no line says there is none.
 /// </summary>
 public class PathPanelLogicTests
 {
-    [AvaloniaFact]
-    public void ACavePresetFillsItsValuesAndItsHelp()
-    {
-        var w = TestWindows.Editing(TestScenes.Flat(2));
-        var panel = w.PathPanel;
-        var preset = PathTool.CavePresets()[panel.CavePresetBox.SelectedIndex];
-        panel.CavePreset(false);
-        Assert.Equal(preset.Width, panel.WidthSlider.Value, 3);
-        Assert.Equal(preset.Soft, panel.SoftSlider.Value, 3);
-        Assert.Equal(preset.Depth, (double)panel.CaveDepthBox.Value!, 3);
-        Assert.Equal(preset.Headroom, (double)panel.HeadroomBox.Value!, 3);
-        Assert.Equal(preset.Help, panel.CaveHelp.Text);
-    }
-
-    [AvaloniaFact]
-    public void ARandomisedPresetSaysItIs()
-    {
-        var w = TestWindows.Editing(TestScenes.Flat(2));
-        var panel = w.PathPanel;
-        var preset = PathTool.CavePresets()[panel.CavePresetBox.SelectedIndex];
-        panel.CavePreset(true);
-        Assert.Equal(preset.Help + " " + Lang.T("cave.hint.randomized"), panel.CaveHelp.Text);
-    }
-
     [AvaloniaFact]
     public void ShowRowsShowsOnlyTheRowsOfTheAction()
     {
@@ -43,7 +19,7 @@ public class PathPanelLogicTests
         w.View.Path.Act = PathTool.Action.Ramp;
         panel.ShowRows();
         Assert.True(((Control)panel.StartBox.Parent!).IsVisible);
-        Assert.False(((Control)panel.CaveDepthBox.Parent!).IsVisible);
+        Assert.False(((Control)panel.DepthBox.Parent!).IsVisible);
     }
 
     [AvaloniaFact]

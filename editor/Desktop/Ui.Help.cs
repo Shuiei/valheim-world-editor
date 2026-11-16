@@ -26,8 +26,10 @@ public static partial class Ui
     /// <param name="topic">Its documentation, asked when the button is clicked.</param>
     public static Grid Titled(TextBlock title, Func<HelpTarget> topic)
     {
-        title.FontSize = 14;
-        title.FontWeight = FontWeight.SemiBold;
+        // As the game heads its panels: larger, bold, in the accent's orange.
+        title.FontSize = 15;
+        title.FontWeight = FontWeight.Bold;
+        title.Foreground = Accent;
         title.VerticalAlignment = VerticalAlignment.Center;
         return new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { title, Col(HelpButton(topic), 1) } };
     }

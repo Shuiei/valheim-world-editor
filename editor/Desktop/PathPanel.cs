@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Media;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -39,22 +38,6 @@ public sealed partial class PathPanel
     internal NumericUpDown EndBox { get; } = Num(32, 0.1m);
     /// <summary>River: how far below the water level the bed goes, at least 0.25 m.</summary>
     internal NumericUpDown DepthBox { get; } = Num(2, 0.25m);
-    /// <summary>Cave: the preset; choosing one fills width, soft edge, depth and headroom from it.</summary>
-    internal ComboBox CavePresetBox { get; }
-    /// <summary>Cave: the preset's values each varied by about 15%, and new boulders.</summary>
-    internal Button CaveRandomButton { get; } = new() { Content = Lang.T("common.randomize"), FontSize = 12, Margin = new Thickness(6, 0, 0, 0) };
-    /// <summary>Cave: depth below the ground, 2 to 20 m.</summary>
-    internal NumericUpDown CaveDepthBox { get; } = Num(7.5m, 0.5m);
-    /// <summary>Cave: headroom inside, 2 to 15 m.</summary>
-    internal NumericUpDown HeadroomBox { get; } = Num(4.5m, 0.5m);
-    /// <summary>Cave: the roof's boulders, in <c>PathTool.CaveRock</c> order.</summary>
-    internal ComboBox RockBox { get; }
-    /// <summary>Cave: the preset's description (and a note after Randomize).</summary>
-    internal TextBlock CaveHelp { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-    /// <summary>The cave presets, named in the language in use, in the preset list's order.</summary>
-    private readonly PathTool.CavePreset[] _presets = PathTool.CavePresets();
-    /// <summary>For Randomize: the varied values and the new boulder seed.</summary>
-    private readonly Random _random = new();
     /// <summary>Smooth curve through the points, or straight stretches.</summary>
     internal CheckBox CurveBox { get; } = new() { Content = Lang.T("path.label.curve"), IsChecked = true, FontSize = 12 };
     /// <summary>Natural look; shows the bump rows when on.</summary>
@@ -62,21 +45,17 @@ public sealed partial class PathPanel
     /// <summary>Asks for the action to be applied (raises <see cref="ApplyAsked"/>).</summary>
     internal Button ApplyButton { get; } = new Button { Content = Lang.T("path.label.apply"), FontSize = 12 }.Classed("primary");
     /// <summary>Removes the line.</summary>
-    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("path.label.clear"), FontSize = 12 };
     /// <summary>How many points the line has and how long it is.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted };
     /// <summary>The rows only some actions show, with the actions that show them.</summary>
     private readonly Dictionary<Control, PathTool.Action[]> _rows = [];
-    /// <summary>The Natural look's bump rows (the brush's noise amplitude and size).</summary>
-    private readonly Control _naturalRows;
     /// <summary>The width slider's value, shown with its unit.</summary>
     private readonly TextBlock _widthShown = new();
     /// <summary>The soft edge slider's value, shown with its unit.</summary>
     private readonly TextBlock _softShown = new();
     /// <summary>Apply was asked for (the window does it: it has the edit session).</summary>
     public event Action? ApplyAsked;
-    /// <summary>The action was changed in the list.</summary>
-    public event Action<PathTool.Action>? ActionChanged;
 
     /// <summary>A number box starting at <c>v</c> that steps by <c>step</c>.</summary>
     private static NumericUpDown Num(decimal v, decimal step) => new() { Value = v, Increment = step, FormatString = "0.0#", FontSize = 12 };
@@ -100,15 +79,15 @@ public sealed partial class PathPanel
         _path = view.Path;
         var actions = Enum.GetValues<PathTool.Action>();
         ActionBox = new ComboBox { ItemsSource = actions.Select(a => PathTool.Label(a).Shown).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-        ActionBox.SelectionChanged += (_, _) => { _path.Act = actions[Math.Max(0, ActionBox.SelectedIndex)]; ShowRows(); _path.Notify(); ActionChanged?.Invoke(_path.Act); };
+        ActionBox.SelectionChanged += (_, _) => { _path.Act = actions[Math.Max(0, ActionBox.SelectedIndex)]; ShowRows(); _path.Notify(); };
         WidthSlider = Slide(1, 40, 0.5, _path.Width, _widthShown, "m", v => { _path.Width = v; _path.Notify(); });
         SoftSlider = Slide(0, 15, 0.5, _path.Soft, _softShown, "m", v => _path.Soft = v);
-        CavePresetBox = new ComboBox { ItemsSource = _presets.Select(p => p.Name).ToArray(), SelectedIndex = 1, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-        var rocks = Enum.GetValues<PathTool.CaveRock>();
-        RockBox = new ComboBox { ItemsSource = rocks.Select(PathTool.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-        WireCave(rocks);
         WireControls();
-        _naturalRows = BuildNaturalRows(brush);
+        NewPatternButton = BrushRows.NewPattern(brush, s => Message?.Invoke(s));
+        NaturalRows = BrushRows.Natural(brush, NewPatternButton);
+        RestRow = BrushRows.Rest(brush, out var rest);
+        RestSlider = rest;
+        _rows[RestRow] = [PathTool.Action.Erode];
         Card = BuildCard();
         _path.Changed += Refresh;
         ShowRows();

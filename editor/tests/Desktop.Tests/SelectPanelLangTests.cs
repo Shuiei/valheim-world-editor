@@ -153,7 +153,7 @@ public sealed class SelectPanelLangTests : SavedSelectionsFolder
             await TestWindows.Until(() => WorldSave.Builder == 0);
             Check("New pieces get no builder: the game takes them for parts of a ruin.");
             w.Claim();
-            Check("Built by is set to Nobody: choose a player first (View panel, Building).");
+            Check("Built by is set to Nobody: choose a player first (the building bar, Built by).");
 
             // A runestone has nothing to inspect; Replace with nothing selected.
             w.View.Select([1]);

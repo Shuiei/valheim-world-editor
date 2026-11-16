@@ -72,15 +72,26 @@ public class DungeonPanelInfoTests
             Assert.Contains("This one: Overlaps cave_new_corridor03.", p.Info.Text, StringComparison.Ordinal);
             // Inside: the roofs cut 4 m above the entrance's floor.
             p.GoInside.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Assert.Equal(4, p.CutSlider.Value);
+            var slider = w.ViewCut.Slider;
+            Assert.Equal(ViewCut.Level.Dungeon, w.ViewCut.From);
+            Assert.Equal(ViewCut.DungeonEnd, slider.Maximum);
+            Assert.Equal(4, slider.Value);
             float? cut = At.Y - 3 + 4;
             Assert.Equal(cut, w.View.CutY);
+            Assert.Equal("Cut at 4 m", w.ViewCut.Text.Text);
             // The left end cuts at the floor, the right end shows the roofs.
-            p.CutSlider.Value = 0;
+            slider.Value = 0;
             Assert.Equal(At.Y - 3, w.View.CutY);
-            p.CutSlider.Value = DungeonPanel.CutOff;
+            slider.Value = ViewCut.DungeonEnd;
             Assert.Null(w.View.CutY);
-            // Another tool: the cut off.
+            slider.Value = 6;
+            // Another tool: the world's own cut, off; back in the Dungeon tool, the dungeon's cut as it was left.
+            w.Tools.ChooseMode(ToolMode.Select);
+            Assert.Equal(ViewCut.Level.Ground, w.ViewCut.From);
+            Assert.Equal(ViewCut.End, slider.Maximum);
+            Assert.Null(w.View.CutY);
+            w.Tools.ChooseMode(ToolMode.Dungeon);
+            Assert.Equal(At.Y - 3 + 6, w.View.CutY);
             w.Tools.ChooseMode(ToolMode.Select);
             Assert.Null(w.View.CutY);
         }

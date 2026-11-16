@@ -17,7 +17,6 @@ public sealed partial class DungeonPanel
         GoOutside.Tip("dungeon.outside");
         BuildHere.Tip("dungeon.build");
         BuildHere.Click += (_, _) => BuildAsked?.Invoke();
-        CutSlider.Tip("dungeon.cut");
         Filter.Tip("dungeon.find");
         Rooms.Tip("dungeon.rooms");
         TurnButton.Tip("dungeon.turn");
@@ -33,11 +32,12 @@ public sealed partial class DungeonPanel
             {
                 Tool.Open(_shown[DungeonBox.SelectedIndex]);
                 FillRooms();
+                // Another dungeon: the cut counts from its floor.
+                CutFromFloor();
             }
         };
         GoInside.Click += (_, _) => Inside();
         GoOutside.Click += (_, _) => Outside();
-        CutSlider.ValueChanged += (_, e) => SetCut(e.NewValue);
         Filter.TextChanged += (_, _) => FillRooms();
         Rooms.SelectionChanged += (_, _) =>
         {

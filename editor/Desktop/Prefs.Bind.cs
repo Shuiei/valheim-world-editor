@@ -36,13 +36,27 @@ public sealed partial class Prefs
     }
 
     /// <summary>
+    /// Entries whose English changed since a choice of them could be remembered: the entry as it is named now, by the
+    /// setting's key and the name it was kept under.
+    /// </summary>
+    private static readonly Dictionary<(string Key, string Was), string> Renamed = new()
+    {
+        [("select.zone", "A zone on the ground (all above it)")] = "An outline on the ground (all above it)",
+        [("brush.falloff", "Smooth")] = "Soft",
+    };
+
+    /// <summary>
     /// Chooses the remembered entry, when the list has it (for lists filled again later), comparing the entries' English
-    /// with the English kept; true when it did.
+    /// with the English kept (or with the name an entry renamed since has now); true when it did.
     /// </summary>
     public bool Restore(ComboBox box, string key)
     {
         if (TryGet(key, out string? text) && text != null && box.ItemsSource is IEnumerable<object> items)
         {
+            if (Renamed.TryGetValue((key, text), out string? now))
+            {
+                text = now;
+            }
             int i = items.Select(o => o is string s ? Lang.EnglishOf(s) : null).ToList().IndexOf(text);
             if (i >= 0)
             {

@@ -88,7 +88,7 @@ public sealed partial class StartPage
             Background = new SolidColorBrush(Color.FromRgb(31, 42, 34)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(62, 107, 69)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = Ui.CardRadius,
             Padding = new Thickness(18, 14),
             MaxWidth = 900,
             HorizontalAlignment = HorizontalAlignment.Left,

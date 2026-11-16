@@ -28,6 +28,8 @@ public sealed partial class PlacePanel
         _attachRow.IsVisible = m == PlaceTool.Modes.Brush;
         GrowBox.IsVisible = t.GrowMatters;
         _brushRows.IsVisible = m == PlaceTool.Modes.Brush;
+        // One at a time places only what the click shows: no drag to set a rate for.
+        _rateRow.IsVisible = !t.OneAtATime;
         _modeHead.Text = (m switch
         {
             PlaceTool.Modes.Line => Lang.T("place.head.line"),
@@ -77,6 +79,7 @@ public sealed partial class PlacePanel
         RotationSlider.Value = t.Rotation;
         SingleBox.IsChecked = t.OneAtATime;
         EndToEndBox.IsChecked = t.EndToEnd;
+        RateSlider.Value = t.Rate;
         DensitySlider.Value = t.Density;
         SpacingSlider.Value = t.Spacing;
         ClumpSlider.Value = t.Clump;

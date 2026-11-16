@@ -34,9 +34,10 @@ public sealed partial class GlView
             return false;
         }
         _dragFrom = null;
-        if (GridAt(at, _surfaceSize) is { } cell)
+        if (GridAt(at, _surfaceSize) is { } cell && Scene is { } sc)
         {
-            PasteClicked?.Invoke(cell);
+            // Where the preview shows it: by the building bar's grid when it is on.
+            PasteClicked?.Invoke(Paste.OnGrid(cell, sc.W, sc.H));
         }
         Wake();
         return true;
@@ -59,7 +60,11 @@ public sealed partial class GlView
         return true;
     }
 
-    /// <summary>The Path tool takes the press: a point is put down (or a segment, with the modifier keys).</summary>
+    /// <summary>
+    /// The Path tool takes the press: a point is put down (or a segment, with the modifier keys). Alt + Shift is the
+    /// Mask's, as with a brush (a ramp's end is Ctrl + Alt): the height there goes to the Mask's band and the path
+    /// is left alone.
+    /// </summary>
     /// <param name="e">The press.</param>
     /// <param name="at">Where the press is, on the surface.</param>
     /// <returns>True when the Path tool is in use and took it.</returns>
@@ -70,10 +75,18 @@ public sealed partial class GlView
             return false;
         }
         _dragFrom = null;
-        _pathDown = true;
         var mods = e.KeyModifiers;
-        Path.Down(GridAt(at, _surfaceSize), at, g => ScreenOfGrid(g), Ctrl(mods), mods.HasFlag(KeyModifiers.Alt),
-            mods.HasFlag(KeyModifiers.Shift), GridHeight);
+        bool alt = mods.HasFlag(KeyModifiers.Alt);
+        if (alt && mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods))
+        {
+            if (WorldAt(at, _surfaceSize) is { } w)
+            {
+                BrushAltClick?.Invoke(w.Y, true);
+            }
+            return true;
+        }
+        _pathDown = true;
+        Path.Down(GridAt(at, _surfaceSize), at, g => ScreenOfGrid(g), Ctrl(mods), alt, GridHeight);
         Wake();
         return true;
     }

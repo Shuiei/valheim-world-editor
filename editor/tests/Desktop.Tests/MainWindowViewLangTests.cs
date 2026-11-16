@@ -31,6 +31,14 @@ public sealed class MainWindowViewLangTests
             await r.Open();
             string[] builders = [.. Builders.Players(r.W.Session!.Scene.World!).Select(p => p.Label)];
             Assert.Empty(PseudoLang.Untranslated(r.W.ViewPanelCard, builders));
+            // Built by is on the building bar (Build, Select and Paste), with the world's builders.
+            foreach (var tool in new Action[] { r.W.Tools.ChooseBuild, r.W.Tools.ChooseSelect })
+            {
+                tool();
+                Assert.True(r.W.BuildingBar.Card.IsVisible);
+                Assert.Empty(PseudoLang.Untranslated(r.W.BuildingBar.Card, builders));
+            }
+            r.W.Tools.Choose(null);
             Assert.Empty(PseudoLang.Untranslated(r.W.HelpCard));
 
             // The message names the list's choice in each language.
@@ -101,8 +109,8 @@ public sealed class MainWindowViewLangTests
         w.Tools.ChooseMode(ToolMode.Paste);
         w.PastePanel.OffsetBox.Value = 0;
         Assert.True(w.View.CtrlWheel!(1, false));
-        Assert.Equal(PseudoLang.Wrap("Paste height: +0.5 m from the ground clicked (Ctrl + wheel; Shift: 0.1 m)."), w.MessageText.Text);
-        Assert.Equal("Paste height: +0.5 m from the ground clicked (Ctrl + wheel; Shift: 0.1 m).", w.LastMessageEn);
+        Assert.Equal(PseudoLang.Wrap("Paste height: +0.5 m from the ground clicked (PgUp, PgDn or Ctrl + wheel; Shift: finer)."), w.MessageText.Text);
+        Assert.Equal("Paste height: +0.5 m from the ground clicked (PgUp, PgDn or Ctrl + wheel; Shift: finer).", w.LastMessageEn);
     }
 
     [AvaloniaFact]

@@ -19,8 +19,8 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// Building pieces as the game places them: true size, upright, all facing the rotation (set in Brush mode, the only
-    /// one with Tilt; the mode is chosen again afterwards).
+    /// Objects as the game places its own (a spawn point, a boulder, crops in a field): true size, upright, all facing
+    /// the rotation (set in Brush mode, the only one with Tilt; the mode is chosen again afterwards).
     /// </summary>
     private static void Pieces(Editor e)
     {
@@ -29,6 +29,59 @@ public sealed partial class Scenes
         e.Send("set Size %|100,100");
         e.Send("set Rotation|0");
         e.Send("check Random facing (off: all face the rotation)|off");
+    }
+
+    /// <summary>The Build tool on, with this piece picked in its dock (by its prefab name), laid as it was last (see <see cref="Lay"/>).</summary>
+    private static void Piece(Editor e, string prefab)
+    {
+        e.Send("key U");
+        e.Send($"type Search pieces|{prefab}");
+        e.Send($"click {prefab}");
+        e.Send("type Search pieces|");
+    }
+
+    /// <summary>The Build dock's Lay: One piece, Line, Circle, Rectangle or Grid.</summary>
+    private static void Lay(Editor e, string how) => e.Send($"click {how}");
+
+    /// <summary>One piece put down with Build where the hammer would put it at that point (on the ground, or on the piece there).</summary>
+    private static void BuildOne(Editor e, string prefab, (double X, double Z) at)
+    {
+        Piece(e, prefab);
+        Lay(e, "One piece");
+        Move(e, at);
+        Click(e, at);
+    }
+
+    /// <summary>A floor laid with Build: the piece in a grid over the box, so far apart, lifted so many half metres (PgUp).</summary>
+    private static void BuildFloor(Editor e, string prefab, (double X, double Z) a, (double X, double Z) b, double spacing = 2, int halfMetresUp = 0)
+    {
+        Piece(e, prefab);
+        Lay(e, "Grid");
+        e.Send($"set Spacing|{spacing.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+        for (int i = 0; i < halfMetresUp; i++)
+        {
+            e.Send("key PageUp");
+        }
+        Drag(e, a, b);
+        e.Send("key Return");
+        if (halfMetresUp > 0)
+        {
+            e.Send("click Reset");
+        }
+        e.Send("click Clear shape (Esc)");
+        Lay(e, "One piece");
+    }
+
+    /// <summary>Walls laid with Build end to end round a rectangle (or a circle: from its centre to its edge), this many high.</summary>
+    private static void BuildWalls(Editor e, string prefab, (double X, double Z) a, (double X, double Z) b, int layers = 1, string shape = "Rectangle")
+    {
+        Piece(e, prefab);
+        Lay(e, shape);
+        e.Send($"set Layers|{layers}");
+        Drag(e, a, b);
+        e.Send("key Return");
+        e.Send("click Clear shape (Esc)");
+        Lay(e, "One piece");
     }
 
     /// <summary>Trees and rocks as nature has them: sizes, tilts and facings vary.</summary>
@@ -59,7 +112,7 @@ public sealed partial class Scenes
         e.Send($"set Soft edge|{soft}");
         e.Send("click avg");
         e.Send("key Return");
-        e.Send("click Clear (Esc)");
+        e.Send("click Clear selection (Esc)");
     }
 
     /// <summary>The trees <c>Trees</c> plants unless told otherwise.</summary>
@@ -79,22 +132,11 @@ public sealed partial class Scenes
         e.Send("key Escape");
     }
 
-    /// <summary>A wooden hut: a floor of 2 m pieces with walls end to end around it, this many high.</summary>
+    /// <summary>A wooden hut: a floor of 2 m pieces with walls end to end around it, this many high (the Build tool).</summary>
     private static void Hut(Editor e, (double X, double Z) a, (double X, double Z) b, int layers = 2)
     {
-        e.Send("key T");
-        Pieces(e);
-        Kinds(e, "wood_floor");
-        e.Send("click Grid");
-        e.Send("set Spacing|2");
-        Drag(e, a, b);
-        e.Send("key Return");
-        Kinds(e, "woodwall");
-        e.Send("click Line");
-        e.Send("click Rectangle");
-        e.Send($"set Layers|{layers}");
-        Drag(e, a, b);
-        e.Send("key Return");
+        BuildFloor(e, "wood_floor", a, b);
+        BuildWalls(e, "woodwall", a, b, layers);
     }
 
     /// <summary>A small wooden house on a floor, a crop field and a fire pit, inside a palisade.</summary>
@@ -118,17 +160,10 @@ public sealed partial class Scenes
         Drag(e, P(-1, -15), P(13, -7));
         e.Send("key Return");
         // A fire pit and a chest by the house.
-        Kinds(e, "fire_pit");
-        Single(e, P(4, 4));
-        Kinds(e, "piece_chest_wood");
-        Single(e, P(-1, 8));
-        e.Send("check One at a time, exactly at the cursor|off");
+        BuildOne(e, "fire_pit", P(4, 4));
+        BuildOne(e, "piece_chest_wood", P(-1, 8));
         // A palisade around it all.
-        Kinds(e, "stake_wall");
-        e.Send("click Line");
-        e.Send("click Circle");
-        Drag(e, P(0, 0), P(24, 0));
-        e.Send("key Return");
+        BuildWalls(e, "stake_wall", P(0, 0), P(24, 0), shape: "Circle");
         e.Send("key Escape");
     }
 }

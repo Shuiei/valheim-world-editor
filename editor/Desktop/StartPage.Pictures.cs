@@ -85,7 +85,7 @@ public sealed partial class StartPage
             {
                 Children =
                 {
-                    new Border { Height = 100, ClipToBounds = true, CornerRadius = new CornerRadius(6, 6, 0, 0), Child = top },
+                    new Border { Height = 100, ClipToBounds = true, CornerRadius = new CornerRadius(3, 3, 0, 0), Child = top },
                     new StackPanel
                     {
                         Margin = new Thickness(12, 10),

@@ -39,9 +39,10 @@ public class SelectToolKeyTests
         // The move is written when the keys stop (or at once on a commit).
         w.View.SelectTool.Commit();
         var moved = Last(s);
-        Assert.Equal(15, moved.Rotation.Y, 3);
-        // On the ground (30 m) and lifted a quarter metre.
-        Assert.Equal(30.25f, moved.Position.Y, 3);
+        // Shift: the fine turn of 1°.
+        Assert.Equal(1, moved.Rotation.Y, 3);
+        // On the ground (30 m) and lifted by the building bar's step, half a metre.
+        Assert.Equal(30.5f, moved.Position.Y, 3);
         Assert.Equal(new Vector2(20, 20), new Vector2(moved.Position.X, moved.Position.Z));
         Assert.Equal([s.Scene.Things.Count - 1], w.View.Selected);
         // Ctrl+Z puts it back.

@@ -24,7 +24,7 @@ public sealed class MountainPanelLangTests
         for (int i = 0; i < Mountain.Presets.Length; i++)
         {
             p.PresetBox.SelectedIndex = i;
-            Assert.Empty(PseudoLang.Untranslated(p.Card));
+            Assert.Empty(PseudoLang.Untranslated(p.Rows));
             Assert.StartsWith(PseudoLang.Open.ToString(), p.HelpText.Text, StringComparison.Ordinal);
         }
         // Scripts name a preset in English, whatever language the window shows.
@@ -40,7 +40,7 @@ public sealed class MountainPanelLangTests
         var tree = new WorldScene.Thing(5, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 0, false);
         var s = TestScenes.Flat(2, tree);
         var w = TestWindows.Editing(s);
-        var m = w.MountainPanel;
+        var m = w.LandformPanel.Mountain;
         m.GrowBox.IsChecked = false;
         for (int i = 0; i < Mountain.Presets.Length; i++)
         {
@@ -62,7 +62,7 @@ public sealed class MountainPanelLangTests
             {
                 Assert.Contains("; 1 tree(s) and rock(s) it buried taken away.", w.LastMessageEn, StringComparison.Ordinal);
             }
-            Assert.Equal(PseudoLang.Wrap("Mountain: {0}").Replace("{0}", preset.Shown, StringComparison.Ordinal), s.UndoLabel);
+            Assert.Equal(PseudoLang.Wrap("Landform: {0}").Replace("{0}", preset.Shown, StringComparison.Ordinal), s.UndoLabel);
             Assert.True(s.Undo());
         }
         // Growing where there is no world generator: why nothing grew stays said, in the language.
@@ -83,8 +83,8 @@ public sealed class MountainPanelLangTests
         await run.Open(size: 3);
         var w = run.W;
         var s = w.Session!;
-        w.MountainPanel.RadiusSlider.Value = 25;
-        w.MountainPanel.GrowBox.IsChecked = true;
+        w.LandformPanel.Mountain.RadiusSlider.Value = 25;
+        w.LandformPanel.Mountain.GrowBox.IsChecked = true;
         // In the zone east of the middle: the start temple keeps its own zone's ground clear.
         float gx = (s.Ground.W - 1) / 2f + 64f, gz = (s.Ground.H - 1) / 2f;
         int steps = s.UndoList.Count;
@@ -95,7 +95,7 @@ public sealed class MountainPanelLangTests
         var grew = Regex.Match(w.LastMessageEn, @" Grew (\d+) of the biome's trees and rocks on it\. Ctrl\+Z takes it back \(twice with what grew\); saving turns it into ground discs\.$");
         Assert.True(grew.Success, w.LastMessageEn);
         Assert.Equal(steps + 2, s.UndoList.Count);
-        Assert.Equal(PseudoLang.Wrap("Mountain: grew {0} object(s)").Replace("{0}", grew.Groups[1].Value, StringComparison.Ordinal), s.UndoLabel);
+        Assert.Equal(PseudoLang.Wrap("Landform: grew {0} object(s)").Replace("{0}", grew.Groups[1].Value, StringComparison.Ordinal), s.UndoLabel);
         Assert.True(s.Undo());
         Assert.True(s.Undo());
 

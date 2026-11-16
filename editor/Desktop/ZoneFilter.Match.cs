@@ -5,8 +5,8 @@ namespace TerrainEditor.Desktop;
 public sealed partial record ZoneFilter
 {
     /// <summary>
-    /// Picks the zones matching the filter out of <c>ZoneStats.Compute</c>'s rows. A zone with pieces never
-    /// matches: buildings are never reset from here.
+    /// Picks the zones matching the filter out of <c>ZoneStats.Compute</c>'s rows. While the buildings are kept
+    /// (<see cref="KeepBuildings"/>), a zone with pieces never matches: buildings are then never reset from here.
     /// </summary>
     /// <param name="stats">ZoneStats' flat rows, <c>ZoneStats.Stride</c> ints per zone.</param>
     /// <returns>The matching zones' coordinates and how many objects they hold in all.</returns>
@@ -21,8 +21,8 @@ public sealed partial record ZoneFilter
             {
                 continue;
             }
-            // Buildings are never reset from here: a zone with pieces never matches.
-            if (pieces > 0 || (NoBuildings && d != -1 && d <= Distance))
+            // Buildings kept: a zone with pieces never matches, so none is reset from here.
+            if ((KeepBuildings && pieces > 0) || (NoBuildings && d != -1 && d <= Distance))
             {
                 continue;
             }

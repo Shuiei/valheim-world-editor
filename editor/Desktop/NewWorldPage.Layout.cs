@@ -94,7 +94,7 @@ public sealed partial class NewWorldPage : IDisposable
             Background = Ui.Panel,
             BorderBrush = Ui.Line,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = Ui.CardRadius,
             Padding = new Thickness(12, 10),
             Margin = new Thickness(10),
             HorizontalAlignment = HorizontalAlignment.Right,
@@ -143,7 +143,7 @@ public sealed partial class NewWorldPage : IDisposable
         {
             BorderBrush = Ui.Line,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = Ui.ControlRadius,
             ClipToBounds = true,
             Child = new Panel { Children = { Map, Marks, Readout, toggles, zoom, Loading } },
         };
@@ -172,7 +172,7 @@ public sealed partial class NewWorldPage : IDisposable
             Background = Ui.Panel,
             BorderBrush = Ui.Line,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = Ui.CardRadius,
             Padding = new Thickness(14, 10),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,

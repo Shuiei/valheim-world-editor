@@ -30,17 +30,25 @@ public sealed partial class BlueprintsPanel
     /// picture when the name changes and the new file name is free).
     /// </summary>
     /// <returns>Whether the details were saved.</returns>
-    public async Task<bool> EditDetails(Homestead.Entry e)
+    public async Task<bool> EditDetails(Homestead.Entry e) => await ChangeDetails(e) != null;
+
+    /// <summary><see cref="EditDetails"/>, telling what was saved and where.</summary>
+    /// <returns>
+    /// The details saved and the file they are in now (the blueprint's own, or the one it was renamed to), null when
+    /// not saved.
+    /// </returns>
+    internal async Task<(Homestead.Details Details, string Path)?> ChangeDetails(Homestead.Entry e)
     {
         var d = await AskDetails(e.Details, Homestead.Cost(e.Kinds).Describe(8));
         if (d == null || string.IsNullOrWhiteSpace(d.Name))
         {
-            return false;
+            return null;
         }
         d = d with { Name = d.Name.Trim(), Description = d.Description.Trim() };
+        string path = e.Path;
         try
         {
-            string path = e.Path, target = Path.Combine(Path.GetDirectoryName(path)!, Homestead.FileName(d.Name));
+            string target = Path.Combine(Path.GetDirectoryName(path)!, Homestead.FileName(d.Name));
             File.WriteAllText(path, Homestead.WithDetails(File.ReadAllText(path), d));
             if (!string.Equals(target, path, StringComparison.Ordinal) && !File.Exists(target))
             {
@@ -49,17 +57,18 @@ public sealed partial class BlueprintsPanel
                 {
                     File.Move(Path.ChangeExtension(path, ".png"), Path.ChangeExtension(target, ".png"));
                 }
+                path = target;
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Log.Caught(ex, "saving a blueprint's details");
             Message?.Invoke(Said.Of("blueprints.msg.changeFailed", ex.Message));
-            return false;
+            return null;
         }
         Message?.Invoke(Said.Of("blueprints.msg.detailsSaved", d.Name));
         Refresh();
-        return true;
+        return (d, path);
     }
 
     /// <summary>Details with only a name.</summary>

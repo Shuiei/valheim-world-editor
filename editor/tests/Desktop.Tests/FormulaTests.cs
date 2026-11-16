@@ -152,11 +152,11 @@ public class FormulaTests
         var p = new ShapePanel();
         p.PresetBox.SelectedIndex = 1;
         Assert.Equal("h * max(0, 1 - d / r)", p.FormulaBox.Text);
-        Assert.Equal("Shape: Cone", p.Label);
+        Assert.Equal("Landform: Cone", p.Label);
         // Editing the formula makes it a formula of its own.
         p.FormulaBox.Text = "h * 2";
         Assert.Equal(ShapePanel.Presets.Length, p.PresetBox.SelectedIndex);
-        Assert.Equal("Shape: Formula", p.Label);
+        Assert.Equal("Landform: Formula", p.Label);
         Assert.NotNull(p.Function);
         p.FormulaBox.Text = "h * ";
         Assert.Null(p.Function);
@@ -168,8 +168,10 @@ public class FormulaTests
     {
         var (w, s, _) = ShownEditor.Open();
         w.KeyPress(Key.G, RawInputModifiers.None, PhysicalKey.G, "g");
-        Assert.Equal(ToolMode.Shape, w.View.Mode);
-        Assert.True(w.ShapePanel.Card.IsVisible);
+        Assert.Equal(ToolMode.Landform, w.View.Mode);
+        Assert.True(w.LandformPanel.Card.IsVisible);
+        Assert.Equal(LandformKind.Formula, w.LandformPanel.Kind);
+        Assert.True(w.LandformPanel.Formula.Rows.IsVisible);
         w.View.SetCamera(new Vector3(0, 100, 1), Vector3.Zero, 1);
         var q = Vector4.Transform(new Vector4(0, 30, 0, 1), w.View.ViewProj);
         var at = new Avalonia.Point((q.X / q.W + 1) / 2 * 1000, (1 - q.Y / q.W) / 2 * 1000);

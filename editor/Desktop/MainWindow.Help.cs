@@ -29,6 +29,7 @@ public partial class MainWindow
         return Tools.Mode switch
         {
             ToolMode.View or ToolMode.Place when InWorkshop => HelpTopics.Workshop,
+            ToolMode.Place when Tools.BuildMode => HelpTopics.Build,
             ToolMode.View when World?.IsLive == true => HelpTopics.Live,
             _ => HelpTopics.Tool(Tools.Mode, Tools.Tool),
         };

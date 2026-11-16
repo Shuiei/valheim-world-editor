@@ -25,9 +25,10 @@ public sealed partial class AreaPanel
 
     /// <summary>The panel's card: its rows in order, each shown only for the actions it belongs to.</summary>
     /// <param name="softV">The soft edge's value text, shown next to its slider.</param>
+    /// <param name="groups">The group buttons.</param>
     /// <param name="kinds">The object kind toggles.</param>
     /// <returns>The card, to be shown over the view.</returns>
-    private Border BuildCard(TextBlock softV, WrapPanel kinds)
+    private Border BuildCard(TextBlock softV, Control groups, WrapPanel kinds)
     {
         return Ui.AsCard(new Border
         {
@@ -42,19 +43,21 @@ public sealed partial class AreaPanel
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { BoxButton, PolyButton, ClearButton } },
                     Info,
                     Row(Lang.T("path.label.soft"), SoftSlider, softV),
-                    Row(Lang.T("path.label.action"), ActionBox),
+                    groups,
+                    _actionRow,
                     For(Row(Lang.T("common.height"), HeightBox, AverageButton), Act.Flatten),
                     For(Row(Lang.T("path.label.amount"), AmountBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }), Act.Raise, Act.Lower),
                     For(Row(Lang.T("common.paint"), PaintBox), Act.Paint),
-                    For(NoLimitBox, Act.Flatten, Act.Raise, Act.Lower),
                     For(VolumeText, Act.Flatten, Act.Raise, Act.Lower),
                     For(Help(Lang.T("area.hint.smooth")), Act.Smooth),
                     For(Help(Lang.T("area.hint.natural")), Act.Natural),
+                    For(NaturalRows, Act.Natural),
                     For(Help(Lang.T("area.hint.restore")), Act.Restore),
                     For(Help(Lang.T("area.hint.erode")), Act.Erode),
-                    For(kinds, Act.Remove, Act.Select, Act.Replace, Act.Regrow, Act.Backup),
-                    For(Row(Lang.T("common.replace"), FromBox), Act.Replace),
-                    For(Row(Lang.T("area.label.with"), ToBox, ToPickButton), Act.Replace),
+                    For(RestRow, Act.Erode),
+                    For(kinds, Act.Select, Act.Regrow, Act.Backup),
+                    For(Row(Lang.T("area.label.only"), OnlyBox), Act.Select),
+                    For(Help(Lang.T("area.hint.select")), Act.Select),
                     For(Help(Lang.T("area.hint.regrow")), Act.Regrow),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, CutButton, PasteButton } }, Act.Copy),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SaveBlueprintButton, LibraryButton } }, Act.Copy),
@@ -69,7 +72,7 @@ public sealed partial class AreaPanel
                     For(KeepBuildingsBox, Act.Reset),
                     For(ResetGroundBox, Act.Reset),
                     For(Help(Lang.T("area.hint.reset")), Act.Reset),
-                    For(UnresetButton, Act.Reset),
+                    For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { UnresetButton, UnresetAllButton } }, Act.Reset),
                     ApplyButton,
                 },
             },
@@ -121,9 +124,7 @@ public sealed partial class AreaPanel
             Act.Restore => Lang.T("area.apply.restore"),
             Act.Erode => Lang.T("area.apply.erode"),
             Act.Paint => Lang.T("area.apply.paint"),
-            Act.Remove => Lang.T("area.apply.remove"),
             Act.Select => Lang.T("area.apply.select"),
-            Act.Replace => Lang.T("area.apply.replace"),
             Act.Reset => Lang.T("area.apply.reset"),
             Act.Regrow => Lang.T("area.apply.regrow"),
             Act.Backup => Lang.T("area.apply.backup"),

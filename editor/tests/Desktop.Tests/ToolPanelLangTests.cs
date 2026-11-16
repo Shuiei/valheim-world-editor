@@ -26,11 +26,10 @@ public sealed class ToolPanelLangTests
             t.Choose(tool);
             Assert.Empty(PseudoLang.Untranslated(t.Options));
         }
-        // A built-in stamp as the shape: its own rows (Turn, Stamp once).
+        // A built-in stamp as the shape: its own row (Turn).
         t.Choose(BrushTool.Raise);
         t.ShapeBox.SelectedIndex = 4;
-        t.StampOnceBox.IsChecked = true;
-        Assert.Equal(PseudoLang.Wrap("Stamp: Mountain"), t.ShapeBox.SelectedItem);
+        Assert.Equal(PseudoLang.Wrap("Stamp: Rough hill"), t.ShapeBox.SelectedItem);
         Assert.Empty(PseudoLang.Untranslated(t.Options));
 
         t.SetWorkshop(true);
@@ -40,8 +39,8 @@ public sealed class ToolPanelLangTests
         Said? said = null;
         t.Message += m => said = m;
         t.NewPattern(7);
-        Assert.Equal(PseudoLang.Wrap("New natural pattern. The next Naturalize stroke or natural path uses it."), said!.Shown);
-        Assert.Equal("New natural pattern. The next Naturalize stroke or natural path uses it.", said.English);
+        Assert.Equal(PseudoLang.Wrap("New bump pattern. The next Naturalize stroke, or path with Natural look, uses it."), said!.Shown);
+        Assert.Equal("New bump pattern. The next Naturalize stroke, or path with Natural look, uses it.", said.English);
 
         var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
         w.Show();

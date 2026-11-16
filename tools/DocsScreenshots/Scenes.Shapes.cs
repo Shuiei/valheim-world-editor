@@ -2,24 +2,25 @@ using SkiaSharp;
 
 namespace TerrainEditor.DocsScreenshots;
 
-/// <summary>The shaping tools' pictures: Shape, Mountain and the Path tool's roads, ramps, rivers and caves.</summary>
+/// <summary>The shaping tools' pictures: Landform (its formulas and mountains) and the Path tool's roads, ramps and rivers.</summary>
 public sealed partial class Scenes
 {
     /// <summary>
-    /// shape.jpg: the Shape tool's presets at the default radius of 16 m, front row Mound, Cone, Mesa, back row
-    /// Crater, Moat (ring ditch), Ridged hill, each named on the picture, the slope colours on so their slopes read;
-    /// the panel shows the Mound and its formula, its ring round the mound.
+    /// shape.jpg: the Landform tool's Formula presets at the default radius of 16 m, front row Mound, Cone, Plateau,
+    /// back row Crater, Moat (ring ditch), Ridged hill, each named on the picture, the slope colours on so their slopes
+    /// read; the panel shows the Mound and its formula, its ring and preview on the mound.
     /// </summary>
     private void ShapeTool(Editor e)
     {
         OpenGround(e, 5, P(-130, -130), P(130, 130), slope: true);
         Level(e, P(-80, -60), P(80, 60), soft: 10);
-        e.Send("click Shape");
+        e.Send("click Landform");
+        e.Send("choose Formula");
         e.Send("set Radius|16");
-        // East is left on the picture: the front row (north) reads Mound, Cone, Mesa from the left.
+        // East is left on the picture: the front row (north) reads Mound, Cone, Plateau from the left.
         (string Shape, double Dx, double Dz)[] shapes =
         [
-            ("Mound", 40, 20), ("Cone", 0, 20), ("Mesa", -40, 20),
+            ("Mound", 40, 20), ("Cone", 0, 20), ("Plateau", -40, 20),
             ("Crater", 40, -22), ("Moat (ring ditch)", 0, -22), ("Ridged hill", -40, -22),
         ];
         Camera(e, 26, -2, 200, 30, 150);
@@ -35,17 +36,18 @@ public sealed partial class Scenes
         string shot = Out("shape.jpg");
         e.Shot(shot);
         // Where each shape shows on the picture: the front row's names below them, the back row's above.
-        Label(shot, [("Mound", 600, 578), ("Cone", 828, 634), ("Mesa", 1102, 698), ("Crater", 690, 360), ("Moat (ring ditch)", 875, 384), ("Ridged hill", 1088, 414)]);
+        Label(shot, [("Mound", 600, 578), ("Cone", 828, 634), ("Plateau", 1102, 698), ("Crater", 690, 360), ("Moat (ring ditch)", 875, 384), ("Ridged hill", 1088, 414)]);
     }
 
-    /// <summary>shape-formula-error.jpg: the Shape panel alone, an unfinished formula and the orange error under it.</summary>
+    /// <summary>shape-formula-error.jpg: the Landform panel alone, its Formula kind, an unfinished formula and the error under it.</summary>
     private void ShapeFormulaError(Editor e)
     {
         Bare(e);
-        e.Send("click Shape");
+        e.Send("click Landform");
+        e.Send("choose Formula");
         e.Send("choose Mound");
         // The formula box has no label the driver can set it by: typed into on the display.
-        e.Point(250, 290);
+        e.Point(250, 375);
         RunXdotool("click", "1");
         RunXdotool("key", "ctrl+a");
         RunXdotool("type", "--delay", "20", "h * smooth(1 - d / ");
@@ -53,17 +55,18 @@ public sealed partial class Scenes
         e.Send("wait 500");
         string shot = Out("shape-formula-error.jpg");
         e.Shot(shot);
-        Crop(shot, new SKRectI(90, 62, 430, 492));
+        Crop(shot, new SKRectI(90, 62, 428, 606));
     }
 
     /// <summary>
-    /// mountain-preview.jpg: the Mountain panel with a lone peak's orange preview and ring under the pointer in the
+    /// mountain-preview.jpg: the Landform panel's Mountain kind with a lone peak's orange preview and ring under the pointer in the
     /// middle of a 5 × 5 area; inset top right, the pointer near the area's edge with the ring red.
     /// </summary>
     private void MountainPreview(Editor e)
     {
         OpenGround(e, 5, P(-159, -159), P(159, 159));
-        e.Send("click Mountain");
+        e.Send("click Landform");
+        e.Send("choose Mountain");
         e.Send("choose Lone peak");
         e.Send("set Height|80");
         e.Send("set Radius|120");
@@ -88,7 +91,7 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// mountain-peak.jpg, mountain-ridge.jpg, mountain-volcano.jpg and mountain-hills.jpg: the Mountain tool's presets
+    /// mountain-peak.jpg, mountain-ridge.jpg, mountain-volcano.jpg and mountain-hills.jpg: the Landform tool's Mountain presets
     /// past the game's ±8 m, each in turn on a 5 × 5 area cleared of trees and rocks and levelled (Ctrl+Z between
     /// them), seen from low down; the peak with the biome's trees grown on it, the others bare so their shape shows.
     /// </summary>
@@ -106,7 +109,8 @@ public sealed partial class Scenes
         ];
         foreach (var m in mountains)
         {
-            e.Send("click Mountain");
+            e.Send("click Landform");
+            e.Send("choose Mountain");
             e.Send($"choose {m.Preset}");
             e.Send($"set Height|{m.Height}");
             e.Send($"set Radius|{m.Radius}");
@@ -163,8 +167,8 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// path.jpg (the Path tool's points across two mounds, Flatten to height chosen, before Apply) and path-road.jpg
-    /// (the same line and camera after Flatten to height with a natural look, then Paint paved narrower along it).
+    /// path.jpg (the Path tool's points across two mounds, Flatten chosen, before Apply) and path-road.jpg
+    /// (the same line and camera after Flatten with a natural look, then Paint paved narrower along it).
     /// </summary>
     private void PathTool(Editor e)
     {
@@ -173,7 +177,7 @@ public sealed partial class Scenes
         PathMounds(e);
         Camera(e, 14, 4, 200, 45, 86);
         e.Send("key P");
-        e.Send("choose Flatten to height");
+        e.Send("choose Flatten");
         e.Send("set Width|6");
         e.Send("set Soft edge|4");
         e.Send("check Natural look (ragged edges, bumps)|on");
@@ -196,7 +200,7 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// path-soft-edge.jpg: two straight trenches dug with Lower by 3 m, Width 6, side by side: left Soft edge 0
+    /// path-soft-edge.jpg: two straight trenches dug with Lower (3 m), Width 6, side by side: left Soft edge 0
     /// (straight steep walls), right Soft edge 8 m (blended banks).
     /// </summary>
     private void PathSoftEdge(Editor e)
@@ -205,7 +209,7 @@ public sealed partial class Scenes
         Stage(e);
         Camera(e, 14, 6, 200, 30, 70);
         e.Send("key P");
-        e.Send("choose Lower by");
+        e.Send("choose Lower");
         e.Send("set Amount|3");
         e.Send("set Width|6");
         e.Send("check Natural look (ragged edges, bumps)|off");
@@ -238,7 +242,7 @@ public sealed partial class Scenes
         e.Send("set Soft edge|0");
         e.Send("set Height|43");
         e.Send("key Return");
-        e.Send("click Clear (Esc)");
+        e.Send("click Clear selection (Esc)");
         Camera(e, 17, 0, 180, 9, 54);
         e.Send("key P");
         e.Send("choose Ramp (start → end)");
@@ -271,41 +275,6 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// path-cave.jpg: a cave dug through a big mound with the Cave button (preset Cave, No limit on so its walls
-    /// rise to the roof), seen at head height from its entrance slope, the Cave panel beside it.
-    /// </summary>
-    private void PathCave(Editor e)
-    {
-        Bare(e);
-        Stage(e);
-        e.Send("key D1");
-        e.Send("check No limit: past the game's ±8 m|on");
-        // A big round hill, 18 m high, to dig through.
-        e.Send("click Shape");
-        e.Send("choose Mound");
-        e.Send("set Radius|26");
-        e.Send("set Height|18");
-        Click(e, P(0, 0));
-        Camera(e, 0, 0, 200, 70, 90);
-        e.Send("click Cave");
-        e.Send("choose Cave");
-        foreach (var p in new[] { P(30, -2), P(10, 0), P(-10, 1), P(-30, 2) })
-        {
-            Click(e, p);
-        }
-        e.Send("key Return");
-        e.Send("wait 1500");
-        // The line off, so only the cave shows; the panel stays.
-        e.Send("key Escape");
-        // The pointer's ring away behind the camera, so it does not show on the walls.
-        Move(e, P(30, -30));
-        // At the east mouth, above the entrance slope, looking in (west).
-        e.Send($"camera {Cx + 10} {Cz} 262 10 24 43");
-        e.Send("wait 500");
-        e.Shot(Out("path-cave.jpg"), keepMessage: true);
-    }
-
-    /// <summary>
     /// An area of this many zones round the bare zone, its zone borders off and its trees and rocks taken away
     /// within the box from a to b, so what a scene shapes stands bare.
     /// </summary>
@@ -321,8 +290,7 @@ public sealed partial class Scenes
         e.Send("click Zone borders");
         e.Send("click View");
         Camera(e, 0, 0, 200, 89, 110 * size);
-        AreaAction(e, a, b, "Remove objects");
-        e.Send("click Clear (Esc)");
+        RemoveObjects(e, a, b);
     }
 
     /// <summary>Names written on a picture, white on a dark rounded box, centred on each point.</summary>

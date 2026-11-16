@@ -6,16 +6,17 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The Mountain tool's panel: a preset (peak, ridge, range, mesa, volcano, hills), its size and roughness, the
-/// direction of ridges and ranges, and the seed that makes its detail. Randomize rolls a new mountain of the preset; a
-/// click on the ground puts it there.
+/// The Landform panel's Mountain kind: a preset (peak, ridge, range, mesa, volcano, hills), its size and roughness,
+/// the direction of ridges and ranges, and the seed that makes its detail. Randomize rolls a new mountain of the
+/// preset; a click on the ground puts it there.
 /// </summary>
 public sealed class MountainPanel
 {
     /// <summary>
-    /// The panel's card, shown while the Mountain tool is on.
+    /// The kind's rows in the Landform panel: the preset, radius, height and turn, then roughness, the seed, Randomize
+    /// and what happens to the trees and rocks.
     /// </summary>
-    public Control Card { get; }
+    public Control Rows { get; }
     /// <summary>
     /// Raised when any setting changes (not while Randomize fills them), so the preview can follow.
     /// </summary>
@@ -127,7 +128,7 @@ public sealed class MountainPanel
     }
 
     /// <summary>
-    /// Builds the card and rolls a first mountain.
+    /// Builds the rows and rolls a first mountain.
     /// </summary>
     public MountainPanel()
     {
@@ -156,34 +157,24 @@ public sealed class MountainPanel
         RandomizeButton.Tip("mountain.randomize");
         ClearBox.Tip("mountain.clear");
         GrowBox.Tip("mountain.grow");
-        Card = Ui.AsCard(new Border
+        // The rows every kind has (preset, radius, height, turn) first and under the same names, then this kind's own.
+        Rows = new StackPanel
         {
-            VerticalAlignment = VerticalAlignment.Top,
-            Child = new StackPanel
+            Spacing = 6,
+            Children =
             {
-                Width = 300,
-                Spacing = 6,
-                Children =
-                {
-                    Ui.Title(Lang.T("rail.label.mountain"), HelpTopics.Tool(ToolMode.Mountain)),
-                    Ui.Row(Lang.T("common.preset"), PresetBox),
-                    HelpText,
-                    Ui.Row(Lang.T("common.height"), HeightSlider, heightV),
-                    Ui.Row(Lang.T("shape.label.radius"), RadiusSlider, radiusV),
-                    Ui.Row(Lang.T("mountain.label.rough"), RoughSlider, roughV),
-                    _turnRow,
-                    Ui.Row(Lang.T("common.seed"), SeedBox),
-                    RandomizeButton,
-                    ClearBox,
-                    GrowBox,
-                    new TextBlock
-                    {
-                        Text = Lang.T("mountain.hint.click"),
-                        FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-                    },
-                },
+                Ui.Row(Lang.T("common.preset"), PresetBox),
+                HelpText,
+                Ui.Row(Lang.T("shape.label.radius"), RadiusSlider, radiusV),
+                Ui.Row(Lang.T("common.height"), HeightSlider, heightV),
+                _turnRow,
+                Ui.Row(Lang.T("mountain.label.rough"), RoughSlider, roughV),
+                Ui.Row(Lang.T("common.seed"), SeedBox),
+                RandomizeButton,
+                ClearBox,
+                GrowBox,
             },
-        });
+        };
         Randomize();
     }
 

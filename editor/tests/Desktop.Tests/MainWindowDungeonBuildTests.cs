@@ -56,9 +56,13 @@ public class MainWindowDungeonBuildTests
         Assert.False(w.BuildingInDungeon);
         Assert.False(w.PlaceTool.Building);
         Assert.Null(w.View.CutY);
-        // The Place tool as it was: Ctrl + wheel is the view's.
+        // The Place tool as it was: Ctrl + wheel raises what it places above the ground, no piece is lifted.
         w.Tools.ChooseMode(ToolMode.Place);
-        Assert.False(w.View.CtrlWheel!(1, false));
+        Assert.False(w.Tools.BuildMode);
+        Assert.True(w.View.CtrlWheel!(1, false));
+        Assert.Equal(0, w.PlaceTool.HeightNudge);
+        Assert.Equal((PlaceTool.Elevations.Above, 0.5f), (w.PlaceTool.Elevation, w.PlaceTool.Elev));
+        w.PlaceTool.Elevation = PlaceTool.Elevations.Ground;
         // Another area ends it too.
         w.BuildInDungeon(true);
         w.Edit(s);

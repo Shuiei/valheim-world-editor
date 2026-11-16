@@ -15,7 +15,7 @@ its bed is below 30 m.
 4. Set **Width** (the water's width), **Soft edge** (the banks) and **Depth** (how far below sea level the bed is in
    its middle, 2 m at first).
 5. Press **Apply (Enter)**. The bed fills with water.
-6. For a pond, press `B` ([Area](../area.md)), choose **Polygon** and click round the pond.
+6. For a pond, press `B` ([Region](../area.md)), choose **Polygon** and click round the pond.
 7. Choose **Flatten**, type a **Height** below 30 m (28 m makes water 2 m deep), set **Soft edge** to about 5 m for
    gentle banks, and press **Flatten (Enter)**.
 8. Click **Save to world** (or **Apply live**).

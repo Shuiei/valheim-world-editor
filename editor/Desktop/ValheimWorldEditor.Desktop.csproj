@@ -30,6 +30,8 @@
   <ItemGroup>
     <!-- The window's icon (Windows also takes the program's, ApplicationIcon). -->
     <AvaloniaResource Include="Assets/icon.png" />
+    <!-- The text's font, Averia Serif Libre (SIL Open Font License: Assets/Fonts/OFL.txt). -->
+    <AvaloniaResource Include="Assets/Fonts/*.ttf" />
     <!-- The Script tool's API, compiled with each script. -->
     <EmbeddedResource Include="ScriptApi.csx" LogicalName="TerrainEditor.ScriptApi.csx" />
     <!-- The documentation, shown in the Help window (HelpDocs): its pages and pictures go inside the program, so help

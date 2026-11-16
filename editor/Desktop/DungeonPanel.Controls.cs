@@ -6,7 +6,7 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The panel's controls: the dungeon list, the cut slider, the room list, its filter and the edit buttons.
+/// The panel's controls: the dungeon list, the room list, its filter and the edit buttons.
 /// </summary>
 public sealed partial class DungeonPanel
 {
@@ -20,12 +20,6 @@ public sealed partial class DungeonPanel
     internal Button BuildHere { get; } = new() { Content = Lang.T("dungeon.label.buildHere"), FontSize = 12 };
     /// <summary>Build here was clicked: the window switches to building in the dungeon.</summary>
     public event Action? BuildAsked;
-    /// <summary>The roof cut, 0 to 30 m above the floor of the dungeon's entrance; the right end (<see cref="CutOff"/>) is off.</summary>
-    internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = CutOff, Value = CutOff, SmallChange = 1, TickFrequency = 1, IsSnapToTickEnabled = true };
-    /// <summary>The cut slider's right end: no cut, the roofs shown.</summary>
-    internal const double CutOff = 30;
-    /// <summary>The cut slider's label.</summary>
-    private readonly TextBlock _cutText = new() { FontSize = 12 };
     /// <summary>Filters the rooms by name.</summary>
     internal TextBox Filter { get; } = new() { PlaceholderText = Lang.T("dungeon.hint.findRoom"), FontSize = 12 };
     /// <summary>The rooms the dungeon can take; the one chosen is added at the next green opening clicked.</summary>

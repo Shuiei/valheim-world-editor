@@ -6,7 +6,7 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, Paste (from the
+/// Which tool is in use: View (look around, click picks), Select, Measure, Landform, Path, Area, Paste (from the
 /// Area tool, Ctrl+V), Place, Blueprints (the library, to paste one), or a brush (Tool says which).
 /// </summary>
 public enum ToolMode
@@ -17,8 +17,8 @@ public enum ToolMode
     Select,
     /// <summary>The Measure tool.</summary>
     Measure,
-    /// <summary>The Shape tool.</summary>
-    Shape,
+    /// <summary>The Landform tool: a whole landform in a click, from a formula, a mountain generator or a picture.</summary>
+    Landform,
     /// <summary>The Path tool.</summary>
     Path,
     /// <summary>The Area tool.</summary>
@@ -29,8 +29,6 @@ public enum ToolMode
     Place,
     /// <summary>A sculpt or paint brush (Tool says which).</summary>
     Brush,
-    /// <summary>The Mountain tool.</summary>
-    Mountain,
     /// <summary>The Script tool.</summary>
     Script,
     /// <summary>The Blueprints library, to paste one.</summary>
@@ -44,8 +42,8 @@ public enum ToolMode
 /// <summary>
 /// The tool rail (left edge) and the chosen tool's options next to it, like the web editor's: View
 /// (look around and pick objects), Select (move, turn and delete objects: see SelectPanel), the sculpt
-/// brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
-/// Esc goes back to View.
+/// brushes and the Paint brush (one button; its options choose the paint). Keys as in the web editor: 1-5, 0 and
+/// O pick the sculpt brushes, 6-9 the Paint brush with one of its paints, E selects, Esc goes back to View.
 /// </summary>
 public sealed partial class ToolPanel
 {
@@ -59,6 +57,11 @@ public sealed partial class ToolPanel
     public BrushTool? Tool { get; private set; }
     /// <summary>The tool in use (Brush when <c>Tool</c> is set).</summary>
     public ToolMode Mode { get; private set; }
+    /// <summary>
+    /// The Build tool is in use: the Place tool (<see cref="Mode"/> is Place) with the Build dock, for the pieces players
+    /// build. Always so in the Workshop, whose only placing tool it is.
+    /// </summary>
+    public bool BuildMode { get; private set; }
     /// <summary>The Select tool is in use.</summary>
     public bool SelectMode => Mode == ToolMode.Select;
     /// <summary>The tool changed (Mode and Tool say which).</summary>
@@ -69,62 +72,65 @@ public sealed partial class ToolPanel
     /// <summary>The brush options card, shown only while a brush is in use.</summary>
     public Control Options { get; }
 
-    /// <summary>The rail button of each brush.</summary>
+    /// <summary>The rail button of each sculpt brush.</summary>
     private readonly Dictionary<BrushTool, Button> _buttons = [];
+    /// <summary>The Paint brush's rail button: one for the four paints (<see cref="Paint"/> says which it lays).</summary>
+    private readonly Button _paintButton;
+    /// <summary>The Paint button's picture: the colour of the paint it lays.</summary>
+    private readonly Border _paintSwatch = Swatch(16);
+    /// <summary>The paint the Paint brush lays: the one last chosen (a swatch in its options, or keys 6 to 9).</summary>
+    public BrushTool Paint { get; private set; } = BrushTool.PaintDirt;
+    /// <summary>The paints, in the order of their swatches and keys (6 to 9).</summary>
+    internal static readonly BrushTool[] Paints = [BrushTool.PaintDirt, BrushTool.PaintCultivated, BrushTool.PaintPaved, BrushTool.PaintClear];
+    /// <summary>The Paint brush's swatches, one per paint: a click lays that paint.</summary>
+    internal Dictionary<BrushTool, Button> PaintButtons { get; } = [];
 
     /// <summary>The rail buttons of the other tools (Blueprints, the library, has its own property).</summary>
-    private readonly Button _viewButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton, _dungeonButton;
-    /// <summary>The Cave button: the Path tool with its Cave action (the window picks the action).</summary>
-    public event Action? CaveChosen;
+    private readonly Button _viewButton, _measureButton, _landformButton, _pathButton, _areaButton, _placeButton, _buildButton, _scriptButton, _dungeonButton;
+    /// <summary>A brush's rail button: the Paint button for every paint (tests).</summary>
+    internal Button ButtonOf(BrushTool t) => IsPaint(t) ? _paintButton : _buttons[t];
 
-    /// <summary>The Path tool lit as Cave while its action is Cave (the window says so when the action changes).</summary>
-    public void MarkCave(bool on)
-    {
-        _caveButton.Classes.Set("on", on && Mode == ToolMode.Path);
-        _pathButton.Classes.Set("on", !on && Mode == ToolMode.Path);
-    }
-    /// <summary>A brush's rail button (tests).</summary>
-    internal Button ButtonOf(BrushTool t) => _buttons[t];
-
-    /// <summary>The keys of the web editor's rail.</summary>
+    /// <summary>The keys of the web editor's rail: one per sculpt brush, and one per paint of the Paint brush.</summary>
     public static readonly (BrushTool Tool, string Key)[] Keys =
     [
         (BrushTool.Raise, "1"), (BrushTool.Lower, "2"), (BrushTool.Flatten, "3"), (BrushTool.Smooth, "4"), (BrushTool.Natural, "0"), (BrushTool.Erode, "O"), (BrushTool.Restore, "5"),
         (BrushTool.PaintDirt, "6"), (BrushTool.PaintCultivated, "7"), (BrushTool.PaintPaved, "8"), (BrushTool.PaintClear, "9"),
     ];
 
-    /// <summary>A paint brush (the rail's Paint section), not a sculpt one.</summary>
+    /// <summary>The Paint brush laying one of its paints, not a sculpt brush.</summary>
     internal static bool IsPaint(BrushTool t) => t is BrushTool.PaintDirt or BrushTool.PaintCultivated or BrushTool.PaintPaved or BrushTool.PaintClear;
 
-    /// <summary>The rail's short names (the web editor's).</summary>
-    private static string RailLabel(BrushTool t) => t switch
+    /// <summary>A sculpt brush's rail icon (the web editor's).</summary>
+    private static string Icon(BrushTool t) => t switch
     {
-        BrushTool.Natural => Lang.T("rail.label.natural"),
-        BrushTool.PaintCultivated => Lang.T("rail.label.cultivated"),
-        BrushTool.PaintClear => Lang.T("rail.label.clear"),
-        _ => Brush.Label(t),
+        BrushTool.Raise => "raise",
+        BrushTool.Lower => "lower",
+        BrushTool.Flatten => "flatten",
+        BrushTool.Smooth => "smooth",
+        BrushTool.Natural => "natural",
+        BrushTool.Erode => "erode",
+        _ => "restore",
     };
 
-    /// <summary>A brush's rail icon (sculpt brushes) or paint colour (paint brushes), the web editor's.</summary>
-    private static (string? Icon, IBrush? Swatch) Look(BrushTool t) => t switch
+    /// <summary>A paint's colour on its swatch (the web editor's): Clear paint is half grass, half bare ground.</summary>
+    internal static IBrush PaintColour(BrushTool t) => t switch
     {
-        BrushTool.Raise => ("raise", null),
-        BrushTool.Lower => ("lower", null),
-        BrushTool.Flatten => ("flatten", null),
-        BrushTool.Smooth => ("smooth", null),
-        BrushTool.Natural => ("natural", null),
-        BrushTool.Erode => ("erode", null),
-        BrushTool.Restore => ("restore", null),
-        BrushTool.PaintDirt => (null, new SolidColorBrush(Color.Parse("#8a6a46"))),
-        BrushTool.PaintCultivated => (null, new SolidColorBrush(Color.Parse("#4e3622"))),
-        BrushTool.PaintPaved => (null, new SolidColorBrush(Color.Parse("#8d8d88"))),
-        _ => (null, new LinearGradientBrush
+        BrushTool.PaintDirt => new SolidColorBrush(Color.Parse("#8a6a46")),
+        BrushTool.PaintCultivated => new SolidColorBrush(Color.Parse("#4e3622")),
+        BrushTool.PaintPaved => new SolidColorBrush(Color.Parse("#8d8d88")),
+        _ => new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
             EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
             GradientStops = { new GradientStop(Color.Parse("#5e8a3a"), 0.5), new GradientStop(Color.Parse("#7a6a4a"), 0.5) },
-        }),
+        },
     };
+
+    /// <summary>A paint's key (6 to 9).</summary>
+    internal static string KeyOf(BrushTool paint) => Keys.First(k => k.Tool == paint).Key;
+
+    /// <summary>An empty paint swatch: a small rounded square, its colour set by who shows it.</summary>
+    private static Border Swatch(double size) => new() { Width = size, Height = size, CornerRadius = Ui.ControlRadius, BorderBrush = new SolidColorBrush(Color.FromArgb(64, 255, 255, 255)), BorderThickness = new Thickness(1) };
 
     /// <summary>Picks the Select tool.</summary>
     public void ChooseSelect() => ChooseMode(ToolMode.Select);
@@ -132,11 +138,13 @@ public sealed partial class ToolPanel
     /// <summary>Picks a tool other than a brush.</summary>
     public void ChooseMode(ToolMode mode) => Choose(null, mode);
 
+    /// <summary>Picks the Build tool: the Place tool with the Build dock.</summary>
+    public void ChooseBuild() => Choose(null, ToolMode.Place, build: true);
+
     /// <summary>The rail's buttons and captions.</summary>
     private readonly StackPanel _rail;
     /// <summary>
-    /// The Workshop: only Build (the Place tool, for building pieces), Select and View on the rail; the
-    /// other tools (and their keys) are for worlds.
+    /// The Workshop: only Build, Select and View on the rail; the other tools (and their keys) are for worlds.
     /// </summary>
     public bool Workshop { get; private set; }
 

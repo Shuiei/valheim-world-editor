@@ -41,13 +41,13 @@ public class RestoreDiscGroundTests
         var brushed = Ground.Read(terrain, edits, Zone - 1, Zone - 1, 3, 3);
         for (int p = 0; p < brushed.Base.Length; p++)
         {
-            Sculpt.RestorePoint(brushed, p, 1, 1);
+            GroundOps.Restore(brushed, p, 1, 1);
         }
         AssertGenerated(brushed, generated);
 
         // The Area tool's Restore does the same.
         var area = Ground.Read(terrain, edits, Zone - 1, Zone - 1, 3, 3);
-        var restore = new AreaTool.CellChange(area, null!, AreaTool.GroundAction.Restore, 0f, 0f, new float[4], AreaTool.HeightSnapshot.Take(area, null!, -1), 0);
+        var restore = new AreaTool.CellChange(area, null!, AreaTool.GroundAction.Restore, 0f, 0f, new float[4], HeightsBefore.None(area));
         for (int p = 0; p < area.Base.Length; p++)
         {
             restore.Change(p, 1);

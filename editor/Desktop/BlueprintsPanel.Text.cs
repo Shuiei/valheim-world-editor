@@ -10,13 +10,6 @@ public sealed partial class BlueprintsPanel
     /// <summary>The "#Tags:" line of a blueprint file (null when it has none).</summary>
     private static string? TagsOf(string text) => text.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))?[6..];
 
-    /// <summary>A row's meta line: its parts that are there, separated by " · ".</summary>
-    /// <param name="parts">The parts, in order (null: left out).</param>
-    private static string Meta(params string?[] parts) => string.Join(" · ", parts.Where(p => p != null));
-
-    /// <summary>The label of the .vbuild buttons: a file format's name, the same in every language.</summary>
-    private const string VbuildLabel = ".vbuild";
-
     /// <summary>What an import says: what was kept, what was left out, and the reminder while Homestead is not installed.</summary>
     /// <param name="name">The name it was saved under.</param>
     /// <param name="count">The objects kept.</param>

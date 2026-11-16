@@ -31,7 +31,7 @@ public sealed partial class AreaTool
     /// <param name="english">In English whatever the language in use (for Claude).</param>
     public static string Label(GroundAction a, bool english = false) => english ? Named(a).English : Named(a).Shown;
 
-    /// <summary>An action's name in both languages.</summary>
+    /// <summary>An action's name in both languages: the brushes' name for it, as the Path tool names it too.</summary>
     /// <param name="a">The action.</param>
     public static Said Named(GroundAction a)
     {

@@ -33,9 +33,15 @@ public sealed partial class BlueprintsPanel
         data.Objects.RemoveAll(o => missing.Contains(o.Name));
         _paste.Clip = data;
         _paste.Notify();
-        Card.IsVisible = false;
-        Pasting?.Invoke();
+        StartPasting();
         var onClipboard = dungeon ? Said.Of("blueprints.msg.pastingDungeon", name) : Said.Of("blueprints.msg.pasting", name);
         Message?.Invoke(onClipboard + (missing.Count > 0 ? Said.Of("blueprints.msg.unknownKinds", missing.Count, FirstFew(missing)) : Said.Empty));
+    }
+
+    /// <summary>Hides the panel and has the window paste what is on the clipboard (a blueprint just loaded, or a copy).</summary>
+    private void StartPasting()
+    {
+        Card.IsVisible = false;
+        Pasting?.Invoke();
     }
 }

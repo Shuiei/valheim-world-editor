@@ -5,28 +5,35 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Load stamp…: a grayscale picture chosen from the computer's files becomes a brush shape.
+    /// Load stamp… (a brush's panel) or Load picture… (the Landform panel): a grayscale picture chosen from the
+    /// computer's files becomes a brush shape and one of the Landform tool's pictures.
     /// </summary>
-    private async Task LoadStampAsync()
+    /// <param name="forLandform">Whether the Landform panel asked: the picture is chosen there, not as the brush's shape.</param>
+    private async Task LoadStampAsync(bool forLandform = false)
     {
-        if (await Pickers.File(StorageProvider, Lang.T("brush.pickStamp"),
+        if (await Pickers.File(StorageProvider, forLandform ? Lang.T("landform.pickPicture") : Lang.T("brush.pickStamp"),
             new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("brush.pictures")) { Patterns = PicturePatterns }) is not string path)
         {
             return;
         }
-        LoadStamp(path);
+        LoadStamp(path, forLandform);
     }
 
     /// <summary>
-    /// The picture at <paramref name="path"/> added to the brush's stamps and chosen, or said in the status bar that it
-    /// could not be read.
+    /// The picture at <paramref name="path"/> added to the stamps and chosen (as the brush's shape, or as the Landform
+    /// panel's picture), or said in the status bar that it could not be read.
     /// </summary>
     /// <param name="path">The picture file.</param>
-    internal void LoadStamp(string path)
+    /// <param name="forLandform">Whether it is chosen as the Landform panel's picture instead of the brush's shape.</param>
+    internal void LoadStamp(string path, bool forLandform = false)
     {
         if (ReadStampFile(path) is { } bytes && Stamps.FromPicture(bytes) is { } data)
         {
-            Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
+            var stamp = Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data, choose: !forLandform);
+            if (forLandform)
+            {
+                LandformPanel.Picture.Choose(stamp);
+            }
         }
         else
         {
@@ -62,7 +69,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Alt + click with a brush: the ground's height there becomes Flatten's target, or with Shift the mask's band.
+    /// Alt + click with a brush: the ground's height there becomes Flatten's target, or with Shift the mask's band
+    /// (Alt + Shift + click with the Path tool too).
     /// </summary>
     /// <param name="h">The ground's height clicked.</param>
     /// <param name="shift">Shift held: the mask's band instead.</param>
@@ -106,14 +114,12 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Wires the Area panel: its messages, No limit, picking a kind, copy, cut, paste, blueprints and the library,
+    /// Wires the Area panel: its messages, picking a kind, copy, cut, paste, blueprints and the library,
     /// the clipboard's line, its dialog and its picture and backup pickers.
     /// </summary>
     private void WireAreaPanel()
     {
         AreaPanel.Message += s => { Msg(s); UpdateSaveBar(); };
-        AreaPanel.NoLimitChanged += on => Tools.NoLimitBox.IsChecked = on;
-        AreaPanel.PickKindAsked += PickKind;
         AreaPanel.SwitchToSelect += Tools.ChooseSelect;
         AreaPanel.CopyAsked += Copy;
         AreaPanel.CutAsked += Cut;

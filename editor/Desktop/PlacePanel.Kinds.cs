@@ -56,8 +56,9 @@ public sealed partial class PlacePanel
     /// <summary>A kind chosen from a chip or the world: add (or take away if ticked), or place only it.</summary>
     internal void Choose(string name, bool add)
     {
-        // Not a kind no longer offered (a chip shown before the mods' manifests or catalogue changed).
-        if (_scene()?.World != null && NotOffered(name))
+        // Not a kind no longer offered (a chip shown before the mods' manifests or catalogue changed), nor a piece of the
+        // Build tool's.
+        if (_scene()?.World != null && (NotOffered(name) || BuiltWithBuild(name)))
         {
             return;
         }

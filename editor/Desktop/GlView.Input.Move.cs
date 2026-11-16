@@ -37,7 +37,8 @@ public sealed partial class GlView
         }
         if (Mode == ToolMode.Paste)
         {
-            Paste.At = GridAt(at, _surfaceSize);
+            // By the building bar's grid when it is on.
+            Paste.At = GridAt(at, _surfaceSize) is { } cell && Scene is { } sc ? Paste.OnGrid(cell, sc.W, sc.H) : null;
         }
         if (Mode == ToolMode.Place)
         {

@@ -50,7 +50,7 @@ public sealed partial class HelpWindow : Window
     internal Button BrowserButton { get; } = Bar("external", "docs.browser");
 
     /// <summary>A picture shown full size over the page (a click on one); a click or Esc closes it.</summary>
-    internal Border Enlarged { get; } = new() { Background = new SolidColorBrush(Color.FromArgb(235, 8, 10, 13)), IsVisible = false, Padding = new Thickness(24) };
+    internal Border Enlarged { get; } = new() { Background = new SolidColorBrush(Color.FromArgb(235, 9, 7, 5)), IsVisible = false, Padding = new Thickness(24) };
 
     /// <summary>Tests: what opens a web address (the system's browser).</summary>
     internal Func<Uri, Task<bool>>? OpenUrl { get; set; }

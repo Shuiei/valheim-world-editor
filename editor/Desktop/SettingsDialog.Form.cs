@@ -60,7 +60,7 @@ public static partial class SettingsDialog
                 SizeToContent = SizeToContent.Height,
                 MaxHeight = 760,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
+                Background = Ui.Side,
             };
             _valheim = new TextBox { Text = settings.ValheimPath, PlaceholderText = Lang.T("settings.valheimAuto") }.Tip("settings.valheim");
             _browse = new Button { Content = Lang.T("common.browse") }.Tip("settings.browse");

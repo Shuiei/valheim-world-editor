@@ -1,5 +1,3 @@
-using TerrainEditor.App;
-
 namespace TerrainEditor.Desktop;
 
 public partial class MainWindow
@@ -10,13 +8,15 @@ public partial class MainWindow
     /// </summary>
     private void EnterBuilding()
     {
-        // Building in a dungeon has ended already (ShowEditor's Edit ends it), so the settings kept are the Place tool's own.
+        // Building in a dungeon has ended already (ShowEditor's Edit ends it), and building in a world ends here, so the
+        // settings kept are the Place tool's own.
+        BuildInWorld(false);
         _kept ??= KeepPlaceTool();
         Tools.SetWorkshop(true);
         View.SetOverlay(Overlays.Layer.Borders, false);
         View.ShowNewMarkers = false;
-        CutBox.IsVisible = true;
-        CutSlider.Value = CutOff;
+        // The view's cut counts from the plot here, off at first.
+        ViewCut.FromPlot(Workshop.Ground);
         // Solid pieces (the View panel and its See-through switch are away).
         View.SeeThroughBuildings = false;
         ViewButton.IsVisible = false;
@@ -39,8 +39,8 @@ public partial class MainWindow
         RestorePlaceTool(k);
         Tools.SetWorkshop(false);
         View.SetOverlay(Overlays.Layer.Borders, k.Borders);
-        CutBox.IsVisible = false;
-        CutSlider.Value = CutOff;
+        // The view's cut counts from the ground again, off.
+        ViewCut.FromGround(forget: true);
         View.ShowNewMarkers = UnsavedBox.IsChecked == true;
         View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
         ViewButton.IsVisible = true;
@@ -53,15 +53,33 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// The cut at so many metres above the plot (0: the ground; <see cref="CutOff"/>: none): nothing drawn above it,
-    /// and the cursor goes through what it hides.
+    /// The Place tool's settings from before the Build tool was chosen in a world (restored when another tool is); null
+    /// when not building in a world's open ground.
     /// </summary>
-    private void SetCut(float metres)
+    private Kept? _worldKept;
+
+    /// <summary>True while the Build tool is on in a world's open ground (not the Workshop's plot, not Build here in a dungeon).</summary>
+    internal bool BuildingInWorld => _worldKept != null;
+
+    /// <summary>
+    /// The Build tool in a world, on (the Place tool's own settings are kept aside and the Build dock starts: its
+    /// pieces, one at a time or along lines; no Library, whose blueprints go onto the Workshop's plot) or off (the
+    /// Place tool gets its settings back).
+    /// </summary>
+    /// <param name="on">Whether the Build tool is on.</param>
+    internal void BuildInWorld(bool on)
     {
-        float? y = metres < CutOff ? Workshop.Ground + metres : null;
-        View.CutY = y;
-        PlaceTool.CutY = y;
-        CutText.Text = metres < CutOff ? Lang.T("workshop.cutAt", metres) : Lang.T("workshop.cutOff");
-        PlaceInput.Refresh();
+        if (on && _worldKept == null)
+        {
+            _worldKept = KeepPlaceTool();
+            BuildPanel.Start(library: false);
+        }
+        else if (!on && _worldKept is { } k)
+        {
+            _worldKept = null;
+            RestorePlaceTool(k);
+            PlacePanel.Fill();
+            PlaceTool.Notify();
+        }
     }
 }

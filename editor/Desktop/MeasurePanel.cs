@@ -36,7 +36,7 @@ public sealed class MeasurePanel
     /// <summary>
     /// Clears the tape.
     /// </summary>
-    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("measure.label.clear"), FontSize = 12 };
     /// <summary>
     /// For tests: the values shown, by label.
     /// </summary>

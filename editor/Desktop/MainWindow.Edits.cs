@@ -24,18 +24,26 @@ public sealed partial class MainWindow
         if (BuildingInDungeon)
         {
             BuildInDungeon(false);
+            // The Build tool stays on: over the new area's open ground now.
+            BuildInWorld(Tools.BuildMode && !InWorkshop);
+        }
+        // The last area's dungeon is left behind: unless the Dungeon tool is on (it finds this area's dungeons), the
+        // view's cut counts from the ground again.
+        if (ViewCut.From == ViewCut.Level.Dungeon && Tools.Mode != ToolMode.Dungeon)
+        {
+            ViewCut.FromGround();
         }
         LastPlaced = null;
         Session = session;
         // The Dungeon tool's rooms and dungeons: the game's, or as this world's Expand World Data files make them.
         Editing.Dungeons.UseMod(session.Scene.Terrain?.Rules.Dungeons);
         session.Brush = Tools.Brush;
-        MountainPanel.FitTo(session.Ground.W);
-        if (MountainPanel.Spec.Radius * 1.15f > (session.Ground.W - 1) / 2f - 2)
+        LandformPanel.Mountain.FitTo(session.Ground.W);
+        if (LandformPanel.Mountain.Spec.Radius * 1.15f > (session.Ground.W - 1) / 2f - 2)
         {
-            MountainPanel.Randomize();
+            LandformPanel.Mountain.Randomize();
         }
-        session.Ground.NoLimit = Tools.NoLimitBox.IsChecked == true;
+        session.Ground.NoLimit = MaskPanel.NoLimitBox.IsChecked == true;
         if (session.Scene.World is { } bw)
         {
             // The builder chosen for this world before, else the world's main builder.
@@ -51,10 +59,9 @@ public sealed partial class MainWindow
         session.EditMade += () => Dispatcher.UIThread.Post(() => AutoApply(session));
         // Saved: the objects were read again, with new indices.
         session.ThingsReset += () => Dispatcher.UIThread.Post(() => { if (Inspector.IsOpen) { Inspector.Close(); } });
-        // The kinds the Select tool can replace with.
-        var kinds = session.Scene.World?.Creatable.Where(p => NameOfPrefab(p) != null).OrderBy(NameOfPrefab, StringComparer.OrdinalIgnoreCase).ToList() ?? [];
-        SelectPanel.ReplaceKinds = kinds;
-        SelectPanel.ReplaceBox.ItemsSource = kinds.Select(p => NameOfPrefab(p)!).ToList();
+        // The kinds the Select tool can replace with, for this session's world.
+        _replaceKindsFrom = null;
+        FillReplaceKinds();
         SelectPanel.FillSaved();
         UpdateSaveBar();
     }

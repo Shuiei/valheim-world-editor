@@ -31,27 +31,34 @@ public sealed partial class MainWindow
         p.Bind(GameLookBox, "view.gameLook");
         p.Bind(SeeThroughBox, "view.seeThrough");
         p.Bind(ResolutionBox, "view.res3d");
-        // The brush's shape and falloff, the Area action, Select's options.
+        // The brush's shape and falloff, the Region action, Select's options.
         p.Bind(Tools.ShapeBox, "brush.shape");
         p.Bind(Tools.FalloffBox, "brush.falloff");
-        p.Bind(AreaPanel.ActionBox, "area.action");
+        // The Region action by its own name, whatever its group and the language: one no longer there (a name kept by
+        // an older version) leaves the panel as it is.
+        if (p.TryGet("area.action", out string? act) && Enum.TryParse<AreaPanel.Act>(act, out var kept) && Enum.IsDefined(kept))
+        {
+            AreaPanel.Choose(kept);
+        }
+        AreaPanel.ActionChosen += () => p.Set("area.action", AreaPanel.Current.ToString());
         p.Bind(SelectPanel.GroundBox, "select.onGround");
-        p.Bind(SelectPanel.SnapBox, "select.snap");
         p.Bind(SelectPanel.ZoneBox, "select.zone");
         p.Bind(SelectPanel.ThroughBox, "select.through");
         p.Bind(SelectPanel.PickBox, "select.picks");
-        // Shape: the preset, and the formula when it is one's own.
-        p.Bind(ShapePanel.PresetBox, "shape.preset");
-        bool Own() => ShapePanel.PresetBox.SelectedIndex == ShapePanel.Presets.Length;
+        // Landform: the kind, and the Formula kind's preset, with the formula when it is one's own.
+        p.Bind(LandformPanel.KindBox, "landform.kind");
+        var shape = LandformPanel.Formula;
+        p.Bind(shape.PresetBox, "shape.preset");
+        bool Own() => shape.PresetBox.SelectedIndex == ShapePanel.Presets.Length;
         if (Own() && p.TryGet("shape.formula", out string? formula) && formula != null)
         {
-            ShapePanel.FormulaBox.Text = formula;
+            shape.FormulaBox.Text = formula;
         }
-        ShapePanel.FormulaBox.PropertyChanged += (_, e) =>
+        shape.FormulaBox.PropertyChanged += (_, e) =>
         {
             if (e.Property == TextBox.TextProperty && Own())
             {
-                p.Set("shape.formula", ShapePanel.FormulaBox.Text ?? "");
+                p.Set("shape.formula", shape.FormulaBox.Text ?? "");
             }
         };
         // The Place tool's list: which categories are open.

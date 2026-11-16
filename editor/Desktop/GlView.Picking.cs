@@ -5,7 +5,7 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 // The selection and the things' boxes: the boxes of each thing in view space, the objects picked, the eyedropper's
-// one click, and the Workshop's cut. The picks and hits are in the GlView.Picking.*.cs files beside this one.
+// one click, and the view's cut. The picks and hits are in the GlView.Picking.*.cs files beside this one.
 public sealed partial class GlView
 {
     // ---- Selection: the objects picked (indices into the scene's things), drawn as orange boxes.
@@ -34,16 +34,53 @@ public sealed partial class GlView
     internal IReadOnlyCollection<int> Selected { get { lock (_selection) { return [.. _selection]; } } }
 
     /// <summary>
-    /// The Workshop's cut: nothing drawn above this height (world y), and the cursor goes through what is
-    /// hidden; null: none.
+    /// The cut: nothing drawn above this height (world y), and the cursor goes through what is hidden; null: none.
+    /// Set, it is a height of its own (the Workshop's plot, a dungeon's floor and so many metres); read, it is the
+    /// height cut at now, that one or the one that follows the view (<see cref="CutAbove"/>).
     /// </summary>
     internal float? CutY
+    {
+        get => field ?? FollowedCut();
+        set
+        {
+            field = value;
+            Wake();
+        }
+    }
+
+    /// <summary>
+    /// A world's cut, which follows the view: so many metres above the ground (or the sea) in the middle of the view,
+    /// under the camera when walking or flying; null: none. A height of its own (<see cref="CutY"/> set) goes first.
+    /// </summary>
+    internal float? CutAbove
     {
         get; set
         {
             field = value;
             Wake();
         }
+    }
+
+    /// <summary>
+    /// The height a cut that follows the view is at now: <see cref="CutAbove"/> over the ground (or the sea) where the
+    /// view turns (walking or flying: under the camera). In a dungeon, far above the ground, over the height the view
+    /// turns at (the camera's feet). Null without such a cut or an area.
+    /// </summary>
+    private float? FollowedCut()
+    {
+        if (CutAbove is not float above || Scene is not { } s)
+        {
+            return null;
+        }
+        Vector3 at;
+        bool eye;
+        lock (_camLock)
+        {
+            eye = _eye != EyeMode.Orbit;
+            at = eye ? _eyePos : _target;
+        }
+        float level = at.Y > InteriorHeight ? at.Y - (eye ? EyeHeight : 0) : GroundOrWater(s, at);
+        return level + above;
     }
 
     /// <summary>

@@ -18,11 +18,12 @@ public sealed partial class PlaceTool
         {
             return [];
         }
-        if (Building)
+        if (Hammering)
         {
             return BuildAt(s, names[0]) is { } one ? new() { one } : new();
         }
-        var mask = Mask();
+        // Building has no Mask panel: a line's pieces go wherever it is drawn.
+        var mask = Building ? null : Mask();
         var hash = Standing(s, MathF.Max(1, Spacing));
         var others = PiecesChosen && (SnapTo || Mode == Modes.Line) ? OtherSnaps(s, NameOf) : null;
         List<Placement> placed;

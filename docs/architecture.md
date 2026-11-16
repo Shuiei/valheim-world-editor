@@ -30,7 +30,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 `editor/Core/WorldGen/` has two namespaces: `ValheimGen` for the generator itself (`WorldGenerator*.cs`,
 `GenMath.cs`, `Vector2.cs`, `Vector3.cs`, `Mathf.cs`, `UnityNative.cs`, `FastNoise.cs`, `TerrainService.cs`, `MapData.cs`,
 `SeedLocations.cs`, `DumpVerifier.cs`), and `TerrainEditor.Terrain` for what it is given from the
-game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`, `CaveRocks`,
+game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`,
 `ZdoKeys`). Core gives its internals to the app and the tests (`InternalsVisibleTo` in the csproj).
 
 ## A world from disk to the screen and back
@@ -137,6 +137,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | 3D view | `GlView` (one partial file per concern: `.Camera`, `.Input`, `.Tools`, `.Render`, `.Terrain`, `.Models`, `.Objects`, `.Cells`, `.Shapes`, `.Picking`, `.Overlays`, and `.Overlays.<tool>` for each tool's marks), `GlObjects`, `Shaders`, `GameLookGl` (with `WaterTint`, its water colours), `ModelStore`, `BundleModels`, `LocationParts`, `StandItems`, `SceneReads`, `Picking`, `Overlays`, `Gizmo` | OpenGL 3.3 or ES 3.0; objects drawn instanced. The view mirrors z (Unity is left-handed): see the comment at the top of `WorldScene`. |
 | Open world | `WorldSession`, `WorldScene`, `EditSession`, `Ground`, `HistoryFile` | One `WorldSession` per open world, one `WorldScene` + `EditSession` per open area. |
 | Tools | `Sculpt`, `Erosion`, `Mountain`, `PathTool`, `AreaTool`, `PlaceTool`, `SelectTool`, `MeasureTool`, `DungeonTool`, `Mask`, `Formula`, each with its `*Panel` | A tool works on the `EditSession`; its panel is a card next to the rail. |
+| Ground actions | `GroundOps`, `HeightsBefore`, `Erosion.Region`, `BrushRows` | What Raise, Lower, Flatten, Smooth, Naturalize, Restore and Paint do to a grid point, written once. `Sculpt` (a brush stroke), `AreaTool` (a selection) and `PathTool` (a line) only say where and weigh the points; `Erosion.Region` is the Erode the last two apply in one go. `BrushRows` builds the rows of the brush settings more than one panel shows (Bumps, Bump size, New pattern, Rest angle), all set on the one `Brush`. |
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoReader`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`editor/Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`editor/Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser`, `LocationPrefabs` (`editor/Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data; what the game makes of a location it spawns (for new worlds). `Dungeons.UseMod` lays the open world's Expand World Data room and dungeon files (`DungeonRules`) over the game's catalogue when an area opens; `Dungeons.Scope` does it for one flow of work (the tests). |
@@ -164,7 +165,7 @@ no data tables. Everything is read at run time from the player's install:
 - `editor/Core/App/GameLook.cs` finds Valheim and keeps the one bundle reader, `editor/Core/App/GameBundles.cs`
   (AssetsTools.NET, with an index cached in `game-index.json`).
 - `editor/Core/App/GameData.cs` lists each kind of data the editor needs (`terrain-modifiers`, `prefabs`,
-  `pieces`, `piece-support`, `piece-place`, `zdo-keys`, `cave-rocks`, `piece-cost`, `vegetation`,
+  `pieces`, `piece-support`, `piece-place`, `zdo-keys`, `piece-cost`, `vegetation`,
   `dungeon-rooms`): how it is read, who takes it (`TerrainModifiers.Use`, `PrefabCatalog.Use`…) and
   how its test copy is trimmed. Each is cached as `game-<kind>.json` until the game's files change.
   Most are read in one pass over the bundles (`GameCatalogues.ReadAtStart`, the `AtStart` list); the

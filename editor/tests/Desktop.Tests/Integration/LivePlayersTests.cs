@@ -73,6 +73,8 @@ public class LivePlayersTests
         Assert.Empty(r.W.LivePlayers);
         Assert.False(r.W.GoPlayerButton.IsEnabled);
         Assert.Null(r.W.PlayerBox.SelectedItem);
+        // Nobody connected: the list leaves the top bar.
+        Assert.False(r.W.PlayersRow.IsVisible);
     }
 
     [AvaloniaFact]

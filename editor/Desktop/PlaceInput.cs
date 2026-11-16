@@ -21,8 +21,19 @@ public sealed partial class PlaceInput
     public Func<EditSession?> Session { get; set; } = () => null;
     /// <summary>A line for the status bar.</summary>
     public event Action<Said>? Message;
-    /// <summary>The step <c>,</c> and <c>.</c> turn by, in degrees (Shift: 1°); null: 1°, Shift 15°.</summary>
+    /// <summary>
+    /// Building: the step <c>,</c> and <c>.</c> turn by, in degrees (the building bar's; Shift: 1° at most); null, the
+    /// Place tool's own: 15°, Shift (finer) 1°.
+    /// </summary>
     public float? TurnStep { get; set; }
+    /// <summary>
+    /// Building: the step PgUp, PgDn and Ctrl + wheel lift by, in metres (the building bar's; Shift: a fifth); null, the
+    /// Place tool's own: 0.5 m, Shift 0.1 m.
+    /// </summary>
+    public float? LiftStep { get; set; }
+    /// <summary>The lift of one press of PgUp or PgDn, or one notch of Ctrl + wheel, in metres.</summary>
+    /// <param name="shift">Shift is held: finer.</param>
+    public float LiftBy(bool shift) => LiftStep is float step ? shift ? MathF.Round(step / 5, 2) : step : shift ? 0.1f : 0.5f;
     /// <summary>Something was placed: the kinds placed, for the recent list.</summary>
     public event Action<IReadOnlyList<string>>? Placed;
 
@@ -64,7 +75,7 @@ public sealed partial class PlaceInput
         {
             return;
         }
-        int? under = (Tool.OnTop || Tool.Building) && _pointer is Point p ? _view.ObjectAt(p, _size) : null;
+        int? under = (Tool.OnTop || Tool.Hammering) && _pointer is Point p ? _view.ObjectAt(p, _size) : null;
         _preview = _view.Mode == ToolMode.Place && !(Tool.Mode == PlaceTool.Modes.Brush && _shift) ? Tool.Preview(_at, under) : [];
         Shown = [.. _preview];
         _view.LassoChanged();
@@ -87,10 +98,15 @@ public sealed partial class PlaceInput
     /// Pick from world: the next click takes the kind of the object clicked (with whether Shift was held).
     /// </summary>
     public Action<string, bool>? PickOnce { get; set; }
-    /// <summary>Building: Ctrl + wheel lifts the piece (or lowers it) from where the cursor points.</summary>
+    /// <summary>
+    /// Building: PgUp, PgDn and Ctrl + wheel lift the piece (or lower it) from where the cursor points; a line's pieces
+    /// stand that much above the ground.
+    /// </summary>
     public void Lift(float metres)
     {
         Tool.HeightNudge = MathF.Round(Tool.HeightNudge + metres, 2);
+        Tool.Elevation = Tool.HeightNudge == 0 ? PlaceTool.Elevations.Ground : PlaceTool.Elevations.Above;
+        Tool.Elev = Tool.HeightNudge;
         if (_pointer is Point p)
         {
             Moved(p, _size);

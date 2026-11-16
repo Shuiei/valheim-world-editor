@@ -62,14 +62,14 @@ public class PlaceInputShapeTests
     {
         var r = new Rig(PlaceTool.Modes.Zone);
         Assert.True(r.Key(Key.OemPeriod));
-        Assert.Equal("Draw a zone first, then turn it.", r.Last);
+        Assert.Equal("Draw a polygon first, then turn it.", r.Last);
         foreach (var (x, z) in new[] { (40f, 40f), (90f, 40f), (90f, 90f) })
         {
             r.Click(x, z);
         }
         Assert.Equal(3, r.T.Points.Count);
-        // Turned by 15° (Shift); its points are kept unturned and dragged where they are drawn.
-        Assert.True(r.Key(Key.OemPeriod, shift: true));
+        // Turned by 15° (the Place tool's own step); its points are kept unturned and dragged where they are drawn.
+        Assert.True(r.Key(Key.OemPeriod));
         Assert.Equal(15, r.T.ShapeTurn, 3);
         var first = r.T.Xf(r.T.Points[0]);
         var to = first + new Vector2(0, -6);
@@ -85,7 +85,7 @@ public class PlaceInputShapeTests
         int shown = r.In.Shown.Length;
         Assert.True(shown > 0);
         Assert.True(r.Key(Key.Enter));
-        Assert.Equal($"Placed {shown} in a zone", r.S.UndoLabel);
+        Assert.Equal($"Placed {shown} in a polygon", r.S.UndoLabel);
         Assert.True(r.Key(Key.Escape));
         Assert.Empty(r.T.Points);
     }
@@ -142,9 +142,12 @@ public class PlaceInputShapeTests
         Assert.True(r.Key(Key.OemPeriod));
         Assert.True(r.Key(Key.OemPeriod, shift: true));
         Assert.Equal(23.5f, r.T.Rotation, 3);
+        // The Place tool's own step: 15°; Shift, finer: 1°.
         r.In.TurnStep = null;
-        Assert.True(r.Key(Key.OemComma, shift: true));
+        Assert.True(r.Key(Key.OemComma));
         Assert.Equal(8.5f, r.T.Rotation, 3);
+        Assert.True(r.Key(Key.OemComma, shift: true));
+        Assert.Equal(7.5f, r.T.Rotation, 3);
         // Not the brush's keys.
         Assert.False(r.Key(Key.Enter));
         Assert.False(r.Key(Key.Escape));

@@ -26,15 +26,9 @@ public sealed partial class PathTool
             _x1 = Math.Min(_g.W - 2, (int)MathF.Ceiling(_curve.Max(c => c.P.X) + _cutoff));
             _z0 = Math.Max(1, (int)MathF.Floor(_curve.Min(c => c.P.Y) - _cutoff));
             _z1 = Math.Min(_g.H - 2, (int)MathF.Ceiling(_curve.Max(c => c.P.Y) + _cutoff));
-            // Smoothing reads the heights from before.
-            if (_tool.Act == Action.Smooth)
-            {
-                _before = new float[_g.W * _g.H];
-                for (int i = 0; i < _before.Length; i++)
-                {
-                    _before[i] = _g.HeightOf(i);
-                }
-            }
+            // Smooth and Naturalize read the ground round each point as it was before: the rectangle and their reach.
+            int reach = _tool.Act == Action.Smooth ? GroundOps.SmoothReach : _tool.Act == Action.Naturalize ? GroundOps.NaturalReach(_b) : -1;
+            _before = reach < 0 ? null : HeightsBefore.Take(_g, _x0, _z0, _x1, _z1, reach);
             _colour = _tool.Act switch
             {
                 Action.PaintDirt => Brush.PaintOf(BrushTool.PaintDirt),

@@ -7,10 +7,10 @@ Draw a level road with an even ramp up the hill, paved along its middle.
 1. Optional: check the slope first. Press `M` ([Measure](../measure.md)), click the foot of the hill, then its top:
    **Slope** is what a ramp between them will give.
 2. Press `P` ([Path](../path.md)) and click points along the level part of the road.
-3. In the panel, choose **Flatten to height**. `Alt`+click the ground to take its height, or type it in **Height**.
+3. In the panel, choose **Flatten**. `Alt`+click the ground to take its height, or type it in **Height**.
 4. Set **Width** (8 m is a good road) and **Soft edge** (4 m blends it into the slope).
 5. Optional: tick **Natural look (ragged edges, bumps)** for a worn track.
-6. Press **Apply (Enter)**, then **Clear (Esc)**.
+6. Press **Apply (Enter)**, then **Clear line (Esc)**.
 7. For the hill, click a point at its foot and one at its top, and choose **Ramp (start → end)**. **Start** and
    **End** follow the ground under the two ends; type a height to change one.
 8. Press **Apply (Enter)**. The line stays.
@@ -19,7 +19,7 @@ Draw a level road with an even ramp up the hill, paved along its middle.
 10. Click **Save to world** (or **Apply live**).
 
 ![A level road cut through two mounds and paved along its middle](../images/path-road.jpg)
-*A road made with Flatten to height through two mounds, then Paint paved (Width 4 m, Soft edge 1 m) on the same
+*A road made with Flatten through two mounds, then Paint paved (Width 4 m, Soft edge 1 m) on the same
 line.*
 
 ## Check it worked
@@ -30,7 +30,7 @@ line.*
 
 ## Undo it
 
-Each **Apply** is one undo step: `Ctrl+Z` takes back the last one. **Clear (Esc)** removes only the line, not what
+Each **Apply** is one undo step: `Ctrl+Z` takes back the last one. **Clear line (Esc)** removes only the line, not what
 you applied. After saving, undo and save again (see
 [Undo a step, take back one change, or discard everything](undo-changes.md)).
 

@@ -15,14 +15,30 @@ public sealed partial class BuildPanel
     /// <summary>Shows the Library: the blueprints.</summary>
     internal Button LibraryTab { get; } = new() { Content = Lang.T("build.label.library"), FontSize = 12, Padding = new Thickness(8, 2) };
 
+    /// <summary>A blueprint's card's width in the Library, in pixels.</summary>
+    internal const double LibraryCardWidth = 380;
+
+    /// <summary>
+    /// The blueprints: the same list, search and row buttons as a world's Blueprints panel, with Add (and dragging onto
+    /// the plot) where that one pastes. The window does what its buttons ask.
+    /// </summary>
+    internal BlueprintLibrary Library { get; } = new(BlueprintLibrary.Places.Workshop, LibraryCardWidth);
+
     /// <summary>Searches the blueprints by name, description and tags (every word must match).</summary>
-    internal TextBox LibrarySearch { get; } = BlueprintsPanel.SearchBox();
+    internal TextBox LibrarySearch => Library.Search;
 
     /// <summary>Imports another mod's blueprint file (the window handles it).</summary>
-    internal Button ImportButton { get; } = BlueprintsPanel.ImportFileButton();
+    internal Button ImportButton => Library.ImportButton;
+
+    /// <summary>A blank plot, to build a new blueprint on (the window handles it).</summary>
+    internal Button NewButton => Library.NewButton;
 
     /// <summary>The blueprints, side by side as cards.</summary>
-    internal WrapPanel LibraryList { get; } = new() { ItemSpacing = 8, LineSpacing = 8 };
+    internal WrapPanel LibraryList => Library.List;
+
+    /// <summary>Lists the blueprints that match the search.</summary>
+    /// <param name="again">Reads the folders again; false: the blueprints read last are searched.</param>
+    internal void RenderLibrary(bool again = true) => Library.Render(again);
 
     /// <summary>Generate dungeon: the Dungeon panel's generator, made of building pieces, onto the plot.</summary>
     internal Button GenerateButton { get; } = new() { Content = Lang.T("build.label.generate"), FontSize = 12 };

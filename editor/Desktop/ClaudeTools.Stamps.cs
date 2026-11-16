@@ -14,7 +14,9 @@ public sealed partial class ClaudeTools
     /// <returns>The stamp's heights, or null with why.</returns>
     internal static (float[]? Data, string? Problem) StampDataOf(string stamp)
     {
-        float[]? data = StampsOffered().FirstOrDefault(st => st.Label.StartsWith(stamp, StringComparison.OrdinalIgnoreCase) || st.Name.Equals(stamp, StringComparison.OrdinalIgnoreCase))?.Data;
+        // A built-in one also by its key's word ("Mountain" for stamp:mountain, the rough hill's name before).
+        float[]? data = StampsOffered().FirstOrDefault(st => st.Label.StartsWith(stamp, StringComparison.OrdinalIgnoreCase) || st.Name.Equals(stamp, StringComparison.OrdinalIgnoreCase)
+            || st.Name.Equals("stamp:" + stamp, StringComparison.OrdinalIgnoreCase))?.Data;
         if (data == null && File.Exists(stamp))
         {
             try
@@ -36,9 +38,9 @@ public sealed partial class ClaudeTools
 
     /// <summary>stamp: a stamp's picture pressed into the ground at a point, raised or lowered, as one pending step.</summary>
     [McpServerTool(Name = "stamp", Title = "Press a stamp into the ground")]
-    [Description("Presses a stamp into the ground of the open area as the Raise or Lower brush does with a stamp shape and Stamp once: the stamp's picture (white high, black untouched) radius metres round x, z, height metres up (negative: down, a hollow), turned by turn degrees. Stamps: Mountain, Mesa (flat top), Crater rim, Dunes, Rocky ground, and those the user loaded (a picture's name, or a PNG file's path to use any greyscale picture). A mask limits it to some ground. One pending step; the game's ±8 m limit holds.")]
+    [Description("Presses a stamp into the ground of the open area as the Landform tool's Picture kind does: the stamp's picture (white high, black untouched) radius metres round x, z, height metres up (negative: down, a hollow), turned by turn degrees. Stamps: Rough hill (also by its older name, Mountain), Mesa (flat top), Crater rim, Dunes, Rocky ground, and those the user loaded (a picture's name, or a PNG file's path to use any greyscale picture). A mask limits it to some ground. One pending step; the game's ±8 m limit holds.")]
     public Task<string> Stamp(
-        [Description("The stamp's name (Mountain, Mesa, Crater rim, Dunes, Rocky ground, a loaded one), or the path of a PNG picture.")] string stamp,
+        [Description("The stamp's name (Rough hill, Mesa, Crater rim, Dunes, Rocky ground, a loaded one), or the path of a PNG picture.")] string stamp,
         [Description("World x of its middle.")] float x,
         [Description("World z of its middle.")] float z,
         [Description("Radius, metres (half its side).")] float radius = 20,

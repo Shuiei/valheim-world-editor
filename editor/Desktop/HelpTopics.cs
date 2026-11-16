@@ -33,8 +33,17 @@ public static class HelpTopics
     /// <summary>The Mask card.</summary>
     public static HelpTarget Mask { get; } = new("masks.md");
 
-    /// <summary>The Workshop and its Build panel.</summary>
+    /// <summary>No limit, the switch under the Mask: ground past the game's 8 m.</summary>
+    public static HelpTarget NoLimit { get; } = new("concepts/ground-limits.md", "no-limit");
+
+    /// <summary>The Workshop and its plot.</summary>
     public static HelpTarget Workshop { get; } = new("workshop.md");
+
+    /// <summary>The Build tool: its dock and the building bar.</summary>
+    public static HelpTarget Build { get; } = new("build.md");
+
+    /// <summary>The building bar (Build, Select and Paste).</summary>
+    public static HelpTarget BuildingBar { get; } = new("build.md", "the-building-bar");
 
     /// <summary>The Blueprints panel (pasting a blueprint into a world).</summary>
     public static HelpTarget Blueprints { get; } = new("workshop.md", "blueprints-panel");
@@ -50,16 +59,15 @@ public static class HelpTopics
     /// <param name="brush">The brush, for <c>ToolMode.Brush</c>.</param>
     public static HelpTarget Tool(ToolMode mode, BrushTool? brush = null) => mode switch
     {
-        ToolMode.Brush when brush is { } b && ToolPanel.IsPaint(b) => new("terrain.md", "paint-brushes"),
+        ToolMode.Brush when brush is { } b && ToolPanel.IsPaint(b) => new("terrain.md", "paint-brush"),
         ToolMode.Brush => new("terrain.md", "sculpt-brushes"),
         ToolMode.Select => new("select.md"),
         ToolMode.Measure => new("measure.md"),
-        ToolMode.Shape => new("shape.md"),
+        ToolMode.Landform => new("landform.md"),
         ToolMode.Path => new("path.md"),
         ToolMode.Area => new("area.md"),
         ToolMode.Paste => new("area.md", "copy-and-paste"),
         ToolMode.Place => new("place.md"),
-        ToolMode.Mountain => new("mountain.md"),
         ToolMode.Script => new("scripting.md"),
         ToolMode.Blueprints => Blueprints,
         ToolMode.Dungeon => new("dungeons.md"),
@@ -69,6 +77,6 @@ public static class HelpTopics
 
     /// <summary>Every place above, each tool's included (HelpTopicsTests).</summary>
     public static IEnumerable<HelpTarget> All =>
-        [StartPage, Map, NewWorld, Editor, History, ViewPanel, Controls, Inspector, Mask, Workshop, Blueprints, Live, Settings,
+        [StartPage, Map, NewWorld, Editor, History, ViewPanel, Controls, Inspector, Mask, NoLimit, Workshop, Build, BuildingBar, Blueprints, Live, Settings,
             .. Enum.GetValues<ToolMode>().Select(m => Tool(m)), .. Enum.GetValues<BrushTool>().Select(b => Tool(ToolMode.Brush, b))];
 }

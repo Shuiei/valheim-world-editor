@@ -3,7 +3,7 @@
 Raise, lower, level, smooth and paint the ground with a brush you hold and drag, as with the game's hoe, pickaxe and
 cultivator, only faster and bigger.
 
-**Where:** tool rail, **SCULPT** and **PAINT** sections · **Keys:** `1` to `9`, `0`, `O` · **Works in:** saved worlds,
+**Where:** tool rail, **SCULPT** section · **Keys:** `1` to `9`, `0`, `O` · **Works in:** saved worlds,
 live
 
 ![A mound raised with Raise, the brush ring on its top and the Raise panel](images/sculpt.jpg)
@@ -15,7 +15,8 @@ no mod. Each stroke is one undo step (`Ctrl+Z`).
 
 ## Use it
 
-1. In the tool rail, click a brush in **SCULPT** or **PAINT**, or press its key (see [Shortcuts](#shortcuts)).
+1. In the tool rail, click a brush in **SCULPT**, or press its key (see [Shortcuts](#shortcuts)). To paint, click
+   **Paint** and choose the paint in its panel (see [Paint brush](#paint-brush)).
 2. In the panel, set **Size** and **Strength**. `[` and `]` change the size as you work.
 3. Hold the left mouse button on the ground and move. The brush keeps working while the button is down, so holding
    still works the same spot more and more.
@@ -38,9 +39,10 @@ The panel shows the settings every brush shares, then the chosen brush's own. Sh
 | **Falloff** | How the effect fades from the middle to the edge (below). Hidden for stamps: a picture has its own fade. |
 | **Turn** | **Square** and stamps only: turns the brush, -180° to 180°. |
 | **Load stamp…** / **Forget stamp** | Add a picture as a brush shape, or remove one you added (see [Stamps](#stamps)). |
-| **Stamp once: a click puts the whole stamp in** / **Height** | Raise and Lower with a stamp only (see [Stamps](#stamps)). |
 | Flatten, Naturalize, Erode settings | Shown only for that brush (see [Sculpt brushes](#sculpt-brushes)). |
-| **No limit: past the game's ±8 m** | Lets the ground go past the game's limit (see [No limit](#no-limit)). Off each time the editor starts. |
+
+Two settings hold for every ground tool, not only the brushes, so they are on the **Mask** card next to the panel:
+the [Mask](masks.md) itself, and **No limit: past the game's ±8 m** under it (see [No limit](#no-limit)).
 
 ### Shapes
 
@@ -59,7 +61,7 @@ Shape list is open in the panel.*
 
 | Falloff | How it fades | Good for |
 |---|---|---|
-| **Smooth** (default) | An S-curve: soft in the middle and at the edge. | Most work. |
+| **Soft** (default) | An S-curve: gentle in the middle and at the edge. | Most work. |
 | **Linear** | Evenly from the middle to the edge. | Cones, even slopes. |
 | **Dome** | Stays strong far out, then drops fast near the edge. | Round hills with steep feet. |
 | **Flat top** | Full strength over the inner 80%, fading only in the outer fifth. | Pads, terraces, flat-topped hills. |
@@ -67,7 +69,7 @@ Shape list is open in the panel.*
 | **Sharp edge (pickaxe)** | Full strength right to the edge, nothing beyond. | Steep walls and straight cuts. |
 
 ![Six mounds raised by the same stroke, one per falloff, each labelled, seen from above at an angle](images/brush-falloffs.jpg)
-*The same Raise stroke with each falloff, labelled: Smooth, Linear, Dome, Flat top, Peak, Sharp edge (pickaxe). Slope
+*The same Raise stroke with each falloff, labelled: Soft (the picture still says Smooth), Linear, Dome, Flat top, Peak, Sharp edge (pickaxe). Slope
 colours are on: the steeper the side, the redder.*
 
 ## Sculpt brushes
@@ -78,7 +80,7 @@ colours are on: the steeper the side, the redder.*
 | **Lower** | `2` | Digs the ground down. |
 | **Flatten** | `3` | Levels the ground to one height: lower ground is raised, higher ground cut. |
 | **Smooth** | `4` | Evens out bumps and sharp edges. Go over a place again for more. |
-| **Naturalize** (rail: **Natural**) | `0` | Turns flat, tool-made ground into natural-looking bumps. |
+| **Naturalize** | `0` | Turns flat, tool-made ground into natural-looking bumps. |
 | **Erode** | `O` | Weathers the ground: steep slopes slide down, or rain cuts gullies. |
 | **Restore** | `5` | Brings the ground back to how the world generated it, and removes paint. |
 
@@ -88,6 +90,11 @@ half Restore took back to the generated ground, the brush's ring on it.*
 
 Flatten, Smooth, Naturalize and Restore never overshoot: each moment they move the ground a share of the way to their
 aim, so holding longer only brings it closer.
+
+The [Region](area.md) and [Path](path.md) tools have the same actions under the same names, applied in one go to a
+selection or along a line instead of under a brush you hold. They change the ground the same way: one **Smooth**
+there moves each point to the average of the ground within 3 m, about what holding the Smooth brush on a spot for a
+second or two does at the default strength.
 
 ### Flatten
 
@@ -110,11 +117,12 @@ the height of a door you already built.
 |---|---|
 | **Bumps** | How tall the bumps are, 0.2 to 4 m (default 1.2 m). |
 | **Bump size** | How wide they are, 4 to 60 m (default 16 m): small values give rough ground, large values gentle swells. |
-| **New pattern** | A new random bump pattern for the next Naturalize stroke and for natural paths. |
+| **New pattern** | A new random bump pattern for the next Naturalize (this brush, the Region or the Path tool's) and for paths with Natural look. |
 
 A second stroke over the same place does not pile up more bumps. The pattern is fixed to the world, so neighbouring
-strokes join without seams. The [Path](path.md) tool's **Natural look** and the [Area](area.md) tool's **Naturalize**
-use the same settings and pattern.
+strokes join without seams. The [Path](path.md) tool's **Naturalize** and **Natural look** and the [Region](area.md)
+tool's **Naturalize** use the same settings and pattern, and show them in their own panels: a value set in one is set
+in all three.
 
 ![Levelled ground with slope colours on, its left half naturalized into bumps, its right half flat](images/naturalize.jpg)
 *Levelled ground with slope colours on. The left half was naturalized (Bumps 3 m, Bump size 12 m): its bumps show as
@@ -128,8 +136,9 @@ yellow patches. The right half stays flat and plain green.*
 | **Water** | Rain: drops fall under the brush, run downhill, pick up ground where they run fast and drop it where they slow down. Many drops make gullies, fans of material at the foot of slopes and smoother valley floors. **Strength** sets how many drops fall. |
 | **Rest angle** | **Thermal** only: the steepest slope that stays put, 10° to 60° (default 33°). Lower values flatten more. |
 
-Material that slides or washes out of the brush can land just outside it. The [Area](area.md) tool's **Erode** does
-both kinds over a whole selection at once.
+Material that slides or washes out of the brush can land just outside it. The [Region](area.md) and [Path](path.md)
+tools' **Erode** do both kinds at once, over a whole selection or along a line, with this **Rest angle** (their
+panels show it too).
 
 ![The same mound before and after Erode (Water), the Erode panel on the left](images/erode.jpg)
 *The same mound from the same camera. Left: as it was raised. Right: after two seconds of Erode (Water): the rain has
@@ -141,14 +150,20 @@ worn its top down and streaked its flanks with small gullies.*
 back ground raised or dug with [No limit](#no-limit), saved or not: the next save takes away the ground discs it no
 longer needs. It removes paint only in the inner part of the brush, so the paint's edge stays clean.
 
-## Paint brushes
+## Paint brush
 
-| Brush (rail label) | Key | What it does |
+**Paint**, the last button of the rail's **SCULPT** section, is one brush for the four paints. Its panel shows them as
+four swatches: click one to paint with it. The chosen swatch is outlined, and the rail button takes its colour.
+
+| Paint | Key | What it does |
 |---|---|---|
 | **Dirt** | `6` | Bare dirt, like a trodden path. |
 | **Cultivate** | `7` | Cultivated soil, as the cultivator makes. In game, crops can only be planted on it. |
 | **Paved** | `8` | Paved stone ground. |
-| **Clear paint** (rail: **Clear**) | `9` | Paints plain ground of the biome. |
+| **Clear paint** | `9` | Paints plain ground of the biome. |
+
+Each key picks the Paint brush with that paint, from any tool. The rail button comes back with the paint you used
+last (Dirt at first).
 
 Paint uses the same Size, Strength, Shape, Falloff and Mask as the sculpt brushes. It changes how the ground looks and
 what grows there, never its height. A light stroke or the brush's soft edge gives a blend; hold longer for the full
@@ -158,18 +173,18 @@ colour.
 world generated there. **Restore** removes your paint, so the ground shows what the world generated again.
 
 ![Stripes of paved, cultivated and dirt ground, before and after a band of Clear paint across them](images/paint.jpg)
-*Left: paved, cultivated and dirt stripes. Right: the same stripes after one Clear paint stroke across all three (its
-panel on the left).*
+*Left: paved, cultivated and dirt stripes. Right: the same stripes after one Clear paint stroke across all three (the
+Paint panel on the left).*
 
 ## Stamps
 
 A stamp is a picture used as the brush shape: white parts work fully, grey parts partly, black parts not at all.
 Choose one in **Shape**, where stamps are listed as **Stamp: …**. A stamp covers a square twice as wide as **Size**
-and turns with **Turn**. It works with every sculpt and paint brush.
+and turns with **Turn**. It works with every sculpt brush and with Paint.
 
 | Stamp | Shape |
 |---|---|
-| **Mountain** | A rough peak. |
+| **Rough hill** | A small peak with rough sides. |
 | **Mesa (flat top)** | A flat top with steep, slightly ragged sides. |
 | **Crater rim** | A ring wall, for craters (Lower inside it afterwards) and old earthworks. |
 | **Dunes** | Parallel ridges inside a round patch. |
@@ -179,16 +194,10 @@ and turns with **Turn**. It works with every sculpt and paint brush.
 |---|---|
 | **Load stamp…** | Uses any picture (PNG, JPEG…) as a stamp: a heightmap from another tool, a logo, a hand-drawn shape. Its brightness is the strength; transparent parts count as black. It is kept for next time under its file name. |
 | **Forget stamp** | Removes the loaded picture chosen in **Shape**. Shown only for loaded pictures: the built-in stamps stay. |
-| **Stamp once: a click puts the whole stamp in** | Raise or Lower only. One click puts the whole picture into the ground at once, instead of painting while you hold the button. One undo step ("Stamp: Mesa (flat top)"). |
-| **Height** | With Stamp once: how high (Raise) or deep (Lower) the white parts go (m, default 4). |
 
-![The five built-in stamps, each put in once](images/stamps.jpg)
-*Each built-in stamp put in with Stamp once. Front row from left: Mountain, Mesa (flat top), Crater rim. Back row
-from left: Dunes, Rocky ground.*
-
-![Raise with the Mesa stamp and Stamp once: the stamp's outline before the click, the mesa after it](images/stamp-once.jpg)
-*Raise with Shape **Stamp: Mesa (flat top)**, **Stamp once** on and **Height** 8 m. Left: the stamp's square outline
-on flat ground before the click. Right: the whole mesa, put in by one click.*
+**To put a whole picture into the ground with one click**, at a height you set, use the
+[Landform](landform.md#picture) tool's **Picture** kind instead of a brush: it offers the same pictures, and those
+you load here.
 
 ## No limit
 
@@ -200,18 +209,20 @@ See [The game's 8 m limit](concepts/ground-limits.md#the-games-8-m-limit).
 *Raise held until the ground stopped 8 m up. With **Limit marks** on, its top is tinted red; the status bar shows the
 message and the cursor readout ends "at the ±8 m limit".*
 
-**No limit: past the game's ±8 m**, at the bottom of the brush settings, lets the ground tools go up to 400 m from the
-generated ground: cliffs, canyons, spires, deep caves. It works with every sculpt brush, Stamp once,
-[Shape](shape.md), [Path](path.md) and [Area](area.md) (the Area panel shows the same switch). It stays on for every
-tool until you switch it off, and is off each time the editor starts. [Mountain](mountain.md) and pasting a copied place always go past the limit.
+**No limit: past the game's ±8 m**, on the **Mask** card next to the tool's panel (under the Mask), lets the ground
+tools go up to 400 m from the generated ground: cliffs, canyons, spires, deep pits. It is one switch for every tool
+it governs, and the card shows it with each of them: every sculpt brush, [Landform](landform.md) (its **Formula**
+and **Picture** kinds), [Path](path.md) and [Region](area.md) (its heightmap imports too). It stays on for every tool
+until you switch it off, and is off each time the editor starts. Landform's **Mountain** kind and pasting a copied
+place always go past the limit.
 
 > [!IMPORTANT]
 > Saving No limit ground reads the area again from the world and **clears its History**: you cannot undo past that
 > save. Check the shape before you save.
 
 ![The same Raise stroke twice: stopped at 8 m on the left, a tall spire with No limit on the right](images/no-limit.jpg)
-*The same Raise stroke with No limit off (left: stopped at 8 m, its top red) and on (right: far higher). The panel
-shows the switch ticked, as for the right one.*
+*The same Raise stroke with No limit off (left: stopped at 8 m, its top red) and on (right: far higher). The switch
+is on the Mask card, ticked as for the right one.*
 
 When you save, ground past ±8 m becomes invisible ground discs that every player's game builds the same way. The save
 message says how many discs were made and how many trees and rocks were taken away, for example "No limit ground: 312
@@ -233,11 +244,11 @@ After saving:
 | Key or mouse | What it does |
 |---|---|
 | `1` `2` `3` `4` `0` `O` `5` | Raise, Lower, Flatten, Smooth, Naturalize, Erode, Restore. |
-| `6` `7` `8` `9` | Dirt, Cultivate, Paved, Clear paint. |
+| `6` `7` `8` `9` | The Paint brush with Dirt, Cultivate, Paved, Clear paint. |
 | `[` / `]` | Brush size 1 m smaller / larger. |
 | Hold the left button and drag | Work the ground. |
 | `Alt`+click | Pick the height there: switches to Flatten at that height. |
-| `Alt`+`Shift`+click | Turn the [Mask](masks.md) on for 2 m below to 2 m above that spot. |
+| `Alt`+`Shift`+click | Turn the [Mask](masks.md) on for 2 m below to 2 m above that spot (with the Path tool too). |
 | Middle button drag | Slide the view (also while a brush is chosen). |
 | `Ctrl+Z` | Undo the last stroke. |
 | `Esc` | Leave the brush (back to View). |
@@ -250,8 +261,8 @@ All keys of the editor: [Shortcuts](help/shortcuts.md).
   ±8 m limit" when the point is there. The sea is at 30 m.
 - **The area's outermost line of points never changes**, so the area joins the land around it. To work there, move
   or grow the area: see [The locked edge](concepts/areas-and-zones.md#the-locked-edge).
-- **The ground has one height per metre.** A wall always spans about a metre and the ground cannot overhang: caves are
-  made with rocks (see [Dig a cave](guides/dig-a-cave.md)). An edge drawn north-east to south-west shows a small
+- **The ground has one height per metre.** A wall always spans about a metre and the ground cannot overhang (a mod such
+  as Tunnelheim digs real tunnels: see [Edit a world made with Expand World, Riverheim or Tunnelheim](guides/use-mods-worlds.md)). An edge drawn north-east to south-west shows a small
   sawtooth, in game too.
 - **Villages, the trader and dungeon entrances level the ground around them.** Your edits sit on top of that; turn on
   **Location flattening** in the View panel to see where. See
@@ -267,5 +278,5 @@ All keys of the editor: [Shortcuts](help/shortcuts.md).
 - [Raise or dig past the game's 8 m limit](guides/raise-past-the-limit.md)
 - [Clear trees and rocks, level a building site](guides/clear-an-area.md)
 - [Ground limits](concepts/ground-limits.md)
-- [Mask](masks.md), [Shape](shape.md), [Mountain](mountain.md)
+- [Mask](masks.md), [Landform](landform.md)
 - [How the ground is stored](concepts/ground-limits.md#how-the-ground-is-stored), [how fast a brush works](concepts/ground-limits.md#how-fast-a-brush-works)

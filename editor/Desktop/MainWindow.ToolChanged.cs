@@ -29,23 +29,18 @@ public sealed partial class MainWindow
             DungeonPanel.Leave();
         }
         DungeonPanel.Card.IsVisible = Tools.Mode == ToolMode.Dungeon;
-        ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
-        MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
+        LandformPanel.Card.IsVisible = Tools.Mode == ToolMode.Landform;
         ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
         if (Blueprints.Card.IsVisible != (Tools.Mode == ToolMode.Blueprints))
         {
             Blueprints.Toggle(Tools.Mode == ToolMode.Blueprints);
         }
-        View.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
-        View.MountainPreview = Tools.Mode == ToolMode.Mountain ? Mountain.Shape(MountainPanel.Spec) : null;
+        ShowLandform();
         PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
-        if (Tools.Mode == ToolMode.Path)
-        {
-            Tools.MarkCave(View.Path.Act == PathTool.Action.Cave);
-        }
         AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
         PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
-        if (BuildingInDungeon && Tools.Mode != ToolMode.Place)
+        // Build here ends with any other tool, the Place tool too (the Build tool is the one it runs under).
+        if (BuildingInDungeon && !Tools.BuildMode)
         {
             if (Tools.Mode != ToolMode.Dungeon)
             {
@@ -53,18 +48,39 @@ public sealed partial class MainWindow
             }
             BuildInDungeon(false);
         }
-        PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !InWorkshop && !BuildingInDungeon;
-        BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && (InWorkshop || BuildingInDungeon);
-        if (Tools.Mode != ToolMode.Place)
+        // The Build tool in a world's open ground: the Place tool set for building while it is on, its own settings back after.
+        BuildInWorld(Tools.BuildMode && !InWorkshop && !BuildingInDungeon);
+        PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !Tools.BuildMode;
+        BuildPanel.Card.IsVisible = Tools.BuildMode;
+        if (!PlacePanel.Card.IsVisible)
         {
             PlacePanel.Chooser.IsVisible = false;
             PlacePanel.KindsButton.Content = PlacePanel.ChooseKindsText;
         }
         PlaceInput.Refresh();
-        MaskPanel.Card.IsVisible = !InWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
+        ShowBuildingBar();
+        // The Mask: with the tools it holds back (Build puts each piece where it is pointed at).
+        MaskPanel.Card.IsVisible = !InWorkshop && !Tools.BuildMode && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Landform or ToolMode.Place;
+        MaskPanel.ShowNoLimit(GovernedByNoLimit(Tools.Mode, t));
         if (Tools.Mode == ToolMode.Area)
         {
             AreaPanel.Refresh();
         }
+        else if (Tools.Mode == ToolMode.Select)
+        {
+            // Replace with offers what the world can make now (a live merge or a mod's catalogue brought kinds).
+            FillReplaceKinds();
+        }
     }
+
+    /// <summary>
+    /// Whether a tool keeps to the game's ±8 m unless No limit is on, so the Mask card shows the switch with it: the
+    /// sculpt brushes (and their stamps), Landform (its formulas and pictures; its panel says that a mountain always
+    /// goes past the limit), Path and Region (its heightmap imports too). Not the Paint brush and Place, which move no
+    /// ground.
+    /// </summary>
+    /// <param name="mode">The tool.</param>
+    /// <param name="brush">The brush, when the tool is one.</param>
+    internal static bool GovernedByNoLimit(ToolMode mode, BrushTool? brush) =>
+        mode is ToolMode.Path or ToolMode.Area or ToolMode.Landform || mode == ToolMode.Brush && brush is { } b && !ToolPanel.IsPaint(b);
 }

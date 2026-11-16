@@ -160,7 +160,7 @@ not from an edit you regret after leaving. For that, keep your own copy of any w
 [Back up a world before editing](../guides/back-up-a-world.md)).
 
 The game keeps its own backups next to the world folder (`<World>_backup_auto-<date>`), and editor versions from
-before kept theirs as `<World>_backup_terraineditor-<date>`. The Area tool's **Restore from a backup** puts one
+before kept theirs as `<World>_backup_terraineditor-<date>`. The Region tool's **Back to a backup** puts one
 selection back as it was in such a copy, without rolling back the whole world (see
 [Restore one area from a backup](../guides/restore-from-backup.md)). It matches objects this way:
 

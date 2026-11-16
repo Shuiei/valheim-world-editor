@@ -20,6 +20,7 @@ public sealed partial class MainWindow
             PlayerBox.SelectedItem = chosen != null && names.Contains(chosen) ? chosen : names.FirstOrDefault();
         }
         GoPlayerButton.IsEnabled = names.Count > 0;
+        PlayersRow.IsVisible = names.Count > 0 && Session?.IsLive == true;
         ToolTip.SetTip(PlayerBox, Tips.Of("view.player") + "\n" + string.Join("\n", players.Select(p => $"{p.Name}: {p.World.X:0}, {p.World.Z:0}")));
         PlaceLabels();
     }

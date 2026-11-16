@@ -118,13 +118,16 @@ public class ClaudeToolsGroundTests
     public void ThePathActionsAreKnownByName()
     {
         Assert.Equal(PathTool.Action.River, ClaudeTools.PathActions["River"]);
-        Assert.Equal(PathTool.Action.Cave, ClaudeTools.PathActions["cave"]);
+        Assert.False(ClaudeTools.PathActions.ContainsKey("cave"));
         Assert.False(ClaudeTools.PathActions.ContainsKey("paintdirt"));
-        Assert.Equal(7, ClaudeTools.PathActions.Count);
+        Assert.Equal(PathTool.Action.Naturalize, ClaudeTools.PathActions["naturalize"]);
+        Assert.Equal(PathTool.Action.Erode, ClaudeTools.PathActions["erode"]);
+        Assert.Equal(PathTool.Action.Restore, ClaudeTools.PathActions["restore"]);
+        Assert.Equal(9, ClaudeTools.PathActions.Count);
     }
 
     // LineOver: the world points in grid points; a ramp from the ground at its ends unless one height is given; a
-    // cave's depth is the cave's, a river's the river's, each clamped.
+    // river's depth is the default.
     [AvaloniaFact]
     public async Task ALineBecomesThePathTool()
     {
@@ -132,40 +135,40 @@ public class ClaudeToolsGroundTests
         await r.OpenArea();
         var scene = r.W.Session!.Scene;
         float[][] line = [[-10f, 0f], [10f, 5f]];
-        var ramp = ClaudeTools.LineOver(scene, line, PathTool.Action.Ramp, 6, 2, null, 4.5f, null, 2, false, true, PathTool.CaveRock.Auto, 3);
+        var ramp = ClaudeTools.LineOver(scene, line, PathTool.Action.Ramp, 6, 2, null, null, 2, false, true);
         Assert.Equal([new(22, 32), new(42, 37)], ramp.Points);
         Assert.Equal(ClaudeRun.J(await r.T.GroundAtPoints(line))[0].GetProperty("height").GetSingle(), ramp.Start, 0);
-        Assert.Equal((6f, 2f, 3), (ramp.Width, ramp.Soft, ramp.Seed));
-        var level = ClaudeTools.LineOver(scene, line, PathTool.Action.Ramp, 6, 2, null, 4.5f, 40, 2, false, true, PathTool.CaveRock.Auto, 3);
+        Assert.Equal((6f, 2f), (ramp.Width, ramp.Soft));
+        var level = ClaudeTools.LineOver(scene, line, PathTool.Action.Ramp, 6, 2, null, 40, 2, false, true);
         Assert.Equal((40f, 40f), (level.Start, level.End));
-        var cave = ClaudeTools.LineOver(scene, line, PathTool.Action.Cave, 6, 2, 100, 4.5f, null, 2, false, true, PathTool.CaveRock.Heath, 3);
-        Assert.Equal((40f, PathTool.CaveRock.Heath), (cave.CaveDepth, cave.Rock));
-        var river = ClaudeTools.LineOver(scene, line, PathTool.Action.River, 6, 2, null, 4.5f, null, 2, false, true, PathTool.CaveRock.Auto, 3);
+        var river = ClaudeTools.LineOver(scene, line, PathTool.Action.River, 6, 2, null, null, 2, false, true);
         Assert.Equal(2, river.Depth);
     }
 
-    // dig_path: wrong actions, lines and rocks are said; a river bed is dug down, one step named for Claude; a cave
-    // is one step too.
+    // dig_path: wrong actions and lines are said (a cave is no longer one); a river bed is dug down, one step
+    // named for Claude.
     [AvaloniaFact]
-    public async Task RiversAndCavesAreDugAlongALine()
+    public async Task RiversAreDugAlongALine()
     {
         using var r = new ClaudeRun();
         await r.OpenArea();
         var s = r.W.Session!;
         float[][] line = [[-20f, 0f], [20f, 0f]];
-        Assert.Equal("The action is river, cave, ramp, flatten, raise, lower or smooth.", await r.T.DigPath("paint", line));
+        Assert.Equal("The action is river, ramp, flatten, raise, lower, smooth, naturalize, erode or restore.", await r.T.DigPath("paint", line));
+        Assert.Equal("The action is river, ramp, flatten, raise, lower, smooth, naturalize, erode or restore.", await r.T.DigPath("cave", line));
         Assert.Equal("A line needs at least 2 points, each [x, z].", await r.T.DigPath("river", [[0f, 0f]]));
-        Assert.Equal("The rock is auto, forest, coast, heath or mountain.", await r.T.DigPath("cave", line, rock: "lava"));
         Assert.StartsWith("(500, 0) is outside the open area", await r.T.DigPath("river", [[0f, 0f], [500f, 0f]]));
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
 
         float before = ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0].GetProperty("height").GetSingle();
         Assert.Contains("Now pending:", await r.T.DigPath("river", line, width: 6, depth: 3));
         Assert.Equal("Claude: river along a line", s.UndoLabel);
-        Assert.True(ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0].GetProperty("height").GetSingle() < before);
-
-        await r.T.DigPath("cave", [[-20f, 15f], [20f, 15f]], depth: 8, headroom: 4);
-        Assert.Equal("Claude: cave along a line", s.UndoLabel);
+        float dug = ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0].GetProperty("height").GetSingle();
+        Assert.True(dug < before);
+        // The river's bed goes back towards the generated ground along the same line.
+        Assert.Contains("Now pending:", await r.T.DigPath("restore", line, width: 6));
+        Assert.Equal("Claude: restore the ground along a line", s.UndoLabel);
+        Assert.True(ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0].GetProperty("height").GetSingle() > dug);
     }
 
     // MaskOf: no spec, no mask; wrong biomes and paints, and settings that let nothing through, are said; heights

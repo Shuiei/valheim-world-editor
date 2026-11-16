@@ -3,7 +3,7 @@ using SkiaSharp;
 namespace TerrainEditor.DocsScreenshots;
 
 /// <summary>
-/// The Area tool's pictures added with the documentation's rewrite (area.md and its guides): cut and fill, a paste
+/// The Region tool's pictures added with the documentation's rewrite (area.md and its guides): cut and fill, a paste
 /// that clears its site, zones marked for reset, and the before and after pictures they share.
 /// </summary>
 public sealed partial class Scenes
@@ -36,7 +36,7 @@ public sealed partial class Scenes
         Bare(e, unsaved: false, size: 3);
         AreaAction(e, P(-20, -12), P(44, 12), "Reset zones", apply: false);
         e.Send("check Keep my buildings|on");
-        e.Send("check Reset ground edits too|on");
+        e.Send("check Also undo their ground edits|on");
         e.Send("key Return");
         e.Send("click Reset when saving");
         Camera(e, 45, 0, 200, 60, 150);
@@ -53,26 +53,15 @@ public sealed partial class Scenes
         Bare(e, unsaved: false);
         // The stone hut on the zone's east side (left on the picture), on levelled ground.
         Level(e, P(10, -10), P(30, 10));
-        e.Send("key T");
-        Pieces(e);
-        Kinds(e, "stone_floor_2x2");
-        e.Send("click Grid");
-        e.Send("set Spacing|2");
-        Drag(e, P(16, -3), P(24, 3));
-        e.Send("key Return");
-        Kinds(e, "stone_wall_2x1");
-        e.Send("click Line");
-        e.Send("click Rectangle");
-        e.Send("set Layers|3");
-        Drag(e, P(16, -3), P(24, 3));
-        e.Send("key Return");
+        BuildFloor(e, "stone_floor_2x2", P(16, -3), P(24, 3));
+        BuildWalls(e, "stone_wall_2x1", P(16, -3), P(24, 3), layers: 3);
         e.Send("key Escape");
         e.Send("key B");
         e.Send("click Box");
         Drag(e, P(13, -6), P(27, 6));
-        e.Send("choose Copy and paste");
+        RegionAction(e, "Copy and paste");
         e.Send("key C ctrl");
-        e.Send("click Clear (Esc)");
+        e.Send("click Clear selection (Esc)");
         // A gentle mound on the west side (right on the picture).
         foreach (var p in new[] { P(-16, 0), P(-18, 6), P(-18, -6) })
         {
@@ -93,13 +82,13 @@ public sealed partial class Scenes
         Move(e, at);
         e.Send("wait 500");
         var (before, after) = ClickBetweenShots(e, at, "paste-clear-site.jpg", keepMessage: true);
-        Halves(Out("paste-clear-site.jpg"), ("Before the click", "After the click"), before, after, new HalvesCut(720));
+        Halves(Out("paste-clear-site.jpg"), ("Before the click", "After the click"), before, after, new HalvesCut(720, Keep: [BuildingBarWhilePasting]));
     }
 
     /// <summary>
-    /// area-backup.jpg: a hut griefed (part of its near wall gone) and a polygon round it with Restore from a backup
-    /// chosen, the Backup list open on the game's backup, Your buildings on; then the same view after Restore the
-    /// selection, the walls back. On a copy of the Docs world, with a backup of it made after the hut was saved.
+    /// area-backup.jpg: a hut griefed (part of its near wall gone) and a polygon round it with Back to a backup
+    /// chosen, the Backup list open on the game's backup, Your buildings on; then the same view after Back to the
+    /// backup, the walls back. On a copy of the Docs world, with a backup of it made after the hut was saved.
     /// </summary>
     private void AreaBackup(Editor e)
     {
@@ -161,7 +150,7 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// A polygon round the hut with Restore from a backup and the backup chosen (before), then the selection restored
+    /// A polygon round the hut with Back to a backup and the backup chosen (before), then the selection restored
     /// (after), side by side.
     /// </summary>
     private void RestoreFromBackupShot(Editor e, DateTime date)
@@ -176,25 +165,25 @@ public sealed partial class Scenes
             Click(e, p);
         }
         e.Send("key Return");
-        e.Send("choose Restore from a backup");
+        RegionAction(e, "Back to a backup");
         e.Send("set Soft edge|2");
         e.Send("click Your buildings");
         e.Send(string.Format(System.Globalization.CultureInfo.InvariantCulture, "choose Game · {0:g}", date));
         Camera(e, 8, 0, 200, 26, 28);
         e.Send("wait 500");
         string before = Out("before-area-backup.jpg"), after = Out("after-area-backup.jpg");
-        ShotWithList(e, before, 300, 492);
+        ShotWithList(e, before, 300, 514);
         e.Send("key Return");
         WaitForMessage(e, "Restored");
         e.Shot(after, keepMessage: true);
         // The open list is the before picture's; the panel's backup line (read by the restore) and the status bar are
         // the after picture's.
-        Halves(Out("area-backup.jpg"), ("Griefed", "After Restore the selection"), before, after,
-            new HalvesCut(1000, AreaPanelRight, Keep: [MaskCard], KeepBefore: [new SKRectI(178, 508, 404, 580)]));
+        Halves(Out("area-backup.jpg"), ("Griefed", "After Back to the backup"), before, after,
+            new HalvesCut(1000, AreaPanelRight, Keep: [MaskCard], KeepBefore: [new SKRectI(176, 530, 406, 598)]));
     }
 
     /// <summary>
-    /// area-heightmap.jpg: the Heightmap action after Export the area and Import… of the picture just exported: the
+    /// area-heightmap.jpg: the Heightmap action after Export and Import… of the picture just exported: the
     /// panel's picture line, Lowest and Highest, Put it into the ground and Cancel, the area seen from above.
     /// </summary>
     /// <remarks>
@@ -214,8 +203,8 @@ public sealed partial class Scenes
         Bare(e, unsaved: false);
         Stroke(e, "D1", P(-8, 4), 20, hold: 2500, steps: 5);
         e.Send("key B");
-        e.Send("choose Heightmap");
-        string said = e.Send("click Export the area").GetProperty("message").GetString() ?? "";
+        RegionAction(e, "Heightmap");
+        string said = e.Send("click Export").GetProperty("message").GetString() ?? "";
         const string Written = "Heightmap written to ";
         int at = said.IndexOf(Written, StringComparison.Ordinal);
         int end = said.LastIndexOf(" (", StringComparison.Ordinal);
@@ -259,7 +248,13 @@ public sealed partial class Scenes
         }
     }
 
-    /// <summary>The Area panel's right edge in the window: halves of its pictures start there.</summary>
+    /// <summary>
+    /// The strip of the view the building bar is in beside the Paste panel, to the window's right edge: kept once over a
+    /// pair of halves, which would each show a part of the bar otherwise.
+    /// </summary>
+    private static readonly SKRectI BuildingBarWhilePasting = new(GroundPairLeft, 62, 1440, 122);
+
+    /// <summary>The Region panel's right edge in the window: halves of its pictures start there.</summary>
     private const int AreaPanelRight = 432;
 
     /// <summary>Waits (up to 30 s) until the status bar's message begins with these words.</summary>
@@ -288,8 +283,8 @@ public sealed partial class Scenes
     /// <param name="From">The window's column each half is cut from, instead of round the subject.</param>
     private readonly record struct HalvesCut(int Subject, int Left = GroundPairLeft, int Bottom = GroundPairBottom, SKRectI[]? Keep = null, SKRectI[]? KeepBefore = null, int? From = null);
 
-    /// <summary>The Mask card beside the Area panel, kept once over a pair of halves.</summary>
-    private static readonly SKRectI MaskCard = new(438, 68, 744, 120);
+    /// <summary>The Mask card beside the Region panel (with its No limit row), kept once over a pair of halves.</summary>
+    private static readonly SKRectI MaskCard = new(438, 68, 744, MaskCardBottom);
 
     /// <summary>
     /// Two pictures of the same view, before and after a change, side by side right of the tool panel: each half is

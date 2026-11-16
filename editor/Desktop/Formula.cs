@@ -6,7 +6,7 @@ namespace TerrainEditor.Desktop;
 /// A small, safe formula language, the same as the web editor's (editor/shapes.js compile): numbers, named variables, +
 /// - * / % ^, comparisons, &amp;&amp; ||, !, a ? b : c, pi, n(x, z) (smooth noise) and the functions below. Compiled
 /// once into a function of an environment; a mistake throws a FormatException with a plain message, in the user's language (the
-/// Shape panel shows it).
+/// Landform panel shows it).
 /// </summary>
 public static partial class Formula
 {

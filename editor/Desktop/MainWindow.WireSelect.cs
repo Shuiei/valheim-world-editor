@@ -1,4 +1,5 @@
 using TerrainEditor.App;
+using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
@@ -27,6 +28,36 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
+    /// The world and its templates, the game's data, the manifests and the mods' catalogue the Select panel's Replace
+    /// with list was worked out from; null: not worked out for the session edited yet.
+    /// </summary>
+    private (WorldSave? World, int Templates, int Data, int Manifests, int Catalogue)? _replaceKindsFrom;
+
+    /// <summary>
+    /// The kinds the Select tool can replace with (Replace with): what the edited world can make, by name. Worked out
+    /// again for another world (its templates are its own), when a live merge brings it new kinds, or when the game's
+    /// data, the mods' manifests or their catalogue change, keeping the chosen kind when it is still offered; left as
+    /// it is otherwise.
+    /// </summary>
+    internal void FillReplaceKinds()
+    {
+        var w = Session?.Scene.World;
+        (WorldSave? World, int Templates, int Data, int Manifests, int Catalogue) from =
+            (w, w?.TemplatesGeneration ?? 0, GameData.Generation, ModManifests.Generation, ModCatalogue.Generation);
+        if (_replaceKindsFrom == from)
+        {
+            return;
+        }
+        _replaceKindsFrom = from;
+        int at = SelectPanel.ReplaceBox.SelectedIndex;
+        int chosen = at >= 0 && at < SelectPanel.ReplaceKinds.Count ? SelectPanel.ReplaceKinds[at] : 0;
+        var kinds = w?.Creatable.Where(p => NameOfPrefab(p) != null).OrderBy(NameOfPrefab, StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        SelectPanel.ReplaceKinds = kinds;
+        SelectPanel.ReplaceBox.ItemsSource = kinds.Select(p => NameOfPrefab(p)!).ToList();
+        SelectPanel.ReplaceBox.SelectedIndex = kinds.IndexOf(chosen);
+    }
+
+    /// <summary>
     /// Replace (Select panel): the selected objects become the given kind.
     /// </summary>
     /// <param name="prefab">The kind they become.</param>
@@ -50,26 +81,21 @@ public sealed partial class MainWindow
     /// </summary>
     private void WireGroundTools()
     {
-        View.StampClicked += StampAt;
         Tools.Message += Msg;
-        Tools.NoLimitChanged += OnNoLimitChanged;
+        MaskPanel.NoLimitChanged += OnNoLimitChanged;
         Tools.LoadStampAsked += async () => await LoadStampAsync();
         View.BrushAltClick += OnBrushAltClick;
     }
 
     /// <summary>
-    /// No limit switched (tool options): the session's ground and the Area panel's same switch follow.
+    /// No limit switched (the Mask card): the session's ground follows, and the Area panel's cut and fill, which
+    /// counts what the limit leaves out of reach.
     /// </summary>
     /// <param name="on">Whether the ground tools go past the game's ±8 m.</param>
     private void OnNoLimitChanged(bool on)
     {
         Session?.Ground.NoLimit = on;
-        // The Area panel shows the same switch under Flatten, Raise and Lower.
-        if (AreaPanel != null)
-        {
-            AreaPanel.NoLimitBox.IsChecked = on;
-            AreaPanel.RefreshVolume();
-        }
-        Msg(on ? Said.Of("brush.msg.noLimitOn") : Said.Of("brush.msg.noLimitOff"));
+        AreaPanel?.RefreshVolume();
+        Msg(on ? Said.Of("mask.msg.noLimitOn") : Said.Of("mask.msg.noLimitOff"));
     }
 }

@@ -1,18 +1,32 @@
 using Avalonia.Controls;
 using TerrainEditor.App;
-using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The Area tool's panel, like the web editor's (editor/area.js): the selection's shape and soft edge,
-/// one action at a time with only its own settings, and Apply (Enter). Ground actions change the ground
-/// inside; object actions remove, select or replace the objects of the chosen kinds inside; Reset zones
-/// hands the zones under the selection back to the world generator when saving.
+/// The Region tool's panel (the Area tool of the web editor's editor/area.js): the selection's shape and soft edge,
+/// then what to do with it, in four groups (Ground, Objects, Recover, Clipboard), one action at a time with only its
+/// own settings, and Apply (Enter). Ground actions change the ground inside; Objects chooses the objects inside (by
+/// kind, and where the Mask lets the ground through) and hands them to the Select tool, which deletes or replaces
+/// them; Recover brings back what was there (the generated ground, a backup, the game's nature, the zones as the
+/// generator makes them); Clipboard copies and pastes.
 /// </summary>
 public sealed partial class AreaPanel
 {
-    /// <summary>The actions on the Action list, in its order; each shows only its own rows.</summary>
+    /// <summary>The groups the actions are in: the panel's first choice.</summary>
+    public enum Group
+    {
+        /// <summary>The ground inside: its height, its paint, a heightmap picture.</summary>
+        Ground,
+        /// <summary>The objects inside, handed to the Select tool.</summary>
+        Objects,
+        /// <summary>What was there, brought back.</summary>
+        Recover,
+        /// <summary>Copy, cut, paste and blueprints.</summary>
+        Clipboard,
+    }
+
+    /// <summary>The actions, each in one group; each shows only its own rows.</summary>
     public enum Act
     {
         /// <summary>Flattens the ground inside to one height.</summary>
@@ -31,15 +45,11 @@ public sealed partial class AreaPanel
         Erode,
         /// <summary>Paints the ground inside.</summary>
         Paint,
-        /// <summary>Removes the objects of the chosen kinds inside.</summary>
-        Remove,
-        /// <summary>Selects the objects of the chosen kinds inside.</summary>
-        Select,
         /// <summary>
-        /// Replaces every object inside of the prefab chosen in Replace with the one chosen in With, whatever
-        /// the kind toggles say.
+        /// Selects the objects of the chosen kinds inside (or only one kind of object among them) and switches to the
+        /// Select tool, where Delete removes them and Replace with turns them into another kind.
         /// </summary>
-        Replace,
+        Select,
         /// <summary>Puts back what the game grows here, by its vegetation rules, for the chosen kinds.</summary>
         Regrow,
         /// <summary>Copies the selection, to paste it elsewhere.</summary>
@@ -52,12 +62,41 @@ public sealed partial class AreaPanel
         Reset,
     }
 
-    /// <summary>The Action list's actions, in its order.</summary>
-    private static readonly Act[] Actions =
-    [
-        Act.Flatten, Act.Raise, Act.Lower, Act.Smooth, Act.Natural, Act.Restore, Act.Erode, Act.Paint,
-        Act.Remove, Act.Select, Act.Replace, Act.Regrow, Act.Copy, Act.Heightmap, Act.Backup, Act.Reset,
-    ];
+    /// <summary>The groups, in the panel's order.</summary>
+    internal static readonly Group[] Groups = [Group.Ground, Group.Objects, Group.Recover, Group.Clipboard];
+
+    /// <summary>A group's actions, in the Action list's order. A group of one action shows no list.</summary>
+    /// <param name="g">The group.</param>
+    internal static Act[] ActsOf(Group g)
+    {
+        return g switch
+        {
+            Group.Ground => [Act.Flatten, Act.Raise, Act.Lower, Act.Smooth, Act.Natural, Act.Erode, Act.Paint, Act.Heightmap],
+            Group.Objects => [Act.Select],
+            Group.Recover => [Act.Restore, Act.Regrow, Act.Backup, Act.Reset],
+            _ => [Act.Copy],
+        };
+    }
+
+    /// <summary>Every action, group by group.</summary>
+    internal static readonly Act[] Actions = [.. Groups.SelectMany(ActsOf)];
+
+    /// <summary>The group an action is in.</summary>
+    /// <param name="a">The action.</param>
+    internal static Group GroupOf(Act a) => Groups.First(g => ActsOf(g).Contains(a));
+
+    /// <summary>A group's name on its button.</summary>
+    /// <param name="g">The group.</param>
+    private static string GroupLabel(Group g)
+    {
+        return g switch
+        {
+            Group.Ground => Lang.T("area.group.ground"),
+            Group.Objects => Lang.T("area.group.objects"),
+            Group.Recover => Lang.T("area.group.recover"),
+            _ => Lang.T("area.group.clipboard"),
+        };
+    }
 
     /// <summary>An action's name on the Action list.</summary>
     /// <param name="a">The action.</param>
@@ -73,9 +112,7 @@ public sealed partial class AreaPanel
             Act.Restore => Lang.T("area.action.restore"),
             Act.Erode => Lang.T("brush.label.erode"),
             Act.Paint => Lang.T("common.paint"),
-            Act.Remove => Lang.T("area.action.remove"),
             Act.Select => Lang.T("area.action.select"),
-            Act.Replace => Lang.T("area.action.replace"),
             Act.Regrow => Lang.T("area.action.regrow"),
             Act.Copy => Lang.T("area.action.copy"),
             Act.Heightmap => Lang.T("area.action.heightmap"),
@@ -113,7 +150,7 @@ public sealed partial class AreaPanel
         };
     }
 
-    /// <summary>The panel itself, shown over the view while the Area tool is on.</summary>
+    /// <summary>The panel itself, shown over the view while the Region tool is on.</summary>
     public Control Card { get; }
 
     /// <summary>The view's selection (box or polygon) the actions work on.</summary>
@@ -131,8 +168,11 @@ public sealed partial class AreaPanel
     /// </summary>
     private bool _applying;
 
-    /// <summary>The kinds' names in the Replace list, in its order (its entries add a count to them).</summary>
-    private List<string> _fromNames = [];
+    /// <summary>
+    /// The object names behind the Only list's entries after its first ("every chosen kind"), in its order (the
+    /// entries add a count to them).
+    /// </summary>
+    private List<string> _onlyNames = [];
 
     /// <summary>Asks a yes/no question (the window's dialog); resetting zones goes on only on true.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
@@ -149,18 +189,60 @@ public sealed partial class AreaPanel
     /// <summary>The rows shown only for some actions, with those actions.</summary>
     private readonly Dictionary<Control, Act[]> _rows = [];
 
-    /// <summary>The prefab hashes behind <see cref="ToBox"/>'s entries, in its order.</summary>
-    private List<int> _creatable = [];
+    /// <summary>The group shown.</summary>
+    public Group CurrentGroup { get; private set; } = Group.Ground;
 
-    /// <summary>
-    /// The world and its templates, the game's data, the manifests and the mods' catalogue <c>_creatable</c> was
-    /// worked out from.
-    /// </summary>
-    private (WorldSave? World, int Templates, int Data, int Manifests, int Catalogue) _creatableFrom;
+    /// <summary>The action each group was last on: the one it shows again when its button is pressed.</summary>
+    private readonly Dictionary<Group, Act> _last = Groups.ToDictionary(g => g, g => ActsOf(g)[0]);
 
-    /// <summary>The action chosen on the list.</summary>
-    public Act Current => Actions[Math.Max(0, ActionBox.SelectedIndex)];
+    /// <summary>The Action list is being filled for another group: its selection is not a choice yet.</summary>
+    private bool _filling;
 
-    /// <summary>Chooses an action on the list.</summary>
-    internal void Choose(Act a) => ActionBox.SelectedIndex = Array.IndexOf(Actions, a);
+    /// <summary>The action chosen: the one on the shown group's list.</summary>
+    public Act Current
+    {
+        get
+        {
+            var acts = ActsOf(CurrentGroup);
+            return acts[Math.Clamp(ActionBox.SelectedIndex, 0, acts.Length - 1)];
+        }
+    }
+
+    /// <summary>An action was chosen (a group's button, the Action list, <see cref="Choose"/>).</summary>
+    public event Action? ActionChosen;
+
+    /// <summary>Chooses an action: shows its group, with the action on its list.</summary>
+    internal void Choose(Act a) => ShowGroup(GroupOf(a), a);
+
+    /// <summary>Shows a group: its button on, its actions on the Action list (hidden for a group of one).</summary>
+    /// <param name="g">The group.</param>
+    /// <param name="act">The action to show; null: the one the group was last on.</param>
+    internal void ShowGroup(Group g, Act? act = null)
+    {
+        CurrentGroup = g;
+        foreach (var (group, button) in GroupButtons)
+        {
+            button.Classes.Set("on", group == g);
+        }
+        var acts = ActsOf(g);
+        _filling = true;
+        ActionBox.ItemsSource = acts.Select(ActionLabel).ToArray();
+        ActionBox.SelectedIndex = Math.Max(0, Array.IndexOf(acts, act ?? _last[g]));
+        _filling = false;
+        _actionRow.IsVisible = acts.Length > 1;
+        ActionChanged();
+    }
+
+    /// <summary>The action shown changed: its rows, the backups when it restores from one, and those who listen.</summary>
+    private void ActionChanged()
+    {
+        _last[CurrentGroup] = Current;
+        // ShowRows refreshes the panel, the volume with it.
+        ShowRows();
+        if (Current == Act.Backup)
+        {
+            FillBackups();
+        }
+        ActionChosen?.Invoke();
+    }
 }

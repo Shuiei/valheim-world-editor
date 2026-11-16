@@ -45,6 +45,6 @@ should float or be left behind. After saving, open the world in game and walk in
 
 ## Related
 
-- [Select](../select.md) · [Area](../area.md)
+- [Select](../select.md) · [Region](../area.md)
 - [Snapping](../concepts/objects.md#snapping)
 - [Paste a blueprint into a world](paste-a-blueprint.md)

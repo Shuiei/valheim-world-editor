@@ -20,8 +20,8 @@ with it. ValheimRAFT itself is unchanged and stays in `BepInEx/plugins`; this re
   Checked on a server running ValheimRAFT 5.1.3, as on 5.1.1 and 5.0.9 before it: on tilted ships, every piece the
   editor draws stands where the mod built it, to a few hundredths of a millimetre.
 - **Moves, copies and deletes them whole.** Selecting any piece takes the whole vehicle, as with any
-  [linked objects](../../docs/select.md#ships-and-other-linked-objects): moving, turning, deleting, the Area tool's
-  Remove objects, copies and blueprints. What a vehicle carries goes with it. Each pasted vehicle gets ids of its own;
+  [linked objects](../../docs/select.md#ships-and-other-linked-objects): moving, turning, deleting (from the
+  Region tool's selection too), copies and blueprints. What a vehicle carries goes with it. Each pasted vehicle gets ids of its own;
   its ropes, sails, switches and plants follow the copy, and a rope to something that was not copied is let go. A
   pasted vehicle is not docked (the mod would hold it at the original's dock clamp) and the mod works out its hull
   shape again (a mirrored copy's would be the original's).

@@ -84,8 +84,7 @@ public class AreaToolWorldTests
             {
                 p.KindButtons[k].IsChecked = k == ObjectKind.Trees;
             }
-            p.Choose(AreaPanel.Act.Remove);
-            await p.Apply();
+            await RegionObjects.Remove(w);
             int removed = s.Pending.Deleted;
             Assert.True(removed > 0, "the test world has trees in zone 0, 0");
             p.Choose(AreaPanel.Act.Regrow);

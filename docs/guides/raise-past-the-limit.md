@@ -8,8 +8,8 @@ no mod.
 
 1. Back up the world. Saving this kind of ground clears the area's History.
 2. In the tool rail, click **Raise** (`1`) or **Lower** (`2`).
-3. At the bottom of the brush settings, tick **No limit: past the game's ±8 m**. The status bar says the ground
-   tools now go past the game's ±8 m.
+3. On the **Mask** card next to the brush settings, tick **No limit: past the game's ±8 m**. The status bar says the
+   ground tools now go past the game's ±8 m.
 4. Set **Size** and **Strength**, then hold the left button on the ground and move. The ground no longer stops at 8 m
    or turns red.
 5. Optional: shape the result with **Smooth** (`4`) or **Naturalize** (`0`), which keep working past the limit
@@ -18,7 +18,8 @@ no mod.
 7. Click **Save to world** (or **Apply live**). The save message says how many ground discs were made and how many
    trees and rocks were taken away, for example "No limit ground: 312 ground disc(s), 40 tree(s)/rock(s) taken away".
 
-For a whole mountain in one click, use [Mountain](../mountain.md) instead: it always goes past the limit.
+For a whole mountain in one click, use [Landform](../landform.md#mountain) with its **Mountain** kind instead: it
+always goes past the limit.
 
 ## Check it worked
 
@@ -35,4 +36,4 @@ For a whole mountain in one click, use [Mountain](../mountain.md) instead: it al
 
 - [No limit](../concepts/ground-limits.md#no-limit): how the ground is saved past 8 m
 - [Sculpt and paint](../terrain.md#no-limit)
-- [Mountain](../mountain.md)
+- [Landform](../landform.md)

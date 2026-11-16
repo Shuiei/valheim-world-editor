@@ -5,8 +5,8 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// The Mountain tool's click: the mountain goes into the ground there (grid point), then the biome's trees and
-    /// rocks grow on it (a second undo step).
+    /// The Landform tool's click with its Mountain kind: the mountain goes into the ground there (grid point), then
+    /// the biome's trees and rocks grow on it (a second undo step).
     /// </summary>
     internal async Task PutMountain(float gx, float gz)
     {
@@ -14,9 +14,10 @@ public sealed partial class MainWindow
         {
             return;
         }
-        var m = MountainPanel.Spec;
-        var preset = MountainPanel.Preset;
-        if (s.Mountain(gx, gz, m, MountainPanel.Clear, Lang.T("mountain.undo.placed", preset.Shown)) is not { } done)
+        var panel = LandformPanel.Mountain;
+        var m = panel.Spec;
+        var preset = panel.Preset;
+        if (s.Mountain(gx, gz, m, panel.Clear, Lang.T("landform.undo", preset.Shown)) is not { } done)
         {
             Msg(MountainTooBig(m.Kind, m.Reach));
             return;
@@ -24,7 +25,7 @@ public sealed partial class MainWindow
         UpdateSaveBar();
         var placed = MountainPlaced(m.Kind, m.Height, done.Cleared > 0 ? Said.Of("mountain.msg.buried", done.Cleared) : Said.Empty);
         Msg(placed);
-        if (!MountainPanel.Grow)
+        if (!panel.Grow)
         {
             Msg(placed + Said.Of("mountain.msg.undoDiscs"));
             return;
@@ -46,7 +47,7 @@ public sealed partial class MainWindow
         }
         if (spots is { Count: > 0 })
         {
-            Growth.Commit(s, Lang.T("mountain.undo.grew", spots.Count), spots);
+            Growth.Commit(s, Lang.T("landform.undo.grew", spots.Count), spots);
             placed += Said.Of("mountain.msg.grew", spots.Count);
             Msg(placed + Said.Of("mountain.msg.undoTwice"));
         }
@@ -90,7 +91,7 @@ public sealed partial class MainWindow
     };
 
     /// <summary>
-    /// The Shape tool's click: the shape goes into the ground there (grid point).
+    /// The Landform tool's click with its Formula kind: the shape goes into the ground there (grid point).
     /// </summary>
     internal void PutShape(float gx, float gz)
     {
@@ -98,12 +99,13 @@ public sealed partial class MainWindow
         {
             return;
         }
-        if (ShapePanel.Function is not { } f)
+        var panel = LandformPanel.Formula;
+        if (panel.Function is not { } f)
         {
             Msg("shape.msg.fixFirst");
             return;
         }
-        var (touched, clamped, bad) = s.Shape(gx, gz, f, ShapePanel.Radius, ShapePanel.Height, ShapePanel.Label);
+        var (touched, clamped, bad) = s.Shape(gx, gz, f, panel.Radius, panel.Height, panel.Label);
         Msg(touched == 0 ? Said.Of("shape.msg.nothing") + (bad > 0 ? Said.Of("shape.msg.noNumber", bad) : Said.Empty)
             : clamped ? Said.Of("shape.msg.clamped")
             : Said.Of("shape.msg.placed", touched));

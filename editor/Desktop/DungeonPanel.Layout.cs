@@ -26,7 +26,6 @@ public sealed partial class DungeonPanel
                 DungeonBox,
                 // Wrapped: the three do not fit the panel's width on one line.
                 new WrapPanel { ItemSpacing = 6, LineSpacing = 6, Children = { GoInside, GoOutside, BuildHere } },
-                new StackPanel { Spacing = 2, Children = { _cutText, CutSlider } },
                 new TextBlock { Text = Lang.T("dungeon.head.rooms"), FontSize = 11, Foreground = Ui.Muted, FontWeight = FontWeight.SemiBold },
                 Filter, Rooms, Contents, Doors,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { TurnButton, DeleteButton } },

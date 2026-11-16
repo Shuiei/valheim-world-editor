@@ -20,8 +20,6 @@ public sealed partial class PathTool
         private readonly float _water;
         /// <summary>Per grid point weight from 0 to 1 (0 leaves it alone); null changes every point.</summary>
         private readonly Func<int, float>? _mask;
-        /// <summary>The cave worked out before the ground changes (Cave); null when none was given.</summary>
-        private readonly CavePlan? _cave;
         /// <summary>The dense line the action follows.</summary>
         private readonly List<(Vector2 P, int Seg)> _curve;
         /// <summary>The grid points changed, by index.</summary>
@@ -44,8 +42,10 @@ public sealed partial class PathTool
         private int _x0, _z0, _x1, _z1;
         /// <summary>How far along the line each point of the dense line is, in metres.</summary>
         private float[] _cum = [];
-        /// <summary>The heights before Smooth reads them; null for the other actions.</summary>
-        private float[]? _before;
+        /// <summary>The heights before the action, for Smooth and Naturalize; null for the other actions.</summary>
+        private HeightsBefore? _before;
+        /// <summary>Erode: the points the line reached, with their weights (the erosion then runs over them all at once).</summary>
+        private readonly List<(int G, float W)> _weighed = [];
         /// <summary>The paint colour (RGBA) of a paint action; null for the others.</summary>
         private float[]? _colour;
 
@@ -55,16 +55,14 @@ public sealed partial class PathTool
         /// <param name="b">The brush, for its noise.</param>
         /// <param name="water">The water level, for River.</param>
         /// <param name="mask">Per grid point weight; null changes every point.</param>
-        /// <param name="cave">The cave worked out before the ground changes, or null.</param>
         /// <param name="curve">The dense line.</param>
-        public ApplyRun(PathTool tool, Ground g, Brush b, float water, Func<int, float>? mask, CavePlan? cave, List<(Vector2 P, int Seg)> curve)
+        public ApplyRun(PathTool tool, Ground g, Brush b, float water, Func<int, float>? mask, List<(Vector2 P, int Seg)> curve)
         {
             _tool = tool;
             _g = g;
             _b = b;
             _water = water;
             _mask = mask;
-            _cave = cave;
             _curve = curve;
             _half = tool.Width / 2;
             _soft = tool.Soft;
@@ -93,7 +91,7 @@ public sealed partial class PathTool
                     Point(gx, gz, near, nw);
                 }
             }
-            return (_touched, (_x0 - 1, _z0 - 1, _x1 + 1, _z1 + 1), _clamped);
+            return _tool.Act == Action.Erode ? Erode() : (_touched, (_x0 - 1, _z0 - 1, _x1 + 1, _z1 + 1), _clamped);
         }
 
         /// <summary>
@@ -114,11 +112,7 @@ public sealed partial class PathTool
             }
             float best = near.Dist[ni];
             float st = near.T[ni];
-            float along = _cum[seg - 1] + st * MathF.Sqrt(Segment(_curve, seg).L2), caveFloor = 0;
-            if (_cave != null)
-            {
-                caveFloor = _cave.Floor[seg - 1] + (_cave.Floor[seg] - _cave.Floor[seg - 1]) * st;
-            }
+            float along = _cum[seg - 1] + st * MathF.Sqrt(Segment(_curve, seg).L2);
             float dEff = best, halfEff = _half, bump = 0;
             if (_tool.Natural)
             {
@@ -142,7 +136,7 @@ public sealed partial class PathTool
             }
             float h = _g.HeightOf(p);
             _touched.Add(p);
-            ActOn(new PointSample(gx, gz, p, h, w, along, bump, caveFloor, dEff, halfEff));
+            ActOn(new PointSample(gx, gz, p, h, w, along, bump, dEff, halfEff));
         }
 
         /// <summary>A brush's noise at a view-space point of the grid, scaled.</summary>
@@ -160,9 +154,8 @@ public sealed partial class PathTool
         /// <param name="W">The weight of the action there, from 0 to 1.</param>
         /// <param name="Along">How far along the line the point is, in metres.</param>
         /// <param name="Bump">The Natural look's bump, in metres.</param>
-        /// <param name="CaveFloor">The cave's floor there, in metres.</param>
         /// <param name="DEff">The distance from the line, with the Natural look's ragged edge.</param>
         /// <param name="HalfEff">The half width there, with the Natural look's variation.</param>
-        internal readonly record struct PointSample(int Gx, int Gz, int P, float H, float W, float Along, float Bump, float CaveFloor, float DEff, float HalfEff);
+        internal readonly record struct PointSample(int Gx, int Gz, int P, float H, float W, float Along, float Bump, float DEff, float HalfEff);
     }
 }

@@ -4,23 +4,22 @@ using Avalonia.Threading;
 
 namespace TerrainEditor.Desktop;
 
-// The left press given to the tools that act on the world under the pointer: Shape and Mountain, Dungeon, Measure
-// and Select.
+// The left press given to the tools that act on the world under the pointer: Landform, Dungeon, Measure and Select.
 public sealed partial class GlView
 {
-    /// <summary>The Shape or Mountain tool takes the press on the ground under it.</summary>
+    /// <summary>The Landform tool takes the press on the ground under it.</summary>
     /// <param name="at">Where the press is, on the surface.</param>
-    /// <returns>True when one of those tools is in use and took it.</returns>
-    private bool PressShape(Point at)
+    /// <returns>True when the Landform tool is in use and took it.</returns>
+    private bool PressLandform(Point at)
     {
-        if (Mode is not (ToolMode.Shape or ToolMode.Mountain))
+        if (Mode != ToolMode.Landform)
         {
             return false;
         }
         _dragFrom = null;
         if (Scene is { } sc && GroundAt(sc, _lastViewProj, at, _surfaceSize) is { } g)
         {
-            ShapeClicked?.Invoke(g.X, g.Z);
+            LandformClicked?.Invoke(g.X, g.Z);
         }
         Wake();
         return true;

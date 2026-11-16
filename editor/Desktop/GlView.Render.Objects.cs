@@ -32,7 +32,8 @@ public sealed partial class GlView
         var u = MaterialUniforms.Of(_u, _objectProg);
         _gl.Uniform1(_u.At(_objectProg, "uMap"), 0);
         _gl.ActiveTexture(TextureUnit.Texture0);
-        _gl.Uniform2(_u.At(_objectProg, "uCut"), CutY != null ? 1f : 0f, CutY ?? 0f);
+        float? cut = CutY;
+        _gl.Uniform2(_u.At(_objectProg, "uCut"), cut != null ? 1f : 0f, cut ?? 0f);
         if (_cellScene == s)
         {
             SeeCells(vp, eye);

@@ -118,7 +118,7 @@ public class PlaceToolMouseTests
     [AvaloniaFact]
     public void PlacingWithoutAShapeSaysWhatToDo()
     {
-        foreach (var (mode, text) in new[] { (PlaceTool.Modes.Line, "Draw a line first"), (PlaceTool.Modes.Zone, "Draw a zone first"), (PlaceTool.Modes.Grid, "Drag a box on the ground first") })
+        foreach (var (mode, text) in new[] { (PlaceTool.Modes.Line, "Draw a line first"), (PlaceTool.Modes.Zone, "Draw a polygon first"), (PlaceTool.Modes.Grid, "Drag a box on the ground first") })
         {
             var v = Open(mode);
             v.In.PlaceShape();
@@ -209,15 +209,19 @@ public class PlaceToolMouseTests
     }
 
     [AvaloniaFact]
-    public void RAndCommaAndPeriodChangeTheLayout()
+    public void NDrawsANewLayoutAndRTurnsAQuarter()
     {
         var v = Open(PlaceTool.Modes.Brush);
         v.In.Moved(v.At(64, 64), v.Size);
         var before = v.In.Shown.Select(t => t.Position).ToList();
         Assert.NotEmpty(before);
-        Assert.True(v.In.Key(Avalonia.Input.Key.R, false, false));
+        Assert.True(v.In.Key(Avalonia.Input.Key.N, false, false));
         v.In.Moved(v.At(64, 64), v.Size);
         Assert.NotEqual(before, [.. v.In.Shown.Select(t => t.Position)]);
+        // R turns a quarter, as it turns the paste and the selection.
+        float rotation = v.Tool.Rotation;
+        Assert.True(v.In.Key(Avalonia.Input.Key.R, false, false));
+        Assert.Equal(90, ((v.Tool.Rotation - rotation) % 360 + 360) % 360, 3);
         Assert.False(v.In.Key(Avalonia.Input.Key.Q, false, false));
     }
 }

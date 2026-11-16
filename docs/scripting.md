@@ -128,7 +128,7 @@ The open area.
 | `Ground.Set(x, z, height)` | Puts the ground point there at that height. |
 | `Ground.Raise(x, z, metres)`, `Ground.Lower(x, z, metres)` | Moves it up or down by that much. |
 | `Ground.Shape(x, z, radius, (dx, dz) => metres)` | Adds the metres your function gives to every point within the radius of (x, z). `dx`, `dz`: metres from the middle; `MathF.Sqrt(dx * dx + dz * dz)` is the distance. A negative value digs. |
-| `Ground.Mountain(x, z, "Lone peak", height:, radius:, rough:, turn:, seed:)` | A mountain of the [Mountain](mountain.md) tool, its middle at (x, z): `"Lone peak"`, `"Ridge"`, `"Mountain range"`, `"Mesa"`, `"Volcano"` or `"Rolling hills"`. `height` and `radius` in metres, `rough` from 0 to 1, `turn` in degrees (a ridge's direction). Leave a value out for a random one in the preset's range; the same `seed` gives the same mountain. It reaches about 1.15 × its radius. Trees, rocks, ore, bushes and pickables it buries by more than 2 m are taken away; unlike the tool, it grows no trees on it afterwards. |
+| `Ground.Mountain(x, z, "Lone peak", height:, radius:, rough:, turn:, seed:)` | A mountain of the [Landform](landform.md#mountain) tool, its middle at (x, z): `"Lone peak"`, `"Ridge"`, `"Mountain range"`, `"Mesa"`, `"Volcano"` or `"Rolling hills"`. `height` and `radius` in metres, `rough` from 0 to 1, `turn` in degrees (a ridge's direction). Leave a value out for a random one in the preset's range; the same `seed` gives the same mountain. It reaches about 1.15 × its radius. Trees, rocks, ore, bushes and pickables it buries by more than 2 m are taken away; unlike the tool, it grows no trees on it afterwards. |
 | `Ground.Paint(x, z, "dirt")` | Paints the point: `"dirt"`, `"cultivated"`, `"paved"` or `"clear"` (back to the biome's own ground). A last number from 0 to 1 paints only partly (`0.5f`), blending with the paint there. |
 | `Ground.Biome(x, z)` | The biome there: `"Meadows"`, `"BlackForest"`, `"Swamp"`, `"Mountain"`, `"Plains"`, `"Ocean"`, `"Mistlands"`, `"AshLands"` or `"DeepNorth"` (`"None"` outside the area). |
 | `Ground.NoLimit` | `true` by default: changes go past the game's 8 m. `false`: they stop at it. Its value when the script ends counts. |
@@ -154,7 +154,7 @@ place are not in it, and those you take away are still listed.
 
 | Member | What it gives |
 |---|---|
-| `Noise.At(x, z, scale, seed)` | Smooth natural noise, from about -1 to 1, the kind Valheim's terrain and the Mountain tool are made of. `scale` is the size of its bumps in metres (default 32); another `seed` (default 0) gives another pattern. It repeats every 256 × `scale` metres. |
+| `Noise.At(x, z, scale, seed)` | Smooth natural noise, from about -1 to 1, the kind Valheim's terrain and the Landform tool's mountains are made of. `scale` is the size of its bumps in metres (default 32); another `seed` (default 0) gives another pattern. It repeats every 256 × `scale` metres. |
 | `Rnd.Seed = 42;` | Makes the random numbers below the same on every run (without it, each run differs). |
 | `Rnd.Next()` | A random number from 0 to 1. |
 | `Rnd.Range(min, max)` | A random number between `min` and `max`. |
@@ -352,4 +352,4 @@ every point is not needed.
 - [Let Claude shape or build](guides/connect-claude.md)
 - [Ground limits](concepts/ground-limits.md#no-limit): what happens to ground past 8 m when you save
 - [Safety](concepts/safety.md#scripts-and-claude): what a script can reach on your computer
-- [Mountain](mountain.md) and [Place](place.md): the tools a script's calls follow
+- [Landform](landform.md) and [Place](place.md): the tools a script's calls follow

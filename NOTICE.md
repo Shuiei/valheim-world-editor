@@ -15,14 +15,20 @@ These files hold data read from the game's files, which remains theirs; the MIT 
 cover them:
 
 - In `editor/tests/fixtures/`: `locations.json`, `terrain-modifiers.json`, `prefabs.json`, `pieces.json`,
-  `piece-support.json`, `piece-place.json`, `zdo-keys.json`, `cave-rocks.json`, `piece-cost.json`,
+  `piece-support.json`, `piece-place.json`, `zdo-keys.json`, `piece-cost.json`,
   `vegetation.json` and `dungeon-rooms.json`, some of the game's location rules, terrain modifiers,
-  prefabs, build pieces, pieces' support and placement, object data names, a cave roof rock's mesh,
+  prefabs, build pieces, pieces' support and placement, object data names,
   pieces' costs, vegetation rules and dungeons' rooms, for the tests (the editor reads them from the
   player's game; `editor/Core/WorldGen/` and the app hold none of the game's data).
 
 The game's textures and models are not in this repository or in the releases: the editor copies
 them from the player's own Valheim install, on their computer.
+
+## Fonts
+
+- `editor/Desktop/Assets/Fonts/AveriaSerifLibre-*.ttf`: Averia Serif Libre, the editor's text font, Copyright (c)
+  2011 Dan Sayers, under the [SIL Open Font License 1.1](editor/Desktop/Assets/Fonts/OFL.txt). Carried in the program;
+  not taken from the game's files.
 
 ## Third-party code
 

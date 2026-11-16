@@ -309,8 +309,8 @@ public sealed class MainWindowLangTests
         }
     }
 
-    // The brush's messages from the window (Stamp once, No limit, Alt + click to flatten or to set the mask's band) are
-    // shown in the language in use and read in English; Stamp once's step is named in it.
+    // The brush's messages from the window (No limit, Alt + click to flatten or to set the mask's band) and the Landform
+    // tool's picture are shown in the language in use and read in English; the picture's step is named in it.
     [AvaloniaFact]
     public void TheBrushMessagesAreShownInTheLanguageAndReadInEnglish()
     {
@@ -338,15 +338,13 @@ public sealed class MainWindowLangTests
         Said(@"^Mask: ground between 28\.0 and 32\.0 m\.$");
         w.MaskPanel.OnBox.IsChecked = false;
 
-        w.Tools.Choose(BrushTool.Raise);
-        w.Tools.ShapeBox.SelectedIndex = 4;
-        w.StampAt(64, 64);
-        Said(@"^Stamped [\d.]+ m up\. Ctrl\+Z undoes it\.$");
-        Assert.Equal(PseudoLang.Wrap("Stamp: " + PseudoLang.Wrap("Mountain")), s.UndoLabel);
+        w.PutPicture(64, 64);
+        Said(@"^Placed the picture, [\d.]+ m up\. Ctrl\+Z undoes it\.$");
+        Assert.Equal(PseudoLang.Wrap("Landform: " + PseudoLang.Wrap("Rough hill")), s.UndoLabel);
 
-        w.Tools.NoLimitBox.IsChecked = true;
+        w.MaskPanel.NoLimitBox.IsChecked = true;
         Said("^No limit: the ground tools go past the game's ±8 m\\.");
-        w.Tools.NoLimitBox.IsChecked = false;
+        w.MaskPanel.NoLimitBox.IsChecked = false;
         Said("^The ground tools keep to the game's ±8 m\\.$");
     }
 }

@@ -9,10 +9,12 @@ namespace TerrainEditor.Desktop;
 public sealed partial class BuildPanel
 {
     /// <summary>Builds the panel (hidden), on the Pieces tab.</summary>
-    /// <param name="input">The Place tool's input: its tool puts the pieces down, its turn step is set here.</param>
-    public BuildPanel(PlaceInput input)
+    /// <param name="input">The Place tool's input: its tool puts the pieces down, its turn and lift steps are set here.</param>
+    /// <param name="bar">The building bar the dock builds with (the window's, shared with Select and Paste); null: one of its own.</param>
+    public BuildPanel(PlaceInput input, BuildingBar? bar = null)
     {
         _input = input;
+        Bar = bar ?? new BuildingBar();
         foreach (int cat in Tabs.Where(c => c != Mods))
         {
             string name = TabName(cat);
@@ -27,27 +29,18 @@ public sealed partial class BuildPanel
             HammerTabs.Children.Add(b);
         }
         Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Render(); } };
-        foreach (var mode in Enum.GetValues<PlaceTool.SnapModes>())
-        {
-            var (label, tip) = mode switch
-            {
-                PlaceTool.SnapModes.Manual => ("build.snap.manual", "build.snapManual"),
-                PlaceTool.SnapModes.Free => ("build.snap.free", "build.snapFree"),
-                _ => ("build.snap.auto", "build.snapAuto"),
-            };
-            var b = new Button { Content = Lang.T(label), FontSize = 11.5, Padding = new Thickness(8, 2), Tag = mode };
-            b.Tip(tip);
-            b.Click += (_, _) => SetSnapMode(mode);
-            SnapModes.Children.Add(b);
-        }
         Tool.Changed += ShowSnapPoint;
-        GridBox.SelectionChanged += (_, _) => { Tool.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)]; Tool.Notify(); };
-        TurnBox.SelectionChanged += (_, _) => _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
-        GridBox.Tip("build.grid");
-        TurnBox.Tip("build.turn");
+        Tool.Changed += ShowLift;
+        Bar.Changed += TakeBar;
+        Bar.LiftResetAsked += () =>
+        {
+            if (Tool.Building)
+            {
+                _input.Lift(-Tool.HeightNudge);
+            }
+        };
         Search.Tip("build.search");
-        LiftReset.Tip("build.lift");
-        LiftReset.Click += (_, _) => { _input.Lift(-Tool.HeightNudge); ShowLift(); };
+        WireLay();
         ShowLift();
         PiecesTab.Click += (_, _) => ShowPieces(mods: false);
         ModsTab.Click += (_, _) => ShowPieces(mods: true);
@@ -57,17 +50,13 @@ public sealed partial class BuildPanel
         LibraryTab.Tip("build.libraryTab");
         CollapseButton.Tip("build.collapse");
         CollapseButton.Click += (_, _) => Fold(!Folded);
-        LibrarySearch.Tip("build.librarySearch");
+        Library.Models = () => Models();
         LibrarySearch.Width = 240;
         LibrarySearch.VerticalAlignment = VerticalAlignment.Center;
-        ImportButton.Tip("blueprints.import");
-        ImportButton.Click += (_, _) => ImportAsked?.Invoke();
         GenerateButton.Tip("build.generate");
         GenerateButton.Click += (_, _) => ShowDungeon();
         BackToLibrary.Tip("build.backToLibrary");
         BackToLibrary.Click += (_, _) => ShowLibrary(true);
-        LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { RenderLibrary(again: false); } };
-        Toolbar = BuildToolbar();
         _library = new Grid
         {
             RowDefinitions = new RowDefinitions("*,Auto"),
@@ -106,31 +95,48 @@ public sealed partial class BuildPanel
         Card.Margin = new Thickness(10, 0, 10, 58);
         Card.VerticalAlignment = VerticalAlignment.Bottom;
         Card.IsVisible = false;
-        // The toolbar comes and goes with the dock (in the Workshop's Build, building in a dungeon).
-        Card.PropertyChanged += (_, e) => { if (e.Property == Visual.IsVisibleProperty) { Toolbar.IsVisible = Card.IsVisible; } };
+        // The building bar comes and goes with the dock (the window shows it again for Select and Paste).
+        Card.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == Visual.IsVisibleProperty)
+            {
+                Bar.Show(Card.IsVisible ? BuildingBar.Uses.Build : BuildingBar.Uses.None, BuilderOffered());
+                ShowLift();
+            }
+        };
         Fold(false);
-        SetSnapMode(PlaceTool.SnapModes.Auto);
         ShowLibrary(false);
     }
 
-    /// <summary>Shows the lift Ctrl + wheel gives.</summary>
+    /// <summary>Whether the building bar offers Built by: in a world (the window says), not on the Workshop's plot.</summary>
+    internal Func<bool> BuilderOffered { get; set; } = () => false;
+
+    /// <summary>Shows the lift PgUp, PgDn and Ctrl + wheel give, while the dock has the building bar.</summary>
     public void ShowLift()
     {
-        LiftText.Text = Tool.HeightNudge == 0 ? Lang.T("build.liftNone") : $"{Tool.HeightNudge:+0.0#;-0.0#} m";
-        LiftReset.IsEnabled = Tool.HeightNudge != 0;
+        if (Bar.Use is BuildingBar.Uses.Build or BuildingBar.Uses.None)
+        {
+            Bar.ShowLift(Tool.HeightNudge);
+        }
     }
 
     /// <summary>
-    /// Into the Workshop: the Place tool set for building (one piece at a time, as it is, facing the
-    /// turn), woodwall (else the first piece) chosen when no single piece of the list is; none when the list is empty.
+    /// Building starts (the Build tool in a world, the Workshop, Build here in a dungeon): the Place tool set for
+    /// building (one piece at a time, as it is, facing the turn, or along the line last laid), woodwall (else the first
+    /// piece) chosen when no single piece of the list is; none when the list is empty.
     /// </summary>
     /// <param name="library">
-    /// The Library tab offered (the Workshop's plot); false building in a dungeon, where its blueprints cannot be added:
-    /// the pieces only.
+    /// The Library tab offered (the Workshop's plot); false in a world and building in a dungeon, where its blueprints
+    /// cannot be added: the pieces only.
     /// </param>
-    public void Start(bool library = true)
+    /// <param name="lines">
+    /// Lay offered (pieces along a line, a circle or a rectangle drawn on the ground); false building in a dungeon,
+    /// whose rooms are far above the ground a line is drawn on.
+    /// </param>
+    public void Start(bool library = true, bool lines = true)
     {
         LibraryTab.IsVisible = library;
+        LinesOffered = lines;
         if (!library)
         {
             ShowLibrary(false);
@@ -144,12 +150,14 @@ public sealed partial class BuildPanel
         t.SizeMin = t.SizeMax = 100;
         t.Elevation = PlaceTool.Elevations.Ground;
         t.SnapMode = SnapMode;
-        t.SnapTo = SnapMode != PlaceTool.SnapModes.Free;
+        t.SnapTo = Bar.Snaps;
         t.SnapPoint = 0;
         t.Fine = false;
         t.OnTop = false;
-        t.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)];
-        _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
+        t.GridStep = Bar.GridStep;
+        _input.TurnStep = Bar.TurnStep;
+        _input.LiftStep = Bar.LiftStep;
+        TakeLay();
         var pieces = Pieces;
         if (pieces.Count == 0)
         {

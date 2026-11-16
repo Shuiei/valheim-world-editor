@@ -54,7 +54,7 @@ public static partial class ScriptHost
         }
 
         /// <summary>
-        /// The trees and rocks the mountain buries go, as with the Mountain tool: those on the ground (raised already), not
+        /// The trees and rocks the mountain buries go, as with the Landform tool's mountains: those on the ground (raised already), not
         /// those high above it, in a dungeon.
         /// </summary>
         private void RemoveBuried(float x, float z, Func<float, float, float> shape)

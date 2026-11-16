@@ -17,6 +17,11 @@ public class GlViewWheelTests
     {
         var v = new GlView { CtrlWheel = (_, _) => true, Mode = ToolMode.Paste };
         Assert.True(v.WheelWanted(ctrlW: true, altW: false));
+        // The tools that lift: Paste, Select, and Place (Build is the Place tool with its dock).
+        v.Mode = ToolMode.Select;
+        Assert.True(v.WheelWanted(ctrlW: true, altW: false));
+        v.Mode = ToolMode.Place;
+        Assert.True(v.WheelWanted(ctrlW: true, altW: false));
         v.Mode = ToolMode.View;
         Assert.False(v.WheelWanted(ctrlW: true, altW: false));
         v.CtrlWheel = null;

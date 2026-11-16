@@ -90,31 +90,36 @@ line under the buttons counts both.*
 
 Pick zones anywhere in the world by what they are, and have the game generate them again: new trees, rocks, ore and
 dungeons, for example after a Valheim update, in places nobody built. To reset the zones under one selection, use the
-[Area](area.md#reset-zones) tool instead; step by step: [Generate zones again](guides/reset-zones.md).
+[Region](area.md#reset-zones) tool instead, which has the same two switches and marks the same way; step by step:
+[Generate zones again](guides/reset-zones.md).
 
 1. Open **Reset zones across the world**.
 2. Set the filter (below).
 3. Press **Show matching**. The first time, the editor reads every zone (a moment). Matching zones turn blue and a line
    says "N of M zones match (K objects in them)". From then on the map follows the filter as you change it.
 4. Press **Mark for reset…** and agree. The matching zones turn red.
-5. **Save to world** (offline) or **Apply live** does the reset. Until then, **Unmark all** cancels it.
+5. **Save to world** (offline) or **Apply live** does the reset. Until then, **Unmark all** cancels it, and **Unmark
+   matching** cancels it for the zones the filter matches now.
 
 > [!CAUTION]
 > **A reset cannot be undone once it is saved or applied.** Every object in the zone is removed but players'
-> tombstones and player-built pieces: trees, rocks, ore, ruins, dungeon entrances, items on the ground and creatures,
-> tamed animals too. Move tamed animals out first, and [back up the world](guides/back-up-a-world.md).
+> tombstones and, with **Keep my buildings** on, player-built pieces: trees, rocks, ore, ruins, dungeon entrances,
+> items on the ground and creatures, tamed animals too. Move tamed animals out first, and
+> [back up the world](guides/back-up-a-world.md).
 
 | Setting | What it does |
 |---|---|
 | Biome buttons (**Meadows** … **Ocean**) | Only zones whose middle is in one of the biomes switched on. None on: every biome. |
-| **No buildings in the zone or within N zone(s)** | Leaves out zones within N zones of player-built pieces, diagonals included (0 to 50; 2 at first). On at first. A zone that holds pieces is always left out, even with this off. |
+| **No buildings in the zone or within N zone(s)** | Leaves out zones within N zones of player-built pieces, diagonals included (0 to 50; 2 at first). On at first. With this off, a zone that holds pieces is still left out while **Keep my buildings** is on. |
 | **No ground edits** | Leaves out zones whose ground was changed (in game or in the editor). On at first. |
 | **Only zones the game generated** | Only zones a player has already been near. Off: also zones that only hold objects or ground edits from the editor. On at first. |
 | **From the centre … to … m** | Only zones at this distance from the world's middle. Empty: no limit (the world's edge is at 10,500 m). For example, reset only the outer rings. |
+| **Keep my buildings** | On at first: buildings are never reset from the map, and a zone that holds player-built pieces never matches. Off, and with **No buildings…** off too, zones with buildings match like any other and their buildings go with the rest; the question before marking says so. |
 | **Also undo their ground edits** | The reset also takes away the zones' ground changes, back to the seed's ground. Matters only when **No ground edits** is off. |
 | **Show matching** | Shades the matching zones blue and counts them and the objects in them. |
 | **Mark for reset…** | Marks every matching zone for reset (red), after asking. |
-| **Unmark all** | Cancels every zone reset that is marked, also those marked with the Area tool. |
+| **Unmark matching** | Cancels the reset of the matching zones that are marked; the other marks stay. |
+| **Unmark all** | Cancels every zone reset that is marked, also those marked with the Region tool. |
 
 The next time a player comes near a reset zone, the game generates it again from the seed, its location (ruin,
 dungeon, altar) included. Live, that happens at once where players are; after a live reset the editor reads the world

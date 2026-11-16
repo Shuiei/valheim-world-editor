@@ -12,24 +12,6 @@ namespace TerrainEditor.Desktop;
 public partial class MainWindow
 {
     /// <summary>
-    /// The cut: the building seen from a height (1 m steps, a half wall's height), to build inside it. 0..40 m above
-    /// the plot, 0 the ground; the right end (<see cref="CutOff"/>) is off.
-    /// </summary>
-    internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = CutOff, Value = CutOff, SmallChange = 1, LargeChange = 2, TickFrequency = 1, IsSnapToTickEnabled = true, Width = 120, VerticalAlignment = VerticalAlignment.Center };
-    /// <summary>
-    /// The cut slider's right end: no cut.
-    /// </summary>
-    internal const double CutOff = 40;
-    /// <summary>
-    /// The cut's height, or that it is off.
-    /// </summary>
-    internal TextBlock CutText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 74 };
-    /// <summary>
-    /// The cut's slider and text, shown in the Workshop.
-    /// </summary>
-    internal StackPanel CutBox { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false };
-
-    /// <summary>
     /// Turns the support check on or off; shown in the Workshop.
     /// </summary>
     internal CheckBox SupportBox { get; } = new CheckBox { Content = Lang.T("workshop.label.support"), FontSize = 12, IsVisible = false, IsChecked = true, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
@@ -81,44 +63,81 @@ public partial class MainWindow
     internal IReadOnlyList<int> LastSupportThings { get; private set; } = [];
 
     /// <summary>
-    /// Wires the cut slider, the support switch and the Blueprints panel's Edit to the Workshop.
+    /// Wires the support switch and the Blueprints panel's Edit to the Workshop.
     /// </summary>
     private void SetUpWorkshop()
     {
         SupportBox.Tip("workshop.support");
-        CutBox.Children.Add(CutSlider);
-        CutBox.Children.Add(CutText);
-        CutSlider.Tip("workshop.cut");
-        CutSlider.PropertyChanged += (_, e) =>
-        {
-            if (e.Property == Avalonia.Controls.Primitives.RangeBase.ValueProperty)
-            {
-                SetCut((float)CutSlider.Value);
-            }
-        };
-        CutText.Text = Lang.T("workshop.cutOff");
         SupportBox.IsCheckedChanged += (_, _) => RefreshSupport();
         Blueprints.EditAsked += async path => await OpenWorkshop(path);
     }
 
     /// <summary>
-    /// Wires the Build panel's Library (once the panel is made): open, add and import blueprints, and dungeons onto
-    /// the plot.
+    /// Wires the Build panel's Library (once the panel is made): the same blueprints and row buttons as the Blueprints
+    /// panel, done by it (details, .vbuild, delete, to Homestead, import), with Add and Open onto the plot, a new
+    /// blank plot, and dungeons onto the plot.
     /// </summary>
     private void SetUpLibrary()
     {
-        BuildPanel.Folder = () => Blueprints.Status.Folder;
-        BuildPanel.OpenAsked += async path => await OpenWorkshop(path);
-        BuildPanel.AddAsked += path => AddToWorkshop(path, null);
-        BuildPanel.Dungeon.PlotAsked += async (settings, result, add) => await PlotDungeon(settings, result, add);
-        BuildPanel.RescanAsked += () => _ = ScanModPieces(again: true);
-        BuildPanel.ImportAsked += async () =>
+        var library = BuildPanel.Library;
+        library.Folder = () => Blueprints.Status.Folder;
+        library.Older = () => Blueprints.Store;
+        library.OpenAsked += async b => await OpenWorkshop(b.Entry!.Path);
+        library.PlaceAsked += b => AddToWorkshop(b.Entry!.Path, null);
+        library.DetailsAsked += async b => await ChangeLibraryDetails(b.Entry!);
+        library.ExportAsked += b => Blueprints.Export(b.Id, "vbuild");
+        library.DeleteAsked += async b => await DeleteFromLibrary(b);
+        library.ToHomesteadAsked += b => { if (Blueprints.ToHomestead(b.Id) != null) { BuildPanel.RenderLibrary(); } };
+        library.NewButton.Click += async (_, _) => await OpenWorkshop(null);
+        library.ImportButton.Click += async (_, _) =>
         {
             if (await Blueprints.PickFile() is string file && Blueprints.Import(file) != null)
             {
                 BuildPanel.RenderLibrary();
             }
         };
+        BuildPanel.Dungeon.PlotAsked += async (settings, result, add) => await PlotDungeon(settings, result, add);
+        BuildPanel.RescanAsked += () => _ = ScanModPieces(again: true);
+    }
+
+    /// <summary>Whether a blueprint file is the one the plot's building was opened from, or last saved as.</summary>
+    private bool IsWorkshopFile(string path) =>
+        string.Equals(path, _workshopFile, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    /// <summary>
+    /// Details in the Workshop's Library: changed in the blueprint's file by the Blueprints panel. When it is the
+    /// blueprint on the plot, the Workshop takes its new name, details and file, so Save blueprint writes that file.
+    /// </summary>
+    internal async Task ChangeLibraryDetails(Homestead.Entry e)
+    {
+        bool onPlot = IsWorkshopFile(e.Path);
+        if (await Blueprints.ChangeDetails(e) is not var (details, path))
+        {
+            return;
+        }
+        if (onPlot)
+        {
+            _workshopName = details.Name;
+            WorkshopDetails = details;
+            _workshopFile = path;
+            TitleText.Text = Lang.T("workshop.title", details.Name);
+        }
+        BuildPanel.RenderLibrary();
+    }
+
+    /// <summary>
+    /// Delete in the Workshop's Library, by the Blueprints panel (it asks first). When the blueprint deleted is the one
+    /// on the plot, the building there is no longer saved as a blueprint.
+    /// </summary>
+    internal async Task DeleteFromLibrary(BlueprintLibrary.Item b)
+    {
+        await Blueprints.Delete(b.Id, b.Name);
+        if (b.Entry is { } e && IsWorkshopFile(e.Path) && !File.Exists(e.Path))
+        {
+            _workshopSaved = -1;
+            UpdateSaveBar();
+        }
+        BuildPanel.RenderLibrary();
     }
 
     /// <summary>

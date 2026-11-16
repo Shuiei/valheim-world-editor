@@ -121,13 +121,9 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal DungeonPanel DungeonPanel { get; }
     /// <summary>
-    /// The Shape tool's panel.
+    /// The Landform tool's panel: its Formula, Mountain and Picture kinds.
     /// </summary>
-    internal ShapePanel ShapePanel { get; } = new();
-    /// <summary>
-    /// The Mountain tool's panel.
-    /// </summary>
-    internal MountainPanel MountainPanel { get; } = new();
+    internal LandformPanel LandformPanel { get; } = new();
     /// <summary>
     /// The Workshop's Build panel (made once the models are there).
     /// </summary>
@@ -168,6 +164,11 @@ public sealed partial class MainWindow : Window
     /// The Place tool's mouse and keys over the 3D view.
     /// </summary>
     internal PlaceInput PlaceInput { get; }
+    /// <summary>
+    /// The view's cut (the status bar's slider): one for every 3D view, counted from the ground in a world, the plot
+    /// in the Workshop and its floor in a dungeon.
+    /// </summary>
+    internal ViewCut ViewCut { get; }
     /// <summary>
     /// The Place tool's panel.
     /// </summary>
@@ -221,7 +222,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// The busy veil over the window while something long runs.
     /// </summary>
-    private readonly Border _busy = new() { Background = new SolidColorBrush(Color.FromArgb(200, 10, 12, 16)), IsVisible = false };
+    private readonly Border _busy = new() { Background = new SolidColorBrush(Color.FromArgb(200, 12, 9, 7)), IsVisible = false };
     /// <summary>
     /// What the busy veil says is being done.
     /// </summary>

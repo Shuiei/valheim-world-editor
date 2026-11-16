@@ -13,17 +13,17 @@ public sealed partial class BuildPanel
     /// <summary>The piece tiles of the tab or search, with a heading where the station changes.</summary>
     internal WrapPanel Tiles { get; } = new() { ItemSpacing = 6, LineSpacing = 6 };
 
-    /// <summary>How the piece snaps: Auto (as the hammer), Manual (one snap point, Q and E) or Free; one button each, tagged with its mode.</summary>
-    internal StackPanel SnapModes { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>The building bar's snapping buttons: Auto (as the hammer), Manual (one snap point, Q and E) or Free.</summary>
+    internal StackPanel SnapModes => Bar.SnapModes;
 
     /// <summary>Snapping by hand: which of the piece's snap points meets the others ("Point 2 of 8").</summary>
-    internal TextBlock SnapPointText { get; } = new() { FontSize = 11.5, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
+    internal TextBlock SnapPointText => Bar.SnapPointText;
 
     /// <summary>The grid step for pieces not snapped (Off, 0.5, 1 or 2 m).</summary>
-    internal ComboBox GridBox { get; } = new() { ItemsSource = new[] { Lang.T("build.grid.off"), "0.5 m", "1 m", "2 m" }, SelectedIndex = 0, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    internal ComboBox GridBox => Bar.GridBox;
 
     /// <summary>The step , and . turn the piece by. The game turns the hammer's piece by 22.5° a step.</summary>
-    internal ComboBox TurnBox { get; } = new() { ItemsSource = new[] { "1°", "15°", "22.5°", "45°", "90°" }, SelectedIndex = 2, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    internal ComboBox TurnBox => Bar.TurnBox;
 
     /// <summary>The chosen piece's English name.</summary>
     internal TextBlock Chosen { get; } = new() { FontSize = 12, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
@@ -31,11 +31,11 @@ public sealed partial class BuildPanel
     /// <summary>What the chosen piece costs in game.</summary>
     internal TextBlock Cost { get; } = new() { FontSize = 11.5, Foreground = new SolidColorBrush(Color.FromRgb(214, 190, 140)), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
 
-    /// <summary>The lift Ctrl + wheel gives (see <see cref="ShowLift"/>).</summary>
-    internal TextBlock LiftText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>The lift the piece has (see <see cref="ShowLift"/>), on the building bar.</summary>
+    internal TextBlock LiftText => Bar.LiftText;
 
     /// <summary>Takes the lift back to none.</summary>
-    internal Button LiftReset { get; } = new() { Content = Lang.T("build.label.reset"), FontSize = 11, Padding = new Thickness(6, 1), VerticalAlignment = VerticalAlignment.Center };
+    internal Button LiftReset => Bar.LiftReset;
 
     /// <summary>The hammer's tabs (and the cultivator's and the serving tray's), on the Pieces tab: a button each, tagged with its tab.</summary>
     internal StackPanel HammerTabs { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center };
@@ -56,10 +56,10 @@ public sealed partial class BuildPanel
     internal StackPanel RecentRow { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>
-    /// The building settings, in a bar of their own beside the tool rail: snapping, the grid, the turn step and the lift.
-    /// Shown with the dock.
+    /// The building bar beside the tool rail: snapping, the grid, the steps, the lift and the builder. Shown with the
+    /// dock (and by the window with Select and Paste).
     /// </summary>
-    public Control Toolbar { get; }
+    public Control Toolbar => Bar.Card;
 
     /// <summary>The Mod pieces tab's word when no mod's piece is known.</summary>
     internal TextBlock NoMods { get; } = new() { Text = Lang.T("build.noModPieces"), FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, MaxWidth = 640, IsVisible = false };

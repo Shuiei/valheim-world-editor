@@ -49,22 +49,22 @@ public sealed partial class Scenes
             ("lower-smooth-restore", LowerSmoothRestore),
             ("naturalize", Naturalize),
             ("erode", Erode),
-            ("stamps", Stamps),
-            ("stamp-once", StampOnce),
             ("paint", Paint),
             ("limit-red", LimitRed),
             ("no-limit", NoLimit),
             ("concept-location-flattening", LocationFlattening),
+            // Landform (landform.md).
             ("shape", ShapeTool),
             ("shape-formula-error", ShapeFormulaError),
             ("mountain-preview", MountainPreview),
             ("mountain", Mountain),
+            ("landform-pictures", LandformPictures),
+            ("landform-picture", LandformPicture),
             // Path (path.md).
             ("path", PathTool),
             ("path-soft-edge", PathSoftEdge),
             ("path-ramp", PathRamp),
             ("path-river", PathRiver),
-            ("path-cave", PathCave),
             // Mask, Measure (masks.md, measure.md).
             ("mask", Mask),
             ("mask-warning", MaskWarning),
@@ -86,6 +86,7 @@ public sealed partial class Scenes
             ("plant-brush", PlantBrush),
             ("place-brush-before-after", PlaceBrushBeforeAfter),
             ("guide-forest-zone", GuideForestZone),
+            ("place-line", PlaceLine),
             ("plant-line", PlantLine),
             ("line-shapes", LineShapes),
             ("plant-grid", PlantGrid),
@@ -109,6 +110,8 @@ public sealed partial class Scenes
             // The Workshop and blueprints (workshop.md).
             ("blueprints", Blueprints),
             ("workshop", Workshop),
+            // Build (build.md).
+            ("build-world", BuildWorld),
             ("workshop-dungeon", WorkshopDungeon),
             ("support-stone-wood", SupportStoneWood),
             // Script (scripting.md).

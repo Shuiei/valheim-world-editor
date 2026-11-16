@@ -36,7 +36,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>reset_zones: zones of the open area marked for reset when saving (or unmarked), as one pending step.</summary>
     [McpServerTool(Name = "reset_zones", Title = "Give zones back to the world generator")]
-    [Description("Marks the 64 m zones a rectangle of the open area touches for reset, as the Area tool's Reset zones does: when the user saves (or applies live), every tree, rock, ruin and dungeon entrance in them is taken away (the players' buildings too unless keepBuildings), and Valheim generates them anew the next time a player comes near; with ground, their ground edits are undone at once. It throws away what is there: do it only when the user asked for it, and say which zones. cancel: true unmarks them instead. One pending step (Ctrl+Z, or cancel, takes it back).")]
+    [Description("Marks the 64 m zones a rectangle of the open area touches for reset, as the Region tool's Reset zones does: when the user saves (or applies live), every tree, rock, ruin and dungeon entrance in them is taken away (the players' buildings too unless keepBuildings), and Valheim generates them anew the next time a player comes near; with ground, their ground edits are undone at once. It throws away what is there: do it only when the user asked for it, and say which zones. cancel: true unmarks them instead. One pending step (Ctrl+Z, or cancel, takes it back).")]
     public Task<string> ResetZones(
         [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,

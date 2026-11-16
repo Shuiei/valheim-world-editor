@@ -15,7 +15,7 @@ public sealed partial class GlView
     /// <param name="dt">The seconds since the last frame.</param>
     private void UpdateBrush(WorldScene s, Matrix4x4 vp, float dt)
     {
-        _hover = (Tool != null || Mode is ToolMode.Shape or ToolMode.Mountain or ToolMode.Path || Mode == ToolMode.Place && Place?.Tool.Mode == PlaceTool.Modes.Brush) && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
+        _hover = (Tool != null || Mode is ToolMode.Landform or ToolMode.Path || Mode == ToolMode.Place && Place?.Tool.Mode == PlaceTool.Modes.Brush) && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
         if (_brushDown && _hover is { } hv)
         {
             s.Session?.StrokeStep(hv.X, hv.Z, dt);

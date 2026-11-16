@@ -24,7 +24,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>regrow_nature: what the game grows in a rectangle (Growth), of the kinds asked, where nothing stands.</summary>
     [McpServerTool(Name = "regrow_nature", Title = "Regrow nature")]
-    [Description("Regrows nature over a rectangle of the open area of a world, as the Area tool's Regrow nature does: the trees, rocks, bushes and pickables the game itself grows there from the world's seed (its kinds, sizes and places, for the biome), left out where something stands (anything within 1 m, the same kind within 3 m, buildings within 4 m). Use it after clearing or reshaping ground to make it look untouched. Up to 16 zones (256 x 256 m) at once. One pending step.")]
+    [Description("Regrows nature over a rectangle of the open area of a world, as the Region tool's Regrow nature does: the trees, rocks, bushes and pickables the game itself grows there from the world's seed (its kinds, sizes and places, for the biome), left out where something stands (anything within 1 m, the same kind within 3 m, buildings within 4 m). Use it after clearing or reshaping ground to make it look untouched. Up to 16 zones (256 x 256 m) at once. One pending step.")]
     public async Task<string> RegrowNature(
         [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,

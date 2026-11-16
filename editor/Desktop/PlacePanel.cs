@@ -108,7 +108,8 @@ public sealed partial class PlacePanel
         _elevRow = Row(Lang.T("common.height"), ElevBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _attachRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { BesideButton, OnTopButton } };
         _pieceBox = new StackPanel { Spacing = 4, Children = { SnapToBox, _attachRow } };
-        _brushRows = new StackPanel { Spacing = 4, Children = { Row(Lang.T("place.label.brushSize"), SizeSlider, _sizeV), SingleBox } };
+        _rateRow = Row(Lang.T("place.label.rate"), RateSlider, _rateV);
+        _brushRows = new StackPanel { Spacing = 4, Children = { Row(Lang.T("place.label.brushSize"), SizeSlider, _sizeV), _rateRow, SingleBox } };
         _patchRow = Row(Lang.T("place.label.patchSize"), PatchSlider, _paV);
         _scatterRows = new StackPanel { Spacing = 4, Children = { Row(Lang.T("place.label.density"), DensitySlider, _densV), Row(Lang.T("place.label.spacing"), SpacingSlider, _spV), Row(Lang.T("place.label.clumping"), ClumpSlider, _clV), _patchRow } };
         _facingRows = new StackPanel
@@ -145,7 +146,7 @@ public sealed partial class PlacePanel
                 Section(Lang.T("place.head.preset"), PresetBox, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SavePresetButton, DeletePresetButton } }),
                 Section(
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Head(Lang.T("place.head.selected")), _mixCount } },
-                    new Border { Background = Ui.Panel2, BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(7), Padding = new Thickness(8, 4), Child = Mix },
+                    new Border { Background = Ui.Panel2, BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = Ui.ControlRadius, Padding = new Thickness(8, 4), Child = Mix },
                     Note,
                     KindsButton),
                 Section(Lang.T("common.objects"), Row(Lang.T("place.label.elevation"), ElevationBox), _elevRow, _pieceBox, GrowBox, _facingRows),
@@ -178,14 +179,16 @@ public sealed partial class PlacePanel
         if (Memory.Chosen.Count > 0)
         {
             t.Chosen.Clear();
-            t.Chosen.AddRange(Memory.Chosen.Where(n => !NotOffered(n)));
+            t.Chosen.AddRange(Memory.Chosen.Where(n => !NotOffered(n) && !BuiltWithBuild(n)));
         }
         foreach (var (k, w) in Memory.Weights)
         {
             t.Weights[k] = w;
         }
+        t.Rate = Math.Clamp(Memory.Rate, 0.05f, 1);
         t.AutoSnap();
-        input.Placed += names => { Memory.NoteRecent(names); RenderChips(); };
+        // (What the Build dock puts down is its own to remember: BuildPanel.Recent.)
+        input.Placed += names => { if (!t.Building) { Memory.NoteRecent(names); RenderChips(); } };
     }
     /// <summary>The tips of the placing controls.</summary>
     private void TipPlaceControls()

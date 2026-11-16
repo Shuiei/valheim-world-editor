@@ -36,9 +36,6 @@ public sealed partial class SelectPanel
     /// <summary>Puts each object on the ground when moving.</summary>
     internal CheckBox GroundBox { get; }
 
-    /// <summary>Snaps moved pieces to other pieces.</summary>
-    internal CheckBox SnapBox { get; }
-
     /// <summary>
     /// What a drag on empty ground draws: a rectangle on the screen (what is seen inside it) or an outline on the
     /// ground (everything above it).

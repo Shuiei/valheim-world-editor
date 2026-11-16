@@ -41,9 +41,14 @@ public sealed partial class MapPage
     /// </summary>
     internal TextBox RMaxBox { get; } = new() { PlaceholderText = "10500", FontSize = 12, Width = 70 };
     /// <summary>
-    /// Resetting also undoes the zones' ground edits.
+    /// Resetting keeps the players' buildings (the Region tool's Reset zones has the same switch). On, zones holding
+    /// buildings never match; off, they match like any other and their buildings go with the rest.
     /// </summary>
-    internal CheckBox GroundBox { get; } = new() { Content = Lang.T("map.label.ground"), FontSize = 12 };
+    internal CheckBox KeepBox { get; } = new() { Content = Lang.T("reset.label.keepBuildings"), IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Resetting also undoes the zones' ground edits (the Region tool's Reset zones has the same switch).
+    /// </summary>
+    internal CheckBox GroundBox { get; } = new() { Content = Lang.T("reset.label.ground"), FontSize = 12 };
     /// <summary>
     /// Shows the zones that match the filter on the map.
     /// </summary>
@@ -53,9 +58,13 @@ public sealed partial class MapPage
     /// </summary>
     internal Button MarkButton { get; } = new Button { Content = Lang.T("map.label.mark"), FontSize = 12 }.Classed("primary");
     /// <summary>
+    /// Unmarks the matching zones that are marked for reset.
+    /// </summary>
+    internal Button UnmarkMatchButton { get; } = new() { Content = Lang.T("map.label.unmarkMatch"), FontSize = 12 };
+    /// <summary>
     /// Unmarks every zone marked for reset.
     /// </summary>
-    internal Button UnmarkButton { get; } = new() { Content = Lang.T("map.label.unmark"), FontSize = 12 };
+    internal Button UnmarkButton { get; } = new() { Content = Lang.T("reset.label.unmarkAll"), FontSize = 12 };
     /// <summary>
     /// How many zones match, and how many are marked.
     /// </summary>

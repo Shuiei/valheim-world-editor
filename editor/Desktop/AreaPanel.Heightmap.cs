@@ -4,14 +4,15 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class AreaPanel
 {
-    // ---- Heightmaps: the area's ground as a 16-bit picture (with its lowest and highest heights), and a
-    // picture back into the ground, fitted to the selection or the whole area.
+    // ---- Heightmaps: the ground as a 16-bit picture (with its lowest and highest heights), and a picture back
+    // into the ground; both the selection's box, or the whole area without a selection.
     /// <summary>Where Export writes (null: the heightmaps folder in the app's data folder). Tests use their own.</summary>
     internal string? HeightmapFolder { get; set; }
 
     /// <summary>
-    /// Writes the whole area's ground as a 16-bit PNG, with its lowest and highest heights in it, named after the
-    /// world and its zones.
+    /// Writes the ground as a 16-bit PNG, with its lowest and highest heights in it, named after the world and its
+    /// zones: the ground of the selection's own box, the one an import fits a picture to (and named after that box
+    /// too), or of the whole area without a selection.
     /// </summary>
     /// <param name="folder">Where to write it; null: <see cref="HeightmapFolder"/>.</param>
     /// <returns>The message for the status bar, or null when no world is open.</returns>
@@ -22,10 +23,25 @@ public sealed partial class AreaPanel
             return null;
         }
         int x1 = s.X0 + s.ZonesX - 1, z1 = s.Z0 + s.ZonesZ - 1;
-        byte[] png = Heightmaps.Encode(s.W, s.H, s.Heights, $"{world.Name} zones {s.X0},{s.Z0} to {x1},{z1}", out float min, out float max);
+        var box = Area.GridBox(s.W, s.H);
+        var (bx0, bz0, bx1, bz1) = box ?? (0, 0, s.W - 1, s.H - 1);
+        int w = bx1 - bx0 + 1, h = bz1 - bz0 + 1;
+        float[] heights = s.Heights;
+        if (box != null)
+        {
+            heights = new float[w * h];
+            for (int row = 0; row < h; row++)
+            {
+                Array.Copy(s.Heights, (bz0 + row) * s.W + bx0, heights, row * w, w);
+            }
+        }
+        // Where the box is in the area, for a selection: two selections of one area do not write over each other.
+        string part = box == null ? "" : $"_at_{bx0}_{bz0}_{w}x{h}";
+        string named = $"{world.Name} zones {s.X0},{s.Z0} to {x1},{z1}" + (box == null ? "" : $", {w} x {h} m from {bx0},{bz0}");
+        byte[] png = Heightmaps.Encode(w, h, heights, named, out float min, out float max);
         string dir = folder ?? HeightmapFolder ?? Path.Combine(AppSettings.DataDir, "heightmaps");
         string safe = string.Concat(world.Name.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_'));
-        string path = Path.Combine(dir, $"{safe}_{s.X0}_{s.Z0}_{x1}_{z1}.png");
+        string path = Path.Combine(dir, $"{safe}_{s.X0}_{s.Z0}_{x1}_{z1}{part}.png");
         try
         {
             Directory.CreateDirectory(dir);
@@ -36,7 +52,7 @@ public sealed partial class AreaPanel
             Log.Caught(ex, "writing the heightmap picture");
             return Said.Of("area.msg.heightmapFailed", path, ex.Message);
         }
-        return Said.Of("area.msg.heightmapWritten", path, s.W, s.H, min, max);
+        return box == null ? Said.Of("area.msg.heightmapWritten", path, w, h, min, max) : Said.Of("area.msg.heightmapWrittenSelection", path, w, h, min, max);
     }
 
     /// <summary>

@@ -17,7 +17,7 @@ SDK.
 | `editor/Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `editor/Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `editor/Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `editor/Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening; no game data (what the editor needs of the game, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, cave rocks, piece costs, vegetation rules and dungeon rooms, is read from the player's Valheim: `editor/Core/App/GameData.cs`). |
+| `editor/Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening; no game data (what the editor needs of the game, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, piece costs, vegetation rules and dungeon rooms, is read from the player's Valheim: `editor/Core/App/GameData.cs`). |
 | `editor/plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `editor/tests/Core.Tests/`, `editor/tests/Desktop.Tests/` | Core's tests and the app's (xUnit v3, the app's in Avalonia's headless mode), laid out like `editor/Core/` and `editor/Desktop/`, see [Tests](#tests). `editor/tests/Support/` holds the helpers both share, `editor/tests/fixtures/` the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
@@ -50,7 +50,7 @@ The app reads one command per line on its input and answers each with one line, 
 | `world <folder>` / `area <zx> <zz> <size>` / `map` | Open a world (its map), an area in the 3D editor, back to the map. |
 | `camera <x> <z> <yaw°> <pitch°> <distance>` | The 3D camera on world x, z. |
 | `mouse <down\|move\|up> <x> <z> [button] [mods]`, `wheel`, `key <name> [mods]` | Real pointer and key events at world positions. |
-| `click <text>` / `choose <text>` | The visible button or switch with that label / the entry so named in a visible drop-down or list box (also in dialogs). |
+| `click <text>` / `choose <text>` | The visible button or switch with that label (a piece's tile in the Build dock by its prefab name too) / the entry so named in a visible drop-down or list box (also in dialogs). |
 | `stroke`, `mapview`, `search`, `hit`, `zones`, `look` | A brush stroke, the map's place, its search (and a result picked) and zone filter, the View look switches. |
 | `set <label>\|<value>`, `type <hint>\|<text>`, `panel`, `message [text]` | A slider, box or list beside a label; a text box by its placeholder; the right-hand panel shown; the status bar's message (none: cleared). |
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
@@ -323,8 +323,6 @@ time and after a game update). The kinds:
   colliders as their triangles: each mesh read once, its vertices and triangles kept, not its fields).
 - `zdo-keys`: the names of object data keys for the object inspector, from the string literals of
   `assembly_valheim.dll` (the save only keeps their hashes).
-- `cave-rocks`: the meshes of the rocks the Path tool's Cave hangs as its roof, from the two prefabs'
-  bundle only (found with the game files' index; under a second).
 - `piece-cost`: each piece's English name, station and resources, for the blueprint library and the
   Workshop's Build, found from each `Piece` script up to its prefab, with the English texts of
   `resources.assets`. Its test copy keeps the pieces it has and the items they take.

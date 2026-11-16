@@ -4,7 +4,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// What the real editor (OpenGL) draws beyond the usual view: walking and flying, the Mountain tool's preview, the
+/// What the real editor (OpenGL) draws beyond the usual view: walking and flying, the Landform tool's mountain preview, the
 /// Path tool's next stretch, the Place tool's line and zone, the box of the object under the pointer, and the Dungeon
 /// tool over a dungeon of the game's rooms generated into the test world.
 /// </summary>
@@ -61,7 +61,7 @@ public sealed class GlViewDrawingTests(EditorProcess editor) : WorldsFolder("vwe
         editor.Send("key F");
         editor.Send("wait 200");
         editor.Send("key F");
-        Do("camera 0 0 0 60 120", "click Mountain", "mouse move 0 0");
+        Do("camera 0 0 0 60 120", "click Landform", "choose Mountain", "mouse move 0 0");
         Picture("mountain");
         // The Path tool: the stretch a click would add, from the last point to the pointer.
         Do("key P", "mouse down -30 0", "mouse up -30 0", "mouse move 0 10");
@@ -71,8 +71,8 @@ public sealed class GlViewDrawingTests(EditorProcess editor) : WorldsFolder("vwe
         Do("key T", "click Line", "mouse down -10 0", "mouse up -10 0", "mouse down 10 0", "mouse up 10 0", "mouse move 15 5");
         Picture("place-line");
         editor.Send("key Enter");
-        // A zone: its corners and its outline.
-        Do("click Zone", "mouse down -10 -10", "mouse up -10 -10", "mouse down 10 -10", "mouse up 10 -10", "mouse down 0 10", "mouse up 0 10", "mouse move 2 2");
+        // A polygon: its corners and its outline.
+        Do("click Polygon", "mouse down -10 -10", "mouse up -10 -10", "mouse down 10 -10", "mouse up 10 -10", "mouse down 0 10", "mouse up 0 10", "mouse move 2 2");
         Picture("place-zone");
         // Select: a click on nothing clears the selection, then the object at the line's start is pointed at.
         Do("key Escape", "key Escape", "key E", "mouse down 40 40", "mouse up 40 40", "mouse move -10 0");

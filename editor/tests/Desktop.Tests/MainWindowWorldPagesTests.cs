@@ -37,7 +37,7 @@ public class MainWindowWorldPagesTests
         await w.Save();
         await w.DiscardHere();
         await w.ResizeArea(3);
-        w.StampAt(10, 10);
+        w.PutPicture(10, 10);
         w.ApplyPath();
         w.Claim();
         w.Inspect();

@@ -11,8 +11,8 @@ Valheim update's new content in places nobody built.
 2. Back up the world.
 3. Open the world. Its [map](../map.md) opens.
 4. In the side panel, open **Reset zones across the world**.
-5. Set the filter: the biomes to reset, and keep **No buildings in the zone or within N zone(s)** on so that bases and
-   the land around them are left alone. Use **From the centre … to … m** to reset only part of the world.
+5. Set the filter: the biomes to reset, and keep **No buildings in the zone or within N zone(s)** and **Keep my
+   buildings** on so that bases and the land around them are left alone. Use **From the centre … to … m** to reset only part of the world.
 6. Press **Show matching**. The first time, the editor reads every zone. Matching zones turn blue, and a line says how
    many match and how many objects they hold.
 7. Change the filter until the blue zones are the ones you want.
@@ -22,8 +22,9 @@ Valheim update's new content in places nobody built.
 ![Reset zones across the world: matching zones blue, marked zones red](../images/map-reset.jpg)
 *Blue zones match the filter; red zones are marked for reset.*
 
-To reset only the zones under one place, use the [Area](../area.md#reset-zones) tool's **Reset zones** action instead:
-draw a box over them and press **Reset zones… (Enter)**.
+To reset only the zones under one place, use the [Region](../area.md#reset-zones) tool instead: draw a box over them,
+choose **Recover**, then **Reset zones** in **Action**, and press **Reset zones… (Enter)**. It has the same **Keep my
+buildings** and **Also undo their ground edits** switches as the map.
 
 ## Check it worked
 
@@ -32,8 +33,9 @@ draw a box over them and press **Reset zones… (Enter)**.
 
 ## Undo it
 
-- **Before saving:** **Unmark all** cancels every marked reset (one marked with the Area tool's **Reset zones**:
-  `Ctrl+Z` too).
+- **Before saving:** **Unmark all** (on the map or in the Region tool) cancels every marked reset, and **Unmark
+  matching** only those of the zones the filter matches (one marked with the Region tool's **Reset zones**: `Ctrl+Z`
+  too).
 - **After saving:** it cannot be undone in the editor. Put back the world backup from step 2 (see
   [Back up a world before editing](back-up-a-world.md#undo-it)).
 

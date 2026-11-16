@@ -87,8 +87,6 @@ public sealed partial class SelectPanel
         InvertButton.Click += (_, _) => tool.Invert();
         GroundBox = new CheckBox { Content = Lang.T("select.label.ground"), IsChecked = tool.OnGround, FontSize = 12 }.Tip("select.ground");
         GroundBox.IsCheckedChanged += (_, _) => tool.OnGround = GroundBox.IsChecked == true;
-        SnapBox = new CheckBox { Content = Lang.T("select.label.snap"), IsChecked = tool.SnapToPieces, FontSize = 12 }.Tip("select.snap");
-        SnapBox.IsCheckedChanged += (_, _) => tool.SnapToPieces = SnapBox.IsChecked == true;
         ZoneBox = new ComboBox { ItemsSource = new[] { Lang.T("select.zone.screen"), Lang.T("select.zone.ground") }, SelectedIndex = tool.ZoneOnGround ? 1 : 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch }.Tip("select.zone");
         ZoneBox.SelectionChanged += (_, _) => tool.ZoneOnGround = ZoneBox.SelectedIndex == 1;
         ThroughBox = new CheckBox { Content = Lang.T("select.label.through"), IsChecked = tool.SelectThrough, FontSize = 12 }.Tip("select.through");
@@ -157,7 +155,6 @@ public sealed partial class SelectPanel
                     ThroughBox,
                     new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6, Children = { new TextBlock { Text = Lang.T("select.label.picks"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PickBox, 1) } },
                     GroundBox,
-                    SnapBox,
                     new TextBlock { Text = Lang.T("select.head.saved"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
                     new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { SavedBox, Ui.Col(KeepButton, 1) } },
                     _savedRow,

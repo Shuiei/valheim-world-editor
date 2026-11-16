@@ -68,24 +68,30 @@ public static partial class Erosion
     public static float Talus(float degrees) => MathF.Tan(degrees * MathF.PI / 180);
 
     /// <summary>
-    /// The Area tool's Erode: both kinds over the whole selection, in one go (thermal, rain, then thermal again to
-    /// settle).
+    /// Erode in one go, as the Area and Path tools apply it: both kinds over a whole region (thermal, rain, then
+    /// thermal again to settle).
     /// </summary>
     /// <param name="g">The ground.</param>
-    /// <param name="a">The selection and how much each of its points may change.</param>
+    /// <param name="cells">The region's grid points (index z * width + x) and how much each may change, 0 to 1.</param>
+    /// <param name="box">The grid box round the region: west, south, east, north (included).</param>
     /// <param name="restAngle">The resting angle in degrees.</param>
     /// <param name="rand">Where the drops fall.</param>
     /// <param name="touched">Gets the indices of the points changed.</param>
     /// <returns>
-    /// The grid rectangle worked on (the selection and one point around it), and whether a point reached the game's
-    /// ±8 m limit.
+    /// The grid rectangle worked on (the box and one point around it), and whether a point reached the game's ±8 m
+    /// limit.
     /// </returns>
-    public static ((int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Area(Ground g, AreaTool.Weights a, float restAngle, Random rand, ICollection<int> touched)
+    public static ((int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Region(Ground g, IReadOnlyCollection<(int G, float W)> cells, (int X0, int Z0, int X1, int Z1) box,
+        float restAngle, Random rand, ICollection<int> touched)
     {
-        var weights = a.Cells.ToDictionary(c => c.G, c => c.W);
+        var weights = new Dictionary<int, float>(cells.Count);
+        foreach (var (p, w) in cells)
+        {
+            weights[p] = w;
+        }
         bool clamped = false;
         float talus = Talus(restAngle);
-        var rect = Run(g, a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1, (_, _, p) => weights.GetValueOrDefault(p), (h, wt, w, d) =>
+        var rect = Run(g, box.X0 - 1, box.Z0 - 1, box.X1 + 1, box.Z1 + 1, (_, _, p) => weights.GetValueOrDefault(p), (h, wt, w, d) =>
         {
             Thermal(h, wt, w, d, talus, 0.8f, 12);
             Hydraulic(h, wt, w, d, (int)MathF.Ceiling(w * d * 0.6f), 1, rand);

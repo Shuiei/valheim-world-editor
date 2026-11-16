@@ -13,7 +13,9 @@ namespace TerrainEditor.Desktop;
 /// kept in the editor's own format before (the data folder's blueprints/) are still listed, and can be
 /// moved to Homestead. Other mods' files (PlanBuild .blueprint, .vbuild) are imported, and written.
 /// Each blueprint shows its picture (BuildingPicture), what it costs to build in game (PieceCost), its
-/// description and tags; the search looks through all of them.
+/// description and tags; the search looks through all of them. The list and its rows are the library's
+/// (<see cref="BlueprintLibrary"/>), the same as in the Workshop's Build dock; above it the clipboard, pasted or saved
+/// as a blueprint from here.
 /// </summary>
 public sealed partial class BlueprintsPanel
 {
@@ -26,23 +28,38 @@ public sealed partial class BlueprintsPanel
     /// <summary>Whether Homestead is installed, and its blueprint folder (tests give their own).</summary>
     internal Func<Homestead.Status> FindHomestead { get; set; } = () => Homestead.Find(AppSettings.Load());
 
+    /// <summary>A row's width in the panel, in pixels: one row a line.</summary>
+    internal const double RowWidth = 332;
+
+    /// <summary>The list, its search and its rows' buttons: the same library as the Workshop's.</summary>
+    internal BlueprintLibrary Library { get; } = new(BlueprintLibrary.Places.World, RowWidth);
+
     /// <summary>Filters the list: every word somewhere in a blueprint's name, creator, description or tags.</summary>
-    internal TextBox Search { get; } = SearchBox();
+    internal TextBox Search => Library.Search;
 
     /// <summary>Imports another mod's blueprint file (see <see cref="Import"/>).</summary>
-    internal Button ImportButton { get; } = ImportFileButton();
+    internal Button ImportButton => Library.ImportButton;
 
     /// <summary>Opens an empty Workshop to build a new blueprint in.</summary>
-    internal Button NewButton { get; } = new() { Content = Lang.T("blueprints.label.new"), FontSize = 12 };
+    internal Button NewButton => Library.NewButton;
 
-    /// <summary>Edit (a blueprint file) or New in Workshop (null): the window opens the Workshop.</summary>
+    /// <summary>Open (a blueprint file) or New blueprint (null): the window opens the Workshop.</summary>
     public event Action<string?>? EditAsked;
+
+    /// <summary>What the clipboard holds (copied with the Area tool or Ctrl+C in Select), or that it is empty.</summary>
+    internal TextBlock ClipInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+
+    /// <summary>Pastes the clipboard (as Ctrl+V does); off while it is empty.</summary>
+    internal Button PasteClipboardButton { get; } = new() { Content = Lang.T("paste.label.paste"), FontSize = 11, Padding = new Thickness(6, 1) };
+
+    /// <summary>Saves the clipboard as a blueprint (see <see cref="Save"/>); off while it is empty.</summary>
+    internal Button SaveClipboardButton { get; } = new() { Content = Lang.T("blueprints.label.saveClipboard"), FontSize = 11, Padding = new Thickness(6, 1) };
 
     /// <summary>Opens Homestead's download page; shown only while it is not installed.</summary>
     internal Button GetHomesteadButton { get; } = new() { Content = Lang.T("blueprints.label.getHomestead"), FontSize = 11, Padding = new Thickness(6, 1) };
 
     /// <summary>The blueprint rows.</summary>
-    internal StackPanel List { get; } = new() { Spacing = 4 };
+    internal WrapPanel List => Library.List;
 
     /// <summary>Whether Homestead is installed, and what that means for the blueprints.</summary>
     internal TextBlock Banner { get; } = new() { FontSize = 11.5, TextWrapping = TextWrapping.Wrap };
@@ -85,13 +102,7 @@ public sealed partial class BlueprintsPanel
     internal Func<Uri, Task<bool>> OpenUrl { get; set; } = _ => Task.FromResult(false);
 
     /// <summary>Homestead's blueprints have ids "hs:&lt;file name&gt;"; the editor's older ones their store id.</summary>
-    private const string HomesteadId = "hs:";
-
-    /// <summary>The editor's older blueprints, as last listed.</summary>
-    private List<BlueprintStore.Summary> _older = [];
-
-    /// <summary>Homestead's blueprints, as last listed.</summary>
-    private List<Homestead.Entry> _homestead = [];
+    private const string HomesteadId = BlueprintLibrary.HomesteadId;
 
     /// <summary>Homestead as last looked for (on refresh and before saving or importing; first when needed).</summary>
     internal Homestead.Status Status { get => field ??= FindHomestead(); private set; }

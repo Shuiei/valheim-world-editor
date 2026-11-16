@@ -50,15 +50,15 @@ public sealed partial class Scenes
     /// </summary>
     private static readonly Retyped[] ClaudeSecrets =
     [
-        new(new SKRectI(554, 333, 925, 350), 554.6f, 346, "<token>\""),
-        new(new SKRectI(511, 457, 900, 474), 511.4f, 470, "\"/home/you/ValheimWorldEditor/ValheimWorldEditor\","),
+        new(new SKRectI(554, 294, 925, 311), 554.6f, 307, "<token>\""),
+        new(new SKRectI(511, 415, 900, 432), 511.4f, 428, "\"/home/you/ValheimWorldEditor/ValheimWorldEditor\","),
     ];
 
     /// <summary>The same in the shot of Settings' end, Claude on (both boxes are higher there).</summary>
     private static readonly Retyped[] EndSecrets =
     [
-        new(new SKRectI(554, 114, 925, 131), 554.6f, 127, "<token>\""),
-        new(new SKRectI(511, 238, 900, 255), 511.4f, 251, "\"/home/you/ValheimWorldEditor/ValheimWorldEditor\","),
+        new(new SKRectI(554, 147, 925, 164), 554.6f, 160, "<token>\""),
+        new(new SKRectI(511, 268, 900, 285), 511.4f, 281, "\"/home/you/ValheimWorldEditor/ValheimWorldEditor\","),
     ];
 
     /// <summary>A text written over a shot.</summary>

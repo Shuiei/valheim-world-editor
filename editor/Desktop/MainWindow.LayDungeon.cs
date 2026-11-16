@@ -32,12 +32,16 @@ public partial class MainWindow
             AddPortalPair(scene, lay, d);
         }
         session.Commit(d.Step, null, [], lay.Adds);
-        LastPlaced = new PlacedDungeon(at, lay.Arrival, lay.Arrival.Y + 3.5f, lay.DungeonAt, session.UndoList[^1]);
+        LastPlaced = new PlacedDungeon(at, lay.Arrival, lay.DungeonAt, session.UndoList[^1]);
         Msg(d.Done(lay.Adds.Count) + way
             + (lay.Skipped > 0 ? Said.Of("dungeon.msg.skipped", lay.Skipped) : Said.Empty) + Said.Of("dungeon.msg.goUp"));
         // The view stays on the ground, looking at the entrance.
         View.Orbit(at.X, at.Z, camYaw * 180f / MathF.PI, 55, 40);
-        View.CutY = null;
+        if (ViewCut.From == ViewCut.Level.Dungeon)
+        {
+            // Out of the dungeon the view was in: its roofs' cut does not go on over the new one's entrance.
+            ViewCut.Off();
+        }
         UpdateSaveBar();
     }
 

@@ -51,11 +51,11 @@ public sealed partial class MainWindow
     /// </summary>
     internal Border LocationNote { get; private set; } = null!;
     /// <summary>The live players to go to, by name.</summary>
-    internal ComboBox PlayerBox { get; } = new() { FontSize = 12, MinWidth = 130 };
+    internal ComboBox PlayerBox { get; } = new() { FontSize = 12, MinWidth = 110, VerticalAlignment = VerticalAlignment.Center };
     /// <summary>Goes to the player chosen in <c>PlayerBox</c>.</summary>
-    internal Button GoPlayerButton { get; } = new Button { Content = Lang.T("live.label.go"), FontSize = 12 };
-    /// <summary>The View panel's players section; shown for live worlds only.</summary>
-    internal StackPanel PlayersRow { get; } = new() { Spacing = 2, IsVisible = false };
+    internal Button GoPlayerButton { get; } = new Button { Content = Lang.T("live.label.go"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>Go to a player, in the top bar beside the LIVE badge: the player and Go; shown for live worlds only.</summary>
+    internal StackPanel PlayersRow { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 4, IsVisible = false, VerticalAlignment = VerticalAlignment.Center };
     /// <summary>The players' names over the view (<c>PlaceLabels</c>).</summary>
     internal Canvas PlayerLabels { get; } = new() { IsHitTestVisible = false };
     /// <summary>The live players: name and world position, as the game last said.</summary>

@@ -50,7 +50,7 @@ public sealed class PastePanelLangTests
         }
 
         w.StartPaste();
-        Check("Copy an area first (Area tool, Ctrl+C).");
+        Check("Copy a region first (Region tool, Ctrl+C).");
 
         // The Select tool's objects: copied, pasted (refused past the area, once, then twice in a row), cut.
         w.Tools.ChooseSelect();
@@ -59,7 +59,7 @@ public sealed class PastePanelLangTests
         Check("Select objects to copy first.");
         w.View.Select([0]);
         w.Copy();
-        Check("Copied 1 object(s). Ctrl+V to paste (R turns, F mirrors).");
+        Check("Copied 1 object(s). Ctrl+V to paste (R turns, X mirrors).");
         w.StartPaste();
         w.PasteAt(new Vector2(-20, -20));
         Check("Not pasted: it goes past the open area.");
@@ -73,16 +73,16 @@ public sealed class PastePanelLangTests
         w.Tools.ChooseSelect();
         w.View.Select([0]);
         w.Cut();
-        Check("Cut 1 object(s): gone from here (Ctrl+Z brings them back). Ctrl+V to paste them, here or in another area (R turns, F mirrors).");
+        Check("Cut 1 object(s): gone from here (Ctrl+Z brings them back). Ctrl+V to paste them, here or in another area (R turns, X mirrors).");
 
         // The Area tool: no area, an area with nothing in it, the first paste's tree copied and cut.
         w.Tools.ChooseMode(ToolMode.Area);
         w.Copy();
-        Check("Select an area first.");
+        Check("Select a region first.");
         w.View.Area.Points.Add(new Vector2(10, 10));
         w.View.Area.Points.Add(new Vector2(20, 20));
         w.Copy();
-        Check("Nothing to copy here: the area holds no objects");
+        Check("Nothing to copy here: the selection holds no objects");
         w.View.Area.Points.Clear();
         w.View.Area.Points.Add(new Vector2(96, 96));
         w.View.Area.Points.Add(new Vector2(104, 104));

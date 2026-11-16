@@ -16,8 +16,8 @@ Not every text comes from the catalogue yet. These do:
   messages and players;
 - the status bar's readouts, the History panel, the View panel, the help card, and what the status bar and History say
   of Claude's changes;
-- the tools: the brushes with their stamps, Measure, Mask, Script, Path, Cave, Shape, Mountain, Select, Paste, Place,
-  Area, the Dungeon tool with its generator, the Blueprints panel, the Workshop and its Build panel, and the Inspector;
+- the tools: the brushes with their stamps, Measure, Mask, Script, Path, Landform, Select, Paste, Place,
+  Region, the Dungeon tool with its generator, the Blueprints panel, the Workshop and its Build panel, and the Inspector;
 - the biome names.
 
 The rest moves over window by window. A catalogue made now keeps working as more texts are added: the new ones show in

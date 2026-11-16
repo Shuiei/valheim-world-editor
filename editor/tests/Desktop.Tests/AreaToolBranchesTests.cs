@@ -86,7 +86,7 @@ public class AreaToolBranchesTests
     [InlineData(AreaTool.GroundAction.Lower, "Lower")]
     [InlineData(AreaTool.GroundAction.Smooth, "Smooth")]
     [InlineData(AreaTool.GroundAction.Natural, "Naturalize")]
-    [InlineData(AreaTool.GroundAction.Restore, "Restore the ground")]
+    [InlineData(AreaTool.GroundAction.Restore, "Back to generated ground")]
     [InlineData(AreaTool.GroundAction.Erode, "Erode")]
     [InlineData(AreaTool.GroundAction.Paint, "Paint")]
     public void EachActionHasItsName(AreaTool.GroundAction act, string label) => Assert.Equal(label, AreaTool.Label(act));

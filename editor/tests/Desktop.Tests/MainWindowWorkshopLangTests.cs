@@ -31,7 +31,7 @@ public sealed class MainWindowWorkshopLangTests
     /// <param name="data">Texts that are data.</param>
     private static List<string> Untranslated(MainWindow w, string[] data) =>
     [
-        .. new Control[] { w.TitleText, w.SubtitleText, w.PendingText, w.SaveButton, w.SupportBox, w.CutBox, w.MapButton }
+        .. new Control[] { w.TitleText, w.SubtitleText, w.PendingText, w.SaveButton, w.SupportBox, w.ViewCut.Box, w.MapButton }
             .SelectMany(c => PseudoLang.Untranslated(c, data)),
     ];
 
@@ -46,7 +46,7 @@ public sealed class MainWindowWorkshopLangTests
         await w.OpenWorkshop(BlueprintFiles.Hut(r.Homestead));
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(1, w.LastSupport!.Breaking);
-        w.CutSlider.Value = 3;
+        w.ViewCut.Slider.Value = 3;
         // The cost's tip lists the materials by their names (game data).
         string[] data = [.. Data, .. PieceCost.Of(Workshop.Kinds(w.Session!.Scene)).Materials.Select(m => m.Name)];
         Assert.Empty(Untranslated(w, data));

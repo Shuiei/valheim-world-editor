@@ -1,7 +1,4 @@
-using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
-using Avalonia.Interactivity;
-using Avalonia.LogicalTree;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -24,15 +21,12 @@ public class ToolPanelBranchesTests
     }
 
     [AvaloniaFact]
-    public void ANewPatternOrTheCaveWithNobodyListeningStillWork()
+    public void ANewPatternWithNobodyListeningStillWorks()
     {
         var t = new ToolPanel();
         var before = t.Brush.Noise;
         t.NewPattern(5);
         Assert.NotSame(before, t.Brush.Noise);
-        var cave = t.Rail.GetLogicalDescendants().OfType<Button>().First(b => b.GetLogicalDescendants().OfType<TextBlock>().Any(x => x.Text == "Cave"));
-        cave.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Assert.Equal(ToolMode.Path, t.Mode);
     }
 
     [AvaloniaFact]

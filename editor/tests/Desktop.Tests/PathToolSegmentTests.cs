@@ -54,36 +54,6 @@ public class PathToolSegmentTests
     }
 
     [Fact]
-    public void ACaveIsDugAlongTheLineItWasPlannedOn()
-    {
-        var s = TestScenes.Flat(2);
-        var p = Line((20, 64), (60, 64));
-        p.Act = PathTool.Action.Cave;
-        p.Width = 4;
-        var cave = p.PlanCave(s.Ground);
-        // The line grows after the plan: the plan's line is dug, not the new one.
-        p.Points.Add(new Vector2(110, 64));
-        var (touched, _, _) = p.Apply(s.Ground, s.Brush, s.Scene.Water, null, cave);
-        Assert.NotEmpty(touched);
-        Assert.DoesNotContain(touched, i => i % s.Ground.W > 70);
-    }
-
-    [Fact]
-    public void ThingsAreInTheTrenchOnlyNearItsDeepPoints()
-    {
-        List<(Vector2 P, int Seg)> curve = [.. Enumerable.Range(0, 41).Select(i => (new Vector2(10 + i, 20), 0))];
-        float[] depth = [.. Enumerable.Range(0, 41).Select(i => i is < 5 or > 35 ? 0.2f : 2f)];
-        var cave = new PathTool.CavePlan(curve, new float[41], depth, new float[41]);
-        var inTrench = PathTool.NearDeep(cave, 3);
-        Assert.True(inTrench(new Vector2(30, 22.9f)));
-        Assert.True(inTrench(new Vector2(12.5f, 20)), "within reach of a deep point");
-        Assert.False(inTrench(new Vector2(30, 23.1f)), "beyond the reach");
-        Assert.False(inTrench(new Vector2(10, 20)), "only shallow points near");
-        Assert.False(inTrench(new Vector2(48, 21)), "past the end");
-        Assert.False(inTrench(new Vector2(-300, 900)), "far away");
-    }
-
-    [Fact]
     public void ASegmentRunsFromItsStartToTheNextPoint()
     {
         var curve = new List<(Vector2 P, int Seg)> { (new Vector2(0, 0), 0), (new Vector2(3, 4), 1) };

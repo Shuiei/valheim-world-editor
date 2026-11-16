@@ -88,9 +88,22 @@ public class SelectToolCommandTests
         Assert.True(v.Tool.Key(Key.OemComma, true));
         Assert.False(v.Tool.Key(Key.Q, false));
         v.Tool.Commit();
-        // +0.25 + 1 - 0.25 = +1 m; +1° then -15°.
-        Assert.Equal(31, v.Last.Position.Y, 2);
-        Assert.Equal(346, (v.Last.Rotation.Y % 360 + 360) % 360, 1);
+        // The building bar's steps (0.5 m, 22.5°), Shift finer: +0.5 + 0.1 - 0.5 = +0.1 m; +22.5° then -1°.
+        Assert.Equal(30.1f, v.Last.Position.Y, 2);
+        Assert.Equal(21.5f, (v.Last.Rotation.Y % 360 + 360) % 360, 1);
+    }
+
+    // R turns a quarter wherever something turns: the selection here, as the paste and the Place preview.
+    [AvaloniaFact]
+    public void RTurnsTheSelectionAQuarter()
+    {
+        var v = Open(T(1, Beech, 40, 30, 40, false));
+        // Nothing selected: the key is not the tool's.
+        Assert.False(v.Tool.Key(Key.R, false));
+        v.W.View.Select([0]);
+        Assert.True(v.Tool.Key(Key.R, false));
+        v.Tool.Commit();
+        Assert.Equal(90, (v.Last.Rotation.Y % 360 + 360) % 360, 1);
     }
 
     [AvaloniaFact]

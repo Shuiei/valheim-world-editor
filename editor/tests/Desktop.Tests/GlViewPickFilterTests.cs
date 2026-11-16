@@ -70,7 +70,7 @@ public class GlViewPickFilterTests
         Assert.True(v.W.View.IsPickable(2));
     }
 
-    // The View tool's clicks and a zone on the ground follow the filter too.
+    // The View tool's clicks and an outline on the ground follow the filter too.
     [AvaloniaFact]
     public void TheViewToolAndAZoneOnTheGroundFollowIt()
     {

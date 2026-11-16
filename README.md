@@ -31,22 +31,25 @@ Use the plugin and add-ons of the same release as the editor. Step by step: [Ins
 - **Sculpt and paint the ground** with brushes that raise, lower, flatten, smooth, erode, naturalize or restore it,
   and paint dirt, cultivated soil or paved stone ([Sculpt and paint](docs/terrain.md)).
 - **Go past the game's ±8 m limit**: raise peaks, ridges, ranges, mesas and volcanoes in one click, or dig canyons.
-  Players need no mod to see it, console players included ([Mountain](docs/mountain.md),
+  Players need no mod to see it, console players included ([Landform](docs/landform.md#mountain),
   [Ground limits](docs/concepts/ground-limits.md)).
-- **Draw roads, ramps, rivers and caves** along a line ([Path](docs/path.md)); hills, craters, terraces or your own
-  height formula in one click ([Shape](docs/shape.md)).
+- **Draw roads, ramps and rivers** along a line ([Path](docs/path.md)); hills, craters, terraces or your own
+  height formula in one click ([Landform](docs/landform.md)).
 - **Keep any tool to some ground**: a biome, a height, a slope or a paint ([Mask](docs/masks.md)); measure distances
   and slopes ([Measure](docs/measure.md)).
 
 **Fill and change the world**
 
-- **Place anything the game has**, trees, rocks, crops, building pieces and spawn points, with a brush, along lines,
-  in grids or over whole zones ([Place](docs/place.md)).
+- **Place anything the game has**, trees, rocks, crops and spawn points, with a brush, along lines, in grids or inside
+  a polygon you draw ([Place](docs/place.md)).
+- **Build with the game's pieces** in a world as on the hammer, one at a time or along lines, with snapping, a grid
+  and the pieces' pictures ([Build](docs/build.md)).
 - **Select, move, turn, copy and delete** objects, whole buildings included ([Select](docs/select.md)).
 - **Look inside objects and change them**: chest contents, sign texts, portal tags. **Search the whole world** for an
   object, an item in any chest, or a sign's text ([World map](docs/map.md)).
-- **Work on a box or polygon at once**: level, clear, replace or regrow it, copy and paste it, or **restore it from a
-  backup** to undo griefing without rolling the whole world back ([Area](docs/area.md)).
+- **Work on a box or polygon at once**: level it, select its trees or rocks to clear or replace them, regrow it, copy
+  and paste it, or **bring it back from a backup** to undo griefing without rolling the whole world back
+  ([Region](docs/area.md)).
 
 **Build, generate, create**
 
@@ -76,7 +79,7 @@ Use the plugin and add-ons of the same release as the editor. Step by step: [Ins
 
 | | | |
 |---|---|---|
-| ![A volcano raised with the Mountain tool](docs/images/mountain-volcano.jpg) | ![A house in the Workshop, tinted by the support check](docs/images/workshop.jpg) | ![A generated dungeon, cut open](docs/images/dungeon-rooms.jpg) |
+| ![A volcano raised with the Landform tool](docs/images/mountain-volcano.jpg) | ![A house in the Workshop, tinted by the support check](docs/images/workshop.jpg) | ![A generated dungeon, cut open](docs/images/dungeon-rooms.jpg) |
 | A volcano, far past the 8 m limit | The Workshop and its support check | A dungeon of the game's own rooms |
 | ![A seed's world on the New world page](docs/images/new-world.jpg) | ![The editor connected to a running server](docs/images/live.jpg) | ![The world map's search](docs/images/map-search.jpg) |
 | A seed's world before it exists | Live on a server while people play | Searching the whole world |
@@ -122,7 +125,7 @@ The same documentation is in the editor (**Documentation** on the start page): s
 - **How-to guides**: one task each, from [editing your game live](docs/guides/edit-your-game-live.md) to
   [restoring an area from a backup](docs/guides/restore-from-backup.md). The list is in [docs/README.md](docs/README.md).
 - **Tools**: [the editor window](docs/editor-basics.md), [the world map](docs/map.md),
-  [sculpt and paint](docs/terrain.md), [Place](docs/place.md), [Select](docs/select.md),
+  [sculpt and paint](docs/terrain.md), [Place](docs/place.md), [Build](docs/build.md), [Select](docs/select.md),
   [the Workshop](docs/workshop.md), [live mode](docs/live-mode.md) and the rest.
 - **How it works**: [saving and history](docs/concepts/saving-and-history.md),
   [ground limits](docs/concepts/ground-limits.md), [safety](docs/concepts/safety.md).

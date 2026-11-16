@@ -90,7 +90,7 @@ public class GroundPathActionTests
     {
         var p = new PathTool();
         var size = new Avalonia.Size(100, 100);
-        p.Down(new Vector2(10, 10), new Avalonia.Point(0, 0), _ => null, false, false, false, _ => 30f);
+        p.Down(new Vector2(10, 10), new Avalonia.Point(0, 0), _ => null, false, false, _ => 30f);
         for (int i = 1; i <= 20; i++)
         {
             p.Moved(new Vector2(10 + i * 0.5f, 10));

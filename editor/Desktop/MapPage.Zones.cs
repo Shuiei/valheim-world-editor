@@ -15,7 +15,8 @@ public sealed partial class MapPage
     /// </summary>
     private ZoneFilter Filter() =>
         new(BiomeButtons.Where(b => b.Value.IsChecked == true).Select(b => b.Key).ToHashSet(), NoBuildBox.IsChecked == true, (int)(DistBox.Value ?? 0),
-            NoEditBox.IsChecked == true, OnlyGenBox.IsChecked == true, Radius(RMinBox).Value, Radius(RMaxBox).Value);
+            NoEditBox.IsChecked == true, OnlyGenBox.IsChecked == true, Radius(RMinBox).Value, Radius(RMaxBox).Value)
+        { KeepBuildings = KeepBox.IsChecked == true };
 
     /// <summary>
     /// A distance box's metres: blank is no limit (null). A point or the computer's own decimal mark, spaces between

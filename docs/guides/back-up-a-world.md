@@ -19,8 +19,8 @@ Make a copy of a world's folder that you can always go back to, whatever happens
    as it is, then `_backup_`.
 
 > [!TIP]
-> Named this way, the copy sits next to the world, and the editor lists it as a backup in the Area tool's
-> **Restore from a backup**, so you can bring back one area from it later: see
+> Named this way, the copy sits next to the world, and the editor lists it as a backup in the Region tool's
+> **Back to a backup**, so you can bring back one area from it later: see
 > [Restore one area from a backup](restore-from-backup.md).
 
 ## Check it worked
@@ -28,7 +28,7 @@ Make a copy of a world's folder that you can always go back to, whatever happens
 - The copy holds the same files as the world: `_main.<n>.chunks`, `.db2`, `.fwl2`, `.ok` and the `.chunk` files.
 - On the start page, **A saved world** lists the copy too, under its own name. Open the world itself to edit, not
   the copy.
-- In a world's 3D view, the [Area](../area.md) tool's **Restore from a backup** lists the copy as **Editor · \<date\>**.
+- In a world's 3D view, the [Region](../area.md) tool's **Back to a backup** lists the copy as **Editor · \<date\>**.
 
 ## Undo it
 

@@ -26,18 +26,20 @@ public partial class MainWindow
     internal Func<string, string, Task> WriteBlueprintFile { get; set; } = (path, text) => File.WriteAllTextAsync(path, text);
 
     /// <summary>
-    /// Turns Build here on (the Place tool's settings are kept aside, the Workshop's Build starts and the Place
-    /// tool cuts at the view's cut height) or off (the Place tool gets its settings back, its status line goes).
+    /// Turns Build here on (the Place tool's settings are kept aside and the Workshop's Build starts, under the
+    /// view's cut, which stays the dungeon's) or off (the Place tool gets its settings back, its status line goes).
     /// </summary>
     internal void BuildInDungeon(bool on)
     {
         var t = PlaceTool;
         if (on && _dungeonKept == null)
         {
+            // The Build tool on already in the world: its dock goes on in the dungeon, the settings kept the Place tool's own.
+            BuildInWorld(false);
             _dungeonKept = KeepPlaceTool();
-            BuildPanel.Start(library: false);
+            BuildPanel.Start(library: false, lines: false);
             t.CutY = View.CutY;
-            Tools.ChooseMode(ToolMode.Place);
+            Tools.ChooseBuild();
             Msg("dungeon.msg.building");
         }
         else if (!on && _dungeonKept is { } k)
@@ -59,11 +61,10 @@ public partial class MainWindow
     /// </summary>
     /// <param name="Entrance">Where its entrance stands on the ground (its portal, when it has no entrance).</param>
     /// <param name="Arrival">Where a player arrives in it, high up.</param>
-    /// <param name="Cut">The roof cut that shows its first level.</param>
     /// <param name="Dungeon">Its dungeon object's place when it is one of the game's rooms (the Dungeon panel lists it), else null.</param>
     /// <param name="Step">The history's step that placed it.</param>
     /// <param name="Undone">That step is undone (on the redo list): nothing to go to until it is redone.</param>
-    internal sealed record PlacedDungeon(Vector3 Entrance, Vector3 Arrival, float Cut, Vector3? Dungeon, EditSession.Change Step, bool Undone = false);
+    internal sealed record PlacedDungeon(Vector3 Entrance, Vector3 Arrival, Vector3? Dungeon, EditSession.Change Step, bool Undone = false);
 
     /// <summary>
     /// The dungeon last placed in this area, or null; the Dungeon panel's Go to buttons follow, and its line for an area
@@ -120,8 +121,11 @@ public partial class MainWindow
             DungeonPanel.Inside();
             return;
         }
+        // A dungeon of pieces, which the Dungeon panel does not list: the cut counts from its floor, half a metre under
+        // where a player arrives, and shows its first level.
         View.Orbit(p.Arrival.X, p.Arrival.Z, 30, 55, 60, p.Arrival.Y);
-        View.CutY = p.Cut;
+        ViewCut.FromDungeon(p.Arrival.Y - 0.5f);
+        ViewCut.Set(DungeonPanel.InsideCut);
     }
 
     /// <summary>The view back down to the entrance of the dungeon last placed, on the ground, nothing cut away.</summary>
@@ -132,8 +136,12 @@ public partial class MainWindow
             return;
         }
         DungeonPanel.ShowRoofs();
+        // Asked for without the Dungeon tool (it puts the cut back on the ground when it is left): on the ground now.
+        if (Tools.Mode != ToolMode.Dungeon && !BuildingInDungeon)
+        {
+            ViewCut.FromGround();
+        }
         View.Orbit(p.Entrance.X, p.Entrance.Z, View.Camera.Yaw * 180f / MathF.PI, 55, 40);
-        View.CutY = null;
     }
 
     /// <summary>An object of a dungeon to place, in the dungeon's own frame.</summary>

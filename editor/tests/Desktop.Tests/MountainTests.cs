@@ -40,21 +40,37 @@ public class MountainTests
     }
 
     [AvaloniaFact]
-    public void TheMountainToolShowsItsPreviewAndOtherToolsDoNot()
+    public void TheLandformToolShowsItsKindsPreviewAndOtherToolsDoNot()
     {
         var w = new MainWindow(load: false) { Width = 1400, Height = 900 };
         w.Show();
         var s = TestScenes.Flat(5);
         w.View.Show(s.Scene, null);
         w.Edit(s);
-        w.Tools.ChooseMode(ToolMode.Mountain);
-        var first = w.View.MountainPreview;
+        w.LandformPanel.KindBox.SelectedIndex = (int)LandformKind.Mountain;
+        // Not while another tool is in use.
+        Assert.Null(w.View.Landform.Shape);
+        w.Tools.ChooseMode(ToolMode.Landform);
+        var first = w.View.Landform.Shape;
         Assert.NotNull(first);
+        // A mountain only goes in where it fits whole, and its outline is a circle as far as it reaches.
+        Assert.True(w.View.Landform.MustFit);
+        Assert.Equal(w.LandformPanel.Mountain.Spec.Reach, w.View.Landform.Reach);
+        Assert.Null(w.View.Landform.Square);
         // A new mountain (Randomize): a new preview.
-        w.MountainPanel.Randomize();
-        Assert.NotSame(first, w.View.MountainPreview);
-        w.Tools.ChooseMode(ToolMode.Shape);
-        Assert.Null(w.View.MountainPreview);
+        w.LandformPanel.Mountain.Randomize();
+        Assert.NotSame(first, w.View.Landform.Shape);
+        // The Formula kind: the shape within its radius, anywhere in the area.
+        w.LandformPanel.KindBox.SelectedIndex = (int)LandformKind.Formula;
+        Assert.False(w.View.Landform.MustFit);
+        Assert.Equal(w.LandformPanel.Formula.Radius, w.View.Landform.Reach);
+        Assert.Equal(w.LandformPanel.Formula.Height, w.View.Landform.Shape!(0, 0), 3);
+        // The Picture kind: the picture's square.
+        w.LandformPanel.KindBox.SelectedIndex = (int)LandformKind.Picture;
+        Assert.NotNull(w.View.Landform.Square);
+        Assert.NotNull(w.View.Landform.Shape);
+        w.Tools.ChooseMode(ToolMode.Measure);
+        Assert.Null(w.View.Landform.Shape);
         w.Close();
     }
 

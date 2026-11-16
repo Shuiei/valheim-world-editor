@@ -51,9 +51,9 @@ public class TipsWordingTests
         w.Show();
         var a = w.AreaPanel;
         var seen = new HashSet<string>();
-        for (int i = 0; i < a.ActionBox.ItemCount; i++)
+        foreach (var act in AreaPanel.Actions)
         {
-            a.ActionBox.SelectedIndex = i;
+            a.Choose(act);
             string button = (string)ToolTip.GetTip(a.ApplyButton)!;
             string list = (string)ToolTip.GetTip(a.ActionBox)!;
             Assert.EndsWith("(Enter). Ctrl+Z undoes it.", button);
@@ -63,7 +63,7 @@ public class TipsWordingTests
             seen.Add(button);
         }
         // Each action its own words.
-        Assert.Equal(a.ActionBox.ItemCount, seen.Count);
+        Assert.Equal(AreaPanel.Actions.Length, seen.Count);
     }
 
     [AvaloniaFact]
@@ -71,7 +71,7 @@ public class TipsWordingTests
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
         w.Show();
-        foreach (var input in new Control[] { w.Tools.SizeSlider, w.PathPanel.WidthSlider, w.AreaPanel.SoftSlider, w.ShapePanel.RadiusSlider, w.PastePanel.GapBox, w.PlacePanel.DensitySlider, w.SelectPanel.XBox })
+        foreach (var input in new Control[] { w.Tools.SizeSlider, w.PathPanel.WidthSlider, w.AreaPanel.SoftSlider, w.LandformPanel.Formula.RadiusSlider, w.PastePanel.GapBox, w.PlacePanel.DensitySlider, w.SelectPanel.XBox })
         {
             var row = (Panel)input.Parent!;
             var label = row.Children.OfType<TextBlock>().First();

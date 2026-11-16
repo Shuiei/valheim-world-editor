@@ -42,7 +42,7 @@ public class KeysAndMouseListingTests
         a.Tools.ChooseSelect();
         a.View.Select([0]);
         float distance = a.View.Camera.Distance;
-        // Towards you (down) as ".", 1°.
+        // Towards you (down) as ".", one turn step.
         a.MouseWheel(screenA(64, 64), new Avalonia.Vector(0, -1), RawInputModifiers.Alt);
         a.View.SelectTool.Commit();
         Assert.Equal(distance, a.View.Camera.Distance);
@@ -105,10 +105,11 @@ public class KeysAndMouseListingTests
         // One at a time and End to end on): set again for the kinds chosen here, as choosing them in the panel does.
         w.PlaceTool.AutoSnap();
         float d = w.View.Camera.Distance;
+        // The Place tool's own step: 15°; Shift, finer: 1°.
         w.MouseWheel(screen(64, 64), new Avalonia.Vector(0, -1), RawInputModifiers.Alt);
-        Assert.Equal(1, w.PlaceTool.Rotation, 3);
+        Assert.Equal(15, w.PlaceTool.Rotation, 3);
         w.MouseWheel(screen(64, 64), new Avalonia.Vector(0, 1), RawInputModifiers.Alt | RawInputModifiers.Shift);
-        Assert.Equal(-14, w.PlaceTool.Rotation, 3);
+        Assert.Equal(14, w.PlaceTool.Rotation, 3);
         Assert.Equal(d, w.View.Camera.Distance);
     }
 
@@ -120,13 +121,14 @@ public class KeysAndMouseListingTests
         w.StartPaste();
         Assert.Equal(ToolMode.Paste, w.Tools.Mode);
         w.MouseWheel(screen(64, 64), new Avalonia.Vector(0, 1), RawInputModifiers.Alt);
-        Assert.Equal(1, w.View.Paste.Turn, 3);
+        // By the building bar's turn step (22.5°); Shift, finer: 1°.
+        Assert.Equal(22.5f, w.View.Paste.Turn, 3);
         w.KeyPress(Key.OemComma, RawInputModifiers.None, PhysicalKey.Comma, ",");
-        Assert.Equal(2, w.View.Paste.Turn, 3);
+        Assert.Equal(45, w.View.Paste.Turn, 3);
         w.MouseWheel(screen(64, 64), new Avalonia.Vector(0, -1), RawInputModifiers.Alt | RawInputModifiers.Shift);
-        Assert.Equal(347, w.View.Paste.Turn, 3);
+        Assert.Equal(44, w.View.Paste.Turn, 3);
         w.KeyPress(Key.OemPeriod, RawInputModifiers.Shift, PhysicalKey.Period, ".");
-        Assert.Equal(332, w.View.Paste.Turn, 3);
+        Assert.Equal(43, w.View.Paste.Turn, 3);
     }
 
     // ---- Help and Naturalize.
@@ -151,7 +153,7 @@ public class KeysAndMouseListingTests
         t.Message += m => said = m.Shown;
         t.NewPattern(1234);
         Assert.Equal(1234, t.Brush.Noise.Seed);
-        Assert.Equal("New natural pattern. The next Naturalize stroke or natural path uses it.", said);
+        Assert.Equal("New bump pattern. The next Naturalize stroke, or path with Natural look, uses it.", said);
         float a = t.Brush.Noise.Fbm(3.3f, 7.1f);
         t.NewPattern(99);
         Assert.NotEqual(a, t.Brush.Noise.Fbm(3.3f, 7.1f));

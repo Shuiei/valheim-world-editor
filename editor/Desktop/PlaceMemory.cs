@@ -25,6 +25,8 @@ public sealed partial class PlaceMemory
     public Dictionary<string, int> Weights { get; set; } = [];
     /// <summary>The builder chosen for each world, by world name (Built by, in the View panel).</summary>
     public Dictionary<string, long> Builders { get; set; } = [];
+    /// <summary>The brush's planting rate while dragging, 0.05 to 1.</summary>
+    public float Rate { get; set; } = 0.5f;
 
     /// <summary>place.json in the data folder.</summary>
     private static string FilePath => Path.Combine(AppSettings.DataDir, "place.json");

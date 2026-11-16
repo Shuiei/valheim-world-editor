@@ -37,7 +37,6 @@ from a task below. In the editor, `F1` or the small **?** at the top of a panel 
 - [Raise or dig past the game's 8 m limit](guides/raise-past-the-limit.md)
 - [Make a road or a ramp up a hill](guides/make-a-road.md)
 - [Dig a river or a pond](guides/make-a-river.md)
-- [Dig a cave](guides/dig-a-cave.md)
 - [Clear trees and rocks, level a building site](guides/clear-an-area.md)
 
 ## Build and fill
@@ -56,13 +55,14 @@ from a task below. In the editor, `F1` or the small **?** at the top of a panel 
   History and the View panel.
 - [The world map](map.md): find a place, open it in 3D, search the whole world.
 - [Sculpt and paint](terrain.md): the ground brushes, stamps and No limit.
-- [Shape](shape.md): hills, craters, terraces and your own formulas in one click.
-- [Mountain](mountain.md): peaks, ridges, hills and volcanoes past the game's limit.
-- [Path](path.md): roads, ramps, rivers and caves along a line.
+- [Landform](landform.md): a whole landform in one click, from a formula of your own (hills, craters, terraces), the
+  mountain generator (peaks, ridges and volcanoes past the game's limit) or a picture.
+- [Path](path.md): roads, ramps and rivers along a line.
 - [Mask](masks.md): keep any tool to a biome, a height, a slope or a paint.
 - [Measure and overlays](measure.md): distances, slopes, slope colours and height lines.
-- [Area, copy and paste](area.md): level, clear, copy and paste a box or polygon; restore it from a backup.
-- [Place](place.md): trees, rocks, crops, building pieces and spawn points.
+- [Region, copy and paste](area.md): level, clear, copy and paste a box or polygon; restore it from a backup.
+- [Place](place.md): trees, rocks, crops and spawn points.
+- [Build](build.md): the pieces players build, one at a time or along lines, with the building bar.
 - [Select](select.md): pick, move, turn, copy and delete objects, and look inside them.
 - [The Workshop](workshop.md): build on a blank plot and keep it as a blueprint.
 - [Dungeons](dungeons.md): generate a dungeon, or edit the game's rooms one by one.

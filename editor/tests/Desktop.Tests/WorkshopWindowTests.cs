@@ -96,7 +96,7 @@ public class WorkshopWindowTests
         Assert.Equal(Expected3, w.PlaceTool.Chosen);
         Assert.True(w.PlaceTool.Building && w.PlaceTool.OneAtATime && !w.PlaceTool.RandomYaw);
         // World tools are not there.
-        w.Tools.ChooseMode(ToolMode.Mountain);
+        w.Tools.ChooseMode(ToolMode.Landform);
         w.Tools.Choose(BrushTool.Raise);
         Assert.Equal(ToolMode.Place, w.Tools.Mode);
         w.Tools.ChooseSelect();

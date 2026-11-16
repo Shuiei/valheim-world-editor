@@ -56,11 +56,15 @@ public sealed class PrefsWindowTests : PrefsFolder
         w.Tools.FalloffBox.SelectedIndex = 4;
         w.AreaPanel.Choose(AreaPanel.Act.Regrow);
         w.SelectPanel.GroundBox.IsChecked = false;
-        w.SelectPanel.SnapBox.IsChecked = false;
+        // The building bar's settings (Build, Select and Paste share them).
+        w.BuildingBar.SetSnapMode(PlaceTool.SnapModes.Free);
+        w.BuildingBar.GridBox.SelectedIndex = 2;
+        w.BuildingBar.TurnBox.SelectedIndex = 4;
+        w.BuildingBar.LiftBox.SelectedIndex = 0;
         w.SelectPanel.ZoneBox.SelectedIndex = 1;
         w.SelectPanel.ThroughBox.IsChecked = true;
         w.SelectPanel.PickBox.SelectedIndex = 1;
-        w.ShapePanel.PresetBox.SelectedIndex = 1;
+        w.LandformPanel.Formula.PresetBox.SelectedIndex = 1;
         w.ShowRight(w.HelpCard);
         w.Prefs.Flush();
 
@@ -81,11 +85,15 @@ public sealed class PrefsWindowTests : PrefsFolder
         Assert.False(v.SelectPanel.GroundBox.IsChecked);
         Assert.False(v.View.SelectTool.OnGround);
         Assert.False(v.View.SelectTool.SnapToPieces);
+        Assert.Equal(PlaceTool.SnapModes.Free, v.BuildingBar.SnapMode);
+        Assert.Equal((1f, 90f, 0.1f), (v.BuildingBar.GridStep, v.BuildingBar.TurnStep, v.BuildingBar.LiftStep));
+        Assert.Equal((1f, 90f, 0.1f), (v.View.SelectTool.GridStep, v.View.SelectTool.TurnStep, v.View.SelectTool.LiftStep));
+        Assert.Equal(1f, v.View.Paste.GridStep);
         Assert.True(v.View.SelectTool.ZoneOnGround);
         Assert.True(v.View.SelectTool.SelectThrough);
         Assert.Equal(GlView.PickKinds.Built, v.View.SelectTool.Picks);
-        Assert.Equal(1, v.ShapePanel.PresetBox.SelectedIndex);
-        Assert.Equal(ShapePanel.Presets[1].Formula, v.ShapePanel.FormulaBox.Text);
+        Assert.Equal(1, v.LandformPanel.Formula.PresetBox.SelectedIndex);
+        Assert.Equal(ShapePanel.Presets[1].Formula, v.LandformPanel.Formula.FormulaBox.Text);
         Assert.True(v.HelpCard.IsVisible);
     }
 
@@ -93,18 +101,18 @@ public sealed class PrefsWindowTests : PrefsFolder
     public void AFormulaOfOnesOwnComesBack()
     {
         var w = Window();
-        w.ShapePanel.FormulaBox.Text = "3 * (1 - d / r)";
-        Assert.Equal(ShapePanel.Presets.Length, w.ShapePanel.PresetBox.SelectedIndex);
+        w.LandformPanel.Formula.FormulaBox.Text = "3 * (1 - d / r)";
+        Assert.Equal(ShapePanel.Presets.Length, w.LandformPanel.Formula.PresetBox.SelectedIndex);
         w.Prefs.Flush();
         var v = Window();
-        Assert.Equal(ShapePanel.Presets.Length, v.ShapePanel.PresetBox.SelectedIndex);
-        Assert.Equal("3 * (1 - d / r)", v.ShapePanel.FormulaBox.Text);
+        Assert.Equal(ShapePanel.Presets.Length, v.LandformPanel.Formula.PresetBox.SelectedIndex);
+        Assert.Equal("3 * (1 - d / r)", v.LandformPanel.Formula.FormulaBox.Text);
         // Back to a preset: its own formula, the one of one's own still kept for later.
-        v.ShapePanel.PresetBox.SelectedIndex = 0;
+        v.LandformPanel.Formula.PresetBox.SelectedIndex = 0;
         v.Prefs.Flush();
         var u = Window();
-        Assert.Equal(0, u.ShapePanel.PresetBox.SelectedIndex);
-        Assert.Equal(ShapePanel.Presets[0].Formula, u.ShapePanel.FormulaBox.Text);
+        Assert.Equal(0, u.LandformPanel.Formula.PresetBox.SelectedIndex);
+        Assert.Equal(ShapePanel.Presets[0].Formula, u.LandformPanel.Formula.FormulaBox.Text);
         Assert.Equal("3 * (1 - d / r)", u.Prefs.Get("shape.formula", ""));
     }
 

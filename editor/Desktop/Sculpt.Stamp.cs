@@ -1,11 +1,11 @@
 
 namespace TerrainEditor.Desktop;
 
-// Stamp once: the picture pressed into the ground in one go.
+// A stamp's whole picture pressed into the ground in one go (the Landform tool's Picture kind, Claude's stamp).
 public static partial class Sculpt
 {
     /// <summary>
-    /// Stamp once: the ground under the stamp moves by <c>amount</c> metres times the picture, all at once. Returns the
+    /// The whole stamp at once: the ground under the stamp moves by <c>amount</c> metres times the picture, all at once. Returns the
     /// points changed, the rectangle around them, and whether the game's limit stopped some.
     /// </summary>
     public static (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) StampOnce(Ground g, Brush b, float cx, float cz, float amount, Func<int, float>? mask)

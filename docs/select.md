@@ -38,13 +38,12 @@ The Select panel, top to bottom.
 | **Invert** | Selects every shown object that is not selected now, and only those (`Ctrl+I`). |
 | **Hide** / **Show hidden** | Hides the selected objects in the view, to reach what they cover (`Ctrl+H`), and shows them again (`Alt+H`). Hidden objects are not drawn or picked; nothing changes in the world. Opening another area forgets what was hidden. |
 | **Inspect data (I)** | Opens the [Inspector](#inspector) on the one selected object. |
-| **Make player built** | Gives the selected pieces that have no builder the player chosen in View → **Built by**, so the game treats them as player built. Use it on a ruin you want to repair and keep. See [Player-built pieces](concepts/objects.md#player-built-pieces). |
+| **Make player built** | Gives the selected pieces that have no builder the player chosen in **Built by** on [the building bar](build.md#the-building-bar), so the game treats them as player built. Use it on a ruin you want to repair and keep. See [Player-built pieces](concepts/objects.md#player-built-pieces). |
 | **Replace with** + **pick** + **Replace the selection** | Choose a kind (or click **pick**, then an object in the world), then replace every selected object by it, at the same place and facing. The new objects hold nothing of the old ones' data. |
-| **A drag draws** | **A box on the screen (what is seen)** or **A zone on the ground (all above it)**: see [Select many at once](#select-many-at-once). |
+| **A drag draws** | **A box on the screen (what is seen)** or **An outline on the ground (all above it)**: see [Select many at once](#select-many-at-once). |
 | **Select through (Alt + Z)** | A box also takes what is hidden behind others inside it: the furniture inside a house, the wall behind another. |
-| **Pick** | What clicks, boxes and zones take: **Everything shown**, **Built pieces only** (what players built) or **Nature only** (trees, rocks, ore, bushes, pickables, remains). What is left out is still drawn but not in the way: with Built pieces only, a box takes the wall behind a tree. It also applies to the View tool's clicks; the Place tool's **On top** and the eyedroppers pick every kind. |
+| **Selects** | What clicks, boxes and outlines take: **Everything shown**, **Built pieces only** (what players built) or **Nature only** (trees, rocks, ore, bushes, pickables, remains). What is left out is still drawn but not in the way: with Built pieces only, a box takes the wall behind a tree. It also applies to the View tool's clicks; the Place tool's **On top** and the eyedroppers pick every kind. |
 | **Put each object on the ground when moving** | On: each object lands on the floor, table or rock under it where it ends up, else on the ground (trees, bushes and creatures hold nothing up: a tree moved in a wood stands on the ground); a building moves as one block and sits on what is under it. Off: the whole selection moves as one block at its height above the ground. On at first. |
-| **Snap to other pieces when moving** | On: while you move, the nearest snap points within 0.75 m lock together, so walls, floors and fences join like with the hammer. On at first. See [Snapping](concepts/objects.md#snapping). |
 | **SAVED SELECTIONS**: **Keep…** | Keeps the selection under a name, for this world. Pick one in the list for its buttons: **Select** (instead of the current selection), **Add** (to it) and **Forget** (after asking). Objects moved or deleted since count as missing; the status bar says how many. |
 | **EXACT PLACE**: **X**, **Y**, **Z**, **Turn** | Shown with a selection. X (east–west) and Z (north–south) are the middle of the selection, Y the height of its lowest object, Turn the first object's facing in degrees, clockwise from above. |
 | **Move there** | Moves and turns the selection to the typed values, as one undo step. Typed values are exact: nothing snaps on top of them. |
@@ -91,15 +90,19 @@ hidden behind the near wall are left out. The status bar counts the objects.*
 *The same box with **Select through** on: 34 pieces, the floor and the chest behind the near wall too.*
 
 ![A box over a hut with Built pieces only](images/select-pick.jpg)
-***Pick: Built pieces only** and a box over the whole hut among rocks and bushes: the hut's 58 pieces alone.*
+***Selects: Built pieces only** and a box over the whole hut among rocks and bushes: the hut's 58 pieces alone.*
 
-With **A drag draws: A zone on the ground (all above it)**, a drag draws an outline on the ground instead, and every
+With **A drag draws: An outline on the ground (all above it)**, a drag draws an outline on the ground instead, and every
 shown object standing inside it is selected, hidden or not. `Alt`, `Ctrl` and `Shift` work as for the box.
 
-![Alt + drag round rocks and bushes](images/select-zone-drawing.jpg)
-*`Alt` + drag round rocks and bushes: the zone is drawn even though the drag started on a bush.*
+To select by kind inside an exact box or polygon (every tree, or only the beeches, and only where the
+[Mask](masks.md) lets the ground through), use the [Region](area.md#object-actions) tool's **Objects**: it selects
+them and comes back here, where **Delete** and **Replace the selection** work on them.
 
-![The selection the zone made](images/select-zone.jpg)
+![Alt + drag round rocks and bushes](images/select-zone-drawing.jpg)
+*`Alt` + drag round rocks and bushes: the outline is drawn even though the drag started on a bush.*
+
+![The selection the outline made](images/select-zone.jpg)
 *Everything shown inside is selected, and **EXACT PLACE** shows where the selection is.*
 
 ![One wall clicked, then Whole building](images/select-building.jpg)
@@ -113,10 +116,14 @@ shown object standing inside it is selected, hidden or not. `Alt`, `Ctrl` and `S
 
 | Action | What it does |
 |---|---|
-| Drag a selected object | Moves the whole selection, following the cursor on the ground. |
+| Drag a selected object | Moves the whole selection, following the cursor on the ground. Pieces snap to the pieces around, or go by the grid, as [the building bar](build.md#the-building-bar) is set. |
 | Drag an arrow | Moves along one axis: **red X** east–west, **green Y** up–down, **blue Z** north–south. Hold `Ctrl` for 0.5 m steps. |
 | Drag the orange ring | Turns the selection round its middle; hold `Ctrl` for 15° steps. |
 | `End` | Drops each object straight down onto what is under it (a floor, a table, a rock), else the ground. |
+
+The building bar beside the panel is the one [Build](build.md) and Paste use: **Snap** (**Auto**: moved pieces lock
+onto the nearest snap points within 0.75 m, like the hammer; **Free**: they stay where you drag them), **Grid** (pieces
+that do not snap go by it), **Turn by** and **Lift** (the steps of the keys below) and **Built by**.
 
 The status bar follows the move: "Moving 12 object(s): 4.5 m, turned 15°, +0.25 m · snapped to woodwall". A moved
 object keeps its data: a chest its contents, a sign its text, a piece its builder. See
@@ -127,10 +134,13 @@ object keeps its data: a chest its contents, a sign its text, a piece its builde
 
 ## Copy, cut and paste
 
-`Ctrl+C` copies the selection; `Ctrl+V` pastes it with the paste tool (`R` turns, `F` mirrors), here or in another
-area: see [Area](area.md). Copies keep everything the originals hold. Trees and the like keep their height above the
+`Ctrl+C` copies the selection; `Ctrl+V` pastes it with the paste tool (`R` turns, `X` mirrors), here or in another
+area: see [Region](area.md). Copies keep everything the originals hold. Trees and the like keep their height above the
 ground where they land; building pieces keep the building's shape and take the ground under them along (without
 paint). `Ctrl+X` cuts: the same copy, then the objects leave the world, so pasting moves them.
+
+To keep a copy as a blueprint, open **Blueprints** on the rail and click **Save as blueprint…** on its **Clipboard**
+row: see [the Blueprints panel](workshop.md#blueprints-panel).
 
 ## Inspector
 
@@ -177,7 +187,8 @@ add-on), the editor draws the group as the mod builds it and keeps it together:
   does not drop with `End`.
 - **Copied whole.** `Ctrl+C` on any part copies the whole group, without the ground. Each paste is a group of its own
   with new ids. A part copied without its root is pasted as an ordinary piece.
-- **Removed whole.** The Area tool's Remove objects takes a root's parts with it.
+- **Removed whole.** Deleting any part deletes the whole group, also when the [Region](area.md#object-actions) tool
+  selected it.
 
 Claude's tools do the same. See [What an object is](concepts/objects.md#what-an-object-is).
 
@@ -193,10 +204,11 @@ Claude's tools do the same. See [What an object is](concepts/objects.md#what-an-
 | `Shift+F` or Numpad `.` | Frame the selection (`F` alone switches the eye). |
 | `Del` | Delete the selection. |
 | `I` | Open the Inspector on the one selected object. |
-| `,` `.` or `Alt` + wheel | Turn by 1° (`Shift`: 15°). |
-| `PgUp` / `PgDn` | Lift or lower by 0.25 m (`Shift`: 1 m). |
+| `,` `.` or `Alt` + wheel | Turn by the building bar's **Turn by** step, 22.5° at first (`Shift`, finer: 1°). |
+| `R` | Turn a quarter turn. |
+| `PgUp` / `PgDn` or `Ctrl` + wheel | Lift or lower by the building bar's **Lift** step, 0.5 m at first (`Shift`, finer: a fifth of it). |
 | `End` | Drop each object onto what is under it. |
-| `Esc` | Close the Inspector; else cancel a box, zone or move in progress; else go back to the View tool (the selection stays). |
+| `Esc` | Close the Inspector; else cancel a box, outline or move in progress; else go back to the View tool (the selection stays). |
 | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy, cut, paste. |
 | `Ctrl+Z` | Undo. Keys pressed within a moment of each other are one step. |
 
@@ -211,7 +223,7 @@ All the editor's keys are in [Shortcuts](help/shortcuts.md).
 
 - **Recover:** deleted or moved by mistake: `Ctrl+Z`, after saving too (then save again). Hid something: `Alt+H`.
   See [Undo changes](guides/undo-changes.md).
-- Boxes, zones, **All**, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the
+- Boxes, outlines, **All**, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the
   ground (objects a mod hides there, such as crafting stations under a house).
 - A click picks an object by its drawn shape, not its box: a stone under a tree's branches can be clicked between the
   branches. Leaves and grass count only where nothing solid is behind them. See
@@ -226,4 +238,4 @@ All the editor's keys are in [Shortcuts](help/shortcuts.md).
 - [Change what a chest holds or a sign says](guides/fill-a-chest.md)
 - [Find an object, a chest's item or a sign](guides/find-things.md)
 - [Objects](concepts/objects.md#what-an-object-is) · [Snapping](concepts/objects.md#snapping)
-- [Place](place.md) · [Area](area.md)
+- [Build](build.md) · [Place](place.md) · [Region](area.md)

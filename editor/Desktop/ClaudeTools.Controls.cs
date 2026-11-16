@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class ClaudeTools
 {
     /// <summary>A control as Claude sees it.</summary>
-    /// <param name="Id">How Claude names it: its tip key (view.gameLook, workshop.cut…), else ~ and its English label; #2… when shared.</param>
+    /// <param name="Id">How Claude names it: its tip key (view.gameLook, view.cut…), else ~ and its English label; #2… when shared.</param>
     /// <param name="Kind">switch, toggle, radio, dropdown, slider, number, text or button.</param>
     /// <param name="Label">Its words: its content, placeholder, or the label beside it.</param>
     /// <param name="Control">The control.</param>
@@ -19,12 +19,12 @@ public sealed partial class ClaudeTools
     [
         "top.save", "top.apply", "top.discard", "top.reload", "top.auto",
         "map.save", "map.apply", "map.discard", "map.reload",
-        "area.saveBlueprint", "place.savePreset", "place.deletePreset", "script.save",
+        "area.saveBlueprint", "blueprints.saveClipboard", "place.savePreset", "place.deletePreset", "script.save",
         "blueprints.import", "blueprints.getHomestead", "build.add", "build.open",
         "start.game", "start.server", "start.editLive", "start.home",
         "start.connect", "start.connectUrl", "start.savedConnect", "start.savedForget",
         "dungeon.gen.openOnPlot", "dungeon.gen.addToPlot", "dungeon.gen.workshop",
-        "select.delete", "select.forget", "brush.forgetStamp", "area.export",
+        "select.delete", "select.forget", "brush.forgetStamp", "landform.forgetPicture", "area.export",
         "blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead",
         "blueprints.delete", "blueprints.deleteOld",
     ];

@@ -17,6 +17,9 @@ public sealed partial class Scenes
     /// </summary>
     private const int GroundPairCut = 718;
 
+    /// <summary>The window's row under the Mask card with its No limit row (a sculpt brush, Shape, Path or Area in use).</summary>
+    private const int MaskCardBottom = 160;
+
     /// <summary>The direction of a row laid along the bare zone's diagonal (north-east), a unit vector.</summary>
     private static readonly (double X, double Z) GroundDiagonal = (Math.Sqrt(0.5), Math.Sqrt(0.5));
 
@@ -34,7 +37,7 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// sculpt.jpg: a mound made with three Raise strokes (Size 8, Strength 0.40, Circle, Smooth), the brush's ring on its
+    /// sculpt.jpg: a mound made with three Raise strokes (Size 8, Strength 0.40, Circle, Soft), the brush's ring on its
     /// top and the Raise panel with its settings.
     /// </summary>
     private void Sculpt(Editor e)
@@ -44,7 +47,7 @@ public sealed partial class Scenes
         e.Send("set Size|8");
         e.Send("set Strength|0.4");
         e.Send("choose Circle");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         foreach (var at in new[] { P(-3, 1), P(3, 1), P(0, -2) })
         {
             Hold(e, at, 900);
@@ -67,7 +70,7 @@ public sealed partial class Scenes
         e.Send("key D8");
         e.Send("set Size|6");
         e.Send("set Strength|1");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         string[] shapes = ["Circle", "Square", "Ring", "Ragged (noise)", "Stamp: Crater rim"];
         for (int i = 0; i < shapes.Length; i++)
         {
@@ -78,14 +81,14 @@ public sealed partial class Scenes
         Aim(e, 7, 7, 225, 60, 72);
         Move(e, P(24, -26));
         e.Send("wait 300");
-        ShotWithList(e, Out("brush-shapes.jpg"), 260, 273);
+        ShotWithList(e, Out("brush-shapes.jpg"), 260, 335);
         // Each dab's shape under it (where this camera shows them).
         Label(Out("brush-shapes.jpg"), [("Circle", 478, 545), ("Square", 655, 545), ("Ring", 826, 545), ("Ragged (noise)", 995, 545), ("Stamp: Crater rim", 1163, 545)]);
     }
 
     /// <summary>
     /// brush-falloffs.jpg: six mounds raised on levelled ground by the same Raise stroke, one per falloff in the list's
-    /// order (Smooth, Linear, Dome, Flat top, Peak, Sharp edge) from left to right along the bare zone's diagonal, slope
+    /// order (Soft, Linear, Dome, Flat top, Peak, Sharp edge) from left to right along the bare zone's diagonal, slope
     /// colours on, each labelled.
     /// </summary>
     private void BrushFalloffs(Editor e)
@@ -96,19 +99,19 @@ public sealed partial class Scenes
         e.Send("choose Circle");
         e.Send("set Size|6");
         e.Send("set Strength|0.5");
-        string[] falloffs = ["Smooth", "Linear", "Dome", "Flat top", "Peak", "Sharp edge (pickaxe)"];
+        string[] falloffs = ["Soft", "Linear", "Dome", "Flat top", "Peak", "Sharp edge (pickaxe)"];
         for (int i = 0; i < falloffs.Length; i++)
         {
             e.Send($"choose {falloffs[i]}");
             Hold(e, OnDiagonal(31.25 - i * 12.5), 1300);
         }
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         Aim(e, 6, 6, 225, 27, 66);
         Move(e, P(26, -26));
         e.Send("wait 300");
         ShotWithoutRing(e, "brush-falloffs.jpg");
         // Each mound's falloff under it (where this camera shows them).
-        Label(Out("brush-falloffs.jpg"), [("Smooth", 458, 565), ("Linear", 600, 565), ("Dome", 745, 565), ("Flat top", 890, 565), ("Peak", 1030, 565), ("Sharp edge (pickaxe)", 1175, 565)]);
+        Label(Out("brush-falloffs.jpg"), [("Soft", 458, 565), ("Linear", 600, 565), ("Dome", 745, 565), ("Flat top", 890, 565), ("Peak", 1030, 565), ("Sharp edge (pickaxe)", 1175, 565)]);
     }
 
     /// <summary>
@@ -120,7 +123,7 @@ public sealed partial class Scenes
         Bare(e);
         e.Send("key D1");
         e.Send("set Strength|0.6");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         Stroke(e, "D1", P(0, 0), 14, hold: 3000, steps: 5);
         e.Send("key D3");
         e.Send("set Size|7");
@@ -143,18 +146,17 @@ public sealed partial class Scenes
         Stage(e);
         e.Send("key D2");
         e.Send("choose Circle");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         e.Send("set Strength|0.5");
         Stroke(e, "D2", P(20, 0), 6, hold: 1500);
-        // A rough mound: rocky ground stamped up.
-        e.Send("key D1");
-        e.Send("choose Stamp: Rocky ground");
-        e.Send("check Stamp once: a click puts the whole stamp in|on");
+        // A rough mound: the Landform tool's Rocky ground picture, put in once.
+        e.Send("click Landform");
+        e.Send("choose Picture");
+        e.Send("choose Rocky ground");
+        e.Send("set Radius|9");
         e.Send("set Height|6");
-        e.Send("set Size|9");
+        e.Send("set Turn|0");
         Click(e, P(0, 0));
-        e.Send("check Stamp once: a click puts the whole stamp in|off");
-        e.Send("choose Circle");
         e.Send("key D4");
         e.Send("set Size|5");
         e.Send("set Strength|0.35");
@@ -209,7 +211,7 @@ public sealed partial class Scenes
         Bare(e);
         Stage(e);
         e.Send("key D1");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         e.Send("set Strength|0.5");
         Stroke(e, "D1", P(0, 0), 11, hold: 1600, steps: 4);
         Aim(e, 11, 0, 200, 35, 40);
@@ -225,59 +227,64 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// stamps.jpg: the built-in stamps put into levelled ground with Stamp once (Mountain, Mesa, Crater rim, Dunes,
-    /// Rocky ground).
+    /// landform-pictures.jpg: the Landform tool's built-in pictures put into levelled ground, 6 m high, from the left
+    /// Rough hill, Dunes, Rocky ground.
     /// </summary>
-    private void Stamps(Editor e)
+    private void LandformPictures(Editor e)
     {
         Bare(e);
         Stage(e);
-        e.Send("key D1");
-        e.Send("set Size|8");
-        (string Stamp, double Dx, double Dz)[] stamps =
-        [
-            ("Stamp: Mountain", 20, 11), ("Stamp: Mesa (flat top)", 0, 11), ("Stamp: Crater rim", -20, 11),
-            ("Stamp: Dunes", 10, -11), ("Stamp: Rocky ground", -10, -11),
-        ];
-        foreach (var (stamp, dx, dz) in stamps)
+        e.Send("click Landform");
+        e.Send("choose Picture");
+        e.Send("set Radius|8");
+        e.Send("set Turn|0");
+        // East is left on the picture.
+        (string Picture, double Dx)[] pictures = [("Rough hill", 20), ("Dunes", 0), ("Rocky ground", -20)];
+        foreach (var (picture, dx) in pictures)
         {
-            e.Send($"choose {stamp}");
-            e.Send("check Stamp once: a click puts the whole stamp in|on");
+            e.Send($"choose {picture}");
             e.Send("set Height|6");
-            Click(e, P(dx, dz));
+            Click(e, P(dx, 0));
         }
-        e.Send("choose Circle");
         e.Send("key H");
         Camera(e, 0, 0, 200, 42, 64);
-        e.Shot(Out("stamps.jpg"));
+        e.Shot(Out("landform-pictures.jpg"));
     }
 
     /// <summary>
-    /// stamp-once.jpg: Raise with the Mesa stamp, Stamp once on and Height 8 m: the stamp's square outline on flat ground
-    /// before the click (left), the mesa it put in after (right), the same camera.
+    /// landform-picture.jpg: the Landform tool's Picture kind with the Rough hill, Radius 9 m and Height 8 m: its square
+    /// outline and orange preview on flat ground before the click (left), the hill it put in after (right), the same
+    /// camera.
     /// </summary>
-    private void StampOnce(Editor e)
+    private void LandformPicture(Editor e)
     {
         Bare(e);
         Stage(e);
-        e.Send("key D1");
-        e.Send("set Size|9");
-        e.Send("choose Stamp: Mesa (flat top)");
-        e.Send("check Stamp once: a click puts the whole stamp in|on");
+        e.Send("click Landform");
+        e.Send("choose Picture");
+        e.Send("choose Rough hill");
+        e.Send("set Radius|9");
         e.Send("set Height|8");
+        e.Send("set Turn|0");
         Aim(e, 14.5, 0, 200, 35, 50);
         Move(e, P(0, 0));
         e.Send("wait 300");
-        GroundPair(e, "stamp-once.jpg", ("Before the click", "After one click"), () =>
+        GroundPair(e, "landform-picture.jpg", ("Before the click", "After one click"), () =>
         {
             Click(e, P(0, 0));
             e.Send("wait 300");
-        }, ring: true);
+        }, ring: true, left: LandformPanelRight, from: LandformMaskRight);
     }
+
+    /// <summary>The Landform panel's right edge in the window (it is wider than a brush's panel): the view starts there.</summary>
+    private const int LandformPanelRight = 428;
+
+    /// <summary>The right edge of the Mask card beside the Landform panel: a pair's halves are cut from there.</summary>
+    private const int LandformMaskRight = 742;
 
     /// <summary>
     /// paint.jpg: stripes of paved, cultivated and dirt ground before (left) and after (right) one Clear paint stroke
-    /// across all three, from the same camera, the Clear paint panel.
+    /// across all three, from the same camera, the Paint panel on Clear paint.
     /// </summary>
     private void Paint(Editor e)
     {
@@ -285,7 +292,7 @@ public sealed partial class Scenes
         Stage(e);
         e.Send("key D8");
         e.Send("choose Circle");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         foreach (var (key, dz) in new[] { ("D8", 9), ("D7", 0), ("D6", -9) })
         {
             e.Send($"key {key}");
@@ -314,7 +321,7 @@ public sealed partial class Scenes
         Stage(e);
         e.Send("key D1");
         e.Send("choose Circle");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         e.Send("set Strength|1");
         e.Send("check No limit: past the game's ±8 m|off");
         Stroke(e, "D1", P(0, 0), 9, hold: 4000, steps: 4);
@@ -325,7 +332,7 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// no-limit.jpg: two stacks raised by the same Raise stroke held as long, with the brush panel's No limit off (left:
+    /// no-limit.jpg: two stacks raised by the same Raise stroke held as long, with No limit (under the Mask) off (left:
     /// stopped at the game's 8 m, its top red) and on (right: a spire far higher), the switch ticked.
     /// </summary>
     private void NoLimit(Editor e)
@@ -334,7 +341,7 @@ public sealed partial class Scenes
         Stage(e);
         e.Send("key D1");
         e.Send("choose Circle");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         e.Send("set Size|6");
         e.Send("set Strength|1");
         e.Send("check No limit: past the game's ±8 m|off");
@@ -356,7 +363,7 @@ public sealed partial class Scenes
         Stage(e);
         e.Send("key D1");
         e.Send("choose Circle");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         e.Send("set Strength|0.6");
         Stroke(e, "D1", P(0, 0), 8, hold: 3000, steps: 5);
         e.Send("key D8");
@@ -386,7 +393,7 @@ public sealed partial class Scenes
         e.Send("wait 300");
         string full = Out("mask-warning-full.jpg");
         e.Shot(full);
-        Crop(full, Out("mask-warning.jpg"), new SKRectI(GroundPairLeft - 6, 64, 718, 408));
+        Crop(full, Out("mask-warning.jpg"), new SKRectI(GroundPairLeft - 6, 64, 714, 398));
         File.Delete(full);
     }
 
@@ -433,7 +440,7 @@ public sealed partial class Scenes
         Stage(e);
         e.Send("key D1");
         e.Send("choose Circle");
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         e.Send("set Strength|0.5");
         e.Send("set Size|16");
         Hold(e, P(-4, 0), 2200);
@@ -444,7 +451,7 @@ public sealed partial class Scenes
         e.Send("set Size|5");
         e.Send("set Strength|1");
         Path(e, [P(-15, -6), P(-15, 4)], steps: 4, hold: 400);
-        e.Send("choose Smooth");
+        e.Send("choose Soft");
         e.Send("key H");
         e.Send("panel view");
         Aim(e, -6, 0, 200, 40, 50);
@@ -465,7 +472,10 @@ public sealed partial class Scenes
     /// <param name="change">Makes the change between the two pictures, choosing its tool.</param>
     /// <param name="keep">Parts of the after picture drawn over the halves where they are in the window (a card).</param>
     /// <param name="ring">Take the halves with the brush and its ring (a stamp's outline before the click).</param>
-    private void GroundPair(Editor e, string file, (string Before, string After) labels, Action change, IReadOnlyList<SKRectI>? keep = null, bool ring = false)
+    /// <param name="left">The window's column where the view starts right of the tool panel (a wider panel than a brush's).</param>
+    /// <param name="from">The window's column the halves are cut from, right of the Mask card beside that panel.</param>
+    private void GroundPair(Editor e, string file, (string Before, string After) labels, Action change, IReadOnlyList<SKRectI>? keep = null, bool ring = false,
+        int left = GroundPairLeft, int from = GroundPairCut)
     {
         string before = Out("before-" + file), after = Out("after-" + file), view = Out("view-" + file);
         if (!ring)
@@ -480,7 +490,7 @@ public sealed partial class Scenes
             e.Send("key H");
             e.Shot(view);
         }
-        Halves(Out(file), labels, before, after, new HalvesCut(0, Keep: keep?.ToArray(), From: GroundPairCut), ring ? null : view);
+        Halves(Out(file), labels, before, after, new HalvesCut(0, left, Keep: keep?.ToArray(), From: from), ring ? null : view);
     }
 
     /// <summary>
@@ -501,7 +511,7 @@ public sealed partial class Scenes
             using var shot = SKBitmap.Decode(Out(file)) ?? throw new InvalidOperationException($"{file}: not a picture");
             using (var canvas = new SKCanvas(shot))
             {
-                foreach (var r in new[] { new SKRectI(0, GroundPairTop, GroundPairLeft, GroundPairBottom), new SKRectI(GroundPairLeft, GroundPairTop, GroundPairCut, 124) })
+                foreach (var r in new[] { new SKRectI(0, GroundPairTop, GroundPairLeft, GroundPairBottom), new SKRectI(GroundPairLeft, GroundPairTop, GroundPairCut, MaskCardBottom) })
                 {
                     canvas.DrawImage(b, r, r, Exact);
                 }

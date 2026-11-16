@@ -7,7 +7,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Shape panel's layout: the formula box named by its label, for screen readers and the driver.
+/// The Landform panel's Formula kind: the formula box named by its label, for screen readers and the driver.
 /// </summary>
 public class ShapePanelLayoutTests
 {
@@ -15,11 +15,11 @@ public class ShapePanelLayoutTests
     public async Task TheFormulaBoxIsNamedAndSetByItsLabel()
     {
         var w = TestWindows.Editing(TestScenes.Flat(2));
-        w.Tools.ChooseMode(ToolMode.Shape);
+        w.Tools.ChooseMode(ToolMode.Landform);
         Dispatcher.UIThread.RunJobs();
         w.UpdateLayout();
-        Assert.Equal(Lang.T("shape.label.formula"), AutomationProperties.GetName(w.ShapePanel.FormulaBox));
+        Assert.Equal(Lang.T("shape.label.formula"), AutomationProperties.GetName(w.LandformPanel.Formula.FormulaBox));
         await Driver.Run(w, "set " + Lang.T("shape.label.formula") + "|d * 2");
-        Assert.Equal("d * 2", w.ShapePanel.FormulaBox.Text);
+        Assert.Equal("d * 2", w.LandformPanel.Formula.FormulaBox.Text);
     }
 }

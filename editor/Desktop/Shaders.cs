@@ -66,7 +66,7 @@ public static class Shaders
     /// <summary>
     /// The objects' fragment shader. Lit like the game look's day (sun, flat ambient, fog), in view space (the
     /// sun's z mirrored); also draws see-through materials (glass) by their alpha, the Place tool's ghosts, see-through
-    /// buildings, the Workshop's cut and the support check's tint; or one flat colour (uFlat, its alpha not zero), the
+    /// buildings, the view's cut and the support check's tint; or one flat colour (uFlat, its alpha not zero), the
     /// selection's outline mask (GlView.Outline).
     /// </summary>
     public const string ObjectFs = GameLookGl.Common + """
@@ -79,7 +79,7 @@ public static class Shaders
 		uniform float uSeeThrough;
 		// A see-through material (glass): its alpha, the colour's times the texture's, is the fragment's (else opaque).
 		uniform float uBlend;
-		// The Workshop's cut: x on (1), y the height above which nothing is drawn (not the ghosts).
+		// The view's cut: x on (1), y the height above which nothing is drawn (not the ghosts).
 		uniform vec2 uCut;
 		// The selection's outline mask: this flat colour where the object is drawn (alpha zero: off).
 		uniform vec4 uFlat;

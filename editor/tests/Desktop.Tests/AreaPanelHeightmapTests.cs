@@ -5,7 +5,8 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Heightmaps: the area's ground out to a picture and back, and a picture's values put into the ground (PutHeights).
+/// Heightmaps: the ground of the selection, or of the whole area, out to a picture and back, and a picture's values put
+/// into the ground (PutHeights).
 /// </summary>
 public class AreaPanelHeightmapTests
 {
@@ -79,6 +80,36 @@ public class AreaPanelHeightmapTests
         Assert.Equal(31, H(s, 30, 60), 1);
         Assert.Equal(33, H(s, 90, 60), 1);
         Assert.Equal(30, H(s, 110, 60), 3);
+    });
+
+    [AvaloniaFact]
+    public void ASelectionIsExportedAsItsOwnBoxAndComesBackIntoIt() => WithPictureFolder(dir =>
+    {
+        var s = TestScenes.Flat(2);
+        var w = TestWindows.Editing(s);
+        s.Shape(64, 64, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 20, 6, "hill");
+        float top = H(s, 64, 64);
+        var a = w.View.Area;
+        a.Soft = 0;
+        a.Points.Add(new Vector2(40, 44));
+        a.Points.Add(new Vector2(90, 84));
+        var p = w.AreaPanel;
+        // The selection's own box (40 to 90 by 44 to 84), named after where it is in the area: not the whole area.
+        string said = p.ExportHeightmap(dir)!.Shown;
+        Assert.StartsWith("Heightmap written to", said);
+        Assert.Contains("(the selection: 51 × 41,", said);
+        string file = Directory.GetFiles(dir).Single();
+        Assert.EndsWith("_at_40_44_51x41.png", file);
+        // The hill goes away, then the picture brings it back into the same selection, point for point.
+        s.Undo();
+        p.LoadPicture(file);
+        Assert.Contains("Picture 51 × 41 fitted to 51 × 41 m (the selection), with the heights it was exported with", p.PictureInfo.Text);
+        p.PutPicture();
+        Assert.Equal(top, H(s, 64, 64), 2);
+        // Nothing selected: the whole area, under the area's own name.
+        a.Clear();
+        p.ExportHeightmap(dir);
+        Assert.Contains(Directory.GetFiles(dir), f => !f.Contains("_at_", StringComparison.Ordinal));
     });
 
     // PutHeights: black at lo, white at hi, faded by each point's weight; points outside the picture left alone; the

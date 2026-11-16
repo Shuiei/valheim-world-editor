@@ -7,14 +7,15 @@ namespace TerrainEditor.Desktop;
 /// </summary>
 public sealed partial class PathPanel
 {
-    /// <summary>Shows only the rows of the current action, and the bump rows when Natural look is on.</summary>
+    /// <summary>Shows only the rows of the current action, and the bump rows for Naturalize or when Natural look is on.</summary>
     internal void ShowRows()
     {
         foreach (var (row, for_) in _rows)
         {
             row.IsVisible = for_.Contains(_path.Act);
         }
-        _naturalRows.IsVisible = _path.Natural;
+        NaturalRows.IsVisible = _path.Natural || UsesBumps(_path.Act);
+        ShowActionHelp();
     }
 
     /// <summary>

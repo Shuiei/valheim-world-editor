@@ -6,7 +6,7 @@ using static TerrainEditor.Desktop.Tests.SharedPlaceTool;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The brush's random layout (PlaceTool.NewLayout, the R key): a new layout puts the scattered objects somewhere else,
+/// The brush's random layout (PlaceTool.NewLayout, the N key): a new layout puts the scattered objects somewhere else,
 /// while the same settings and cursor keep the layout they have.
 /// </summary>
 public class PlaceToolLayoutTests

@@ -18,8 +18,8 @@ console and crossplay players included.
 ## Shape the land
 
 - **Past the ±8 m limit.** Raise a mountain, a volcano or a cliff, carve a canyon. Players see it with no mod at all.
-- **Roads, rivers and caves.** Draw the line on the map: the editor levels and paves a road, with ramps where it
-  climbs, digs a river bed, or a cave roofed with boulders.
+- **Roads and rivers.** Draw the line on the map: the editor levels and paves a road, with ramps where it
+  climbs, or digs a river bed.
 - **Brushes and one-click shapes.** Raise, flatten, smooth, paint; hills, craters and terraces in one click.
 
 ![A level road cut through the mounds and paved along its middle](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/v1.109.0/docs/images/path-road.jpg)

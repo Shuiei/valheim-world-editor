@@ -115,12 +115,17 @@ public sealed partial class Scenes
     {
         Bare(e);
         Level(e);
-        e.Send("key T");
-        Pieces(e);
-        Kinds(e, "piece_chest_wood");
-        Single(e, P(3, 2));
+        BuildOne(e, "piece_chest_wood", P(3, 2));
         e.Send("key E");
-        Click(e, P(3, 2));
+        // The chest alone is shown here: All selects it, once its model is read (Build puts it by its own snapping,
+        // not exactly under the pointer, so it is not clicked).
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        do
+        {
+            e.Send("wait 300");
+            e.Send("click All");
+        }
+        while (e.Send("wait 100").GetProperty("selected").GetInt32() != 1 && watch.Elapsed < TimeSpan.FromSeconds(20));
         e.Send("key I");
         ChestItem(e, 0, 0, "Wood", 20);
         ChestItem(e, 1, 0, "Coins", 50);

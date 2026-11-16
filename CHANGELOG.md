@@ -5,6 +5,161 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.120.0 — unreleased
+
+### Added
+- **Build in a world.** A new **Build** tool on the rail (`U`), under Place, opens the Workshop's Build dock over a
+  world's open ground: the pieces in the game's tabs with their pictures, the search, your mods' pieces, **Recent**,
+  the cost, **Auto**, **Manual** and **Free** snapping, the grid, rows by dragging, `Shift` + right click to take a
+  piece away and a middle click to build with a piece's kind. See [Build](docs/build.md).
+- **Lay pieces along a line or in a grid.** At the Build dock's foot, **Lay** puts the picked piece end to end along
+  a line of points, round a circle or a rectangle (**Layers** high, **Closed**), or in a grid (a floor): in a world
+  and in the Workshop. What Place did with building pieces, with the dock's pictures and the hammer's snapping.
+- **One building bar for Build, Select and Paste.** The bar beside the rail (**Snap**, **Grid**, **Turn by**,
+  **Lift**, **Built by**) now shows with Select and while pasting too, with one setting for the three: moved pieces
+  snap or go by the grid, a paste goes by the grid, and `,` `.` and the lift go by the same steps. The steps and the
+  grid are kept for the next time.
+- **A Rate for the Place brush**: how fast a drag plants is the Place tool's own setting, no longer the sculpt
+  brushes' Strength.
+- **The Path tool has Naturalize, Erode and Restore**, the brushes' and the Region tool's actions along a line: put
+  natural bumps back on a flattened road, weather a ditch or a dyke, or take a road back to the ground the game
+  generated long after the undo history is gone.
+- **Every action shows the settings it uses.** The Region tool's **Naturalize** shows **Bumps**, **Bump size** and
+  **New pattern**, and its **Erode** shows **Rest angle**; so do the Path tool's. Before, they silently used what
+  was last set in the Naturalize and Erode brushes. They are still the same values: set in any panel, they change in
+  all of them.
+- **Save the clipboard as a blueprint from the Blueprints panel.** A **Clipboard** row above the blueprints shows what
+  was copied last (with the Region tool, or `Ctrl+C` in Select), with **Paste** and **Save as blueprint…**: a copy
+  made with Select no longer needs the Region tool to become a blueprint. **Save blueprint…** in the Region panel is
+  still there.
+
+### Changed
+- **The editor looks like the game's own menus**: near-black panels with a bronze line round them, squared corners,
+  warm white text in the game's serif (Averia Serif Libre, carried in the program, so the editor looks the same on
+  every computer), orange panel titles and accent. Every page follows: the start page, the map, the 3D editor, the
+  Workshop, Settings and Help.
+- **Place is for nature**: trees, rocks, bushes, crops, pickables, creatures and spawn points (and parts of ruins).
+  The pieces of the hammer and the serving tray left its list for Build; the cultivator's saplings and crops are in
+  both. Picking a building piece in the world with Place says to use Build.
+- **The same keys lift and turn everywhere.** `PgUp`, `PgDn` and `Ctrl` + wheel all lift in Build, Select, Paste and
+  Place; `,` `.` and `Alt` + wheel turn. **`Shift` now always makes the step finer**: in Select it used to make it
+  coarser (15° and 1 m). Select and Paste turn by the bar's **Turn by** (22.5° at first, `Shift`: 1°) and lift by its
+  **Lift** (0.5 m at first, `Shift`: a fifth). Place turns trees and the like by 15° a press, and by 1° with `Shift`
+  (it was 1°, and 15° with `Shift`).
+- **Built by moved** from the View panel to the building bar, where the pieces it signs are built, pasted and
+  replaced.
+- Select's **Snap to other pieces when moving** switch is the building bar's **Snap** (**Auto** or **Free**).
+- The tool rail ends above the Build dock while it is open, and scrolls.
+- **One Landform tool** in place of Shape, Mountain and the brushes' Stamp once, which all put a whole landform into
+  the ground with one click. Its panel starts with **Kind**: **Formula** (the Shape tool's mounds, craters and your
+  own formulas), **Mountain** (the Mountain tool's peaks, ridges and volcanoes) or **Picture** (a greyscale picture
+  pressed in, built in or loaded from a file). Preset, Radius, Height and Turn are in the same place and under the
+  same names for the three. The rail's CREATE section has one **Landform** button (`G`) instead of Shape and
+  Mountain. See [Landform](docs/landform.md).
+- **Every kind shows what a click will add** before you click: the white outline and the orange lines the Mountain
+  tool had are now drawn for formulas and pictures too, hollows included.
+- **The panel says whether the landform obeys the game's ±8 m limit**: Formula and Picture stop at it unless No limit
+  is on, a mountain always goes past it. The line follows the No limit switch.
+- **A picture has its own size, height and turn**, apart from the brush: a radius up to 80 m (the brush stopped at
+  30 m), and a negative height presses it down, where Stamp once needed the Lower brush. **Load picture…** in the
+  panel adds your own; pictures loaded there or as brush stamps are offered in both places.
+- **No landform name is used twice.** The formula's flat-topped hill is now **Plateau** (the mountain keeps **Mesa**),
+  and the stamp that was called Mountain is **Rough hill**, in the brush's Shape list too. The **Mesa (flat top)** and
+  **Crater rim** stamps stay brush shapes but are not offered as pictures: the formulas already make them (Plateau,
+  and Moat with a negative height).
+- History names these steps "Landform: …", whatever the kind.
+- **The Area tool is now the Region tool** (`B`), and its sixteen actions are sorted into four groups, chosen with
+  buttons above the **Action** list: **Ground** (Flatten, Raise, Lower, Smooth, Naturalize, Erode, Paint, Heightmap),
+  **Objects**, **Recover** and **Clipboard** (Copy, Cut, Paste, blueprints). Each group comes back on the action it
+  was last on. "The area" now only means the block of zones open in 3D. History names its steps "Region: …".
+- **Objects of a region go to the Select tool.** **Objects** has one action, **Select the objects**: it takes the
+  objects of the kinds switched on inside the box or polygon, where the Mask lets the ground through, and opens the
+  Select tool with them selected. There, `Del` removes them and **Replace the selection** turns them into another
+  kind, so the Region tool's own **Remove objects** and **Replace objects** are gone (they did the same, with a second
+  "replace with" list and a second eyedropper). The new **Only** list narrows the choice to one kind of object among
+  those inside ("Beech1 (42)"), which is how to replace only the beeches of a wood. Press `B` to come back: the
+  selection is still there.
+- **Recover** gathers what brings a place back, lightest first: **Back to generated ground** (was "Restore the
+  ground"), **Regrow nature**, **Back to a backup** (was "Restore from a backup") and **Reset zones**. With the
+  **Restore** brush, three things were called Restore.
+- **Reset zones has the same choices in the Region tool and on the map**, under the same words: **Keep my buildings**,
+  **Also undo their ground edits**, and **Unmark all** in both. The Region tool's **Cancel reset** is now **Unmark
+  these zones**, and it gains **Unmark all** (those marked on the map too, as one undo step). The map gains **Unmark
+  matching** and **Keep my buildings**: on, as it is at first, nothing changes and a zone holding buildings never
+  matches; off, with **No buildings…** off too, such zones match and their buildings go with the rest (the question
+  before marking says so).
+- **Heightmap's Export writes the selection.** It wrote the whole open area whatever was selected; it now writes the
+  box of the selection, the one **Import…** fits a picture to, and the whole area only when nothing is selected.
+- The Select tool's **Replace with** list follows the world: kinds a live game or a mod brings are offered without
+  opening the area again, and the kind chosen stays chosen.
+- **One Paint brush in place of four.** The tool rail's PAINT section and its four buttons (Dirt, Cultivate, Paved,
+  Clear) are now one **Paint** button, last of the SCULPT section. Its panel shows the four paints as swatches: click
+  one to paint with it. The keys are the same: `6` Dirt, `7` Cultivate, `8` Paved, `9` Clear paint, each picking the
+  Paint brush with that paint. The rail button shows the colour of the paint in use and comes back with the one you
+  used last.
+- **One action, one result, whichever tool applies it.** Raise, Lower, Flatten, Smooth, Naturalize, Restore and Paint
+  are now worked out in one place for the brushes, the Region tool and the Path tool, which only say where: under a
+  stroke, inside a selection, along a line.
+  - **Smooth** in one go (Region and Path) moves each point towards the average of the ground within 3 m. The Path
+    tool's reached 2 m, so one **Smooth** along a line now evens out a little more. The Smooth brush is unchanged:
+    held on a spot for a second or two at the default strength, it does what one Apply does.
+  - **Naturalize** aims at the same ground under the brush, in a selection and along a line: the brush read the
+    ground's broad shape a little more coarsely, so its bumps may sit very slightly differently than before.
+- **The same names in the three tools.** The Path tool's **Flatten to height**, **Raise by** and **Lower by** are
+  **Flatten**, **Raise** and **Lower**, as the brushes and the Region tool call them.
+- **One blueprint library.** The **Blueprints** panel of a world and the **Library** tab of the Workshop now show the
+  same list: each blueprint with its picture, pieces, maker, cost, description and tags, and the same buttons. In the
+  Workshop that adds **Details**, **.vbuild** and **Delete** on every blueprint, **New blueprint** for a blank plot,
+  and the older editor blueprints with **To Homestead**; in a world, a blueprint without a picture gets one drawn.
+  Only putting a blueprint down differs: **Paste** in a world, **Add** (or dragging it) onto the Workshop's plot.
+- **Edit is now Open**, as in the Workshop: the button that opens a blueprint in the Workshop has one name in both
+  places. **New in Workshop** is **New blueprint**.
+- Changing the **Details** of the blueprint on the Workshop's plot renames the building there too, so **Save
+  blueprint** writes the renamed file; deleting it leaves the building on the plot, marked not saved.
+- **No limit is one switch, on the Mask card.** It was a tick box at the bottom of the brush settings and a second one
+  under three of the Area tool's actions, while Shape, Path and Stamp once followed it without showing it. It is now
+  under the Mask, on the card next to the panel of every tool it governs (the sculpt brushes and their stamps,
+  Landform, Path and Region), and nowhere else. It works as before: off each time the editor starts, then on for
+  every tool until you switch it off. A Landform mountain and pasting always go past the game's 8 m.
+- **One Cut slider, for worlds too.** The Workshop's **Cut** slider and the Dungeon panel's own are now one slider in
+  the status bar, under every 3D view. It hides everything above a height, and the cursor goes through what is hidden,
+  so you can look, select and build inside. New in a world: the height counts from the ground in the middle of the
+  view and follows the view as it moves. In the Workshop it counts from the plot, in a dungeon from its floor, as
+  before. It starts off; a world and a dungeon each keep their own cut. See
+  [Cut](docs/editor-basics.md#cut).
+- **Go to a player is beside LIVE.** In a live world, the player list and **Go** moved from the View panel to the top
+  bar, next to the **LIVE** badge, with the other live controls. They show while a player is connected.
+- **Claude**: the cut is the control `view.cut` (it was `workshop.cut`), usable in a world, the Workshop and a dungeon.
+- **Claude's `dig_path`** takes `naturalize`, `erode` and `restore` too, as the Path tool now does.
+- **The status bar gives its room to the message.** Its reminder of the mouse ("Right drag turns · Wheel zooms…")
+  shows in a window 1500 px wide or more; in a narrower one the message has its place, beside the Cut slider.
+- **One key, one meaning.** A few keys did one thing in one tool and another in the next. Was → now:
+  - **`R` turns a quarter turn wherever something turns.** It already turned the paste; it now also turns the Place
+    preview, a drawn grid or polygon, the piece in Build and the selection in Select. In the Dungeon tool it still
+    turns the room to add.
+  - **Place, New layout:** `R` → `N`.
+  - **Pasting, Mirror:** `F` → `X`. `F` is Walk and Fly in every tool, while pasting too.
+  - **Path, a ramp's end height:** `Alt+Shift`+click → `Ctrl+Alt`+click. `Alt+Shift`+click now sets the Mask's
+    height range with the Path tool, as it does with a brush.
+- **One word, one meaning.** Was → now:
+  - **"Zone" is only the game's 64 m zone.** Place's **Zone** mode → **Polygon** (its **ZONE FILL** rows → **POLYGON
+    FILL**). Select's **A zone on the ground** → **An outline on the ground**; a choice of it is remembered as before.
+  - **Clear (Esc)** says what it clears: **Clear selection (Esc)** in Region, **Clear line (Esc)** in Path, **Clear
+    shape (Esc)** in Place, **Clear measurement (Esc)** in Measure.
+  - **The rail's Natural** → **Naturalize**, as its panel is titled.
+  - **The brushes' Smooth falloff** → **Soft**: Smooth is the brush.
+  - **Select's Pick list** (Everything shown, Built pieces only, Nature only) → **Selects**: "pick" is taking a kind
+    from the world.
+
+### Removed
+- **Stamp once** and its Height in the Raise and Lower brush panels: choose **Landform**, Kind **Picture**. A stamp
+  as a brush shape still paints as before.
+- **The Path tool's Cave** (the **Cave** button of the rail, the **Cave (dig and roof)** action and Claude's
+  `dig_path` cave) is gone. It could only dig a trench and lay boulders over it, since the game's ground cannot
+  overhang. Real tunnels, rooms, shafts and stairs under the ground are dug with the **Tunnel** tool of the
+  [Tunnelheim add-on](addons/Tunnelheim/README.md), in worlds played with Tunnelheim. Caves already made stay as they
+  are: they are ordinary ground and boulders.
+
 ## v1.119.4 — 2026-11-12
 
 ### Changed
@@ -991,6 +1146,7 @@ the plugin is unchanged in versions without that part. Mods newly supported, or 
   world file (Expand World Size keeps its settings in it) and the mods' settings files in the BepInEx folder.
   With the switch off, as before, every world is generated as the game itself does. Not yet: Expand World Data's
   biomes, locations and vegetation, worlds wider than the game's save grid, and the map's size.
+
 ## v1.48.2 — 2026-10-19
 
 ### Fixed

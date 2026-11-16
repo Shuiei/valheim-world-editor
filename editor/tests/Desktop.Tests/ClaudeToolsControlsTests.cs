@@ -7,7 +7,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Claude's tools for the editor's own controls (ClaudeTools.Controls): the Workshop's Cut slider and Support check
+/// Claude's tools for the editor's own controls (ClaudeTools.Controls): the view's Cut slider and the Workshop's Support check
 /// found and set, blocked controls refused, only the View panel's while live with Auto on; and the helpers they use
 /// (KindOf, LabelOf, ControlsOf, ValueOf, Set, Blocked).
 /// </summary>
@@ -40,7 +40,7 @@ public class ClaudeToolsControlsTests
         var slider = new Slider();
         _ = new StackPanel { Children = { new TextBlock { Text = "Strength" }, slider } };
         Assert.Equal("Strength", ClaudeTools.LabelOf(slider));
-        var tipped = new NumericUpDown().Tip("workshop.cut");
+        var tipped = new NumericUpDown().Tip("view.cut");
         Assert.Equal(((string)ToolTip.GetTip(tipped)!).Split(". ")[0], ClaudeTools.LabelOf(tipped));
     }
 
@@ -125,7 +125,7 @@ public class ClaudeToolsControlsTests
         Assert.NotNull(t.Blocked(C("~delete", new Button { Content = "Delete" })));
         // The Blueprints rows' buttons that write or delete files and Select's Delete, by their key whatever their
         // label's language.
-        string[] writing = ["select.delete", "blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead", "blueprints.delete", "blueprints.deleteOld"];
+        string[] writing = ["select.delete", "blueprints.saveClipboard", "blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead", "blueprints.delete", "blueprints.deleteOld"];
         Assert.All(writing, k => Assert.NotNull(t.Blocked(C(k, new Button { Content = "Supprimer" }.Tip(k)))));
         Assert.Null(t.Blocked(C("blueprints.paste", new Button { Content = "Coller" }.Tip("blueprints.paste"))));
         Assert.Null(t.Blocked(C("~go", button)));
@@ -168,17 +168,18 @@ public class ClaudeToolsControlsTests
         w.CloseWithoutAsking();
     }
 
-    // In the Workshop: the Cut slider and the Support check are listed and set as the user would; an unknown id is said.
+    // In the Workshop: the view's Cut slider and the Support check are listed and set as the user would; an unknown id is said.
     [AvaloniaFact]
     public async Task TheWorkshopsCutAndSupportCheckAreSet()
     {
         using var r = new ClaudeRun();
         await r.T.OpenWorkshop();
-        var listed = ClaudeRun.J(await r.T.ListControls("workshop"));
-        Assert.Contains(listed.GetProperty("controls").EnumerateArray(), c => c.GetProperty("id").GetString() == "workshop.cut");
-        var cut = ClaudeRun.J(await r.T.SetControl("workshop.cut", "12"));
+        var listed = ClaudeRun.J(await r.T.ListControls("cut"));
+        Assert.Contains(listed.GetProperty("controls").EnumerateArray(), c => c.GetProperty("id").GetString() == "view.cut");
+        var cut = ClaudeRun.J(await r.T.SetControl("view.cut", "12"));
         Assert.Equal(12, cut.GetProperty("value").GetDouble());
-        Assert.Equal(12, r.W.CutSlider.Value);
+        Assert.Equal(12, r.W.ViewCut.Slider.Value);
+        Assert.Equal(Workshop.Ground + 12, r.W.View.CutY);
         await r.T.SetControl("workshop.support", "false");
         Assert.False(r.W.SupportBox.IsChecked);
         Assert.StartsWith("No control nothing.here now", await r.T.SetControl("nothing.here", "1"));

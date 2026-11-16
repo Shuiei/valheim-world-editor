@@ -58,6 +58,6 @@ public class ErosionBrushTests
         w.AreaPanel.Choose(AreaPanel.Act.Erode);
         await w.AreaPanel.Apply();
         Assert.True(s.Scene.Heights[64 * s.Scene.W + 64] < 36);
-        Assert.Equal("Area: Erode", s.UndoLabel);
+        Assert.Equal("Region: Erode", s.UndoLabel);
     }
 }

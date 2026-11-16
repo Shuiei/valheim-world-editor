@@ -27,7 +27,7 @@ public class AreaPanelTests
         await r.P.Apply();
         Assert.StartsWith(said, r.Said);
         Assert.True(r.S.CanUndo);
-        Assert.StartsWith("Area: ", r.S.UndoLabel);
+        Assert.StartsWith("Region: ", r.S.UndoLabel);
         if (act == AreaPanel.Act.Raise)
         {
             Assert.Equal(before + 1.5f, r.H(32, 32), 2);
@@ -43,28 +43,19 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
-    public void NoLimitShowsUnderFlattenRaiseAndLowerAndIsTheBrushSwitch()
+    public void TheMaskCardsNoLimitGovernsTheAreaToolsCutAndFill()
     {
         using var r = new SharedAreaPanelRun();
-        foreach (var act in new[] { AreaPanel.Act.Flatten, AreaPanel.Act.Raise, AreaPanel.Act.Lower })
-        {
-            r.P.Choose(act);
-            Assert.True(r.P.NoLimitBox.IsVisible);
-        }
-        r.P.Choose(AreaPanel.Act.Smooth);
-        Assert.False(r.P.NoLimitBox.IsVisible);
         // Flatten far above the ground: the limit leaves most of it out of reach, until No limit is on.
         r.P.Choose(AreaPanel.Act.Flatten);
         r.P.HeightBox.Value = (decimal)(r.H(32, 32) + 100);
         Assert.Contains("out of reach", r.P.VolumeText.Text);
-        r.P.NoLimitBox.IsChecked = true;
-        Assert.True(r.W.Tools.NoLimitBox.IsChecked);
+        // The one switch, on the Mask card: the ground and the Area panel's cut and fill follow.
+        r.W.MaskPanel.NoLimitBox.IsChecked = true;
         Assert.True(r.S.Ground.NoLimit);
         Assert.StartsWith("No limit", r.Said);
         Assert.DoesNotContain("out of reach", r.P.VolumeText.Text);
-        // The brush options' switch moves this one too.
-        r.W.Tools.NoLimitBox.IsChecked = false;
-        Assert.False(r.P.NoLimitBox.IsChecked);
+        r.W.MaskPanel.NoLimitBox.IsChecked = false;
         Assert.False(r.S.Ground.NoLimit);
         Assert.Contains("out of reach", r.P.VolumeText.Text);
     }
@@ -102,7 +93,7 @@ public class AreaPanelTests
         using var r = new SharedAreaPanelRun(select: false);
         r.P.Choose(AreaPanel.Act.Raise);
         await r.P.Apply();
-        Assert.Equal("Select an area first.", r.Said);
+        Assert.Equal("Select a region first.", r.Said);
         Assert.False(r.S.CanUndo);
         // No area open at all: nothing happens.
         var lone = new MainWindow(load: false) { Width = 800, Height = 600 };
@@ -112,13 +103,15 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
-    public async Task RemoveWithNoneOfTheChosenKindsInsideSaysSo()
+    public async Task SelectObjectsWithNoneOfTheChosenKindsInsideSaysSoAndStays()
     {
         using var r = new SharedAreaPanelRun();
         r.ChooseNoKinds();
-        r.P.Choose(AreaPanel.Act.Remove);
+        r.P.Choose(AreaPanel.Act.Select);
         await r.P.Apply();
         Assert.Equal("No objects of the chosen kinds inside the selection.", r.Said);
+        Assert.Equal(ToolMode.Area, r.W.Tools.Mode);
+        Assert.Empty(r.W.View.Selected);
     }
 
     [AvaloniaFact]
@@ -154,7 +147,7 @@ public class AreaPanelTests
     public void TheVolumeIsWorkedOutOnlyForTheActionsShowingIt()
     {
         using var r = new SharedAreaPanelRun();
-        r.P.Choose(AreaPanel.Act.Remove);
+        r.P.Choose(AreaPanel.Act.Select);
         Assert.Equal("", r.P.VolumeText.Text);
         foreach (var act in (AreaPanel.Act[])[AreaPanel.Act.Flatten, AreaPanel.Act.Raise, AreaPanel.Act.Lower])
         {
