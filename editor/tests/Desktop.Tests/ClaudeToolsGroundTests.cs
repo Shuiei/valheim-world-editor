@@ -214,7 +214,7 @@ public class ClaudeToolsGroundTests
     {
         using var r = new ClaudeRun();
         await r.OpenArea();
-        Assert.StartsWith("No stamp \"Volcano\": Mountain, ", await r.T.Stamp("Volcano", 0, 0));
+        Assert.StartsWith("No stamp \"Volcano\": Rough hill, ", await r.T.Stamp("Volcano", 0, 0));
         Assert.StartsWith("(500, 0) is outside the open area", await r.T.Stamp("Mountain", 500, 0));
         async Task<float> H() => ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0].GetProperty("height").GetSingle();
         float before = await H();

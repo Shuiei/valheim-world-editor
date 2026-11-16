@@ -257,8 +257,10 @@ public sealed class BuildingBar
     /// <param name="metres">The lift, in metres (0: none).</param>
     public void ShowLift(float metres)
     {
-        LiftText.Text = metres == 0 ? Lang.T("build.liftNone") : $"{metres:+0.0#;-0.0#} m";
-        LiftReset.IsEnabled = metres != 0;
+        // None: less than the half millimetre the text would round away.
+        bool none = MathF.Abs(metres) < 0.0005f;
+        LiftText.Text = none ? Lang.T("build.liftNone") : $"{metres:+0.0#;-0.0#} m";
+        LiftReset.IsEnabled = !none;
     }
 
     /// <summary>Snapping by hand while building: shows which snap point meets the others, or nothing (null).</summary>

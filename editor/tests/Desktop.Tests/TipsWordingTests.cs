@@ -21,7 +21,7 @@ public class TipsWordingTests
         Assert.Contains("[ and ]", Tip(w.PlacePanel.SizeSlider));
         Assert.Contains(", and .", Tip(w.PlacePanel.RotationSlider));
         Assert.Contains("(R)", Tip(w.PastePanel.TurnButton));
-        Assert.Contains("(F)", Tip(w.PastePanel.MirrorButton));
+        Assert.Contains("(X)", Tip(w.PastePanel.MirrorButton));
         Assert.Contains("(Esc)", Tip(w.PastePanel.DoneButton));
         Assert.Contains("(L)", Tip(w.HistoryButton));
         Assert.Contains("(V)", Tip(w.ViewButton));

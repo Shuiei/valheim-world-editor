@@ -39,8 +39,8 @@ public sealed class ToolPanelLangTests
         Said? said = null;
         t.Message += m => said = m;
         t.NewPattern(7);
-        Assert.Equal(PseudoLang.Wrap("New bump pattern. The next Naturalize stroke, or path with Natural look, uses it."), said!.Shown);
-        Assert.Equal("New bump pattern. The next Naturalize stroke, or path with Natural look, uses it.", said.English);
+        Assert.Equal(PseudoLang.Wrap("New bump pattern. The next Naturalize (brush, Region or Path), or path with Natural look, uses it."), said!.Shown);
+        Assert.Equal("New bump pattern. The next Naturalize (brush, Region or Path), or path with Natural look, uses it.", said.English);
 
         var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
         w.Show();

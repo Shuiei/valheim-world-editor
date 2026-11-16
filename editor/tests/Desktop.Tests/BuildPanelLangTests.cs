@@ -29,7 +29,7 @@ public sealed class BuildPanelLangTests
             .. pieces.SelectMany(x => new[] { x.Prefab, x.Name }),
             .. pieces.Select(x => PieceCost.Get(x.Prefab)?.Station).OfType<string>(),
             .. PieceCost.Of(pieces.Select(x => x.Prefab)).Materials.Select(m => m.Name),
-            "Gate",
+            "Gate", ".vbuild",
         ];
         // The generator below the Library is the Dungeon panel's, checked with it. Its texts are read again each
         // time: it starts making a dungeon on its own and then shows another line.

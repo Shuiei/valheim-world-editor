@@ -138,7 +138,7 @@ public class KeysAndMouseListingTests
     {
         var w = new MainWindow(load: false);
         var texts = Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(w.HelpCard).OfType<TextBlock>().Select(t => t.Text).ToList();
-        foreach (string k in new[] { "[  ]", "Alt + wheel", "E / M / H", "Middle drag", "Place: R", "PgUp / PgDn / End", "Ctrl+S", "V / L / ?", "Alt + click", "I", "Del" })
+        foreach (string k in new[] { "[  ]", "Alt + wheel", "E / M / H", "Middle drag", "Place: N", "PgUp / PgDn / End", "Ctrl+S", "V / L / ?", "Alt + click", "I", "Del" })
         {
             Assert.Contains(k, texts);
         }
@@ -153,7 +153,7 @@ public class KeysAndMouseListingTests
         t.Message += m => said = m.Shown;
         t.NewPattern(1234);
         Assert.Equal(1234, t.Brush.Noise.Seed);
-        Assert.Equal("New bump pattern. The next Naturalize stroke, or path with Natural look, uses it.", said);
+        Assert.Equal("New bump pattern. The next Naturalize (brush, Region or Path), or path with Natural look, uses it.", said);
         float a = t.Brush.Noise.Fbm(3.3f, 7.1f);
         t.NewPattern(99);
         Assert.NotEqual(a, t.Brush.Noise.Fbm(3.3f, 7.1f));

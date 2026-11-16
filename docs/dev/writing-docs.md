@@ -4,7 +4,8 @@ The documentation is for people who play Valheim, not for programmers. Most of t
 undo this?", "why can't I lift this higher?") and read a fifth of a page at most: headings and the first words of each
 paragraph carry the meaning. The same Markdown is shown on GitHub and in the editor's Help window
 (`editor/Desktop/HelpWindow.cs`), which carries every page of `docs/` but this folder, the release notes,
-`architecture.md` and `development.md`.
+`architecture.md`, `development.md` and the pointer pages (`shape.md`, `mountain.md`: a line each, kept so that links
+from outside to a tool page merged into another still lead somewhere).
 
 ## Four kinds of page
 

@@ -86,7 +86,7 @@ public sealed class SharedGroundSettingsTests
 
         p.NewPatternButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.NotSame(before, w.Tools.Brush.Noise);
-        Assert.StartsWith("New natural pattern.", w.LastMessageEn);
+        Assert.StartsWith("New bump pattern.", w.LastMessageEn);
     }
 
     [AvaloniaFact]
@@ -113,7 +113,7 @@ public sealed class SharedGroundSettingsTests
         var before = w.Tools.Brush.Noise;
         p.NewPatternButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.NotSame(before, w.Tools.Brush.Noise);
-        Assert.StartsWith("New natural pattern.", w.LastMessageEn);
+        Assert.StartsWith("New bump pattern.", w.LastMessageEn);
     }
 
     [AvaloniaFact]

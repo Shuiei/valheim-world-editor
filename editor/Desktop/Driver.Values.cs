@@ -13,7 +13,9 @@ public static partial class Driver
         string[] a = call.A;
         MainWindow w = call.W;
         var (label, value) = Bar(a, "set <label>|<value>");
-        var tb = Find<Avalonia.Controls.TextBlock>(w, t => string.Equals(t.Text?.Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no label \"{label}\"");
+        // A label, not the choice a list shows (the Landform panel's Kind list shows "Formula" above the Formula box).
+        var tb = Find<Avalonia.Controls.TextBlock>(w, t => string.Equals(t.Text?.Trim(), label, StringComparison.OrdinalIgnoreCase)
+            && !Avalonia.VisualTree.VisualExtensions.GetVisualAncestors(t).OfType<Avalonia.Controls.ComboBox>().Any()) ?? throw new InvalidOperationException($"no label \"{label}\"");
         // The row holding the label: the first control after it.
         var row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(tb);
         for (int up = 0; up < 3 && row != null; up++, row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(row))

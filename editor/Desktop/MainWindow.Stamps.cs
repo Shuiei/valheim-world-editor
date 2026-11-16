@@ -19,7 +19,7 @@ public sealed partial class MainWindow
         var panel = LandformPanel.Picture;
         var b = panel.Brush;
         float amount = panel.Height;
-        if (b.StampData == null || amount == 0)
+        if (b.StampData == null || MathF.Abs(amount) < 0.0005f)
         {
             Msg("landform.msg.pictureNothing");
             return;

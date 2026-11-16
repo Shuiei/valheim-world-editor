@@ -81,7 +81,7 @@ public class AreaPanelTests
         await r.P.Apply();
         r.P.Choose(AreaPanel.Act.Restore);
         await r.P.Apply();
-        Assert.StartsWith("Restore", r.Said);
+        Assert.StartsWith("Back to generated ground", r.Said);
         r.P.Choose(AreaPanel.Act.Erode);
         await r.P.Apply();
         Assert.Contains("applied to", r.Said);

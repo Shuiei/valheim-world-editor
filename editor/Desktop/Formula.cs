@@ -29,7 +29,7 @@ public static partial class Formula
     /// <summary>
     /// JavaScript's truth: 0 and NaN are false.
     /// </summary>
-    private static bool Truthy(double v) => v != 0 && !double.IsNaN(v);
+    private static bool Truthy(double v) => v is not (0d or double.NaN);
 
     /// <summary>
     /// smooth(t): 0 to 1 eased (smoothstep), t clamped to 0..1.
