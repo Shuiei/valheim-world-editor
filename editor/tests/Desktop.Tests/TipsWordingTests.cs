@@ -35,7 +35,7 @@ public class TipsWordingTests
         Assert.Contains("(Ctrl+C)", Tip(w.AreaPanel.CopyButton));
         Assert.Contains("(Ctrl+V)", Tip(w.AreaPanel.PasteButton));
         Assert.Contains("(Backspace)", Tip(w.PlacePanel.UndoPointButton));
-        Assert.Contains("(R)", Tip(w.PlacePanel.NewLayoutButton));
+        Assert.Contains("(N)", Tip(w.PlacePanel.NewLayoutButton));
         Assert.Contains("PgUp / PgDn", Tip(w.PlacePanel.ElevationBox));
         Assert.Contains("Alt + click", Tip(w.Tools.TargetBox));
         Assert.Contains("Alt + Shift + click", Tip(w.MaskPanel.HeightMin));
