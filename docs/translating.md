@@ -46,6 +46,41 @@ keeps the carried translation; English shows only where neither has the text.
 To have a catalogue carried by the editor, open a pull request adding it to `editor/Core/Lang/` (keys
 only from `en.json`; `LangCatalogueTests` checks them).
 
+## Translating the documentation
+
+The Help window shows the documentation in the editor's language when it has a translation of the page, and in English
+otherwise. A translation of the documentation is a folder of `docs/` named after the language's code, as its catalogue
+is: `docs/fr/`, `docs/pt-BR/`. Its own `README.md` is what makes it one (the first page, and the Help window's
+contents); the English folders (`guides/`, `help/`, `concepts/`, `start/`) have none.
+
+- **Pages.** The folder mirrors the English pages: `docs/fr/map.md` translates `docs/map.md`, and
+  `docs/fr/guides/make-a-road.md` translates `docs/guides/make-a-road.md`. Translate the pages the Help window carries
+  ([writing-docs.md](dev/writing-docs.md) lists the ones it does not). A page not translated yet shows in English, so a
+  translation can start with a few pages.
+- **Links.** Write them as the English page writes them, from the folder: `map.md#…` and `guides/x.md` from
+  `docs/fr/README.md`, `../area.md` from `docs/fr/guides/`. A link that leads out of `docs/` climbs one `../` more than
+  the English one (`../../README.md`, `../../editor/Core/Lang/en.json`), and so does a link to a file of `docs/` that is
+  not translated (`../worldeditor.schema.json`). Links to a page the folder does not have yet still work in the editor
+  (it shows the English page), but not on GitHub until the page is translated.
+- **Pictures.** A picture with words in it is retaken in your language in `docs/fr/images/`, under the same name, and
+  written `images/x.jpg`. One with nothing to translate can stay the English one: `../images/x.jpg`. Until a picture
+  of `images/` is added to your folder, the Help window shows the English one of the same name.
+- **Headings.** Translate them; their ids change with them (GitHub makes them from the words: `#search-the-world`
+  becomes `#rechercher-dans-le-monde`), and the translation's own links use the translated ids, as GitHub needs. Keep
+  the English page's headings: as many, of the same levels, in the same order. The editor then also takes the English
+  ids to their translated headings, so its help buttons (`F1`, the panels' `?`), which name English headings, land in
+  the right place.
+- **Source mark.** Put a line on the page, first, saying which English text it was translated from:
+  `<!-- source: 1a2b3c4d -->`, the first 8 characters of the English page's SHA-256 (neither GitHub nor the Help window
+  shows it). Get them with `sha256sum docs/map.md | cut -c1-8` (macOS: `shasum -a 256`). The mark is computed on the
+  page with Unix line ends: on a Windows checkout that turned them into `\r\n`, use
+  `git show HEAD:docs/map.md | sha256sum | cut -c1-8`, which gives the page as the repository keeps it.
+
+When the English page changes, its mark changes: the Help window still shows the translation, with a note that the
+page has changed in English and a button that shows the English page. To bring a translation up to date, see what
+changed in English since (`git log -p docs/map.md`), translate it, and write the new mark. The tests check every
+link and picture of a translation, and that an up-to-date one has its English page's headings.
+
 ## For developers
 
 - A text the user sees goes in `en.json` under a key named after where it is shown

@@ -37,14 +37,17 @@ public sealed partial class HelpSearch
     /// <summary>Every part of every page searched.</summary>
     private readonly List<Part> _parts = [];
 
-    /// <summary>The search through the documentation carried, made the first time it is needed.</summary>
+    /// <summary>
+    /// The search through the documentation carried, in the language shown (each page's file shown: HelpDocs.ShownFile),
+    /// made the first time it is needed.
+    /// </summary>
     public static HelpSearch Carried => CarriedSearch.Value;
 
-    /// <summary>The documentation carried, cut into parts once.</summary>
-    private static readonly Lazy<HelpSearch> CarriedSearch = new(() => new HelpSearch(HelpDocs.Pages.Select(p => (p, HelpDocs.Read(p)))));
+    /// <summary>The documentation carried, cut into parts once for the language shown.</summary>
+    private static readonly ShownDocs<HelpSearch> CarriedSearch = new(() => new HelpSearch(HelpDocs.Pages.Select(p => (p, HelpDocs.Read(HelpDocs.ShownFile(p))))));
 
     /// <summary>Cuts pages into parts at their headings.</summary>
-    /// <param name="pages">Each page's path under docs/ and the page, read.</param>
+    /// <param name="pages">Each page's path under docs/ and the page (or its translation), read.</param>
     public HelpSearch(IEnumerable<(string Page, MarkdownDocument Doc)> pages)
     {
         foreach (var (page, doc) in pages)

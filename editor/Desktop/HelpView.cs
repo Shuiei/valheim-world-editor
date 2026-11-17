@@ -21,7 +21,7 @@ public sealed partial class HelpView
     /// <summary>The text's size, and the space between its lines.</summary>
     private const double BodySize = 14, BodyLine = 21;
 
-    /// <summary>The page drawn, under docs/ (where its links and pictures start from).</summary>
+    /// <summary>The file drawn, under docs/: a page, or its translation ("fr/map.md"). Its pictures start from its folder.</summary>
     private readonly string _page;
 
     /// <summary>What a click on a link does, with the link as written.</summary>
@@ -34,7 +34,7 @@ public sealed partial class HelpView
     public Dictionary<string, Control> Anchors { get; } = [];
 
     /// <summary>Sets up the drawing of a page.</summary>
-    /// <param name="page">The page, under docs/.</param>
+    /// <param name="page">The file drawn, under docs/: a page, or its translation.</param>
     /// <param name="follow">What a click on a link does, with the link as written.</param>
     /// <param name="enlarge">What a click on a picture does, with its path under docs/.</param>
     public HelpView(string page, Action<string> follow, Action<string> enlarge)
@@ -141,12 +141,13 @@ public sealed partial class HelpView
 
     /// <summary>
     /// A picture at the page's width (never wider than it is), its description as its tip; a click shows it full size.
-    /// One that is not carried shows its description instead.
+    /// One that is not carried shows its description instead (a translation's picture not carried shows the English
+    /// one: HelpDocs.Picture).
     /// </summary>
     private Control Picture(LinkInline pic)
     {
         string alt = HelpText.Of(pic);
-        string path = HelpDocs.Combine(_page, pic.Url ?? "");
+        string path = HelpDocs.Picture(_page, pic.Url ?? "");
         using var stream = HelpDocs.Open(path);
         if (stream == null)
         {

@@ -12,7 +12,9 @@ namespace TerrainEditor.Desktop;
 /// The Help window: the documentation carried in the app (HelpDocs), beside the editor and never in its way. On the
 /// left, the search box and the contents (the first page's list, the page shown with its parts under it), or what a
 /// search found; on the right, the page, with Back, Forward, Home and Open in browser above it. One window for the
-/// whole app: asking for help again shows the place asked for in it.
+/// whole app: asking for help again shows the place asked for in it. A page with a translation in the editor's language
+/// is shown translated (HelpDocs.ShownFile), with a note when its English has changed since, and a button to read the
+/// English page instead.
 /// </summary>
 public sealed partial class HelpWindow : Window
 {
@@ -49,6 +51,18 @@ public sealed partial class HelpWindow : Window
     /// <summary>Open in browser: the page shown, on GitHub.</summary>
     internal Button BrowserButton { get; } = Bar("external", "docs.browser");
 
+    /// <summary>Beside the note on a translation the English has changed since: shows the English page instead.</summary>
+    internal Button EnglishButton { get; } = new Button
+    {
+        Content = Lang.T("docs.english"),
+        FontSize = 12,
+        Foreground = Ui.Accent,
+        Padding = new Thickness(8, 2),
+        IsVisible = false,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(0, 0, 12, 6),
+    }.Classed("ghost").Tip("docs.english");
+
     /// <summary>A picture shown full size over the page (a click on one); a click or Esc closes it.</summary>
     internal Border Enlarged { get; } = new() { Background = new SolidColorBrush(Color.FromArgb(235, 9, 7, 5)), IsVisible = false, Padding = new Thickness(24) };
 
@@ -64,7 +78,22 @@ public sealed partial class HelpWindow : Window
     /// <summary>The page shown, read.</summary>
     private Markdig.Syntax.MarkdownDocument? _doc;
 
-    /// <summary>A line under the bar, when a link could not be opened: what to open by hand (it can be copied).</summary>
+    /// <summary>
+    /// The file shown for the page shown, under docs/: the page, or its translation ("fr/map.md"). Its links lead from
+    /// its folder.
+    /// </summary>
+    internal string ShownFile { get; private set; } = HelpDocs.Home;
+
+    /// <summary>The translated heading's id by the English one's, for the page shown (HelpDocs.AnchorAliases).</summary>
+    private IReadOnlyDictionary<string, string> _aliases = new Dictionary<string, string>();
+
+    /// <summary>Whether the file shown is a translation the English has changed since (HelpDocs.IsOutdated).</summary>
+    private bool _outdated;
+
+    /// <summary>
+    /// A line under the bar: that a translation's English has changed since it was made, or, when a link could not be
+    /// opened, what to open by hand (it can be copied).
+    /// </summary>
     internal SelectableTextBlock Note { get; } = new() { Foreground = Ui.Warn, FontSize = 12, TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(18, 0, 18, 8) };
 
     /// <summary>The page's title, above it.</summary>
@@ -84,7 +113,9 @@ public sealed partial class HelpWindow : Window
         BackButton.Click += (_, _) => Move(-1);
         ForwardButton.Click += (_, _) => Move(1);
         HomeButton.Click += (_, _) => Go(HelpTarget.Home);
-        BrowserButton.Click += async (_, _) => await OpenWeb(HelpDocs.OnGitHub(Shown));
+        // The file shown, on GitHub: a translated heading's id there for an English one.
+        BrowserButton.Click += async (_, _) => await OpenWeb(HelpDocs.OnGitHub(new HelpTarget(ShownFile, Shown.Anchor is { } a ? _aliases.GetValueOrDefault(a, a) : null)));
+        EnglishButton.Click += (_, _) => ShowEnglish();
         SearchBox.Tip("docs.search");
         // On the text itself (TextChanged comes a moment later): what was typed is searched at once.
         SearchBox.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { ShowSide(); } };
@@ -131,7 +162,8 @@ public sealed partial class HelpWindow : Window
         _title.Margin = new Thickness(10, 0);
         bar.Children.Add(Ui.Col(BrowserButton, 4));
         var main = new DockPanel();
-        var barRow = new Border { Child = new StackPanel { Children = { bar, Note } }, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 0, 0, 1) };
+        var noteRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { Note, Ui.Col(EnglishButton, 1) } };
+        var barRow = new Border { Child = new StackPanel { Children = { bar, noteRow } }, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 0, 0, 1) };
         DockPanel.SetDock(barRow, Dock.Top);
         main.Children.Add(barRow);
         main.Children.Add(Scroller);
@@ -176,23 +208,57 @@ public sealed partial class HelpWindow : Window
     {
         if (View == null || target.Page != Shown.Page)
         {
-            var doc = _doc = HelpDocs.Read(target.Page);
-            View = new HelpView(target.Page, Follow, Enlarge);
-            var page = View.Build(doc);
-            page.MaxWidth = PageWidth;
-            page.Margin = new Thickness(36, 24, 36, 48);
-            page.HorizontalAlignment = HorizontalAlignment.Center;
-            Scroller.Content = page;
-            _title.Text = HelpDocs.Title(doc, target.Page);
-            Title = target.Page == HelpDocs.Home ? Lang.T("docs.title") : Lang.T("docs.titleOf", _title.Text);
+            Draw(target.Page, HelpDocs.ShownFile(target.Page));
         }
         Shown = target;
         Enlarged.IsVisible = false;
-        Note.IsVisible = false;
+        Note.IsVisible = _outdated;
+        Note.Text = _outdated ? Lang.T("docs.outdated") : "";
+        EnglishButton.IsVisible = _outdated;
         BackButton.IsEnabled = _at > 0;
         ForwardButton.IsEnabled = _at < _visited.Count - 1;
         ShowSide();
         ScrollTo(target.Anchor);
+    }
+
+    /// <summary>
+    /// Draws a page from one of its files (the page, or its translation): its headings found by the English ids too when
+    /// the translation has the same headings (HelpDocs.AnchorAliases), the window called after its title.
+    /// </summary>
+    /// <param name="page">The English page, under docs/.</param>
+    /// <param name="file">The file drawn for it, under docs/.</param>
+    private void Draw(string page, string file)
+    {
+        var doc = _doc = HelpDocs.Read(file);
+        ShownFile = file;
+        View = new HelpView(file, Follow, Enlarge);
+        var drawn = View.Build(doc);
+        drawn.MaxWidth = PageWidth;
+        drawn.Margin = new Thickness(36, 24, 36, 48);
+        drawn.HorizontalAlignment = HorizontalAlignment.Center;
+        Scroller.Content = drawn;
+        _aliases = HelpDocs.AnchorAliases(page, file);
+        foreach (var (english, id) in _aliases)
+        {
+            // A heading's own id first: an English id another heading of the translation has keeps leading there.
+            if (View.Anchors.TryGetValue(id, out var heading))
+            {
+                View.Anchors.TryAdd(english, heading);
+            }
+        }
+        _outdated = HelpDocs.IsOutdated(page, file);
+        _title.Text = HelpDocs.Title(doc, file);
+        Title = page == HelpDocs.Home ? Lang.T("docs.title") : Lang.T("docs.titleOf", _title.Text);
+    }
+
+    /// <summary>
+    /// Shows the English page instead of its translation (the note's button), at the top; going to another page shows
+    /// translations again.
+    /// </summary>
+    internal void ShowEnglish()
+    {
+        Draw(Shown.Page, Shown.Page);
+        Display(new HelpTarget(Shown.Page));
     }
 
     /// <summary>Scrolls the page to a heading once it is laid out (to the top for none, or one it does not have).</summary>
@@ -216,7 +282,7 @@ public sealed partial class HelpWindow : Window
     /// <param name="href">The link as written.</param>
     internal void Follow(string href)
     {
-        switch (HelpDocs.Resolve(Shown.Page, href))
+        switch (HelpDocs.Resolve(ShownFile, href))
         {
             case { Target: { } target }:
                 Go(target);
