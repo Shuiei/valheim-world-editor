@@ -63,7 +63,8 @@ public static partial class Lang
             at = m.Index + m.Length;
         }
         sb.Append(Regex.Escape(Literal(text[at..]))).Append('$');
-        return new Regex(sb.ToString(), RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        // Made from a catalogue's text, which a user's lang file can hold: bounded, so a pathological one cannot hang a match.
+        return new Regex(sb.ToString(), RegexOptions.Singleline | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250));
     }
 
     /// <summary>How many letters a text with places has outside them: none for "{0} {1}" or "{0} ({1})".</summary>
