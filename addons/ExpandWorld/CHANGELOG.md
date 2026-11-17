@@ -3,7 +3,7 @@
 Changes to the Expand World add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
-## v0.3.0 — unreleased
+## v0.3.0 — 2026-11-17
 
 ### Added
 - **Custom objects placed and edited.** The new **Custom object** tool (under **Mods** on the 3D editor's rail) lists
@@ -13,7 +13,7 @@ as its own zip and under its own version.
   game reads them, a component's fields ("Piece.m_name") and a size by axis ("scale") included. Values the mod works
   out as it makes an object (a parameter, a list, a range, items) are left out, and the card names them. Needs the
   editor 1.126.0.
-## v0.2.0 — unreleased
+## v0.2.0 — 2026-11-17
 
 ### Added
 - **Persistent events placed where you want them.** The new **Persistent event** tool (under **Mods** on the 3D
