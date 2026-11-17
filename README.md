@@ -162,8 +162,10 @@ Found a security problem? Report it privately, see [SECURITY.md](SECURITY.md).
   (**Open log** on the start page). See [The log and bug reports](docs/help/troubleshooting.md#the-log-and-bug-reports).
 - **Questions**: [Questions](docs/help/faq.md) first, then an issue, the
   [Nexus Mods page](https://www.nexusmods.com/valheim/mods/4348) or [Discord](https://discord.com/channels/1167153871546744842/1563001733813243914).
-- **Translations**: the editor is in English, French, German, Spanish, Brazilian Portuguese and Thai; a language
-  is one JSON file, and corrections are welcome ([Translating](docs/translating.md)).
+- **Translations**: the editor and its documentation are in English, French, German, Spanish, Brazilian Portuguese and
+  Thai ([Français](docs/fr/README.md), [Deutsch](docs/de/README.md), [Español](docs/es/README.md),
+  [Português](docs/pt-BR/README.md), [ไทย](docs/th/README.md)); corrections are welcome
+  ([Translating](docs/translating.md)).
 - **Support the project**: [Buy Me a Coffee](https://buymeacoffee.com/tieboo).
 
 ## How it works

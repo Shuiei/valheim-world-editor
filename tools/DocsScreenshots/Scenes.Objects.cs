@@ -64,8 +64,11 @@ public sealed partial class Scenes
         WaitForMessage(e, "Regrew");
         e.Shot(after, keepMessage: true);
         // The message takes two lines: the halves end above it. The cut leaves the Mask card out; it is kept once.
-        Halves(Out("area-regrow.jpg"), ("Bare", "After Regrow nature"), before, after, new HalvesCut(1000, AreaPanelRight, 830, [MaskCard]));
+        Halves(Out("area-regrow.jpg"), RegrowPair, before, after, new HalvesCut(1000, AreaPanelRight, 830, [MaskCard]));
     }
+
+    /// <summary>area-regrow.jpg's halves.</summary>
+    private static readonly Pair RegrowPair = new("Bare", "After Regrow nature");
 
     /// <summary>
     /// paste.jpg: a copied wood of a few dozen trees and rocks being pasted (one copy), turned 30°, over open grass,
@@ -168,7 +171,7 @@ public sealed partial class Scenes
         Move(e, at);
         e.Send("wait 500");
         var (before, after) = ClickBetweenShots(e, at, "place-brush-before-after.jpg", keepMessage: false);
-        Halves(Out("place-brush-before-after.jpg"), ("Before the click", "After one click"), before, after,
+        Halves(Out("place-brush-before-after.jpg"), OneClickPair, before, after,
             new HalvesCut(0, Keep: [new SKRectI(GroundPairLeft, GroundPairTop, 452, 842)], From: 770));
     }
 

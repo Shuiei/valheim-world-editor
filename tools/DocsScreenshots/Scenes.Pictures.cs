@@ -17,7 +17,7 @@ public sealed partial class Scenes
     /// <summary>A picture saved as a JPEG, as the editor's shots are (written over the file).</summary>
     private static void SavePicture(SKBitmap picture, string path)
     {
-        using var jpeg = picture.Encode(SKEncodedImageFormat.Jpeg, 85);
+        using var jpeg = picture.Encode(SKEncodedImageFormat.Jpeg, Editor.Quality);
         using var file = File.Create(path);
         jpeg.SaveTo(file);
     }

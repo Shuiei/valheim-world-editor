@@ -9,14 +9,22 @@ namespace TerrainEditor.DocsScreenshots;
 public sealed partial class Editor
 {
     /// <summary>
-    /// The whole window, saved as a JPEG for the docs (the status bar's message cleared unless kept: it would tell
-    /// how the scene was set up).
+    /// The pictures' JPEG quality, 0 to 100: $DOCS_QUALITY, else 85. The translations' pictures are taken lower (every
+    /// language's set is carried in the app).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">$DOCS_QUALITY is not a number from 0 to 100.</exception>
+    public static int Quality { get; } = Environment.GetEnvironmentVariable("DOCS_QUALITY") is { Length: > 0 } q
+        ? int.TryParse(q, System.Globalization.CultureInfo.InvariantCulture, out int n) && n is >= 0 and <= 100 ? n : throw new InvalidOperationException($"DOCS_QUALITY={q}: a JPEG quality from 0 to 100")
+        : 85;
+
+    /// <summary>
+    /// The whole window, saved as a JPEG for the docs at <see cref="Quality"/> (the status bar's message cleared unless
+    /// kept: it would tell how the scene was set up).
     /// </summary>
     /// <param name="path">The JPEG file to write.</param>
-    /// <param name="quality">JPEG quality, 0 to 100.</param>
     /// <param name="keepMessage">Keep the status bar's message in the picture.</param>
     /// <returns>The app's state when the picture was taken.</returns>
-    public JsonElement Shot(string path, int quality = 85, bool keepMessage = false)
+    public JsonElement Shot(string path, bool keepMessage = false)
     {
         if (!keepMessage)
         {
@@ -24,6 +32,7 @@ public sealed partial class Editor
         }
         string png = Path.Combine(_home, "shot.png");
         var state = Send($"shot {png}");
+        LogClipped(path);
         using var shot = SKBitmap.Decode(png) ?? throw new InvalidOperationException($"{png}: not a picture");
         var img = shot;
         // At the window's own size (the screen's scaling makes the snapshot bigger).
@@ -35,7 +44,7 @@ public sealed partial class Editor
         }
         try
         {
-            using var jpeg = img.Encode(SKEncodedImageFormat.Jpeg, quality);
+            using var jpeg = img.Encode(SKEncodedImageFormat.Jpeg, Quality);
             using var file = File.Create(path);
             jpeg.SaveTo(file);
         }

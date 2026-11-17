@@ -36,8 +36,15 @@ public sealed partial class Scenes
         string shot = Out("shape.jpg");
         e.Shot(shot);
         // Where each shape shows on the picture: the front row's names below them, the back row's above.
-        Label(shot, [("Mound", 600, 578), ("Cone", 828, 634), ("Plateau", 1102, 698), ("Crater", 690, 360), ("Moat (ring ditch)", 875, 384), ("Ridged hill", 1088, 414)]);
+        Label(shot, ShapeNames);
     }
+
+    /// <summary>shape.jpg's names: where each shape shows on the picture, the front row's below them, the back row's above.</summary>
+    private static readonly Name[] ShapeNames =
+    [
+        new("Mound", 600, 578), new("Cone", 828, 634), new("Plateau", 1102, 698),
+        new("Crater", 690, 360), new("Moat (ring ditch)", 875, 384), new("Ridged hill", 1088, 414),
+    ];
 
     /// <summary>shape-formula-error.jpg: the Landform panel alone, its Formula kind, an unfinished formula and the error under it.</summary>
     private void ShapeFormulaError(Editor e)
@@ -293,21 +300,15 @@ public sealed partial class Scenes
         RemoveObjects(e, a, b);
     }
 
-    /// <summary>Names written on a picture, white on a dark rounded box, centred on each point.</summary>
-    private static void Label(string file, (string Text, int X, int Y)[] labels)
+    /// <summary>Names written on a picture, white on dark rounded boxes, in the pictures' language (<see cref="WriteNames"/>).</summary>
+    /// <param name="file">The picture, rewritten.</param>
+    /// <param name="names">The names, a field of their own so that the captions' check finds them.</param>
+    private static void Label(string file, Name[] names)
     {
         using var bitmap = LoadBitmap(file);
         using (var canvas = new SKCanvas(bitmap))
         {
-            using var font = new SKFont(SKTypeface.FromFamilyName("Noto Sans", SKFontStyle.Bold), 17);
-            using var box = new SKPaint { Color = new SKColor(20, 24, 30, 210), IsAntialias = true };
-            using var ink = new SKPaint { Color = SKColors.White, IsAntialias = true };
-            foreach (var (text, x, y) in labels)
-            {
-                float width = font.MeasureText(text);
-                canvas.DrawRoundRect(new SKRect(x - width / 2 - 8, y - 15, x + width / 2 + 8, y + 9), 6, 6, box);
-                canvas.DrawText(text, x, y, SKTextAlign.Center, font, ink);
-            }
+            WriteNames(canvas, bitmap.Width, bitmap.Height, names);
         }
         SavePicture(bitmap, file);
     }

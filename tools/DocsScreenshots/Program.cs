@@ -4,7 +4,7 @@ using TerrainEditor.DocsScreenshots;
 // The documentation's pictures (docs/images), taken in the app (Editor.cs drives it, Scenes.cs holds
 // one scene per picture). The worlds are made from seeds with tools/WorldCheck (see
 // docs/development.md, which also says what to do when the recipe leaves another zone bare than the
-// scenes' -10, -5) and never change:
+// scenes' 5, -4) and never change:
 //   WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     one zone left bare for the tools
 //   WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     a second world for the start page
 // Each scene opens a fresh editor (a stand-in home: no one's names or folders) and leaves without
@@ -20,10 +20,26 @@ using TerrainEditor.DocsScreenshots;
 // $DOCS_APP (a released ValheimWorldEditor program) is driven instead of the Debug build in editor/Desktop/bin.
 // $DOCS_LIVE ("<bridge address> <token>", a local server running the Docs world with the plugin) is
 // what the live scene connects to; without it the live scene is skipped.
+// The captions drawn on the pictures are in the app's language (Captions.cs: $LANGUAGE as the app reads it), from
+// Captions/<code>.json or the app's catalogue; they are checked before the scenes run, and in every language with:
+//   dotnet run --project tools/DocsScreenshots -- --captions-check [<folder for the check's pictures>]
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: DocsScreenshots <dir> [scene ...]");
+    Console.Error.WriteLine("usage: DocsScreenshots <dir> [scene ...] | --captions-check [<pictures dir>]");
     return 2;
+}
+if (args[0] == "--captions-check")
+{
+    var languages = Captions.Languages()
+        .Concat(Directory.GetFiles(Captions.Folder, "*.json").Select(Path.GetFileNameWithoutExtension).OfType<string>())
+        .Distinct().Order(StringComparer.Ordinal).ToList();
+    return Scenes.CheckCaptions(languages, args.Length > 1 ? args[1] : null);
+}
+// Every caption in the pictures' language, before any scene: one missing or too long stops the run here rather
+// than leave a picture unlabelled.
+if (Scenes.CheckCaptions([Captions.Current.Code], null) != 0)
+{
+    return 1;
 }
 string dir = args[0];
 string output = Environment.GetEnvironmentVariable("DOCS_OUT") is { Length: > 0 } o ? o : Path.Combine(Editor.Repo, "docs", "images");

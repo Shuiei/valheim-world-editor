@@ -56,6 +56,7 @@ message in English):
 | `click <text>` / `choose <text>` | The visible button or switch with that label (a piece's tile in the Build dock by its prefab name too) / the entry so named in a visible drop-down or list box (also in dialogs). |
 | `stroke`, `mapview`, `search`, `hit`, `zones`, `look` | A brush stroke, the map's place, its search (and a result picked) and zone filter, the View look switches. |
 | `set <label>\|<value>`, `type <hint>\|<text>`, `panel`, `message [text]` | A slider, box or list beside a label; a text box by its placeholder; the right-hand panel shown; the status bar's message (none: cleared). |
+| `where <label>` | Where the slider, box or list beside a label is: its middle in the window (`x`, `y`), wherever the language shown puts it. |
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
 | `bounds <prefab>...` | Each prefab's model box in its own frame (its parts' meshes, the root's scale): the feet and sizes the dungeon generator places props by. Needs an area or the Workshop open. |
 | `docs <page[#heading]>`, `docs search <words>`, `docs shot <file.png>`, `docs close` | The Help window at a place of the documentation (`map.md#controls`), its search, a picture of it, closed. |
@@ -77,14 +78,13 @@ dotnet build editor/Desktop                                 # the app the scenes
 dotnet run --project tools/DocsScreenshots -- <dir> [scene ...]  # all scenes, or only those named
 ```
 
-The scenes work on zone -10, -5 (`ZoneX` and `ZoneZ` in `Scenes.cs`): the zone `--flat` left bare when they were
-written. `--flat` takes the most even zone of dry Meadows that holds no location (`WorldCreator.FlattestZone`), and a
-new world's locations are laid out from the installed Valheim's location rules ([the game's files](#the-games-files)).
-The layout is no longer the one of that world: a location now stands on zone -10, -5, and the recipe leaves zone 5, -4
-bare instead (9.1 m from its lowest point to its highest). `create` ends by naming the zone it left bare. When it is
-not -10, -5, the scenes open a wooded zone with a location on it and their pictures are wrong: take them on a Docs
-world made while the recipe still gave -10, -5 (the scenes never save it, so one made once stays good), or move
-`ZoneX` and `ZoneZ` to the zone named and check every scene's framing again.
+The scenes work on zone 5, -4 (`ZoneX` and `ZoneZ` in `Scenes.cs`): the zone `--flat` leaves bare (9.1 m from its
+lowest point to its highest). `--flat` takes the most even zone of dry Meadows that holds no location
+(`WorldCreator.FlattestZone`), and a new world's locations are laid out from the installed Valheim's location rules
+([the game's files](#the-games-files)). `create` ends by naming the zone it left bare. When a later Valheim changes
+the layout and it names another, the scenes open a wooded zone with a location on it and their pictures are wrong:
+take them on a Docs world made before (the scenes never save it, so one made once stays good), or move `ZoneX` and
+`ZoneZ` to the zone named and check every scene's framing again.
 
 Run it on a display of its own, never your desktop: `Xvfb :91 -screen 0 1920x1080x24 &`, then
 `DISPLAY=:91 VGL_EGLLIB=/usr/lib64/libEGL.so.1 VGL_GLLIB=/usr/lib64/libGL.so.1 vglrun -d egl dotnet run --project
@@ -105,6 +105,18 @@ The pictures go to `docs/images` (or `$DOCS_OUT`). `$DOCS_APP` names a released 
 to drive instead of the Debug build (the pictures of a release are taken with the release; put it in a
 neutral folder such as `/tmp/ValheimWorldEditor`, since Settings shows its path). The red on ground
 at the ±8 m limit is switched off in every scene (it would hide the edits).
+
+A translation's pictures are the same scenes in its language, into its folder, a little more compressed (every
+language's pictures are carried in the app): `LANGUAGE=fr DOCS_OUT=docs/fr/images DOCS_QUALITY=70 dotnet run --project
+tools/DocsScreenshots -- <dir>`. `$DOCS_QUALITY` is the JPEG quality, 85 when unset. The scenes name the controls in
+English, which the driver finds in any language. The captions the tool draws itself (a pair's Before and After, the
+names on a shot, the drawn diagrams' words) are written in English too and drawn in the app's language: from
+`tools/DocsScreenshots/Captions/<code>.json` (English to translation), else from the app's catalogue when the caption
+is exactly one of its English texts (an interface word, so it reads as in the window). A caption with neither, or too
+long for its box, stops the run before any scene. `dotnet run --project tools/DocsScreenshots -- --captions-check
+[<dir>]` draws them all in every language without the app (keeping the pictures in `<dir>` to look at), and fails on
+a missing or too long caption and on a caption file entry no scene draws. A new set of names or pair of labels is a
+field of its own (`Name[]`, `Pair`), which is how the check finds it.
 
 A few things the driver cannot reach are done on the display with `xdotool` (Linux, X11): scrolling
 a panel (the dungeon generator's plan, Settings, the found seeds). Without `xdotool` those pictures

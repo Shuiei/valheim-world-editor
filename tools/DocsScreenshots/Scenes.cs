@@ -18,7 +18,7 @@ namespace TerrainEditor.DocsScreenshots;
 public sealed partial class Scenes
 {
     /// <summary>The Docs world's bare zone (WorldCheck create --flat), in zone coordinates.</summary>
-    private const int ZoneX = -10, ZoneZ = -5;
+    private const int ZoneX = 5, ZoneZ = -4;
 
     /// <summary>The bare zone's middle, in world metres.</summary>
     private const double Cx = ZoneX * 64, Cz = ZoneZ * 64;

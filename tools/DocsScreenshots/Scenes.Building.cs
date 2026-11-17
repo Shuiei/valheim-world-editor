@@ -501,8 +501,13 @@ public sealed partial class Scenes
         e.Scroll(250, 600, 30);
         e.Send("click Go to the dungeon");
         e.Send("wait 2000");
-        // The same seed lays out the same rooms: an end cap, then the slope room it closes, deleted where they lie.
-        foreach (var (camera, x, z) in new[] { ("", -636, -350), ("camera -650 -350 30 85 75 5035", -650, -320) })
+        // The same seed lays out the same rooms: an end cap, then the slope room it closes, deleted where they lie
+        // (placed at the zone's middle, so found from it).
+        var (endX, endZ) = P(4, -30);
+        var (slopeX, slopeZ) = P(-10, 0);
+        var (overX, overZ) = P(-10, -30);
+        var (insideX, insideZ) = P(-8, -22);
+        foreach (var (camera, x, z) in new[] { ("", endX, endZ), ($"camera {overX} {overZ} 30 85 75 5035", slopeX, slopeZ) })
         {
             if (camera.Length > 0)
             {
@@ -515,12 +520,12 @@ public sealed partial class Scenes
             e.Send("click Delete room (Del)");
             e.Send("wait 800");
         }
-        e.Send("camera -648 -342 30 70 82 5035");
+        e.Send($"camera {insideX} {insideZ} 30 70 82 5035");
         e.Point(1350, 820);
         e.Send("wait 800");
         e.Shot(Out("dungeon-inside.jpg"));
         // An ice corridor, held at the open end where the slope room was.
-        e.Send("camera -650 -350 30 85 75 5035");
+        e.Send($"camera {overX} {overZ} 30 85 75 5035");
         e.Send("type Find a room|icecorridor");
         e.Send("wait 500");
         ClickWindow(e, 182, 527);
