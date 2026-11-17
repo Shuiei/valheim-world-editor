@@ -47,6 +47,23 @@ public static partial class Driver
     internal static bool Says(string? shown, string name) => shown != null
         && (string.Equals(shown.Trim(), name, StringComparison.OrdinalIgnoreCase) || string.Equals(English(shown.Trim()), name, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// Whether a text shown begins with words whose English is <paramref name="name"/> (any case), followed by more after a
+    /// space: a label with a value put after it by a text of places only ("Deine Gebäude 247", "{0} {1}", is "Your
+    /// buildings" and a count).
+    /// </summary>
+    internal static bool BeginsAs(string shown, string name)
+    {
+        for (int i = shown.IndexOf(' ', StringComparison.Ordinal); i > 0; i = shown.IndexOf(' ', i + 1))
+        {
+            if (string.Equals(English(shown[..i].Trim()), name, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// <summary>Whether a control's words are <paramref name="name"/> (any case), as shown or in English.</summary>
     internal static bool Says(Avalonia.Controls.ContentControl c, string name) =>
         string.Equals(TextOf(c), name, StringComparison.OrdinalIgnoreCase) || string.Equals(EnglishTextOf(c), name, StringComparison.OrdinalIgnoreCase);
