@@ -81,7 +81,7 @@
   "inspect.label.tidy": "Ordenar huecos",
   "inspect.hint.clickSlot": "Haz clic en un hueco para elegir lo que contiene.",
   "inspect.hint.findItem": "Buscar un artículo…",
-  "inspect.label.empty": "Vacío",
+  "inspect.label.empty": "Vaciar",
   "inspect.label.clickSlot": "Haz clic en un hueco…",
   "inspect.label.move": "Mover",
   "inspect.head.slot": "HUECO {0}, {1}",
