@@ -81,7 +81,7 @@
   "inspect.label.tidy": "Ranger",
   "inspect.hint.clickSlot": "Cliquez sur un emplacement pour choisir ce qu'il contient.",
   "inspect.hint.findItem": "Chercher un objet…",
-  "inspect.label.empty": "Vide",
+  "inspect.label.empty": "Vider",
   "inspect.label.clickSlot": "Cliquez sur un emplacement…",
   "inspect.label.move": "Déplacer",
   "inspect.head.slot": "EMPLACEMENT {0}, {1}",
