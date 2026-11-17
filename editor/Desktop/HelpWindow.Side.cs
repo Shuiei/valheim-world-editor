@@ -58,12 +58,21 @@ public sealed partial class HelpWindow
             foreach (var (title, id) in Parts())
             {
                 var t = new TextBlock { Text = title, FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-                var b = SideButton(t, new HelpTarget(Shown.Page, id), Shown.Anchor == id);
+                var b = SideButton(t, new HelpTarget(Shown.Page, id), IsShownHeading(id));
                 b.Margin = new Thickness(14, 0, 0, 0);
                 Side.Children.Add(b);
             }
         }
     }
+
+    /// <summary>
+    /// Whether a heading of the page shown is the one shown: named by its id, or by an id that leads to it too (the
+    /// English one of a translated heading, HelpDocs.AnchorAliases).
+    /// </summary>
+    /// <param name="id">The heading's id.</param>
+    private bool IsShownHeading(string id) =>
+        Shown.Anchor == id
+        || (Shown.Anchor is { } a && View != null && View.Anchors.TryGetValue(a, out var shown) && View.Anchors.GetValueOrDefault(id) == shown);
 
     /// <summary>The page shown's parts: each "##" heading's text and id.</summary>
     private IEnumerable<(string Title, string Id)> Parts() =>

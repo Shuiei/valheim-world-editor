@@ -15,16 +15,25 @@ public sealed record HelpSection(string Title, IReadOnlyList<HelpEntry> Entries)
 
 /// <summary>
 /// The Help window's contents, read from the first page (docs/README.md): each "##" heading is a part, each link that
-/// starts an item of the list under it a page. One list for GitHub's readers and the app's.
+/// starts an item of the list under it a page. One list for GitHub's readers and the app's. In another language, the
+/// first page's translation gives the parts' and pages' names; its links still lead to the English pages, each shown
+/// translated (HelpDocs.ShownFile).
 /// </summary>
 public static class HelpContents
 {
-    /// <summary>The contents of the documentation carried (the first page's).</summary>
-    public static IReadOnlyList<HelpSection> Sections { get; } = Of(HelpDocs.Read(HelpDocs.Home), HelpDocs.Home);
+    /// <summary>The contents of the documentation carried, in the language shown (the first page's).</summary>
+    public static IReadOnlyList<HelpSection> Sections => Shown.Value;
+
+    /// <summary>The contents, read once for the language shown.</summary>
+    private static readonly ShownDocs<IReadOnlyList<HelpSection>> Shown = new(() =>
+    {
+        string file = HelpDocs.ShownFile(HelpDocs.Home);
+        return Of(HelpDocs.Read(file), file);
+    });
 
     /// <summary>The contents a first page lists: its parts and, in each, the pages its list items link to first.</summary>
     /// <param name="doc">The first page, read.</param>
-    /// <param name="page">Its path under docs/ (where its links start from).</param>
+    /// <param name="page">Its path under docs/, or its translation's ("fr/README.md"): where its links start from.</param>
     public static IReadOnlyList<HelpSection> Of(MarkdownDocument doc, string page)
     {
         var sections = new List<HelpSection>();

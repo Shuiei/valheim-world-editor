@@ -91,5 +91,5 @@ from a task below. In the editor, `F1` or the small **?** at the top of a panel 
 
 ## For translators and mod authors
 
-- [Translating](translating.md): the language catalogues, and how to make one.
+- [Translating](translating.md): the language catalogues, how to make one, and how to translate this documentation.
 - [For mod authors](modding.md): what the editor learns from mods, `worldeditor.json`, extensions and add-ons.

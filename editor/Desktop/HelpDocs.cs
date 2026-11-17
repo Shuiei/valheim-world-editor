@@ -25,9 +25,9 @@ public sealed record HelpLink(HelpTarget? Target, Uri? Web);
 /// The documentation inside the app: docs/'s pages and pictures, carried in the program (ValheimWorldEditor.Desktop.csproj,
 /// "Docs/..." resources), so the Help window works offline and always shows the version it came with. The same Markdown
 /// GitHub shows: one text for both. Links are read as GitHub reads them; a link out of the pages carried (the code, a mod
-/// author's file) goes to GitHub.
+/// author's file) goes to GitHub. Its translations, and which file is shown for a page, are in HelpDocs.Languages.cs.
 /// </summary>
-public static class HelpDocs
+public static partial class HelpDocs
 {
     /// <summary>The first page, which also lists every page in the order the Help window's contents show them.</summary>
     public const string Home = "README.md";
@@ -52,26 +52,46 @@ public static class HelpDocs
         .UseAutoLinks()
         .Build();
 
-    /// <summary>Every page carried, by its path under docs/ ("map.md"), in alphabetical order.</summary>
-    public static IReadOnlyList<string> Pages { get; } = [.. Carrier.GetManifestResourceNames()
-        .Select(Normalise)
-        .Where(n => n.StartsWith(Prefix, StringComparison.Ordinal) && n.EndsWith(".md", StringComparison.Ordinal))
-        .Select(n => n[Prefix.Length..])
-        .Order(StringComparer.Ordinal)];
-
     /// <summary>The resources' names by their path with forward slashes (Windows builds name them with backslashes).</summary>
     private static readonly Dictionary<string, string> Resources = Carrier.GetManifestResourceNames().ToDictionary(Normalise, n => n);
+
+    /// <summary>Every file of the documentation carried (pages and pictures, translations' too), by its path under docs/.</summary>
+    private static readonly string[] CarriedFiles = [.. Resources.Keys.Where(n => n.StartsWith(Prefix, StringComparison.Ordinal)).Select(n => n[Prefix.Length..])];
+
+    /// <summary>The language folders carried (Languages, without the tests' files).</summary>
+    private static readonly string[] CarriedLanguages = LanguagesOf(CarriedFiles);
+
+    /// <summary>
+    /// Every English page carried, by its path under docs/ ("map.md"), in alphabetical order; the translations' pages are
+    /// not in it (Languages). The contents, the topics and the Help window's places are all in these pages' terms.
+    /// </summary>
+    public static IReadOnlyList<string> Pages { get; } = [.. CarriedFiles
+        .Where(n => n.EndsWith(".md", StringComparison.Ordinal) && LanguageOf(n, CarriedLanguages) == null)
+        .Order(StringComparer.Ordinal)];
+
+    /// <summary>
+    /// Tests: files laid over the ones carried, by their path under docs/ ("fr/map.md"), each its bytes (a page's text in
+    /// UTF-8); a file here is found first, and one carried nowhere else is found too. Null: only the files carried.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, byte[]>? Overlay { get; set; }
 
     /// <summary>A resource's name with forward slashes.</summary>
     private static string Normalise(string name) => name.Replace('\\', '/');
 
-    /// <summary>Whether a page is carried.</summary>
+    /// <summary>Whether a file of the documentation (a page, a picture) is carried.</summary>
     /// <param name="page">Its path under docs/.</param>
-    public static bool Has(string page) => Resources.ContainsKey(Prefix + page);
+    public static bool Has(string page) => Overlay?.ContainsKey(page) == true || Resources.ContainsKey(Prefix + page);
 
     /// <summary>A file of the documentation (a page, a picture), opened for reading; null when it is not carried.</summary>
     /// <param name="path">Its path under docs/ ("images/map.jpg").</param>
-    public static Stream? Open(string path) => Resources.TryGetValue(Prefix + path, out string? name) ? Carrier.GetManifestResourceStream(name) : null;
+    public static Stream? Open(string path)
+    {
+        if (Overlay?.TryGetValue(path, out byte[]? bytes) == true)
+        {
+            return new MemoryStream(bytes, false);
+        }
+        return Resources.TryGetValue(Prefix + path, out string? name) ? Carrier.GetManifestResourceStream(name) : null;
+    }
 
     /// <summary>A page's Markdown; throws <c>FileNotFoundException</c> when it is not carried.</summary>
     /// <param name="page">Its path under docs/.</param>
@@ -94,12 +114,14 @@ public static class HelpDocs
 
     /// <summary>
     /// Where a link on a page leads: a place in the documentation carried, or else a web address (the link itself when it
-    /// is one; GitHub's copy of a file of the repository otherwise).
+    /// is one; GitHub's copy of a file of the repository otherwise). A link on a translation is read from the translation's
+    /// folder, as GitHub reads it, and a page it leads to there is named as its English page ("fr/select.md" is
+    /// "select.md"): the Help window's places are English pages, each shown in the language shown (ShownFile).
     /// </summary>
-    /// <param name="page">The page the link is on, under docs/.</param>
+    /// <param name="file">The file the link is on, under docs/: a page, or its translation ("fr/map.md").</param>
     /// <param name="href">The link as written ("map.md#search-the-world", "#walk-and-fly", "../README.md", "https://...").</param>
     /// <returns>Where it leads; null for a link that leads nowhere (empty).</returns>
-    public static HelpLink? Resolve(string page, string href)
+    public static HelpLink? Resolve(string file, string href)
     {
         if (string.IsNullOrWhiteSpace(href))
         {
@@ -112,12 +134,13 @@ public static class HelpDocs
         int hash = href.IndexOf('#', StringComparison.Ordinal);
         string path = hash < 0 ? href : href[..hash];
         string? anchor = hash < 0 || hash == href.Length - 1 ? null : href[(hash + 1)..];
-        string target = path.Length == 0 ? page : Combine(page, Uri.UnescapeDataString(path));
-        if (Has(target))
+        string target = path.Length == 0 ? file : Combine(file, Uri.UnescapeDataString(path));
+        string page = EnglishPath(target);
+        if (Has(page))
         {
-            return new HelpLink(new HelpTarget(target, anchor), null);
+            return new HelpLink(new HelpTarget(page, anchor), null);
         }
-        // Not carried: the repository's copy (a link above docs/ climbs out of it).
+        // Not carried: the repository's copy, where the link leads from the file it is on (a link above docs/ climbs out of it).
         string inRepo = target.StartsWith("../", StringComparison.Ordinal) ? target[3..] : "docs/" + target;
         return new HelpLink(null, new Uri(Repository + inRepo + (anchor == null ? "" : "#" + anchor)));
     }
@@ -151,6 +174,6 @@ public static class HelpDocs
     }
 
     /// <summary>The address of a place in the documentation on GitHub (Open in browser).</summary>
-    /// <param name="target">The place.</param>
+    /// <param name="target">The place: a page, or the translation shown for it ("fr/map.md"), and a heading's id there.</param>
     public static Uri OnGitHub(HelpTarget target) => new(Repository + "docs/" + target);
 }

@@ -3,8 +3,8 @@
 The documentation is for people who play Valheim, not for programmers. Most of them open it with a question ("how do I
 undo this?", "why can't I lift this higher?") and read a fifth of a page at most: headings and the first words of each
 paragraph carry the meaning. The same Markdown is shown on GitHub and in the editor's Help window
-(`editor/Desktop/HelpWindow.cs`), which carries every page of `docs/` but this folder, the release notes,
-`architecture.md`, `development.md` and the pointer pages (`shape.md`, `mountain.md`: a line each, kept so that links
+(`editor/Desktop/HelpWindow.cs`), which carries every page of `docs/` (and its translations) but this folder, the
+release notes, `architecture.md`, `development.md` and the pointer pages (`shape.md`, `mountain.md`: a line each, kept so that links
 from outside to a tool page merged into another still lead somewhere).
 
 ## Four kinds of page
@@ -68,6 +68,15 @@ Put trees, rocks, bushes, crops and spawn points into the world, one at a time o
   Their ids are links: renaming a heading breaks links to it (the tests catch it).
 - **Links** say where they go ("see [Ground limits](concepts/ground-limits.md)"), never "click here". Paths are
   relative to the page.
+
+## Translations
+
+Translations of the pages are folders `docs/<code>/` (`docs/fr/`), made by translators as
+[translating.md](../translating.md#translating-the-documentation) explains; write and fix the English pages only. Each
+translated page carries the source mark of the English text it was made from. Once you change an English page, the
+Help window shows its translations with a note that the page has changed in English (and a button to the English
+page) until a translator brings them up to date. Adding, removing or moving a heading also stops the translations
+taking the English heading ids (the help buttons' places) until then: keep heading changes to the ones the page needs.
 
 ## Pictures
 
