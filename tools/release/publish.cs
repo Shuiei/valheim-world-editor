@@ -595,7 +595,7 @@ static async Task<string> NexusUpload(HttpClient http, string url, (string, stri
     else
     {
         upload = (await V3(http, Post($"{url}/v3/uploads/multipart", new JsonObject { ["filename"] = name, ["size_bytes"] = size.ToString(System.Globalization.CultureInfo.InvariantCulture) }, auth)))!;
-        long partSize = long.Parse((string)upload["part_size_bytes"]!, System.Globalization.CultureInfo.InvariantCulture);
+        long partSize = Whole(upload["part_size_bytes"], "part_size_bytes");
         var xml = new StringBuilder("<CompleteMultipartUpload>");
         using (var file = File.OpenRead(path))
         {
@@ -639,6 +639,22 @@ static async Task<string> NexusUpload(HttpClient http, string url, (string, stri
         await Task.Delay(delay);
         waited += delay;
     }
+}
+
+// A whole number of Nexus' answer, which it sends as a number or as text (a size in bytes, by the call).
+static long Whole(JsonNode? value, string what)
+{
+    if (value is JsonValue v && v.TryGetValue(out long number))
+    {
+        return number;
+    }
+
+    if (value is JsonValue t && t.TryGetValue(out string? text) && long.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out long parsed))
+    {
+        return parsed;
+    }
+
+    throw new InvalidDataException($"Nexus Mods: {what} is not a whole number ({value?.ToJsonString() ?? "missing"}).");
 }
 
 // Sends a request to Nexus' storage; returns the stored part's ETag.

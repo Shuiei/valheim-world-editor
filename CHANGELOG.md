@@ -5,6 +5,12 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.125.1 — unreleased
+
+### Fixed
+- **Releases reach Nexus Mods again.** The editor's downloads, now over 100 MiB, stopped part way through their
+  upload to Nexus Mods, so v1.124.1 has only the plugin there.
+
 ## v1.125.0 — unreleased
 
 ### Added
