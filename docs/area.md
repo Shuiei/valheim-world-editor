@@ -79,7 +79,7 @@ Under **Flatten**, **Raise** and **Lower**:
 
 | Setting | What it does |
 |---|---|
-| Cut and fill line | How much ground the action would move ("Flatten to 35 m: dig 120 m³, fill 340 m³"), and what is out of reach ("(40 m³ out of reach: ±8 m limit)"). The second line, "Ground inside: … raised, … dug since generated", compares with the world as generated. Both follow every change. |
+| Cut and fill line | How much ground the action would move ("Flatten to 35 m: dig 120 m³, fill 340 m³"), and for Flatten what is out of reach ("(40 m³ out of reach: ±8 m limit)"; with No limit on, only what is past its ±400 m). The second line, "Ground inside: … raised, … dug since generated", compares with the world as generated. Both follow every change, the soft edge and the Mask. |
 
 ![Flatten on a box over a hill: the cut and fill line, with ground out of reach of the ±8 m limit](images/area-cut-fill.jpg)
 *A box over a hill with **Flatten** at 46 m and **No limit** off: "Flatten to 46 m: dig 0 m³, fill 1.5k m³ (2.2k
@@ -203,7 +203,7 @@ step: [Generate zones again](guides/reset-zones.md).
 | Setting | What it does |
 |---|---|
 | **Keep my buildings** | Player-built objects in the zones are kept. On at first. Off, the buildings in the zones go too. |
-| **Also undo their ground edits** | Also undoes the zones' ground edits: height (No limit ground too) and paint. On at first. |
+| **Also undo their ground edits** | Also undoes the zones' ground edits: height (No limit ground too) and paint. The view shows the ground back as generated as soon as the zones are marked. On at first. |
 | **Reset zones… (Enter)** | Marks every zone under the selection for reset (red outline), after asking. |
 | **Unmark these zones** | Unmarks the zones under the selection: they are not reset. |
 | **Unmark all** | Unmarks every zone marked for reset, those marked on the map and outside the open area too. One step in History. |
@@ -232,9 +232,13 @@ the Select tool); `Ctrl+V` works in any tool.
 | Setting | What it does |
 |---|---|
 | **Copy (Ctrl+C)** | Copies every shown object inside (whatever the kind chips say), and the ground their buildings stand on. Pasted, trees, rocks and the like keep their height above the ground where each lands; building pieces keep the building's shape. Kinds the world cannot make are left out. The copy is remembered: paste it in another area, another world, or after restarting the editor. |
-| **Cut (Ctrl+X)** | The same copy, then the copied objects leave the world (`Ctrl+Z` brings them back), so a paste moves them. The ground stays. A selection with no objects copies its ground only and removes nothing. |
+| **Cut (Ctrl+X)** | The same copy, then the copied objects leave the world (`Ctrl+Z` brings them back), so a paste moves them. The ground stays. |
 | **Paste (Ctrl+V)** | Starts pasting: the copy follows the cursor; click to put it down. Paste as many as you like; `Esc` stops. |
 | **Save blueprint…** / **Blueprints…** | See [Blueprints](#blueprints). |
+
+The line under the buttons says what is on the clipboard ("Clipboard: 24 × 18 m, 54 object(s).", with the blueprint's
+name when it came from the library). A selection with no shown objects inside copies nothing (its ground goes only
+with buildings): the status bar says so, and the clipboard keeps what it had.
 
 A copy holds:
 
@@ -263,13 +267,6 @@ area first (the area size list in the top bar, or the [map](map.md)).
 | **Objects** | Pastes the copied objects. |
 | **Clear the site (dig the ground in its way, take away trees and rocks)** | On at first. Digs ground in the way of pasted building pieces down to the lowest piece (never raises ground), and takes away trees, rocks, ore, bushes and pickables in their footprint. Buildings and creatures stay. |
 | **Height** | Moves the paste up or down (m); `PgUp`, `PgDn` and `Ctrl` + wheel do too. Lower a building into a hill and Clear the site digs it out. |
-| **Turn 90° (R)** | A quarter turn. `,` and `.` turn by the building bar's **Turn by** step (`Shift`: 1°). |
-| **Mirror (X)** | Mirrors the paste east to west, before turning. |
-| **Done (Esc)** | Stops pasting, back to the Region tool. |
-
-While you paste, [the building bar](build.md#the-building-bar) shows beside the panel, the same one Build and Select
-use: **Grid** (the paste goes by it), **Turn by** and **Lift** (the steps of `,` `.` and of `PgUp` `PgDn`; the bar
-shows the height, **Reset** takes it back to none) and **Built by**.
 
 Under **REPEAT (STACK)**:
 
@@ -278,6 +275,18 @@ Under **REPEAT (STACK)**:
 | **Copies** | How many copies one click places, 1 to 50, all one undo step. |
 | **Along** | Which way they follow each other: **its width** or **its depth** (these turn and mirror with the paste), or **upwards** (stacked floors). |
 | **Gap** | Space between two copies (m); negative overlaps them. Upwards, a copy's size is its height plus a metre. |
+
+At the bottom of the panel:
+
+| Setting | What it does |
+|---|---|
+| **Turn 90° (R)** | A quarter turn. `,` and `.` turn by the building bar's **Turn by** step (`Shift`: 1°). |
+| **Mirror (X)** | Mirrors the paste east to west, before turning. |
+| **Done (Esc)** | Stops pasting, back to the Region tool. |
+
+While you paste, [the building bar](build.md#the-building-bar) shows beside the panel, the same one Build and Select
+use: **Grid** (the paste goes by it), **Turn by** and **Lift** (the steps of `,` `.` and of `PgUp` `PgDn`; the bar
+shows the height, **Reset** takes it back to none) and **Built by**.
 
 Copies side by side each sit on the ground where they land; stacked upwards, only the first shapes the ground. The
 line at the top of the panel says what is on the clipboard: name, size, objects, copies, turn, mirrored. The status

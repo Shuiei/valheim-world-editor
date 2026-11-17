@@ -55,7 +55,7 @@ treasury on level 2, and the summary under them.*
 | **Loot: × 1** | Chests and treasure: **none** to twice the usual. Deeper levels hold more. With the game's own rooms, it keeps or doubles the rooms' chests. |
 | **Light** | **Dark**, **Dim** (the default) or **Bright**: how many torches and braziers. |
 | **Furniture** | **Bare**, **Furnished** (the default) or **Rich**. |
-| **Ruin: 15 %** | How ruined it is, 0 to 100 %: rubble, fallen pillars, torches gone out. Picking a style sets its own value. |
+| **Ruin: 15 %** | How ruined it is, 0 to 100 % in steps of 5: rubble, fallen pillars, torches gone out. Picking a style sets its own value, and so does picking a biome while **Style** is **The biome's**. |
 | **Ways round: × 1** | How often rooms far apart along the way are joined, so there is more than one way round: **none (a tree)** to twice the usual. |
 | **Boss** | **The biome's boss**, **No boss**, or any biome's boss or elite by name (`Troll`, `Draugr_Elite`, `StoneGolem`...). |
 | **Boss behind a gate, its key in a chest** | The arena's gate opens with the crypt key, in a chest far from it (players who hold the key from the Elder open it too). Off: grand double gates, open to all. |
@@ -91,7 +91,7 @@ left out`).
 | Button | What it does |
 |---|---|
 | **Place in the world** | Puts the entrance on the ground at the middle of the view, its door facing you, and the dungeon 5000 m above it. |
-| **Open in the Workshop** | Writes the dungeon (building pieces) as a blueprint and opens it in the [Workshop](workshop.md) to change it. |
+| **Open in the Workshop** | Writes the dungeon (building pieces) as a blueprint and opens it in the [Workshop](workshop.md) to change it: see [Open it in the Workshop](#open-it-in-the-workshop). Not shown with **The game's own rooms**. |
 | **Go to the dungeon** / **Go to the entrance** | Shown once the dungeon is placed (and until `Ctrl+Z` takes it back): take the view up into the first level with the roofs cut away, and back down. |
 
 ![The entrance of a generated dungeon on the ground](images/dungeon-entrance.jpg)
@@ -107,7 +107,7 @@ Below the generator, with a dungeon in the area, the panel lists its dungeons an
 | Dungeon list | The area's dungeons, each with its kind, rooms and place (`Frost Cave, 34 room(s), at 1520, -2240`). Fuling villages and Meadows farms, laid out the same way on the ground, show too. |
 | **Go to the dungeon** | Takes the view up to the middle of the dungeon's rooms and cuts their roofs away (at 4 m above the floor when the cut was off). |
 | **Go to the entrance** | Takes the view back down to the entrance on the ground, with nothing cut. |
-| **Build here** | Opens the Workshop's Build panel over the dungeon: see [Build inside a dungeon](#build-inside-a-dungeon). |
+| **Build here** | Turns [Build](build.md) on over the dungeon, with its dock along the bottom: see [Build inside a dungeon](#build-inside-a-dungeon). |
 | **ROOMS** + **Find a room…** | The rooms this kind of dungeon can take; type to narrow them by name. End caps and entrance rooms are marked `(end cap)` and `(entrance)`. |
 | **With what the game puts in them** | On (the default): an added room comes with what the game would have made in it there (chests, spawners, torches, decorations). Off: bare rooms. |
 | **Doors where the game might put them** | On (the default): an added room gets a door where it joins, by the game's own chance. |
@@ -203,7 +203,9 @@ follow them: see [Edit a world made with Expand World, Riverheim or Tunnelheim](
 tab: at the top, the entrance hall with its portal where players arrive; below it, the boss's arena.*
 
 **Open in the Workshop** writes the dungeon as a blueprint in Homestead's folder and opens it, to change it: open a
-chest, move the furniture, add your own touches, then **Save blueprint**. The blueprint:
+chest, move the furniture, add your own touches, then **Save blueprint**. The Workshop takes the world's place: with
+changes not saved (or not applied), it asks first. To put the dungeon in a world afterwards, open the world again
+and paste the blueprint (see [Dungeons from blueprints](#dungeons-from-blueprints)). The blueprint:
 
 - keeps what its objects hold (the key in its chest, the signs, the boss and its stars) and that it is a ruin;
 - is tagged `dungeon` and `generated`, and its description gives the seed and the summary;

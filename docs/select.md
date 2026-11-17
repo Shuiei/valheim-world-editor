@@ -96,8 +96,9 @@ With **A drag draws: An outline on the ground (all above it)**, a drag draws an 
 shown object standing inside it is selected, hidden or not. `Alt`, `Ctrl` and `Shift` work as for the box.
 
 To select by kind inside an exact box or polygon (every tree, or only the beeches, and only where the
-[Mask](masks.md) lets the ground through), use the [Region](area.md#object-actions) tool's **Objects**: it selects
-them and comes back here, where **Delete** and **Replace the selection** work on them.
+[Mask](masks.md) lets the ground through), use the [Region](area.md#object-actions) tool: under **Objects**, its
+**Select the objects (Enter)** selects them and switches to Select, where **Delete** and **Replace the selection**
+work on them.
 
 ![Alt + drag round rocks and bushes](images/select-zone-drawing.jpg)
 *`Alt` + drag round rocks and bushes: the outline is drawn even though the drag started on a bush.*

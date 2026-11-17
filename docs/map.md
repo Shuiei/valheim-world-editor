@@ -38,6 +38,9 @@ page: with changes pending it asks first, and **Leave anyway** loses them.
 
 | Setting | What it does |
 |---|---|
+| **Reload from the game** | Live only: reads the whole world again from the running game. The line above lists the players online ("Live world · 2 player(s) online: Ragnar, Freya"). |
+| **Save to world…** / **Apply live** | Writes every pending change into the world files (live: sends it to the running game). The line above says what is waiting, for example "Not saved yet: 3 zones of ground, 12 deleted, 40 added, 25 zone reset(s)." |
+| **Discard** | Throws away every change not saved or applied yet, after asking. |
 | **Show buildings (N player-built pieces)** | Draws every player-built piece: footprints close up, dots further out, nothing zoomed far out. Ruins players built onto are drawn with the building. On at first. |
 | **Show ruins (spoilers)** | Also draws the world's ruins (stone towers, ruined houses, Mistlands and Ashlands ruins), fainter. Off at first, because it shows where they are. |
 | **Show portals and their links (N: P linked pairs, A alone)** | Draws every portal as a violet dot, with a line between the two that share a tag (the pair the game joins); a portal with no partner is hollow. Zoomed in (8 m a pixel or closer) each tag is written beside its portal ("no tag" for an empty one). N counts the portals, P the linked pairs, A the portals with no partner. Portals added or deleted in the editor count once the map is shown again. Off at first, because it shows where every portal is. |
@@ -47,9 +50,6 @@ page: with changes pending it asks first, and **Leave anyway** loses them.
 | **Clouds (as in game)** | Draws the drifting cloud shadows of the in-game map. |
 | **Edit in 3D** | Opens the 3D editor on the area around the picked zone. |
 | Size list (next to **Edit in 3D**) | How much ground the editor loads: **3 × 3 zones (192 m)**, **5 × 5 zones (320 m)** (default), **7 × 7**, **9 × 9**, **13 × 13** or **17 × 17 zones (1088 m)**. Use 5 × 5 for most work, 9 × 9 or more to paste a town or raise a big mountain. Bigger areas are slower. You can change it later in the top bar. |
-| **Save to world…** / **Apply live** | Writes every pending change into the world files (live: sends it to the running game). The line above says what is waiting, for example "Not saved yet: 3 zones of ground, 12 deleted, 40 added, 25 zone reset(s)." |
-| **Discard** | Throws away every change not saved or applied yet, after asking. |
-| **Reload from the game** | Live only: reads the whole world again from the running game. The line above lists the players online ("Live world · 2 player(s) online: Ragnar, Freya"). |
 
 In live mode the players online show as blue dots with their names, updated every 5 seconds. Changes stay
 [pending](concepts/saving-and-history.md#pending-changes) across areas: edit one area, come back to the map, open
@@ -115,7 +115,7 @@ dungeons, for example after a Valheim update, in places nobody built. To reset t
 | **Only zones the game generated** | Only zones a player has already been near. Off: also zones that only hold objects or ground edits from the editor. On at first. |
 | **From the centre … to … m** | Only zones at this distance from the world's middle. Empty: no limit (the world's edge is at 10,500 m). For example, reset only the outer rings. |
 | **Keep my buildings** | On at first: buildings are never reset from the map, and a zone that holds player-built pieces never matches. Off, and with **No buildings…** off too, zones with buildings match like any other and their buildings go with the rest; the question before marking says so. |
-| **Also undo their ground edits** | The reset also takes away the zones' ground changes, back to the seed's ground. Matters only when **No ground edits** is off. |
+| **Also undo their ground edits** | The reset also takes away the zones' ground changes, back to the seed's ground. Matters only when **No ground edits** is off. Off at first here (the Region tool's is on at first). |
 | **Show matching** | Shades the matching zones blue and counts them and the objects in them. |
 | **Mark for reset…** | Marks every matching zone for reset (red), after asking. |
 | **Unmark matching** | Cancels the reset of the matching zones that are marked; the other marks stay. |

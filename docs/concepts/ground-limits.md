@@ -121,8 +121,8 @@ The other tools say it their way:
 
 | Tool | How it shows the limit |
 |---|---|
-| [Path](../path.md) | The points of the line turn red, and the status bar says so. |
-| [Region](../area.md): Flatten, Raise, Lower | The cut-and-fill line says how much is out of reach: "(40 m³ out of reach: ±8 m limit)". |
+| [Path](../path.md) | The ground points that reached it turn red, and the status bar says so. |
+| [Region](../area.md): Flatten | The cut-and-fill line says how much is out of reach: "(40 m³ out of reach: ±8 m limit)". For Raise and Lower the line counts only the ground the limit lets move. |
 | Region: Heightmap | Points that cannot reach their height turn red, and the status bar counts them. |
 | [Script](../scripting.md) | With `Ground.NoLimit = false`, the result line counts the points that stopped. |
 
@@ -176,7 +176,7 @@ halfway. Edits made all at once (Landform, a paste, Path, the Region tool's acti
 the ground just before them.
 
 Because there is no soft edge, sculpting with a Mask can leave a step where matching ground meets ground left out,
-most of all with Raise, Lower and Mountain. Smooth it afterwards with the Mask off.
+most of all with Raise, Lower and a Landform. Smooth it afterwards with the Mask off.
 
 ## How the tools shape the ground
 

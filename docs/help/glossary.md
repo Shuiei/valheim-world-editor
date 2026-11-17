@@ -2,8 +2,9 @@
 
 The words the editor and this help use, A to Z. Each entry links to where it is explained.
 
-**Add-on.** A separate download that teaches the editor about a mod (Expand World, Riverheim, Tunnelheim), unpacked
-into the `addons` folder next to the editor. See [Install the editor](../start/install.md#add-ons-for-mods).
+**Add-on.** A separate download that teaches the editor about a mod (Expand World, Riverheim, Tunnelheim, Railroads,
+ValheimRAFT), unpacked into the `addons` folder next to the editor. See
+[Install the editor](../start/install.md#add-ons-for-mods).
 
 **Alt biome.** A variant of a biome the game gives some areas from the seed (Dark Meadows, Rock Black Forest…), with
 what grows there. The map's readout names it. See [Region, copy and paste](../area.md) (Regrow nature).
@@ -38,6 +39,9 @@ pasted into any world. See [The Workshop](../workshop.md).
 **Brush.** A tool you drag over the ground: the sculpt brushes (Raise, Lower, Flatten…) and the Paint brush with its
 four paints (Dirt, Cultivate, Paved, Clear paint). Place has a brush too. See [Sculpt and paint](../terrain.md).
 
+**Build dock.** The Build tool's panel along the bottom of the window, with the game's pieces by tab, in a world and
+in the Workshop. See [The Build dock](../build.md#the-build-dock).
+
 **Building bar.** The bar of building settings beside the tool rail, shared by Build, Select and Paste: Snap, Grid,
 Turn by, Lift and Built by. See [The building bar](../build.md#the-building-bar).
 
@@ -47,6 +51,9 @@ Turn by, Lift and Built by. See [The building bar](../build.md#the-building-bar)
 
 **Clipboard.** What the last copy or cut holds, kept until you copy again, even after the editor restarts. See
 [Region, copy and paste](../area.md).
+
+**Cut (the view's).** The status bar's slider that hides every object above a height, to see and work inside
+buildings. Not the same as cutting to the clipboard (`Ctrl+X`). See [Cut](../editor-basics.md#cut).
 
 **Discard.** The top bar's button that undoes everything not saved or applied yet. See
 [Undo a step, take back one change, or discard everything](../guides/undo-changes.md).
@@ -82,6 +89,9 @@ the hammer. Not needed to paste blueprints in the editor. See [The Workshop](../
 
 **Inspector.** The panel that shows and changes what an object holds: a chest's items, a sign's text, a portal's tag.
 See [Select](../select.md).
+
+**Landform.** A mound, crater, mountain or height picture put into the ground whole, with one click of the Landform
+tool (`G`). See [Landform](../landform.md).
 
 **Limit marks.** Red on ground that reached the game's 8 m limit. See
 [Limit marks](../concepts/ground-limits.md#limit-marks).

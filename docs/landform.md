@@ -170,7 +170,7 @@ before the click. Right: the whole hill, put in by one click.*
 | **Radius** | Half the picture's side, 2 to 80 m (default 16 m). |
 | **Height** | How far the white parts rise (m, default 4). Negative: they are pressed down instead. |
 | **Turn** | Turns the picture, -180° to 180°. |
-| **Load picture…** | Uses any picture (PNG, JPEG…): a heightmap from another tool, a logo, a hand-drawn shape. Its brightness is the height; transparent parts count as black. It is kept for next time under its file name. |
+| **Load picture…** | Uses any picture (PNG, JPEG…): a heightmap from another tool, a logo, a hand-drawn shape. Its brightness is the height; transparent parts count as black. It is scaled to a square of 128 × 128 points, so a wide picture is squeezed and fine detail is lost. It is kept for next time under its file name. |
 | **Forget picture** | Removes the loaded picture chosen. Shown only for loaded pictures: the built-in ones stay. |
 
 The pictures are the brushes' [stamps](terrain.md#stamps): one you load here is a brush shape too, and one loaded
@@ -188,8 +188,9 @@ landforms, the **Formula** kind makes them (**Plateau**, and **Moat** with a neg
 
 ## Tips and limits
 
-- **Formula and Picture stop 8 m from the generated ground**, and the status bar says so. For taller ones, switch
-  **No limit** on (see [No limit](terrain.md#no-limit)): it stays on for every ground tool until you switch it off.
+- **Formula and Picture stop 8 m from the generated ground**, and the status bar says so. For taller ones, tick
+  **No limit: past the game's ±8 m** on the **Mask** card next to the panel (see [No limit](terrain.md#no-limit)):
+  it stays on for every ground tool until you switch it off.
 - **A mountain always goes past the game's 8 m**, whatever **No limit** says. Saving turns it into ground discs and
   clears the area's History, as with [No limit](terrain.md#no-limit). Check it before you save.
 - **For big mountains, open a bigger area first** (the area size list in the top bar): on a 5 × 5 area the radius can

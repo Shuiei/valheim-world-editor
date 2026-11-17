@@ -33,8 +33,9 @@ Each click, stroke or `Enter` is one undo step (`Ctrl+Z`). Nothing is written to
 
 ## Settings
 
-The panel, top to bottom. Rows that do not apply to the chosen mode or kinds are hidden. The settings are remembered
-between runs. The [Mask](masks.md) is on its own card beside the panel and applies to every mode.
+The panel, top to bottom. Rows that do not apply to the chosen mode or kinds are hidden. The ticked kinds with their
+shares, **Rate**, your presets, favourites and recent kinds are kept between runs; the other settings start again from
+their defaults. The [Mask](masks.md) is on its own card beside the panel and applies to every mode.
 
 | Setting | What it does |
 |---|---|
@@ -46,13 +47,13 @@ between runs. The [Mask](masks.md) is on its own card beside the panel and appli
 | **Choose kinds…** | Opens the **Choose kinds** card: see [Choose what to place](#choose-what-to-place). |
 | **OBJECTS: Elevation** | **On the ground**: each object stands on the ground (a part of a ruin by its bottom). **Above the ground**: **Height** metres above the ground under it. **At one height**: every object's bottom at the same **Height**, whatever the ground does (a level wall, a platform). |
 | **Height** | The metres for Above the ground, or the height for At one height. |
-| **Snap to pieces already there** | Shown when a ticked kind is a part of a ruin or a dungeon that has snap points (the pieces players build are [Build](build.md)'s). On: the part locks onto the pieces around it, like the hammer. In Brush mode, **Beside** puts it end to end with the piece next to the cursor and **On top** sits it on the piece under the cursor. The line under the buttons says what it snapped to. See [Snapping](concepts/objects.md#snapping). |
+| **Snap to pieces already there** | Shown when a ticked kind is a part of a ruin or a dungeon that has snap points (the pieces players build are [Build](build.md)'s). On: the part locks onto the pieces around it, like the hammer. In Brush mode, **Beside** puts it end to end with the piece next to the cursor and **On top** sits it on the piece under the cursor. The line at the bottom of the panel says what it snapped to ("Snapped beside *name*."). See [Snapping](concepts/objects.md#snapping). |
 | **Leave saplings and crops room to grow** | Shown when a sapling, a crop or a tree that grows from one is ticked. On: they keep the room the game needs to grow them. Off: as tight as you like (they may not grow). See [Growing rules](concepts/objects.md#growing-rules). |
 | **Size %** min / max | Each object gets a random size between the two, 10 to 300% (80 to 120 at first). |
 | **Tilt** | Random lean, 0 to 20°. |
 | **Rotation** | Turns the brush's pattern and every object's facing, -180 to 180°. |
 | **Random facing (off: all face the rotation)** | On: each object faces a random way. Off: all face the Rotation. |
-| **BRUSH: Brush size** | Brush radius, 1 to 30 m. |
+| **BRUSH: Brush size** | Brush radius, 1 to 30 m. It is the sculpt brushes' size too: one value for both. |
 | **Rate** | Brush: how fast a drag plants, 0.05 to 1. Higher fills the brush circle to its Density sooner. It is the Place brush's own: the sculpt brushes' **Strength** does not change it. Hidden with One at a time. |
 | **One at a time, exactly at the cursor** | Brush: one object exactly under the cursor per click; a drag adds no more. Only an object right on that spot blocks it. |
 | **Density** | Brush and Polygon: objects per 100 m², 0.2 to 20. |
@@ -173,7 +174,7 @@ points** and **Creature nests** in the [View panel](editor-basics.md).
 | `Shift` + drag | Brush: remove the ticked kinds under the brush. |
 | `Ctrl` + click a point | Line and Polygon: remove that point. |
 | `Enter` | Place the line, grid or polygon. |
-| `Esc` | Clear the shape; cancel **Pick from world**. |
+| `Esc` | Cancel **Pick from world**; else clear the shape; with nothing drawn, back to **View**. |
 | `Backspace` | Remove the last point. |
 | `N` | New layout. |
 | `,` `.` or `Alt` + wheel | Turn by 15° (`Shift`, finer: 1°): the facing, or in Grid and Polygon the whole box or polygon. |

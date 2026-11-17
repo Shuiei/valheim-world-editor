@@ -36,7 +36,7 @@ with it. ValheimRAFT itself is unchanged and stays in `BepInEx/plugins`; this re
 - **Names the mod's values** in the inspector (the vehicle a piece is built on, its place there, a swivel's settings,
   a sail's corners, mast and colours, a vehicle's build mode, hull shape and the dock clamp it is docked at), with a
   rope anchor's ropes and a sail's colours in words. Values the mod sets itself are read-only.
-- **Sorts the mod's pieces** in the Workshop's Build panel (**Mods** tab) under the vehicle hammer's own headings:
+- **Sorts the mod's pieces** in the Build dock's **Mod pieces** tab (in a world and in the Workshop) under the vehicle hammer's own headings:
   Hull, Structure, Propulsion, Power and mechanisms, Vehicles, Tools and Old hull pieces. The hull boundary tools and
   the build mode toggle, which delete themselves once placed, are not offered.
 

@@ -15,7 +15,8 @@ Move a house, with everything in it, a few metres or across the world, or put a 
 5. For a long move, press `Ctrl+X` (or `Ctrl+C` for a copy). The building is now on the clipboard.
 6. Open the area at the new place (from the [Map](../map.md)), or stay in this one.
 7. Press `Ctrl+V`: the building follows the cursor, see-through.
-8. Turn it with `R` (a quarter turn) or `,` `.`, then click where it should stand.
+8. Turn it with `R` (a quarter turn) or `,` `.` (by **Turn by** on the building bar), then click where it should
+   stand.
 9. Press `Esc` to stop pasting.
 10. Click **Save to world** (or **Apply live**).
 
@@ -38,6 +39,8 @@ should float or be left behind. After saving, open the world in game and walk in
 - A paste must fit inside the open area: if it says *Not pasted*, open a bigger area round the place.
 - The clipboard stays: you can paste in another area or another world.
 - To move by exact metres, use **EXACT PLACE** → **Move by** in the Select panel.
+- A dragged building locks onto pieces within 0.75 m while **Snap** is on **Auto** on
+  [the building bar](../build.md#the-building-bar). Choose **Free** to leave it exactly where you drag it.
 - For a ship or other mod vehicle, select any part: the whole group moves.
 - In live mode, a building moved while no player is near it stays the same object in the game, so mods that track
   it keep track: see

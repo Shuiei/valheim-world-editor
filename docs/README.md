@@ -52,18 +52,19 @@ from a task below. In the editor, `F1` or the small **?** at the top of a panel 
 ## Tools
 
 - [The editor window](editor-basics.md): the start page, the top bar, the tool rail, the camera, the area, saving,
-  History and the View panel.
+  History, the View panel and Cut.
 - [The world map](map.md): find a place, open it in 3D, search the whole world.
 - [Sculpt and paint](terrain.md): the ground brushes, stamps and No limit.
-- [Landform](landform.md): a whole landform in one click, from a formula of your own (hills, craters, terraces), the
-  mountain generator (peaks, ridges and volcanoes past the game's limit) or a picture.
+- [Landform](landform.md): a whole landform in one click, from a formula of your own (hills, craters, plateaus,
+  moats), the mountain generator (peaks, ridges and volcanoes past the game's limit) or a picture.
 - [Path](path.md): roads, ramps and rivers along a line.
-- [Mask](masks.md): keep any tool to a biome, a height, a slope or a paint.
+- [Mask](masks.md): keep any tool to a biome, a height, a slope or a paint; its card also holds the No limit switch.
 - [Measure and overlays](measure.md): distances, slopes, slope colours and height lines.
-- [Region, copy and paste](area.md): level, clear, copy and paste a box or polygon; restore it from a backup.
+- [Region, copy and paste](area.md): level or paint a box or polygon, pick its objects, copy and paste it, regrow it
+  or restore it from a backup.
 - [Place](place.md): trees, rocks, crops and spawn points.
 - [Build](build.md): the pieces players build, one at a time or along lines, with the building bar.
-- [Select](select.md): pick, move, turn, copy and delete objects, and look inside them.
+- [Select](select.md): pick, move, turn, copy, replace and delete objects, and look inside them.
 - [The Workshop](workshop.md): build on a blank plot and keep it as a blueprint.
 - [Dungeons](dungeons.md): generate a dungeon, or edit the game's rooms one by one.
 - [A new world](new-world.md): see a seed's world before it exists, and make it.

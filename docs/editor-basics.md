@@ -57,8 +57,8 @@ The 3D window has five parts:
   [Inspector](select.md) (`I`). They share one place, so only one shows at a time; the same key or button again
   closes it.
 - **Status bar** (bottom): where the mouse is, the last message, the selection, Walk or Fly, the **Cut** slider
-  (see [Cut](#cut)) and, in a window 1500 px wide or more, a reminder of the mouse ("Right drag turns · Wheel zooms ·
-  Middle drag slides · ? help"); in a narrower window its place goes to the message.
+  (see [Cut](#cut)) and, in a window about 1500 px wide or more, a reminder of the mouse ("Right drag turns · Wheel
+  zooms · Middle drag slides · ? help"); in a narrower window its place goes to the message.
 
 The mouse readout reads like `x 1250, z -380   ground 32.40 m (original 30.10, +2.30)   zone 20, -6`: the
 position in metres, the ground's height now, its height before any change and the difference, and the zone. At the
@@ -66,9 +66,10 @@ game's limit it adds ", at the ±8 m limit". The selection reads like "Selected:
 with the four most common kinds.
 
 Every slider, switch and button explains itself when you hover it. The editor remembers your choices between runs:
-what View shows, the look options, the brush's shape and falloff, the Region action, the Landform kind, its Formula preset and your own
-formula, Select's options, which Place categories are open, the right-hand panel you left open, **Follow**,
-**Auto**, the map's place and the clipboard.
+what View shows, the look options, the brush's shape and falloff, the Region action, the Landform kind, its Formula
+preset and your own formula, Select's options, which Place categories are open, the building bar's settings and the
+Build dock's size, the right-hand panel you left open, **Follow**, **Auto**, the map's place and the clipboard.
+**No limit** is not: it is off each time the editor starts.
 
 ## The top bar
 
@@ -229,7 +230,7 @@ more.
 | **Back to here** | Undoes every change made after this one. The later changes stay in the list, greyed out. |
 | **Redo to here** | On a greyed-out change: redoes every change up to and including it. |
 | **Remove** | Takes out only this change and keeps everything done after it. The removal is a new step ("Removed: …"), so `Ctrl+Z` brings the change back. The removed change is struck through. |
-| **Take back Claude's changes** | Shown when Claude made changes in this area's history. Removes each of them, as **Remove** does, and keeps yours, even those made after them. Claude's changes made in other areas are taken back from those areas. |
+| **Take back Claude's changes** | Shown when Claude made changes in this area's history. Removes each of them, as **Remove** does, and keeps yours, even those made after them. Claude's changes made in other areas stay, and the status bar says how many: open those areas to take them back there. |
 
 Tags on a row: **applied** (sent to the game, or saved), **Claude** (made through the
 [Claude connection](claude.md)), **earlier session** (kept from an earlier run of the editor). A new change made after
@@ -339,6 +340,7 @@ In the [Workshop](workshop.md) the window shows a blank plot instead of a world,
 | **Support check** | On at first: each building piece is tinted the colour the game gives its support in build mode, and pieces that would fall in game are red. Off: build freely. See [The support check](concepts/objects.md#the-support-check). |
 | Pending | "N piece(s)", how many would fall, and "not saved as a blueprint" or "saved"; "No pieces yet" on an empty plot. |
 | **Save blueprint** | Saves the building pieces on the plot as a Homestead blueprint (`Ctrl+S`). Nothing else is kept. |
+| **Materials** | Opens or closes the Materials panel at the right: what the building costs in game. See [Materials](workshop.md#materials). |
 | **History**, **?** | As in a world. |
 
 The **Cut** slider is in the status bar, as in a world: in the Workshop its metres count from the plot (see

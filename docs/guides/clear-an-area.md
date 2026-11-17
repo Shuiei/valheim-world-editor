@@ -18,10 +18,10 @@ Remove the trees, rocks and bushes from a place and level it into a flat site to
 9. Set **Soft edge** (3 m at first) so the site blends into the slope. The line under the settings says how much
    ground will be dug and filled, and what is out of the game's 8 m reach.
 10. Press **Flatten (Enter)**.
-11. Optional: choose **Paint** with **Dirt** or **Paved** and press **Paint (Enter)**.
+11. Optional: in **Action**, choose **Paint**, then **Dirt** or **Paved**, and press **Paint (Enter)**.
 12. Click **Save to world** (or **Apply live**).
 
-![A polygon round part of a wood after its objects were selected and deleted: the trees inside are gone](../images/area-polygon-done.jpg)
+![Part of a wood after the objects inside a polygon were selected and deleted: the trees inside are gone, the Select panel open](../images/area-polygon-done.jpg)
 *After **Select the objects (Enter)** and `Del`: the trees inside the polygon are gone, the ones outside stand.*
 
 ## Check it worked

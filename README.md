@@ -33,7 +33,7 @@ Use the plugin and add-ons of the same release as the editor. Step by step: [Ins
 - **Go past the game's ±8 m limit**: raise peaks, ridges, ranges, mesas and volcanoes in one click, or dig canyons.
   Players need no mod to see it, console players included ([Landform](docs/landform.md#mountain),
   [Ground limits](docs/concepts/ground-limits.md)).
-- **Draw roads, ramps and rivers** along a line ([Path](docs/path.md)); hills, craters, terraces or your own
+- **Draw roads, ramps and rivers** along a line ([Path](docs/path.md)); hills, craters, plateaus, moats or your own
   height formula in one click ([Landform](docs/landform.md)).
 - **Keep any tool to some ground**: a biome, a height, a slope or a paint ([Mask](docs/masks.md)); measure distances
   and slopes ([Measure](docs/measure.md)).
@@ -87,8 +87,9 @@ Use the plugin and add-ons of the same release as the editor. Step by step: [Ins
 ## Mods
 
 **Building mods work without anything to set up.** Connected to a modded game, the editor learns the mods' pieces and
-draws them with their own models; the Workshop's **Mod pieces** tab also reads the mods installed in your Valheim and
-mod manager profiles, without a running game ([Modded games](docs/live-mode.md#modded-games)).
+draws them with their own models; the Build dock's **Mod pieces** tab, in a world and in the Workshop, also reads the
+mods installed in your Valheim and mod manager profiles, without a running game
+([Modded games](docs/live-mode.md#modded-games)).
 
 **Add-ons** teach the editor about mods that change how worlds are made or what they keep:
 

@@ -383,6 +383,7 @@ public sealed partial class Scenes
         Level(e);
         Hut(e, P(-4, -3), P(4, 3));
         e.Send("key E");
+        Settle(e);
         Click(e, P(4, 0));
         e.Send("click Whole building");
         Camera(e, 6, 0, 200, 35, 30);

@@ -21,8 +21,9 @@ entrance yet (a backup first: see [Back up a world](back-up-a-world.md)).
 ![The entrance of a generated dungeon on the ground](../images/dungeon-entrance.jpg)
 *The entrance after **Place in the world**: a burial chamber's mound, its door facing the camera.*
 
-To change the dungeon by hand before placing it (move furniture, fill chests), click **Open in the Workshop** instead
-of step 7, then save it as a blueprint and paste it: see [Paste a blueprint into a world](paste-a-blueprint.md).
+To change the dungeon by hand before placing it (move furniture, fill chests), save (or apply) your changes, then
+click **Open in the Workshop** instead of step 7: the Workshop takes the world's place. Change the dungeon, click
+**Save blueprint**, open the world again and paste it: see [Paste a blueprint into a world](paste-a-blueprint.md).
 
 ## Check it worked
 

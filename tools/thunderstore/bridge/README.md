@@ -18,14 +18,16 @@ console and crossplay players included.
 ## Shape the land
 
 - **Past the ±8 m limit.** Raise a mountain, a volcano or a cliff, carve a canyon. Players see it with no mod at all.
-- **Roads and rivers.** Draw the line on the map: the editor levels and paves a road, with ramps where it
+- **Roads and rivers.** Draw the line on the ground: the editor levels and paves a road, with ramps where it
   climbs, or digs a river bed.
-- **Brushes and one-click shapes.** Raise, flatten, smooth, paint; hills, craters and terraces in one click.
+- **Brushes and one-click shapes.** Raise, flatten, smooth, paint; hills, craters and plateaus in one click.
 
 ![A level road cut through the mounds and paved along its middle](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/v1.109.0/docs/images/path-road.jpg)
 
 ## Build and rearrange
 
+- **Build with the game's pieces.** Pick any piece of the hammer and put it down in the world, one at a time or along
+  a line, snapping as in game.
 - **Paste a building.** Design it in the editor's Workshop, or use a
   [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprint, and paste it: the hill in its way
   is dug out, the trees and rocks there are cleared.
@@ -69,7 +71,7 @@ console and crossplay players included.
 ## Modded games
 
 Open a modded game live and the pieces and objects its mods add get their names, are drawn with the mods' own models,
-and can be placed or built from the Workshop's **Mods** tab. Worlds made with **Expand World**, **Riverheim** or
+and can be placed, or built from the Build dock's **Mod pieces** tab. Worlds made with **Expand World**, **Riverheim** or
 **Tunnelheim** open with the editor's add-ons, separate downloads on its releases page; another draws **Railroads**'
 track, stations and trains. Mod authors can teach the
 editor their own mod: see [For mod authors](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/modding.md).

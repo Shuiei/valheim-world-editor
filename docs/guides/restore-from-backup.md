@@ -32,8 +32,9 @@ whole again; the line above the button names the backup's save, the status bar c
 
 ## Undo it
 
-`Ctrl+Z` takes the restore back before you save. Objects of the chosen kinds that are not in the backup are removed,
-so restore again from a newer backup if you lost something you built later.
+`Ctrl+Z` takes the restore back: it is one step in History. After a save, undo it and save again. Objects of the
+chosen kinds that are not in the backup are removed, so restore again from a newer backup if you lost something you
+built later.
 
 ## Related
 

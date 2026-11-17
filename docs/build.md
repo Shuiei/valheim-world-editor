@@ -92,7 +92,7 @@ shows the parts it uses. On a narrow window the bar wraps onto two rows.
 | **Built by** | The player written as the builder of the pieces you put down. | The builder **Make player built** and **Replace** write. | The builder of the pieces pasted. |
 
 **`Shift` always makes a step finer**, in the three tools: `,` and `.` turn by 1°, and the lift goes by a fifth of
-its step (0.1 m at 0.5 m).
+its step (0.1 m at 0.5 m). `R` turns a quarter turn in all three, whatever the step.
 
 Hold `Alt` while building to place a piece by a quarter metre, without snapping, whatever the **Snap** setting (like
 holding `Alt` in game, with a step). See [Snapping](concepts/objects.md#snapping).
@@ -121,6 +121,7 @@ the builder matters: see [Player-built pieces](concepts/objects.md#player-built-
 | Click | Put the piece down (**One piece**); add a point (**Line**). |
 | Drag | **One piece**: a row of the piece. **Circle**, **Rectangle**, **Grid**: draw it. |
 | `,` `.` or `Alt` + wheel | Turn the piece by the bar's **Turn by** (`Shift`: 1°). In **Grid**: the whole grid. |
+| `R` | Turn the same a quarter turn. |
 | `PgUp` / `PgDn` or `Ctrl` + wheel | Lift or lower the piece by the bar's **Lift** (`Shift`: a fifth of it). |
 | `Alt` (held) | Place by a quarter metre, no snapping. |
 | `Q` / `E` | **Manual** snap: the piece's previous / next snap point. |

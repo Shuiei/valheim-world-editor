@@ -74,7 +74,8 @@ The editor must be running for Claude to reach it.
 ## What Claude can do
 
 Claude's tools call the same code as the editor's own tools and buttons, so what it makes follows the same game rules
-as your edits: the 8 m ground limit unless No limit is asked for, the snapping of building pieces, zones, locations.
+as your edits: the game's 8 m ground limit (only a script of its own goes past it), the snapping of building pieces,
+zones, locations.
 Each step it makes is named "Claude: …" in History and carries a **Claude** tag. It checks its work with pictures of
 the 3D view and the map, and with the support check.
 
@@ -83,10 +84,10 @@ the 3D view and the map, and with the support check.
 | See what is open, the worlds on this computer, and an area's heights, biomes, water and objects; open an area of 1 to 17 zones; search the whole world for a kind, a chest's item or a sign's text; list the start, traders, altars and dungeon entrances | `editor_state`, `list_worlds`, `open_world`, `open_area`, `describe_area`, `list_objects`, `ground_at`, `search_world`, `list_locations` |
 | Look at its work: pictures of the 3D view (any camera, or four views of a place at once) or the map, a map of the area from above with a grid in metres, the support check (which pieces would fall) | `screenshot`, `area_map`, `support_check` |
 | Use your selection, and show you what it means | `get_selection`, `select_objects` |
-| Set any control as you would (View switches, tool settings, the rail) | `list_controls`, `set_control` |
+| Set any control as you would (View switches, the status bar's Cut, tool settings, the rail) | `list_controls`, `set_control` |
 | Look up the game's pieces and how they fit | `find_prefabs`, `piece_info`, `building_guide`, `list_blueprints` |
 | Look at a seed's world (biomes, start, traders, bosses) and make a new world of a name and seed | `preview_seed`, `create_world` |
-| Level, paint, smooth, naturalize, erode, restore, raise or lower ground; press a stamp or a heightmap picture; dig a river, moat or ramp along a line; lay a road; mark zones for reset; regrow the game's trees and rocks | `flatten`, `paint_area`, `shape_ground`, `stamp`, `import_heightmap`, `dig_path`, `road`, `reset_zones`, `regrow_nature` (most take a [Mask](masks.md)) |
+| Level, paint, smooth, naturalize, erode, restore, raise or lower ground; press a stamp or a heightmap picture; dig a river, moat or ramp along a line, or flatten, raise, lower, smooth, naturalize, erode or restore the ground along it; lay a road; mark zones for reset; regrow the game's trees and rocks | `flatten`, `paint_area`, `shape_ground`, `stamp`, `import_heightmap`, `dig_path`, `road`, `reset_zones`, `regrow_nature` (most take a [Mask](masks.md)) |
 | Plant trees or rocks, put down pieces and objects (they snap like the hammer), copy objects once or in a row or ring, swap objects for another kind, take objects away | `forest`, `place_pieces`, `copy_objects`, `replace_objects`, `remove_objects` |
 | Build a floor, walls with doors and a gable roof (26° or 45°, thatch or shingle) over a rectangle; open the Workshop; add a blueprint to the plot or an area; save the plot as a blueprint | `build_floor`, `build_walls`, `build_roof`, `place_pieces`, `open_workshop`, `add_blueprint`, `save_blueprint` |
 | Move and turn objects as a group, or place, tilt and size each exactly; fill a chest, dress an armour stand or item stand, write a sign, give a creature stars; change a portal's tag, a builder, a ward's permitted players, health, fuel, a creature's level or tamed state | `move_objects`, `set_transform`, `get_object`, `set_object_data`, `set_contents` |

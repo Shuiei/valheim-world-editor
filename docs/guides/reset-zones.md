@@ -7,7 +7,8 @@ Valheim update's new content in places nobody built.
 [backup of the world](back-up-a-world.md): a saved reset cannot be undone.
 
 1. In game, lead tamed animals away from the places you will reset: everything in a reset zone goes except
-   player-built pieces and tombstones. Then close the game (or stop the server), unless you edit live.
+   tombstones and, with **Keep my buildings** on, player-built pieces. Then close the game (or stop the server),
+   unless you edit live.
 2. Back up the world.
 3. Open the world. Its [map](../map.md) opens.
 4. In the side panel, open **Reset zones across the world**.
@@ -16,7 +17,8 @@ Valheim update's new content in places nobody built.
 6. Press **Show matching**. The first time, the editor reads every zone. Matching zones turn blue, and a line says how
    many match and how many objects they hold.
 7. Change the filter until the blue zones are the ones you want.
-8. Press **Mark for reset…** and agree. The zones turn red.
+8. Press **Mark for reset…**. The question says how many zones, what goes and whether your buildings are kept: read
+   it, then agree. The zones turn red.
 9. Click **Save to world** (or **Apply live**).
 
 ![Reset zones across the world: matching zones blue, marked zones red](../images/map-reset.jpg)

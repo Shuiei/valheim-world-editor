@@ -29,8 +29,10 @@ always goes past the limit.
 ## Undo it
 
 - **Before saving:** `Ctrl+Z`, the **Restore** brush, or **Discard** for everything not saved.
-- **After saving:** History starts again from the saved world. Work the shape down again with No limit on, or put
-  the place back with [Restore one area from a backup](restore-from-backup.md).
+- **After saving:** History starts again from the saved world. The **Restore** brush still takes the place back to
+  the ground the world generated (so do the Path tool's **Restore** and Region's **Back to generated ground**): save
+  again, and the ground discs it no longer needs go. Or put the place back with
+  [Restore one area from a backup](restore-from-backup.md).
 
 ## Related
 

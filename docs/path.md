@@ -6,15 +6,15 @@ causeways, ditches and rivers.
 **Where:** tool rail, **EDIT** section · **Key:** `P` · **Works in:** saved worlds, live
 
 ![The Path tool's five points across two mounds, Flatten chosen, before Apply](images/path.jpg)
-*A line of five points drawn over two mounds, with **Flatten** chosen and its **Height** taken from the flat
-ground with `Alt`+click. Nothing has changed yet: the band shows the path's width and soft edges until you press
-**Apply (Enter)**; the circle at the last point is the pointer's.*
+*A line of five points drawn over two mounds, with **Flatten** chosen, its **Height** taken from the flat
+ground with `Alt`+click, and **Natural look** on. Nothing has changed yet: the band shows the path's width and soft
+edges until you press **Apply (Enter)**; the circles at the last point are the pointer's.*
 
 ## Use it
 
 1. In the tool rail, click **Path** (`P`).
-2. Click points along the route, or hold and drag to draw it freely. Before you click, a circle shows the path's
-   width; once there are points, the band shows its width and soft edges.
+2. Click points along the route, or hold and drag to draw it freely. Under the pointer, a circle shows the path's
+   width and a fainter one its soft edge; once there are points, the band shows both along the line.
 3. Optional: fine-tune the line. Drag a point to move it, drag the line between two points to add a point there,
    `Ctrl`+click a point to remove it, `Backspace` to remove the last one.
 4. In the panel, choose an **Action** and set its settings.
@@ -40,7 +40,7 @@ The panel shows how many points the line has and how long it is.
 | **Start**, **End** | **Ramp**: the height at the first and the last point (m). See [Ramp](#ramp). |
 | **Depth** | **River / canal**: how deep the bed is below sea level in its middle (m, default 2). |
 | **Smooth curve through the points** | On (default): a smooth curve through your points. Off: straight lines between them. |
-| **Natural look (ragged edges, bumps)** | A width that varies along the way (up to 45% either way), ragged edges and small bumps on the surface, so the path looks worn rather than tool-made. |
+| **Natural look (ragged edges, bumps)** | A width that varies along the way (up to 45% either way) and ragged edges, for every action; small bumps on the surface too for **Flatten**, **Ramp**, **Raise**, **Lower** and **River / canal**. The path then looks worn rather than tool-made. |
 | **Bumps**, **Bump size**, **New pattern** | **Naturalize** and **Natural look**: how tall and how wide the bumps are, and another random pattern for them. They are the [Naturalize](terrain.md#naturalize) brush's: set here, there or in the [Region](area.md) tool, they are the same values. |
 | **Rest angle** | **Erode**: the steepest slope that stays put, 10° to 60° (default 33°). The [Erode](terrain.md#erode) brush's, the same value. |
 
@@ -65,8 +65,9 @@ a trench with steep, straight walls. Right: **Soft edge** 8 m, the banks slope g
 | **Clear paint** | Paints plain biome ground along the path (see [Paint brush](terrain.md#paint-brush)). |
 
 **Flatten**, **Raise**, **Lower**, **Smooth**, **Naturalize**, **Erode**, **Restore** and the paints are the same
-actions as the [brushes](terrain.md) and the [Region](area.md) tool's ground actions, under the same names: a brush says
-where by its stroke, the Region tool by a selection, the Path tool by a line, and the ground changes the same way.
+actions as the [brushes](terrain.md) and the [Region](area.md) tool's, under the same names (Region lists Restore as
+**Back to generated ground**, in its **Recover** group): a brush says where by its stroke, the Region tool by a
+selection, the Path tool by a line, and the ground changes the same way.
 
 ### Ramp
 

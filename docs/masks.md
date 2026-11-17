@@ -11,7 +11,8 @@ level a valley floor without touching its sides, plant only on unpainted ground.
 under 15°: the flat ground is paved, the mound's steep sides are not. The Mask card is next to the tool panel.*
 
 The Mask works with the sculpt brushes and the Paint brush, [Landform](landform.md),
-[Path](path.md), the [Region](area.md) tool's actions, pasting and [Place](place.md).
+[Path](path.md), the [Region](area.md) tool's actions, pasting and [Place](place.md). It does not hold
+[Build](build.md) back: a piece goes where you point.
 
 ## Use it
 
@@ -34,6 +35,9 @@ The Mask works with the sculpt brushes and the Paint brush, [Landform](landform.
 An orange warning shows under the settings when they let nothing through: a maximum slope of 0°, or a minimum above
 the maximum.
 
+![The Mask card with Slope min 30 and max 10, and its orange warning that nothing matches](images/mask-warning.jpg)
+*Slope min 30° is above max 10°, so the card warns in orange: "Slope min is above max: nothing matches."*
+
 ### No limit, on the same card
 
 Under the Mask, the card holds the other setting every ground tool shares:
@@ -46,9 +50,6 @@ It is not part of the Mask (it works with the Mask on or off), and the card show
 not with the Paint brush and [Place](place.md), which move no ground. A Landform mountain always goes past the
 limit, whatever the switch says.
 
-![The Mask card with Slope min 30 and max 10, and its orange warning that nothing matches](images/mask-warning.jpg)
-*Slope min 30° is above max 10°, so the card warns in orange: "Slope min is above max: nothing matches."*
-
 ## Shortcuts
 
 | Key or mouse | What it does |
@@ -58,8 +59,8 @@ limit, whatever the switch says.
 ## Tips and limits
 
 - **The Mask has no soft edge.** Each ground point (one per metre) matches or not, so sculpting with it can leave a
-  step where matching ground meets the rest, most of all with Raise, Lower and Mountain. Go over the step with the
-  **Smooth** brush afterwards, with the Mask off.
+  step where matching ground meets the rest, most of all with Raise, Lower and a [Landform](landform.md). Go over
+  the step with the **Smooth** brush afterwards, with the Mask off.
 - **During a brush stroke the Mask looks at the ground as it was when you pressed the button.** A Raise stroke under
   a height limit keeps rising past it until you let go. One-click edits (Landform, Path, Region,
   paste) look at the ground just before them.
@@ -68,7 +69,10 @@ limit, whatever the switch says.
   **Only paved** need that paint to be at least half of the colour.
 - **Nothing changed?** The status bar says "Nothing changed: the Mask leaves out all the ground under the brush (check
   its height, slope, biome and paint settings)."
-- **The Mask is a setting, not a change**: it is not undone with `Ctrl+Z` and not saved in the world.
+- **A paste obeys the Mask too, though the card is not shown while you paste.** A Mask left on limits the ground
+  the paste shapes (its objects all go in). Untick **Mask** before you copy and paste if you want the whole ground.
+- **The Mask is a setting, not a change**: it is not undone with `Ctrl+Z` and not saved in the world. It is off, its
+  boxes empty, each time the editor starts.
 
 Ideas:
 

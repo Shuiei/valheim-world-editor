@@ -87,8 +87,9 @@ Read `script_reference` once per session for the script API.
 - One phase per script (shell, roofs, towers, details…), each one undo step labelled "Claude: …".
 - Use `dryRun: true` on anything large or destructive first.
 - After each phase: screenshot (overview + one close-up). Fix before moving on.
-- Pieces carry yaw only (`Objects.Place(prefab, x, z, yaw, scale, y)`); keep scale 0 for building pieces
-  (the game doesn't keep scale on pieces).
+- Most pieces need yaw only (`Objects.Place(prefab, x, z, yaw, scale, y)`; `pitch`, `roll` and `snap: true`
+  come after for the few that need them); keep scale 0 for building pieces (the game doesn't keep scale on
+  pieces).
 - Every part of a window (arch head, panes, lattice, sill) takes yaw = the window's facing angle φ. Never
   snap a sill or pane to 0/90: it breaks on round towers.
 - Stone may overhang freely in the editor, but if the user cares about the game's support, run
@@ -140,7 +141,7 @@ and from the moat band first.
 
 Say what was built (by part, with sizes), what the audit and tour found and fixed, and what can't be judged
 from the editor (the dark side's lighting, walking scale, how it looks in game). Offer next steps. Everything
-is pending: remind the user to save (Save blueprint in the Workshop, Save for a world).
+is pending: remind the user to save (Save blueprint in the Workshop, Save to world or Apply live for a world).
 
 ## Learning
 

@@ -18,7 +18,7 @@ Fill a stretch of land with trees in natural groves, a field of crops in rows, o
 
 ![Meadows woods previewed in a polygon with Clumping 50% and Patch size 30 m: groves and clearings](../images/guide-forest-zone.jpg)
 *A polygon of about 58 × 40 m with **Clumping** 50% and **Patch size** 30 m (and **Density** 1.5): the see-through
-trees gather in groves with clearings between them. The **POLYGON FILL** rows (**ZONE FILL** in this picture) are at the bottom of the panel.*
+trees gather in groves with clearings between them. The **POLYGON FILL** rows are at the bottom of the panel.*
 
 ## A field
 

@@ -51,8 +51,8 @@ level, is the blueprint's **anchor**, the point Homestead measures every piece f
   [The Build dock](#the-build-dock)).
 - At the right, the **Materials** panel: what the building costs (see [Materials](#materials)).
 - There is no Mask, no View panel and no zone borders, and buildings are drawn solid.
-- The top bar has **Start**, the **Support check** switch, **Save blueprint** and **Materials**.
-  It counts the pieces, says how many would fall and whether the building is saved
+- The top bar has **Start**, undo and redo, the **Support check** switch, **Save blueprint**, **Materials** and
+  **History**. It counts the pieces, says how many would fall and whether the building is saved
   (`12 piece(s) · 2 would fall · not saved as a blueprint`).
 - Under the title: what the building costs in game, in short; a long line ends in "…".
 - The status bar has the **Cut** slider, as in a world (see [Cut](#cut)).
@@ -88,7 +88,8 @@ In each tab the pieces are grouped by the crafting station they need, in the ord
 stonecutter, forge, artisan table, black forge, galdr table), then by name. Each group starts with the station's name.
 
 **Mod pieces** lists the pieces your mods add, one mod at a time: pick the mod in the list down its left side (with
-its number of pieces). The headings are the mod's own groups. The pieces come from two places:
+its number of pieces). The headings are the mod's own groups (its crafting station for a piece without one). The
+pieces come from two places:
 
 - **The mods installed on this computer**, in the BepInEx folders the editor knows (your Valheim's, your mod manager
   profiles', those added in Settings). The Workshop reads their files the first time it opens, without the game, and
@@ -225,7 +226,9 @@ off, and the **Cost in game** line above **Save**.*
 
 What is kept:
 
-- **Building pieces only.** Trees, rocks and items left on the plot are not.
+- **Everything that stands on the plot**, not the plot's ground. The plot starts bare, so all of it is yours:
+  the pieces you built, and whatever an opened or added blueprint brought (trees, rocks, creatures). There must be
+  at least one building piece.
 - **What objects hold**: a chest's contents, a sign's text, an item stand's item, a creature's stars. Select an object
   and press `I` to see or change it: see [Inspector](select.md).
 - **Whether it is a ruin**: pieces with no builder, as the game's ruins and generated dungeons have. No builder is
@@ -248,7 +251,7 @@ Workshop's [Library tab](#library-tab); a blueprint without a picture gets one d
 
 | Button | What it does |
 |---|---|
-| **Paste** | Starts pasting it into the open area (see [Region](area.md)). Kinds this world cannot make are left out and listed. A dungeon blueprint goes up behind an entrance instead. |
+| **Paste** | Closes the panel and starts pasting it into the open area (see [Copy and paste](area.md#copy-and-paste)). Kinds this world cannot make are left out and listed. A dungeon blueprint goes up behind an entrance instead. |
 | **Open** | Opens it in the Workshop, alone on the plot, to change it. |
 | **Details** | Changes its name, description, tags and the dungeon switch. A new name renames the file and picture when that name is free. |
 | **.vbuild** | Writes its objects (not the ground) as a `.vbuild` file (BuildShare and older tools) into the `export` folder of the editor's blueprints folder, and says where. |

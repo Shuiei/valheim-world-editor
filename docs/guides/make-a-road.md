@@ -34,6 +34,9 @@ Each **Apply** is one undo step: `Ctrl+Z` takes back the last one. **Clear line 
 you applied. After saving, undo and save again (see
 [Undo a step, take back one change, or discard everything](undo-changes.md)).
 
+To take a road away later, when the undo steps are gone, draw a line along it and apply **Restore** with a **Width**
+that covers it: the ground goes back to how the world generated it, paint removed.
+
 ## Related
 
 - [Path](../path.md)

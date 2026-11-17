@@ -203,5 +203,12 @@ public sealed partial class Scenes
         Level(e);
         Hut(e, P(-4, -3), P(4, 3));
         e.Send("key E");
+        Settle(e);
     }
+
+    /// <summary>
+    /// A wait after building: a piece just put down is picked only once its model is read (on another thread), which a
+    /// click sent straight after the last piece is ahead of.
+    /// </summary>
+    private static void Settle(Editor e) => e.Send("wait 1000");
 }

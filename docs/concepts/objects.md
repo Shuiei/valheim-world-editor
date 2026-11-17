@@ -39,7 +39,7 @@ boss's altar) are made again from the location each time the zone loads, so they
 [Locations level the ground](ground-limits.md#locations-level-the-ground)). A runestone is the same: you can delete it,
 which removes its location for good, but not move, copy or inspect it.
 
-**Some mods hide objects far underground**, such as crafting stations 10 km under a house. Boxes, zones, **All** and
+**Some mods hide objects far underground**, such as crafting stations 10 km under a house. Boxes, outlines, **All** and
 **Whole building** leave out what lies more than 10 m under the ground, so those are not taken with what stands above.
 
 ### Linked groups: ships and vehicles

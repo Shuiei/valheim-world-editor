@@ -12,10 +12,10 @@ SDK.
 
 | Path | What it holds |
 |---|---|
-| `editor/Desktop/` | The app, `ValheimWorldEditor` (Avalonia window, 3D view and map drawn with OpenGL through Silk.NET). `Program.cs` (command line), `StartPage`, `MapPage` + `MapView` (the map), `MainWindow` (the 3D editor's page: top bar, tool rail, panels, keys) with `GlView` (the 3D view and its mouse), `WorldSession` / `WorldScene` / `EditSession` (the open world, the loaded area, its pending changes and history), one class per tool and panel (`AreaTool` + `AreaPanel`, `PlaceTool` + `PlacePanel`, `SelectTool` + `SelectPanel`, `PathTool`, `Sculpt`, `Erosion`, `Mask`…), `ModelStore` and `GameLookGl` (the game's models and terrain shader), `Prefs` (remembered choices), `Driver` (`--driver`, below). |
+| `editor/Desktop/` | The app, `ValheimWorldEditor` (Avalonia window, 3D view and map drawn with OpenGL through Silk.NET). `Program.cs` (command line), `StartPage`, `MapPage` + `MapView` (the map), `MainWindow` (the 3D editor's page: top bar, tool rail, panels, keys) with `GlView` (the 3D view and its mouse), `WorldSession` / `WorldScene` / `EditSession` (the open world, the loaded area, its pending changes and history), one class per tool and panel (`AreaTool` + `AreaPanel` for the Region tool, `PlaceTool` + `PlacePanel` and the Build dock `BuildPanel`, `SelectTool` + `SelectPanel`, `PathTool`, `LandformPanel`, `Sculpt`, `Erosion`, `Mask`…), `GroundOps` (the ground actions the brushes, Region and Path share), `Ui` (the look), `ModelStore` and `GameLookGl` (the game's models and terrain shader), `Prefs` (remembered choices), `Driver` (`--driver`, below). |
 | `editor/Core/` | `ValheimWorldEditor.Core`, what is not about the window: |
 | `editor/Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
-| `editor/Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
+| `editor/Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoBuilder`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `editor/Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
 | `editor/Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening; no game data (what the editor needs of the game, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, piece costs, vegetation rules and dungeon rooms, is read from the player's Valheim: `editor/Core/App/GameData.cs`). |
 | `editor/plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
@@ -68,10 +68,20 @@ builds only what its pictures show (often a tool's settings side by side) and ta
 made from seeds and never saved:
 
 ```sh
-WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # the bare zone the tools are shown on (zone -10, -5)
+WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # one zone left bare for the tools; it says which
 WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     # a second world for the start page
+dotnet build editor/Desktop                                 # the app the scenes drive (it is not built with them)
 dotnet run --project tools/DocsScreenshots -- <dir> [scene ...]  # all scenes, or only those named
 ```
+
+The scenes work on zone -10, -5 (`ZoneX` and `ZoneZ` in `Scenes.cs`): the zone `--flat` left bare when they were
+written. `--flat` takes the most even zone of dry Meadows that holds no location (`WorldCreator.FlattestZone`), and a
+new world's locations are laid out from the installed Valheim's location rules ([the game's files](#the-games-files)).
+The layout is no longer the one of that world: a location now stands on zone -10, -5, and the recipe leaves zone 5, -4
+bare instead (9.1 m from its lowest point to its highest). `create` ends by naming the zone it left bare. When it is
+not -10, -5, the scenes open a wooded zone with a location on it and their pictures are wrong: take them on a Docs
+world made while the recipe still gave -10, -5 (the scenes never save it, so one made once stays good), or move
+`ZoneX` and `ZoneZ` to the zone named and check every scene's framing again.
 
 Run it on a display of its own, never your desktop: `Xvfb :91 -screen 0 1920x1080x24 &`, then
 `DISPLAY=:91 VGL_EGLLIB=/usr/lib64/libEGL.so.1 VGL_GLLIB=/usr/lib64/libGL.so.1 vglrun -d egl dotnet run --project
@@ -81,7 +91,11 @@ out), `area-heightmap` a `DBUS_SESSION_BUS_ADDRESS` naming no bus (so the file p
 `settings` and `claude-history` port 5731 free (no other editor allowing Claude; or run them under `unshare -rn` with
 the loopback up). `new-world-riverheim` needs Riverheim: `$RIVERHEIM_BEPINEX`, a BepInEx folder with
 Riverheim installed (its `core`, and `Riverheim.dll` under `plugins`), and `$RIVERHEIM_ADDON`, the Riverheim add-on's
-folder unpacked from its release zip; without them the scene is skipped. Pages say where a picture is still to be taken with a `<!-- picture: … -->` comment
+folder unpacked from its release zip; without them the scene is skipped. `live` needs `$DOCS_LIVE`, the bridge address
+and the token (`"http://127.0.0.1:5182 <token>"`) of a local server running the Docs world with the plugin (never a
+live one: the scene applies a hut to it); without it the scene is skipped. `$HOMESTEAD_DLL` (Homestead.dll from its Thunderstore package) puts Homestead in the
+stand-in game, so the start page and the Blueprints panel show it installed. The drawn diagrams (`Scenes.Diagrams.cs`)
+are made without the app. Pages say where a picture is still to be taken with a `<!-- picture: … -->` comment
 ([writing the documentation](dev/writing-docs.md#pictures)).
 
 The pictures go to `docs/images` (or `$DOCS_OUT`). `$DOCS_APP` names a released `ValheimWorldEditor`
@@ -372,22 +386,24 @@ after an update.
 | `verify-ingame <world> <file>` | The editor's ground against heightmaps recorded in the game by the TerrainCheck plugin. |
 | `selftest-save <world copy>` | Edits, saves and reads back a copy of a world (only under `/tmp`). |
 | `inspect <world>` / `summary <world>` | The chunk mapping and terrain objects / the overview map and the most edited zones. |
-| `create <folder> <name> <seed> [radius]` | A new world from a seed, in the game's save format; its middle (`radius` zones around spawn) generated with the game's vegetation rules (no locations). It refuses a folder that already holds a world. |
+| `create <folder> <name> <seed> [radius] [--flat]` | A new world from a seed, in the game's save format; its middle (`radius` zones around spawn) generated with the game's vegetation rules and its locations, as the New world page makes it. With `--flat` (a radius of 2 or more), the most even zone of dry Meadows without a location is left bare, and named. It refuses a folder that already holds a world. |
 | `look <seed> [metres]` | The biomes and water around a seed's spawn, to choose one. |
 | `objects <world> [prefab]` | The most common kinds of saved objects; with a prefab (name or hash), each of its objects and its saved bytes in hex, to check them byte by byte. |
 | `altbiomes <dump> <seed> [valheim folder]` | The biome areas and the alt biomes the editor lays out for a seed, line by line against those the game made (the AltDump plugin's `AltDump.txt`). |
 | `locations <dump> <seed> [valheim folder]` | Every location the editor lays out for a seed against those the game laid out (`LocDump.txt`). |
 | `contents <world> <BepInEx folder> <name part>` | New world's build of the locations whose contents Expand World Data changes (kinds whose name holds the part) against a world where the game made them: each object's prefab, place on the ground and data. |
 | `regrow <world> <zones> [--no-alts] [--all-kinds]` | Regrow nature on zones the game generated (`Zones.txt`) against what the game put there: in alt biome areas and elsewhere, and per kind an alt biome adds or blocks (every kind with `--all-kinds`; `--no-alts` as if there were no alt biomes). |
+| `vegetation <world> <BepInEx folder> <zones> <rules>` | Regrow nature with the first `rules` rules of Expand World Data's vegetation file on zones the game generated (`Zones.txt`), against what the game put there: each object's prefab and place, then its data. |
+| `snap <world> <name part>` | The ground New world puts a location's snapped objects on (kinds whose name holds the part), against where the game put them. |
 
-The last three take their files from the AltDump test plugin (`_src/AltDump` in the workspace, next to TerrainCheck
+`altbiomes`, `locations` and `regrow` take their files from the AltDump test plugin (`_src/AltDump` in the workspace, next to TerrainCheck
 and TerrainDump), run on a local dedicated server, never a live one: copy its dll into the server's
 `BepInEx/plugins`, start the server with a new world in a scratch save folder and `-altdump-quit`
 (`-savedir <scratch> -world AltTest -altdump-quit`), and it writes `AltDump.txt` when the game has laid out the
 alt biomes, `LocDump.txt` when it has laid out the locations, then generates zones in alt biome areas and others
 (`Zones.txt`), saves the world and stops. The seed's name is in the dump's first line. With `-altdump-loc <name
-part>` it generates only the zones of the locations whose names hold the part (for `contents`, with Expand World
-Data and a test location file in the server's BepInEx).
+part>` it generates only the zones of the locations whose names hold the part (for `contents` and `snap`; `contents`
+and `vegetation` with Expand World Data and a test file in the server's BepInEx).
 
 ## Tests
 
@@ -445,7 +461,7 @@ and on the branches whose name has `windows` in it, so a Windows fix is checked 
 | Job | What it checks |
 |---|---|
 | `code-analysis` | `Desktop` (with `Core` and `Sdk`) and `WorldEditorBridge.Api` build with every analyzer warning an error, the repository's XML files are well formed, and the test jobs' scripts (`.circleci/run-tests.sh`, `list-classes.sh`, `coverage-reports.sh`) pass their checks against a stand-in `dotnet` (`.circleci/run-tests.test.sh`). |
-| `formatting` | `tools/format-check.sh`: the five projects are formatted as `.editorconfig` says (`dotnet format whitespace` and `style`), on two containers. A pull request checks only the projects with a changed file (all of them when `.editorconfig`, `Directory.Build.props` or `global.json` changed); main checks all of them. |
+| `formatting` | `tools/format-check.sh`: the editor's and the SDK's projects and every add-on's are formatted as `.editorconfig` says (`dotnet format whitespace` and `style`), on two containers. A pull request checks only the projects with a changed file (all of them when `.editorconfig`, `Directory.Build.props` or `global.json` changed); main checks all of them. |
 | `core-tests` | `editor/tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
 | `app-tests` | `editor/tests/Desktop.Tests` on six containers, the visual tests included: they draw on a virtual screen (Xvfb, Mesa's software OpenGL), so CI checks the shapes they draw but not the game's look (CI has no Valheim: its editor draws plain colours). Both test jobs run through CircleCI's testsuite CLI ([Smarter Testing](https://circleci.com/docs/guides/test/getting-started-with-smarter-testing/): the suites in `.circleci/test-suites.yml`, each class a test atom, run in batches by `.circleci/run-tests.sh` as `--filter-class`es): the containers take classes from one shared queue as they finish, longest first (dynamic test splitting, a paid option), and **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`editor/tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. Test impact analysis (running only the tests a change touches) is not on: it needs each test's coverage as LCOV, Go's format or CircleCI's own, which .NET's coverage does not write (it writes Cobertura). |
 | `addon-tests` | Every add-on, found by itself under `addons/`: `editor/tests/AddOns.Tests` installs each as a player does and has the editor load it and call its hooks (so a change of the editor or the SDK that breaks an add-on fails here), then each add-on's own tests (`addons/<Name>/tests`), then every add-on's zip as a release makes it (`tools/addons.sh`). One of the checks main's ruleset requires (with code-analysis, formatting, core-tests and app-tests); not in Codecov's figure. |
@@ -467,7 +483,7 @@ dotnet test --project editor/tests/Desktop.Tests --filter-trait Category=Visual 
 dotnet test --project editor/tests/Core.Tests --filter-class '*.WorldWriterTests'    # one class
 for p in Core.Tests Desktop.Tests; do                                     # with coverage (Cobertura)
   dotnet test --project editor/tests/$p --filter-not-trait Category=Visual --coverage --coverage-output-format cobertura \
-    --coverage-settings "$PWD/tests/coverage.runsettings" --coverage-output /tmp/coverage/$p/coverage.cobertura.xml
+    --coverage-settings "$PWD/editor/tests/coverage.runsettings" --coverage-output /tmp/coverage/$p/coverage.cobertura.xml
 done
 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```

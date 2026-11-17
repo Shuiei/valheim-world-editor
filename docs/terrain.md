@@ -69,7 +69,7 @@ Shape list is open in the panel.*
 | **Sharp edge (pickaxe)** | Full strength right to the edge, nothing beyond. | Steep walls and straight cuts. |
 
 ![Six mounds raised by the same stroke, one per falloff, each labelled, seen from above at an angle](images/brush-falloffs.jpg)
-*The same Raise stroke with each falloff, labelled: Soft (the picture still says Smooth), Linear, Dome, Flat top, Peak, Sharp edge (pickaxe). Slope
+*The same Raise stroke with each falloff, labelled: Soft, Linear, Dome, Flat top, Peak, Sharp edge (pickaxe). Slope
 colours are on: the steeper the side, the redder.*
 
 ## Sculpt brushes
@@ -92,9 +92,10 @@ Flatten, Smooth, Naturalize and Restore never overshoot: each moment they move t
 aim, so holding longer only brings it closer.
 
 The [Region](area.md) and [Path](path.md) tools have the same actions under the same names, applied in one go to a
-selection or along a line instead of under a brush you hold. They change the ground the same way: one **Smooth**
-there moves each point to the average of the ground within 3 m, about what holding the Smooth brush on a spot for a
-second or two does at the default strength.
+selection or along a line instead of under a brush you hold. (Region lists Restore as **Back to generated ground**,
+in its **Recover** group.) They change the ground the same way: one **Smooth** there moves each point to the average
+of the ground within 3 m, about what holding the Smooth brush on a spot for a second or two does at the default
+strength.
 
 ### Flatten
 
@@ -117,7 +118,7 @@ the height of a door you already built.
 |---|---|
 | **Bumps** | How tall the bumps are, 0.2 to 4 m (default 1.2 m). |
 | **Bump size** | How wide they are, 4 to 60 m (default 16 m): small values give rough ground, large values gentle swells. |
-| **New pattern** | A new random bump pattern for the next Naturalize (this brush, the Region or the Path tool's) and for paths with Natural look. |
+| **New pattern** | A new random bump pattern for the next Naturalize (this brush, the Region or the Path tool's) and for paths with Natural look. The **Ragged (noise)** shape's edge and the noise of [Landform](landform.md#write-a-formula) formulas come from the same pattern, so they change too. |
 
 A second stroke over the same place does not pile up more bumps. The pattern is fixed to the world, so neighbouring
 strokes join without seams. The [Path](path.md) tool's **Naturalize** and **Natural look** and the [Region](area.md)
@@ -192,7 +193,7 @@ and turns with **Turn**. It works with every sculpt brush and with Paint.
 
 | Setting | What it does |
 |---|---|
-| **Load stamp…** | Uses any picture (PNG, JPEG…) as a stamp: a heightmap from another tool, a logo, a hand-drawn shape. Its brightness is the strength; transparent parts count as black. It is kept for next time under its file name. |
+| **Load stamp…** | Uses any picture (PNG, JPEG…) as a stamp: a heightmap from another tool, a logo, a hand-drawn shape. Its brightness is the strength; transparent parts count as black. It is scaled to a square of 128 × 128 points, so a wide picture is squeezed and fine detail is lost. It is kept for next time under its file name. |
 | **Forget stamp** | Removes the loaded picture chosen in **Shape**. Shown only for loaded pictures: the built-in stamps stay. |
 
 **To put a whole picture into the ground with one click**, at a height you set, use the
