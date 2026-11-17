@@ -125,4 +125,28 @@ public sealed class ToolCommitTests
         Assert.True(s.Undo());
         Assert.Equal(2, s.Edits.EventCount);
     }
+
+    [Fact]
+    public void ASizeTheToolSetsByAxisIsKeptAsItsDataHasIt()
+    {
+        var flat = new Vector3(0.01f, 1, 1);
+        var block = new ObjectView("Beech1", new Vector3(1, 30, 1), Vector3.Zero, new ZdoData { Prefab = StableHash.Of("Beech1") }) { Id = 4 };
+        var flattened = new ZdoData { Prefab = StableHash.Of("Beech1") };
+        flattened.SetVec3(ZdoData.ScaleKey, flat);
+        var already = new ObjectView("Beech1", new Vector3(2, 30, 2), Vector3.Zero, flattened, 0.01f) { Id = 5 };
+        var s = TestScenes.Flat(1, TestScenes.Beech(4, new Vector3(1, 30, 1)), TestScenes.Beech(5, new Vector3(2, 30, 2)));
+
+        var plan = ToolCommit.PlanOf(s, new ToolEdit()
+            .Add("Beech1", new Vector3(6, 30, 6), Vector3.Zero, c => c.SetVector3("scale", flat))
+            .Add("Beech1", new Vector3(7, 30, 7), Vector3.Zero)
+            .Change(block, c => c.SetVector3("scale", flat))
+            .Change(already, c => c.SetInt("n", 1)));
+
+        // Scale 0: written with its data's size, not one size on every axis; an object given none keeps the editor's.
+        Assert.Equal([0f, 1f, 0f, 0f], plan.AddThings.Select(t => t.Item1.Scale));
+        foreach (int i in (int[])[0, 2, 3])
+        {
+            Assert.Contains((ZdoData.ScaleKey, flat), ZdoData.Parse(plan.AddThings[i].Item1.Raw!).Vec3List);
+        }
+    }
 }

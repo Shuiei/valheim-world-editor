@@ -8,7 +8,7 @@ namespace ExpandWorld.WorldEditor;
 
 /// <summary>
 /// The add-on's extension: Expand World's world rules, with the readers' lines going to the editor's log and the game's
-/// own rules taken from the editor, and the Persistent event tool.
+/// own rules taken from the editor, the Persistent event tool and the Custom object tool.
 /// </summary>
 public sealed class ExpandWorldExtension : IWorldEditorExtension
 {
@@ -19,5 +19,6 @@ public sealed class ExpandWorldExtension : IWorldEditorExtension
         ExpandWorldMod.Game = registry.Host.World;
         registry.AddWorldRules(new ExpandWorldRules(registry.Host));
         registry.AddTool(new PersistentEventTool(registry.Host));
+        registry.AddTool(new CustomObjectTool(registry.Host));
     }
 }
