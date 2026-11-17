@@ -24,7 +24,7 @@ public sealed class LangTests : LangTestBase
     [Fact]
     public void AUsersLanguageIsTakenWithEnglishWhereItHasNoText()
     {
-        Write("fr", new()
+        Write("fr-CA", new()
         {
             [Lang.NameKey] = "Français",
             ["common.cancel"] = "Annuler",
@@ -34,22 +34,22 @@ public sealed class LangTests : LangTestBase
             // No English text has that key: left out.
             ["no.such.text"] = "Rien",
         });
-        Assert.Equal("fr", Lang.Use("fr"));
-        Assert.Equal("fr", Lang.Current);
+        Assert.Equal("fr-CA", Lang.Use("fr-CA"));
+        Assert.Equal("fr-CA", Lang.Current);
         Assert.Equal("Annuler", Lang.T("common.cancel"));
         Assert.Equal("Dossier de mondes introuvable : /x", Lang.T("settings.worldNotFound", "/x"));
         Assert.Equal("BepInEx folder not found: /x", Lang.T("settings.bepInExNotFound", "/x"));
         Assert.Equal("Copy", Lang.T("common.copy"));
         Assert.Throws<KeyNotFoundException>(() => Lang.T("no.such.text"));
-        Assert.Contains(new Lang.Language("fr", "Français"), Lang.Available());
+        Assert.Contains(new Lang.Language("fr-CA", "Français"), Lang.Available());
         Assert.Equal(Lang.Source, Lang.Available()[0].Code);
     }
 
     [Fact]
     public void WhatClaudeIsToldStaysInEnglish()
     {
-        Write("fr", new() { [Lang.NameKey] = "Français", ["cost.free"] = "Gratuit", ["cost.needs"] = "{0} (il faut {1})" });
-        Lang.Use("fr");
+        Write("fr-CA", new() { [Lang.NameKey] = "Français", ["cost.free"] = "Gratuit", ["cost.needs"] = "{0} (il faut {1})" });
+        Lang.Use("fr-CA");
         Assert.Equal("Free", Lang.En("cost.free"));
         Assert.Equal("Gratuit", TerrainEditor.Terrain.PieceCost.Of(Array.Empty<string>()).Describe());
         Assert.Equal("Free", TerrainEditor.Terrain.PieceCost.Of(Array.Empty<string>()).Describe(english: true));
@@ -63,8 +63,8 @@ public sealed class LangTests : LangTestBase
     [Fact]
     public void AShownTextsEnglishIsFound()
     {
-        Write("fr", new() { [Lang.NameKey] = "Français", ["common.cancel"] = "Annuler" });
-        Lang.Use("fr");
+        Write("fr-CA", new() { [Lang.NameKey] = "Français", ["common.cancel"] = "Annuler" });
+        Lang.Use("fr-CA");
         Assert.Equal("Cancel", Lang.EnglishOf("Annuler"));
         Assert.Equal("Made in code", Lang.EnglishOf("Made in code"));
         Lang.Use(Lang.Source);
@@ -77,9 +77,9 @@ public sealed class LangTests : LangTestBase
     {
         Assert.Equal(Lang.Source, Lang.Use("xx"));
         Assert.Equal("Cancel", Lang.T("common.cancel"));
-        File.WriteAllText(Path.Combine(Folder, "de.json"), "{ not json");
-        Assert.Equal(Lang.Source, Lang.Use("de"));
-        Assert.Contains(new Lang.Language("de", "de"), Lang.Available());
+        File.WriteAllText(Path.Combine(Folder, "nl.json"), "{ not json");
+        Assert.Equal(Lang.Source, Lang.Use("nl"));
+        Assert.Contains(new Lang.Language("nl", "nl"), Lang.Available());
     }
 
     // A hand-made file whose root is not an object, or that gives a key twice, must not throw out of Use (which
@@ -109,8 +109,8 @@ public sealed class LangTests : LangTestBase
     [Fact]
     public void ATextTheValuesCannotGoInIsLeftOutEnglishCorrectionsToo()
     {
-        Write("fr", new() { [Lang.NameKey] = "Français", ["settings.worldNotFound"] = "Introuvable {0} dans {chemin}" });
-        Lang.Use("fr");
+        Write("fr-CA", new() { [Lang.NameKey] = "Français", ["settings.worldNotFound"] = "Introuvable {0} dans {chemin}" });
+        Lang.Use("fr-CA");
         Assert.Equal("World folder not found: /x", Lang.T("settings.worldNotFound", "/x"));
         Write(Lang.Source, new() { ["settings.worldNotFound"] = "Missing {0} {", ["common.cancel"] = "Stop {" });
         Lang.Use(Lang.Source);
@@ -126,8 +126,8 @@ public sealed class LangTests : LangTestBase
     [Fact]
     public void ATextWithoutPlacesIsNotFormattedEvenWhenAskedWithNoValues()
     {
-        Write("fr", new() { [Lang.NameKey] = "Français", ["cost.free"] = "Gratuit {sans}" });
-        Lang.Use("fr");
+        Write("fr-CA", new() { [Lang.NameKey] = "Français", ["cost.free"] = "Gratuit {sans}" });
+        Lang.Use("fr-CA");
         Assert.Equal("Gratuit {sans}", Lang.T("cost.free", []));
         Assert.Equal("Free", Lang.En("cost.free", []));
         Assert.Equal("World folder not found: /x", Lang.T("settings.worldNotFound", "/x"));
@@ -145,6 +145,37 @@ public sealed class LangTests : LangTestBase
         Assert.Equal("pt-PT", Lang.Pick(["pt-BR"], have));
         Assert.Equal("fr", Lang.Pick(["ja", "fr"], have));
         Assert.Null(Lang.Pick(["ja"], have));
+    }
+
+    // A carried language with the user's corrections over it: their texts where they have one, the carried
+    // translation elsewhere (not English).
+    [Fact]
+    public void TheUsersFileCorrectsACarriedLanguage()
+    {
+        Write("fr", new() { ["common.cancel"] = "Laisser tomber" });
+        Assert.Equal("fr", Lang.Use("fr"));
+        Assert.Equal("Laisser tomber", Lang.T("common.cancel"));
+        Assert.NotEqual("Copy", Lang.T("common.copy"));
+        Assert.Equal("Français", Lang.Available().Single(l => l.Code == "fr").Name);
+    }
+
+    // EnglishOfFilled: a text shown that a translation made with values, back to the English with the same values; a
+    // text no translation with values makes, and one only a text of places and signs would match, have none.
+    [Fact]
+    public void AShownTextMadeWithValuesHasItsEnglishFound()
+    {
+        Write("fr-CA", new()
+        {
+            [Lang.NameKey] = "Français",
+            ["newWorld.count.seeds"] = "{0} graines",
+            ["settings.worldNotFound"] = "Dossier de mondes introuvable : {0}",
+            ["newWorld.nameDistance"] = "{0} {1}",
+        });
+        Lang.Use("fr-CA");
+        Assert.Equal("150 seeds", Lang.EnglishOfFilled("150 graines"));
+        Assert.Equal("World folder not found: /x y", Lang.EnglishOfFilled("Dossier de mondes introuvable : /x y"));
+        Assert.Null(Lang.EnglishOfFilled("Annuler"));
+        Assert.Null(Lang.EnglishOfFilled("Haldor 300"));
     }
 
     [Fact]

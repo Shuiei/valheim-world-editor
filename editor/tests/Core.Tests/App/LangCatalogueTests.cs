@@ -81,13 +81,33 @@ public sealed partial class LangCatalogueTests : LangTestBase
         var unused = Lang.English.Keys.Where(k => !k.StartsWith("tip.", StringComparison.Ordinal) && k != Lang.NameKey && !code.Contains($"\"{k}\"", StringComparison.Ordinal)).ToList();
         Assert.True(unused.Count == 0, "Texts in en.json no code asks for: " + string.Join(", ", unused));
         Assert.All(Lang.English, kv => Assert.False(string.IsNullOrWhiteSpace(kv.Value), kv.Key));
-        // Each carried translation: only English keys, the same places for values.
+        // Each carried translation: only English keys, each text one the app takes (the same places for values, and
+        // one they can be put in; a text that does not fit would show in English).
         foreach (string file in Directory.GetFiles(Path.Combine(editor, "Core", "Lang"), "*.json"))
         {
             using var s = File.OpenRead(file);
             var texts = Lang.Parse(s);
             Assert.True(texts.ContainsKey(Lang.NameKey), file);
-            Assert.All(texts, kv => Assert.True(Lang.English.TryGetValue(kv.Key, out string? en) && Lang.SamePlaces(en, kv.Value), $"{Path.GetFileName(file)}: {kv.Key}"));
+            Assert.All(texts, kv => Assert.True(Lang.English.TryGetValue(kv.Key, out string? en) && Lang.Fits(en, kv.Value), $"{Path.GetFileName(file)}: {kv.Key}"));
+        }
+    }
+
+    // A shown text is taken back to its English (Lang.EnglishOf) to remember a list's choice and to name a control for
+    // Claude: two different English texts given the same translation would take one of them back to the other's English.
+    [Fact]
+    public void NoTwoEnglishTextsShareATranslation()
+    {
+        string editor = Path.Combine(Fixtures.Root, "..", "..");
+        foreach (string file in Directory.GetFiles(Path.Combine(editor, "Core", "Lang"), "*.json"))
+        {
+            using var s = File.OpenRead(file);
+            var shared = Lang.Parse(s)
+                .Where(kv => Lang.English.ContainsKey(kv.Key))
+                .GroupBy(kv => kv.Value, StringComparer.Ordinal)
+                .Where(g => g.Select(kv => Lang.English[kv.Key]).Distinct(StringComparer.Ordinal).Count() > 1)
+                .Select(g => $"\"{g.Key}\" ({string.Join(", ", g.Select(kv => kv.Key))})")
+                .ToList();
+            Assert.True(shared.Count == 0, $"{Path.GetFileName(file)}: texts translating different English texts: {string.Join("; ", shared)}");
         }
     }
 }

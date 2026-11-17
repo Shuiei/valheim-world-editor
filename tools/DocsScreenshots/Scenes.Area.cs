@@ -204,7 +204,7 @@ public sealed partial class Scenes
         Stroke(e, "D1", P(-8, 4), 20, hold: 2500, steps: 5);
         e.Send("key B");
         RegionAction(e, "Heightmap");
-        string said = e.Send("click Export").GetProperty("message").GetString() ?? "";
+        string said = e.Send("click Export").GetProperty("messageEn").GetString() ?? "";
         const string Written = "Heightmap written to ";
         int at = said.IndexOf(Written, StringComparison.Ordinal);
         int end = said.LastIndexOf(" (", StringComparison.Ordinal);
@@ -257,11 +257,11 @@ public sealed partial class Scenes
     /// <summary>The Region panel's right edge in the window: halves of its pictures start there.</summary>
     private const int AreaPanelRight = 432;
 
-    /// <summary>Waits (up to 30 s) until the status bar's message begins with these words.</summary>
+    /// <summary>Waits (up to 30 s) until the status bar's message begins with these words (its English, in any language).</summary>
     private static void WaitForMessage(Editor e, string start)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        while (!(e.Send("wait 300").GetProperty("message").GetString() ?? "").StartsWith(start, StringComparison.Ordinal))
+        while (!(e.Send("wait 300").GetProperty("messageEn").GetString() ?? "").StartsWith(start, StringComparison.Ordinal))
         {
             if (watch.Elapsed > TimeSpan.FromSeconds(30))
             {

@@ -18,14 +18,14 @@ public sealed class SaidTests : IDisposable
     {
         Directory.CreateDirectory(_folder);
         Lang.FolderOverride = _folder;
-        File.WriteAllText(Path.Combine(_folder, "fr.json"), JsonSerializer.Serialize(new Dictionary<string, string>
+        File.WriteAllText(Path.Combine(_folder, "fr-CA.json"), JsonSerializer.Serialize(new Dictionary<string, string>
         {
             [Lang.NameKey] = "Français",
             ["common.cancel"] = "Annuler",
             ["common.save"] = "Enregistrer",
             ["settings.worldNotFound"] = "Dossier de mondes introuvable : {0}",
         }));
-        Lang.Use("fr");
+        Lang.Use("fr-CA");
     }
 
     public void Dispose()

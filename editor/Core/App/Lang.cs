@@ -76,6 +76,7 @@ public static partial class Lang
         }
         _texts = texts;
         _back = null;
+        _filled = null;
         Current = chosen;
         return chosen;
     }

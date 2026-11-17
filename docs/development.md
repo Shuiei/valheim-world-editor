@@ -42,7 +42,10 @@ files are still read from the user's Valheim, and its index kept in the user's d
 The app reads one command per line on its input and answers each with one line, `@@ ok <json>`
 (the state: page, objects, pending, frames drawn, OpenGL errors, selection, camera…) or `@@ error
 <message>`. It prints `@@ ready` when it can take commands. The full list is at the top of
-`editor/Desktop/Driver.cs`; the main ones:
+`editor/Desktop/Driver.cs`; the main ones. A control is named by its words as shown or in English (a text made with
+values too: `choose 150 seeds` finds "150 graines"), so the same commands and the screenshot scenes work in every
+language (`LANGUAGE=fr` in the environment starts the app in French; the state's `messageEn` is the status bar's
+message in English):
 
 | Command | What it does |
 |---|---|
