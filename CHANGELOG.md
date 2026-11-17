@@ -5,7 +5,7 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
-## v1.126.0 — unreleased
+## v1.126.0 — 2026-11-17
 
 ### Added
 - **Custom objects of the Expand World mods can be placed and edited.** With the Expand World add-on, the new
@@ -21,14 +21,14 @@ the plugin is unchanged in versions without that part. Mods newly supported, or 
 ### Mods
 - **Expand World add-on 0.3.0**: the data entries of Expand World Data, Expand World Prefabs and World Edit Commands,
   through the Custom object tool.
-  
-## v1.125.1 — unreleased
+
+## v1.125.1 — 2026-11-17
 
 ### Fixed
 - **Releases reach Nexus Mods again.** The editor's downloads, now over 100 MiB, stopped part way through their
   upload to Nexus Mods, so v1.124.1 has only the plugin there.
 
-## v1.125.0 — unreleased
+## v1.125.0 — 2026-11-17
 
 ### Added
 - **Persistent events can be started and stopped in a saved world.** With the Expand World add-on, the new
@@ -1024,7 +1024,7 @@ the plugin is unchanged in versions without that part. Mods newly supported, or 
   than the object itself (a roof, a wall) does not count: it goes under. A building still moves as one block that
   keeps its shape, its bottom layer put on the floor or platform under it, else on the ground. Before, every moved
   object was set onto the ground, through the floor it was moved onto.
-  
+
 ## v1.59.0 — 2026-10-19
 
 ### Added
