@@ -173,15 +173,19 @@ public class SettingsChoicesTests
             var settings = new AppSettings();
             var shown = SettingsDialog.Show(owner, settings);
             var d = TestWindows.Shown(owner);
-            Assert.Equal(["The computer's language", "English", "Testish"], Language(d).Items.Cast<string>());
+            // The computer's, English, then the carried catalogues and the one dropped in, by their own names.
+            var names = Language(d).Items.Cast<string>().ToList();
+            Assert.Equal(["The computer's language", "English"], names[..2]);
+            Assert.Equal(["Deutsch", "Español", "Français", "Português (Brasil)", "Testish", "ไทย"], names[2..].Order(StringComparer.Ordinal));
             Assert.Equal(0, Language(d).SelectedIndex);
-            Language(d).SelectedIndex = 2;
+            int testish = names.IndexOf("Testish");
+            Language(d).SelectedIndex = testish;
             Click(Buttons(d, "Save").Single());
             Assert.True(await shown);
             Assert.Equal("xx", AppSettings.Load().Language);
             shown = SettingsDialog.Show(owner, settings);
             d = TestWindows.Shown(owner);
-            Assert.Equal(2, Language(d).SelectedIndex);
+            Assert.Equal(testish, Language(d).SelectedIndex);
             Language(d).SelectedIndex = 0;
             Click(Buttons(d, "Save").Single());
             Assert.True(await shown);

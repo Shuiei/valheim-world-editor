@@ -1,8 +1,10 @@
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The commands that press and read the controls: keys, clicks, check boxes, lists and text boxes.
+/// The commands that press and read the controls: keys, clicks, check boxes, lists and text boxes, named by their words as
+/// shown or in English.
 /// </summary>
 public static partial class Driver
 {
@@ -24,8 +26,8 @@ public static partial class Driver
     {
         MainWindow w = call.W;
         string[] a = call.A;
-        var c = Find<Avalonia.Controls.Button>(w, b => string.Equals(TextOf(b), a[1], StringComparison.OrdinalIgnoreCase))
-            ?? Find<Avalonia.Controls.Button>(w, b => TextOf(b).StartsWith(a[1] + " ", StringComparison.OrdinalIgnoreCase))
+        var c = Find<Avalonia.Controls.Button>(w, b => Says(b, a[1]))
+            ?? Find<Avalonia.Controls.Button>(w, b => TextOf(b).StartsWith(a[1] + " ", StringComparison.OrdinalIgnoreCase) || EnglishTextOf(b).StartsWith(a[1] + " ", StringComparison.OrdinalIgnoreCase))
             // A piece's tile in the Build dock, by its prefab name (its words are its English name).
             ?? Find<Avalonia.Controls.Button>(w, b => b.Tag is string tag && string.Equals(tag, a[1], StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException($"no button \"{a[1]}\"");
@@ -45,7 +47,7 @@ public static partial class Driver
         MainWindow w = call.W;
         // check <label>|on|off: a check box or switch by its text.
         var (label, state) = Bar(a, "check <label>|on|off");
-        var box = Find<Avalonia.Controls.CheckBox>(w, b => string.Equals(TextOf(b).Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no check box \"{label}\"");
+        var box = Find<Avalonia.Controls.CheckBox>(w, b => Says(b, label)) ?? throw new InvalidOperationException($"no check box \"{label}\"");
         box.IsChecked = state == "on";
         return Task.FromResult(State(w));
     }
@@ -70,7 +72,8 @@ public static partial class Driver
         string[] a = call.A;
         MainWindow w = call.W;
         var (hint, text) = Bar(a, "type <hint>|<text>");
-        var box = Find<Avalonia.Controls.TextBox>(w, b => (b.PlaceholderText ?? "").Contains(hint, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no text box \"{hint}\"");
+        var box = Find<Avalonia.Controls.TextBox>(w, b => (b.PlaceholderText ?? "").Contains(hint, StringComparison.OrdinalIgnoreCase)
+            || Lang.EnglishOf(b.PlaceholderText ?? "").Contains(hint, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no text box \"{hint}\"");
         box.Text = text;
         return Task.FromResult(State(w));
     }

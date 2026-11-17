@@ -14,7 +14,7 @@ public static partial class Driver
         MainWindow w = call.W;
         var (label, value) = Bar(a, "set <label>|<value>");
         // A label, not the choice a list shows (the Landform panel's Kind list shows "Formula" above the Formula box).
-        var tb = Find<Avalonia.Controls.TextBlock>(w, t => string.Equals(t.Text?.Trim(), label, StringComparison.OrdinalIgnoreCase)
+        var tb = Find<Avalonia.Controls.TextBlock>(w, t => Says(t.Text, label)
             && !Avalonia.VisualTree.VisualExtensions.GetVisualAncestors(t).OfType<Avalonia.Controls.ComboBox>().Any()) ?? throw new InvalidOperationException($"no label \"{label}\"");
         // The row holding the label: the first control after it.
         var row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(tb);

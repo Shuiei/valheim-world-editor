@@ -5,6 +5,13 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.121.0 — unreleased
+
+### Added
+- **The editor in French, German, Spanish, Brazilian Portuguese and Thai.** Choose one under **Settings → Language**;
+  a computer set to one of them shows it from the start. Every text that comes from the catalogue is translated (the
+  windows not moved to it yet stay in English). Corrections are welcome: see [Translating](docs/translating.md).
+
 ## v1.120.0 — 2026-11-16
 
 ### Added
