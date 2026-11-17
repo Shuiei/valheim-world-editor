@@ -88,6 +88,45 @@ public sealed class ToolCommitTests
     }
 
     [Fact]
+    public void EventEditsAreLeftOutWhereTheWorldHoldsNoEvents()
+    {
+        // A scene of no saved world (as the Workshop's): its events cannot be edited, the objects still are.
+        var s = TestScenes.Flat(1);
+        var edit = new ToolEdit().StartEvent(0, new Vector3(4, 30, 4), 100f).StopEvent(3).Add("Beech1", new Vector3(6, 30, 6), Vector3.Zero);
+
+        var plan = ToolCommit.Apply(s, "Tool", edit);
+
+        Assert.False(ToolCommit.CanEditEvents(s));
+        Assert.Equal((2, 0), (plan.EventsSkipped, plan.Events.Count));
+        Assert.Empty(s.Edits.Events);
+        Assert.Empty(Assert.Single(s.UndoList).Events);
+    }
+
+    [Fact]
+    public void AStepsEventsAreUndoneRedoneAndTakenOut()
+    {
+        var s = TestScenes.Flat(1);
+        var start = new TerrainEditor.Editing.EventEdit(s.Edits.NewEventId(), false, 1, new Vector3(4, 30, 4), 100f, 0);
+        var stop = new TerrainEditor.Editing.EventEdit(7, true, 0, default, 50f, 0);
+
+        s.Commit("Events", null, [], [], events: [(start, false, true), (stop, false, true)]);
+        Assert.Equal([start, stop], s.Edits.Events);
+        var step = Assert.Single(s.UndoList);
+        Assert.Equal(2, step.Events.Length);
+
+        Assert.True(s.Undo());
+        Assert.Empty(s.Edits.Events);
+        Assert.True(s.Redo());
+        Assert.Equal(2, s.Edits.EventCount);
+
+        // Taken out: both go back, as a step of its own that undo brings back.
+        s.RemoveChange(step);
+        Assert.Empty(s.Edits.Events);
+        Assert.True(s.Undo());
+        Assert.Equal(2, s.Edits.EventCount);
+    }
+
+    [Fact]
     public void ASizeTheToolSetsByAxisIsKeptAsItsDataHasIt()
     {
         var flat = new Vector3(0.01f, 1, 1);

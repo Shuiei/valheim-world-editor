@@ -17,10 +17,11 @@ public sealed partial class EditSession
     /// <param name="add">New objects shown as things (Piece: a player-built piece).</param>
     /// <param name="removeHidden">Hidden objects to take away, by object id (gone or unknown ones are skipped).</param>
     /// <param name="addHidden">New hidden objects (their ids are given here).</param>
+    /// <param name="events">Persistent events started or stopped, with their state before and after.</param>
     /// <returns>The indices of the things added.</returns>
     public List<int> CommitObjects(string label, IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add,
-        IReadOnlyCollection<int> removeHidden, IReadOnlyList<NewObject> addHidden) =>
-        Commit(label, null, remove, add, null, removeHidden, addHidden);
+        IReadOnlyCollection<int> removeHidden, IReadOnlyList<NewObject> addHidden, (EventEdit Edit, bool Before, bool After)[]? events = null) =>
+        Commit(label, null, remove, add, null, removeHidden, addHidden, events);
 
     /// <summary>
     /// The hidden objects a step takes away (those still there) and adds (given their ids), each with whether it is

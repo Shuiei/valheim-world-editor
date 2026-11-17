@@ -10,7 +10,7 @@ public static partial class WorldWriter
     /// failure the new files are removed and the refusal is returned; nothing old is touched.
     /// </summary>
     /// <returns>The refusal, or null when the save is written and checked (the plan then holds its files and read-back).</returns>
-    internal static Result? Commit(WorldSave world, Planned plan, IReadOnlyList<ZoneReset> resets)
+    internal static Result? Commit(WorldSave world, Planned plan, IReadOnlyList<ZoneReset> resets, IReadOnlyList<EventEdit>? events = null)
     {
         string dir = world.Directory;
         plan.NewNumber = Math.Max(world.SaveNumber, LatestNumber(dir)) + 1;
@@ -37,12 +37,19 @@ public static partial class WorldWriter
             // Each file is listed before it is written: a failure halfway removes it too.
             plan.NewFiles.AddRange([main + ".chunks", main + ".db2", main + ".fwl2", main + ".ok"]);
             WriteIndex(main + ".chunks", world.SaveVersion, [.. world.Chunks.Select(c => plan.Updated.TryGetValue(c, out var u) ? (c.Chunk, c.Size, u.Version, u.Count) : (c.Chunk, c.Size, c.Version, c.IndexCount))]);
-            if (resets.Count > 0)
+            int? eventsLeft = null;
+            if (resets.Count > 0 || events is { Count: > 0 })
             {
                 var db = ZoneDb.Load(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"));
                 foreach (ZoneReset r in resets)
                 {
                     db.ResetZone(r.X, r.Z);
+                }
+                if (events is { Count: > 0 })
+                {
+                    var (stopped, started) = db.ApplyEvents(events);
+                    plan.EventsChanged = stopped + started;
+                    eventsLeft = db.Events!.Count;
                 }
                 db.Save(main + ".db2");
             }
@@ -59,6 +66,10 @@ public static partial class WorldWriter
             // 5. Read back and compare with what was meant to be written (nothing old removed yet).
             plan.Read = WorldSave.Load(dir);
             string? problem = Check(plan.Read, world, [.. plan.Changed.Where(e => !plan.NotSaved.Contains((e.ZoneX, e.ZoneZ)))], plan.Created + plan.AddedCount, plan.Removed, plan.GroundReset, resets);
+            if (problem == null && eventsLeft is int left && plan.Read.Zones?.Events?.Count != left)
+            {
+                problem = $"{plan.Read.Zones?.Events?.Count ?? 0} persistent events, expected {left}";
+            }
             if (problem != null)
             {
                 RemoveAll(plan.NewFiles);

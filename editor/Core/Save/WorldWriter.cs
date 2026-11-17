@@ -92,9 +92,11 @@ public static partial class WorldWriter
     /// Zones handed back to the world generator (their objects are removed and the zone is marked as not generated).
     /// </param>
     /// <param name="options">File handling; null for the defaults.</param>
-    public static Result Save(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int>? deleted = null, IReadOnlyList<NewObject>? added = null, IReadOnlyList<ZoneReset>? resets = null, Options? options = null)
+    /// <param name="events">Persistent events started and stopped (the world's .db2 file holds the active ones).</param>
+    public static Result Save(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int>? deleted = null, IReadOnlyList<NewObject>? added = null, IReadOnlyList<ZoneReset>? resets = null, Options? options = null, IReadOnlyList<EventEdit>? events = null)
     {
         options ??= new Options();
+        events ??= [];
         List<string> skipped = [];
         deleted ??= [];
         added ??= [];
@@ -102,6 +104,15 @@ public static partial class WorldWriter
         // Terrain edits of zones whose ground is reset are dropped.
         HashSet<(int, int)> groundReset = [.. resets.Where(r => r.Ground).Select(r => (r.X, r.Z))];
         changed = [.. changed.Where(e => !groundReset.Contains((e.ZoneX, e.ZoneZ)))];
+        if (events.Count > 0 && world.Zones?.Events == null)
+        {
+            return Refused(Said.Of("save.writer.noEvents"), skipped);
+        }
+        // With events alone the save is written as one that takes an earlier one's place is: nothing else differs.
+        if (events.Count > 0)
+        {
+            options = options with { Rewrite = true };
+        }
         if (Refusal(world, changed, deleted, added, resets, options, skipped) is Result refused)
         {
             return refused;
@@ -129,12 +140,16 @@ public static partial class WorldWriter
         {
             return Refused(Said.Of("save.writer.nothingSaved"), skipped);
         }
-        if (Commit(world, plan, resets) is Result failed)
+        if (Commit(world, plan, resets, events) is Result failed)
         {
             return failed;
         }
         RemoveOld(world, plan, options);
         var summary = Summary(plan, resets);
+        if (plan.EventsChanged > 0)
+        {
+            summary = Said.Join(", ", [summary, Said.Of("save.writer.events", plan.EventsChanged)]);
+        }
         var saved = summary.Shown.Length > 0 ? Said.Of("save.writer.saved", summary, plan.NewNumber) : Said.Of("save.writer.savedAsOpened", plan.NewNumber);
         return new Result(true, saved.Shown, null, plan.Written, plan.Created, skipped, plan.Removed, plan.AddedCount, resets.Count) { Files = plan.NewFiles, Number = plan.NewNumber, Read = plan.Read, Report = saved };
     }

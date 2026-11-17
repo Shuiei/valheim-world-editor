@@ -13,8 +13,27 @@ public static partial class SceneLayers
     /// changes not saved yet are copied when it is made (on the window's thread); the objects' data and the ground are
     /// read as they are when asked (a brush stroke going on is seen part way, and drawn again once done).
     /// </summary>
-    internal sealed class AreaView : IAreaView
+    internal sealed class AreaView : IAreaView, IWorldEvents
     {
+        /// <inheritdoc/>
+        public bool CanEdit => _s.Session is { } session && ToolCommit.CanEditEvents(session);
+
+        /// <inheritdoc/>
+        public IReadOnlyList<WorldEvent> Active
+        {
+            get
+            {
+                if (_s.Session is not { } session || !CanEdit)
+                {
+                    return [];
+                }
+                var asked = session.Edits.Events;
+                var stopped = asked.Where(e => e.Stop).Select(e => e.Id).ToHashSet();
+                return [.. _s.World.Zones!.Events!.Where(e => !stopped.Contains(e.Id)).Select(e => new WorldEvent(e.Id, e.Source, e.Position, e.Radius, e.Duration)),
+                    .. asked.Where(e => !e.Stop).Select(e => new WorldEvent(e.Id, e.Source, e.Position, e.Radius, e.Duration))];
+            }
+        }
+
         private readonly WorldScene _s;
         private readonly HashSet<int> _deleted;
         private readonly List<Editing.NewObject> _added;

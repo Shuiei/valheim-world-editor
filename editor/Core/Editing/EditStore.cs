@@ -178,3 +178,14 @@ public sealed partial record ObjectField(string Section, int Key, string? Value)
 /// <param name="KeepBuildings">Keeps player-built pieces.</param>
 /// <param name="Ground">Also removes the terrain edits.</param>
 public sealed record ZoneReset(int X, int Z, bool KeepBuildings, bool Ground);
+
+/// <summary>
+/// A persistent event started or stopped (Save.PersistentEvents), written with the next save.
+/// </summary>
+/// <param name="Id">A started one: the editor's own id for it, negative; a stopped one: the saved event's id.</param>
+/// <param name="Stop">Whether it stops the event (else it starts one).</param>
+/// <param name="Source">Which event: its place in the game's list of events.</param>
+/// <param name="Position">Its middle.</param>
+/// <param name="Radius">Its radius, in metres.</param>
+/// <param name="Duration">How long it lasts, in seconds (0 or less: until it is stopped).</param>
+public sealed record EventEdit(int Id, bool Stop, int Source, System.Numerics.Vector3 Position, float Radius, double Duration);

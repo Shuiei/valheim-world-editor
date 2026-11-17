@@ -129,6 +129,11 @@ public sealed partial class EditReplay
         {
             edits.SetReset(reset, true);
         }
+        // An event the game stopped meanwhile is skipped by the save; one started here is started all the same.
+        foreach (var e in _events)
+        {
+            edits.SetEvent(e, true);
+        }
         return new Replayed(edits.ChangedZoneCount, edits.DeletedCount, edits.AddedCount, edits.ResetCount, dropped, gameGround, _unread.Count);
     }
 }

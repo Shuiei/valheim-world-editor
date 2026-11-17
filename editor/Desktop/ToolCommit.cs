@@ -14,7 +14,14 @@ namespace TerrainEditor.Desktop;
 internal static class ToolCommit
 {
     /// <summary>What an edit comes to: things and hidden objects to take away, and new ones of each.</summary>
-    internal sealed record Plan(List<int> RemoveThings, List<(NewObject, bool)> AddThings, List<int> RemoveHidden, List<NewObject> AddHidden, List<string> Skipped);
+    internal sealed record Plan(List<int> RemoveThings, List<(NewObject, bool)> AddThings, List<int> RemoveHidden, List<NewObject> AddHidden, List<string> Skipped)
+    {
+        /// <summary>Persistent events started or stopped, as a step's entries.</summary>
+        public List<(EventEdit Edit, bool Before, bool After)> Events { get; } = [];
+
+        /// <summary>How many event starts and stops were left out (live mode, a world without events, an event not found).</summary>
+        public int EventsSkipped { get; set; }
+    }
 
     /// <summary>Makes an edit one step of the session's history; what it could not do is listed (an object not from the area).</summary>
     /// <param name="s">The area's session.</param>
@@ -23,7 +30,7 @@ internal static class ToolCommit
     public static Plan Apply(EditSession s, string label, ToolEdit edit)
     {
         var plan = PlanOf(s, edit);
-        s.CommitObjects(label, plan.RemoveThings, plan.AddThings, plan.RemoveHidden, plan.AddHidden);
+        s.CommitObjects(label, plan.RemoveThings, plan.AddThings, plan.RemoveHidden, plan.AddHidden, [.. plan.Events]);
         return plan;
     }
 
@@ -63,7 +70,51 @@ internal static class ToolCommit
         {
             Remove(s, plan, obj);
         }
+        AddEvents(plan, s, edit);
         return plan;
+    }
+
+    /// <summary>
+    /// Whether a session's world holds persistent events the editor can start and stop: a saved world (not a game
+    /// connected live, not the Workshop) whose file has their list.
+    /// </summary>
+    internal static bool CanEditEvents(EditSession s) => s.Scene.Owner is { IsLive: false } && s.Scene.World.Zones?.Events != null;
+
+    /// <summary>
+    /// The edit's event starts and stops as a step's entries: a start gets an id of the editor's; stopping an event
+    /// started here and not saved drops its start, stopping a saved one asks for the stop.
+    /// </summary>
+    private static void AddEvents(Plan plan, EditSession s, ToolEdit edit)
+    {
+        if (edit.StartedEvents.Count + edit.StoppedEvents.Count == 0)
+        {
+            return;
+        }
+        if (!CanEditEvents(s))
+        {
+            plan.EventsSkipped += edit.StartedEvents.Count + edit.StoppedEvents.Count;
+            return;
+        }
+        foreach (var (source, position, radius, duration) in edit.StartedEvents)
+        {
+            plan.Events.Add((new EventEdit(s.Edits.NewEventId(), false, source, position, radius, duration), false, true));
+        }
+        var asked = s.Edits.Events;
+        foreach (int id in edit.StoppedEvents.Distinct())
+        {
+            if (asked.FirstOrDefault(e => e.Id == id && !e.Stop) is { } start && id < 0)
+            {
+                plan.Events.Add((start, true, false));
+            }
+            else if (id >= 0 && s.Scene.World.Zones!.Events!.FirstOrDefault(e => e.Id == id) is { } saved && !asked.Any(e => e.Id == id && e.Stop))
+            {
+                plan.Events.Add((new EventEdit(id, true, saved.Source, saved.Position, saved.Radius, saved.Duration), false, true));
+            }
+            else
+            {
+                plan.EventsSkipped++;
+            }
+        }
     }
 
     /// <summary>

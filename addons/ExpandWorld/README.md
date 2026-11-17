@@ -142,7 +142,49 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 Followed: Expand World Size 1.45, Expand World Rivers 1.11, Expand World Data 1.80. A later version that
 adds a setting or a field is read with its defaults until the editor follows it. Data 1.80 adds persistent events
 (`expand_persistent_events.yaml`, with its "Persistent event data" switch), which the game runs while it is played and
-which change no ground, location or vegetation: the add-on does not read them.
+which change no ground, location or vegetation: the world's rules do not read them, the
+[Persistent event tool](#the-persistent-event-tool) does.
+
+## The Persistent event tool
+
+Expand World Data's persistent events are long lasting events over a part of the world (the game's own Jotun invasion,
+and those the file adds): inside one the game forces an environment, lets the spawns that need the event run, and
+shows it on the map. The game starts them by itself, somewhere its rules allow. The tool starts one **where you want
+it**:
+
+1. Open a saved world's area in the 3D editor and choose **Persistent event** on the rail, under **Mods**.
+2. Choose the **Event** (the file's, in its order) and its **Size**, from the event's smallest radius (0 %) to its
+   largest (100 %). The card says what the event comes to; the ring under the pointer is where it will reach.
+3. Click the ground. The event is started there, and with **Place its objects** on, the objects it makes when it
+   starts are placed round it.
+4. Save the world. The game then finds the event active, as if it had started it there.
+
+To stop one, set **A click** to "stops the event there" and click inside its ring: the event leaves the world's save,
+its objects stay. Active events are ringed in blue, those started and not saved yet in green. Every start and stop is
+one step of the history, undone and redone like any other.
+
+How it works, and what it leaves out:
+
+- **The save holds the event, the editor places its objects.** The game makes an event's objects only when it starts
+  the event itself, so the tool places them as the file says: for each group a number between "minCount" and
+  "maxCount", each of a prefab picked among "prefabs", within "maxDistance" of the middle (0: the event's radius),
+  no nearer the event's other objects than "minDistanceFromOtherObjects", no steeper than "maxSlope", in or out of
+  the water as "water" says (those that must be in the water float at its surface), turned at random unless
+  "randomRotation" is off. A few places are tried for each, a hundred for an "important" group. Only inside the area
+  open: open an area wide enough for the event, or the status bar says part of it reached past.
+- **A saved world only.** In live mode the running game keeps the list of active events and writes it over the
+  file's: start the event in the game there (`pevents start`). The Workshop has no world.
+- **"Persistent event data" must be on** in Expand World Data's settings, and the file must be there (the game writes
+  it the first time it runs with the switch on). The world's save names an event by its place in the file, as the mod
+  warns: do not remove or reorder the file's entries once a world has active events.
+- **Left out:** the event's "location", an object group's "data", and a prefab that is no object of the game (a
+  blueprint, a location) are not placed (the status bar names them); "startMessage", "startCommands" and their end
+  counterparts do not run; "enabled", "maxConcurrent", the biome, distance, altitude, slope and global key
+  conditions are the game's rules for starting an event by itself, and do not hold the tool back.
+- **The file is read when the tool is chosen**, but the card's list is made once: after adding or renaming events,
+  restart the editor.
+- An event with a duration starts counting when the world is saved, and lasts a time drawn between "minDuration" and
+  "maxDuration"; without one it stays until stopped.
 
 ## The Custom object tool
 

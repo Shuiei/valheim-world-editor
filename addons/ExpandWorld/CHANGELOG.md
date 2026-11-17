@@ -13,6 +13,17 @@ as its own zip and under its own version.
   game reads them, a component's fields ("Piece.m_name") and a size by axis ("scale") included. Values the mod works
   out as it makes an object (a parameter, a list, a range, items) are left out, and the card names them. Needs the
   editor 1.126.0.
+## v0.2.0 — unreleased
+
+### Added
+- **Persistent events placed where you want them.** The new **Persistent event** tool (under **Mods** on the 3D
+  editor's rail) lists the events of Expand World Data's `expand_persistent_events.yaml` and starts the one chosen
+  where you click, at a size between its smallest and largest radius: the world's save then holds it as active, as
+  if the game had started it there. The objects the event makes when it starts are placed round it as the file
+  says (their counts, distances, spacing, slope and water), inside the area open. A click inside an active event
+  can stop it instead. Needs the editor 1.125.0, a saved world (not live mode) and the mod's "Persistent event
+  data" switch on. The event's location, its start messages and commands, object data and blueprints are left
+  out.
 
 ## v0.1.0 — 2026-10-21
 
