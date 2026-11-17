@@ -5,7 +5,7 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
-## v1.120.0 — unreleased
+## v1.120.0 — 2026-11-16
 
 ### Added
 - **Build in a world.** A new **Build** tool on the rail (`U`), under Place, opens the Workshop's Build dock over a
