@@ -27,6 +27,8 @@ namespace TerrainEditor.Desktop;
 ///    choose &lt;text&gt;                  the entry so named in whichever visible list (drop-down or list box) has it
 ///    type &lt;hint&gt;|&lt;text&gt;             the visible text box whose placeholder contains hint gets text
 ///    set &lt;label&gt;|&lt;value&gt;            the slider, text box(es: a,b) or list beside the label so worded
+///    where &lt;label&gt;                  {"x", "y"}: the middle, in the window, of the slider, box or list beside the label
+///    clipped                        the one-line texts shown that are wider than their room (a translation too long)
 ///    panel &lt;view|history|help|none&gt; the right-hand panel shown
 ///    message [text]                 the status bar's message (none: cleared)
 ///    note close                     the note on the locations near the area closed (as its × does)
@@ -101,6 +103,8 @@ public static partial class Driver
         ["look"] = CmdLook,
         ["type"] = CmdType,
         ["set"] = CmdSet,
+        ["where"] = CmdWhere,
+        ["clipped"] = CmdClipped,
         ["panel"] = CmdPanel,
         ["message"] = CmdMessage,
         ["note"] = CmdNote,

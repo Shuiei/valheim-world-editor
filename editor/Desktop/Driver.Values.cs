@@ -2,7 +2,7 @@
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The set command: a slider, text box or list beside a label gets its value.
+/// The set and where commands: a slider, text box or list beside a label gets its value, or tells where it is.
 /// </summary>
 public static partial class Driver
 {
@@ -43,6 +43,31 @@ public static partial class Driver
             }
         }
         throw new InvalidOperationException($"nothing to set beside \"{label}\"");
+    }
+
+    /// <summary>
+    /// The 'where' command: where the slider, box or list beside a label is, its middle in the window's coordinates (what
+    /// a scene points at or clicks on the display, wherever the language shown puts it).
+    /// </summary>
+    /// <param name="call">The command as given.</param>
+    private static Task<string> CmdWhere(Call call)
+    {
+        MainWindow w = call.W;
+        string label = call.A[1];
+        var tb = Find<Avalonia.Controls.TextBlock>(w, t => Says(t.Text, label)
+            && !Avalonia.VisualTree.VisualExtensions.GetVisualAncestors(t).OfType<Avalonia.Controls.ComboBox>().Any()) ?? throw new InvalidOperationException($"no label \"{label}\"");
+        var row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(tb);
+        for (int up = 0; up < 3 && row != null; up++, row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(row))
+        {
+            var c = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.Control>()
+                .FirstOrDefault(c => c is Avalonia.Controls.Slider or Avalonia.Controls.TextBox or Avalonia.Controls.ComboBox or Avalonia.Controls.NumericUpDown && c.IsEffectivelyVisible);
+            if (c != null && Avalonia.Controls.TopLevel.GetTopLevel(c) is { } top
+                && Avalonia.VisualExtensions.TranslatePoint(c, new Avalonia.Point(c.Bounds.Width / 2, c.Bounds.Height / 2), top) is { } at)
+            {
+                return Task.FromResult(System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, double> { ["x"] = Math.Round(at.X), ["y"] = Math.Round(at.Y) }));
+            }
+        }
+        throw new InvalidOperationException($"nothing beside \"{label}\"");
     }
 
     /// <summary>Sets the visible boxes of one row of a type in order from a comma separated list of values.</summary>

@@ -113,7 +113,13 @@ public sealed partial class Scenes
     /// <summary>Where the measures of the chosen disc go (pixels from the top).</summary>
     private const float MeasureTop = 222;
 
-    /// <summary>The words on the diagram: title, measures, what each line is.</summary>
+    /// <summary>The diagram's width and its margin left and right (pixels).</summary>
+    private const float DiagramWidth = 1440, DiagramMargin = 48;
+
+    /// <summary>The key's second column (pixels from the left).</summary>
+    private const float KeyRight = 760;
+
+    /// <summary>The words on the diagram, in the pictures' language: title, measures, what each line is.</summary>
     private static void DiscLabels(SKCanvas canvas, double c, double cTop, double[] centres, double[] heights)
     {
         using var title = new SKFont(SKTypeface.FromFamilyName("Noto Sans", SKFontStyle.Bold), 28);
@@ -121,27 +127,31 @@ public sealed partial class Scenes
         using var body = new SKFont(SKTypeface.FromFamilyName("Noto Sans"), 18);
         using var ink = new SKPaint { IsAntialias = true, Color = Ink };
         using var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
-        canvas.DrawText("How No limit ground is saved: ground discs", 48, 60, SKTextAlign.Left, title, ink);
+        float across = DiagramWidth - (2 * DiagramMargin);
+        Lines(canvas, Captions.Tr("How No limit ground is saved: ground discs"), DiagramMargin, 60, across, 1, 0, title, ink);
         ink.Color = Muted;
-        canvas.DrawText("A cross-section through a hill raised 30 m, heights and distances to the same scale.", 48, 92, SKTextAlign.Left, body, ink);
+        Lines(canvas, Captions.Tr("A cross-section through a hill raised {0} m, heights and distances to the same scale.", HillHeight), DiagramMargin, 92, across, 1, 0, body, ink);
 
         // The chosen disc: its flat circle and its blend, measured from its middle, with guides down to it.
         float y1 = MeasureTop, y2 = MeasureTop + 34;
-        Measure(canvas, Sx(c), Sx(c + DiscFlat), y1, "8 m", Warn, bold);
-        Measure(canvas, Sx(c - DiscReach), Sx(c), y2, "13 m", Warn, bold);
+        Measure(canvas, Sx(c), Sx(c + DiscFlat), y1, Captions.Tr("{0} m", DiscFlat), Warn, bold);
+        Measure(canvas, Sx(c - DiscReach), Sx(c), y2, Captions.Tr("{0} m", Math.Round(DiscReach)), Warn, bold);
         using (var guide = Stroke(Warn.WithAlpha(170), 1.3f, dashed: true))
         {
             canvas.DrawLine(Sx(c), y1, Sx(c), Sy(cTop) - 14, guide);
             canvas.DrawLine(Sx(c + DiscFlat), y1, Sx(c + DiscFlat), Sy(cTop), guide);
             canvas.DrawLine(Sx(c - DiscReach), y2, Sx(c - DiscReach), Sy(Generated(c - DiscReach)), guide);
         }
+        // What the chosen disc does, over its measures on two lines of at most 700 pixels (the last line's baseline stays
+        // put, so a shorter text keeps clear of the subtitle).
         ink.Color = Warn;
-        canvas.DrawText("One disc, alone on the generated ground: it levels a flat", Sx(c - DiscReach), MeasureTop - 88, SKTextAlign.Left, bold, ink);
-        canvas.DrawText("circle of 8 m radius to its height and blends out to 13 m", Sx(c - DiscReach), MeasureTop - 62, SKTextAlign.Left, bold, ink);
+        string[] alone = Captions.Wrap(Captions.Tr("One disc, alone on the generated ground: it levels a flat circle of {0} m radius to its height and blends out to {1} m",
+            DiscFlat, Math.Round(DiscReach)), bold, 700, 2);
+        Lines(canvas, alone, Sx(c - DiscReach), MeasureTop - 62 - ((alone.Length - 1) * 26), 26, bold, ink);
 
         // The spacing of two discs at the top.
         int a = Array.FindIndex(centres, x => x >= 0);
-        Measure(canvas, Sx(centres[a]), Sx(centres[a + 1]), Sy(Math.Max(heights[a], heights[a + 1])) - 26, "6 m", Accent, bold);
+        Measure(canvas, Sx(centres[a]), Sx(centres[a + 1]), Sy(Math.Max(heights[a], heights[a + 1])) - 26, Captions.Tr("{0} m", DiscSpacing), Accent, bold);
 
         // The hill's height, right of it, with a guide from its top.
         double baseHeight = Generated(-2);
@@ -150,29 +160,50 @@ public sealed partial class Scenes
         {
             canvas.DrawLine(Sx(8), Sy(baseHeight + HillHeight), xh, Sy(baseHeight + HillHeight), guide);
         }
-        Measure(canvas, Sy(baseHeight), Sy(baseHeight + HillHeight), xh, "30 m", Ink, bold, vertical: true);
+        Measure(canvas, Sy(baseHeight), Sy(baseHeight + HillHeight), xh, Captions.Tr("{0} m", HillHeight), Ink, bold, vertical: true);
 
-        // A grid point at the hill's foot: no disc.
+        // A grid point at the hill's foot: no disc. The note stays left of the hill's side (three lines at most), its
+        // leader from under its last line.
         ink.Color = Muted;
-        canvas.DrawText("No disc where the hill is", 48, 470, SKTextAlign.Left, body, ink);
-        canvas.DrawText("under 5 m up", 48, 494, SKTextAlign.Left, body, ink);
+        float last = Lines(canvas, Captions.Tr("No disc where the hill is under {0} m up", DiscNeed), DiagramMargin, 470, 260, 3, 24, body, ink);
         using (var leader = Stroke(Muted, 1.3f))
         {
-            canvas.DrawLine(110, 504, Sx(-42), Sy(Generated(-42) + Hill(-42)) - 6, leader);
+            canvas.DrawLine(110, last + 10, Sx(-42), Sy(Generated(-42) + Hill(-42)) - 6, leader);
         }
         fill.Color = Ink;
         canvas.DrawCircle(Sx(-42), Sy(Generated(-42) + Hill(-42)), 5, fill);
 
-        // What each line or colour is.
-        Key(canvas, 48, 792, Ink, "Your final surface", line: true, bold);
-        Key(canvas, 48, 832, Accent, "Disc ground: the game counts it as generated", line: true, bold);
-        Key(canvas, 48, 872, Muted, "Generated ground (from the seed)", line: true, bold, dashed: true);
-        Key(canvas, 760, 792, Ok.WithAlpha(220), "Ordinary ground edits make up the rest", line: false, bold);
-        Key(canvas, 760, 832, Ok, "\u00b18 m from the disc ground: as far as edits go", line: true, bold, dashed: true);
-        Key(canvas, 760, 872, Accent, "A disc's middle, on a 6 m grid", line: false, bold, marker: true);
+        // What each line or colour is, in two columns.
+        Key(canvas, DiagramMargin, 792, Ink, Captions.Tr("Your final surface"), line: true, bold);
+        Key(canvas, DiagramMargin, 832, Accent, Captions.Tr("Disc ground: the game counts it as generated"), line: true, bold);
+        Key(canvas, DiagramMargin, 872, Muted, Captions.Tr("Generated ground (from the seed)"), line: true, bold, dashed: true);
+        Key(canvas, KeyRight, 792, Ok.WithAlpha(220), Captions.Tr("Ordinary ground edits make up the rest"), line: false, bold);
+        Key(canvas, KeyRight, 832, Ok, Captions.Tr("\u00b1{0} m from the disc ground: as far as edits go", EditLimit), line: true, bold, dashed: true);
+        Key(canvas, KeyRight, 872, Accent, Captions.Tr("A disc's middle, on a {0} m grid", DiscSpacing), line: false, bold, marker: true);
     }
 
-    /// <summary>One line of the key: a sample of the line, mark or colour, then its words.</summary>
+    /// <summary>
+    /// A text from x, its first baseline at y, in lines no wider than <paramref name="room"/> (at most
+    /// <paramref name="most"/>, <paramref name="step"/> apart).
+    /// </summary>
+    /// <returns>The last line's baseline.</returns>
+    /// <exception cref="InvalidOperationException">It does not fit: a shorter translation is needed.</exception>
+    private static float Lines(SKCanvas canvas, string text, float x, float y, float room, int most, float step, SKFont font, SKPaint ink) =>
+        Lines(canvas, Captions.Wrap(text, font, room, most), x, y, step, font, ink);
+
+    /// <summary>Lines from x, the first's baseline at y, <paramref name="step"/> apart.</summary>
+    /// <returns>The last line's baseline.</returns>
+    private static float Lines(SKCanvas canvas, string[] lines, float x, float y, float step, SKFont font, SKPaint ink)
+    {
+        for (int k = 0; k < lines.Length; k++)
+        {
+            Captions.Draw(canvas, lines[k], x, y + (k * step), SKTextAlign.Left, font, ink);
+        }
+        return y + ((lines.Length - 1) * step);
+    }
+
+    /// <summary>One line of the key: a sample of the line, mark or colour, then its words (on one line, within its column).</summary>
+    /// <exception cref="InvalidOperationException">The words are wider than their column: a shorter translation is needed.</exception>
     private static void Key(SKCanvas canvas, float x, float y, SKColor color, string text, bool line, SKFont font, bool dashed = false, bool marker = false)
     {
         using var paint = Stroke(color, 3.5f, dashed);
@@ -191,10 +222,11 @@ public sealed partial class Scenes
             canvas.DrawRoundRect(new SKRect(x, y - 18, x + 48, y + 3), 4, 4, paint);
         }
         using var ink = new SKPaint { IsAntialias = true, Color = Ink };
-        canvas.DrawText(text, x + 64, y, SKTextAlign.Left, font, ink);
+        float column = x < KeyRight ? KeyRight - 24 : DiagramWidth - DiagramMargin;
+        Lines(canvas, text, x + 64, y, column - (x + 64), 1, 0, font, ink);
     }
 
-    /// <summary>A measure: a line with ends between a and b (across, at y; or upright, at x), its value over it.</summary>
+    /// <summary>A measure: a line with ends between a and b (across, at y; or upright, at x), its value (translated) over it.</summary>
     private static void Measure(SKCanvas canvas, float a, float b, float at, string text, SKColor color, SKFont font, bool vertical = false)
     {
         using var pen = Stroke(color, 2f);
@@ -204,13 +236,13 @@ public sealed partial class Scenes
             canvas.DrawLine(at, a, at, b, pen);
             canvas.DrawLine(at - 8, a, at + 8, a, pen);
             canvas.DrawLine(at - 8, b, at + 8, b, pen);
-            canvas.DrawText(text, at + 14, (a + b) / 2 + 7, SKTextAlign.Left, font, ink);
+            Captions.Draw(canvas, text, at + 14, ((a + b) / 2) + 7, SKTextAlign.Left, font, ink);
             return;
         }
         canvas.DrawLine(a, at, b, at, pen);
         canvas.DrawLine(a, at - 8, a, at + 8, pen);
         canvas.DrawLine(b, at - 8, b, at + 8, pen);
-        canvas.DrawText(text, (a + b) / 2, at - 9, SKTextAlign.Center, font, ink);
+        Captions.Draw(canvas, text, (a + b) / 2, at - 9, SKTextAlign.Center, font, ink);
     }
 
     /// <summary>

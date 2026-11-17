@@ -5,6 +5,13 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.123.0 — unreleased
+
+### Added
+- **The documentation in French, German, Spanish, Brazilian Portuguese and Thai.** Every page of the Help window is
+  translated, with its pictures taken in the editor in that language, so the help names each button as you see it.
+  Messages the editor still shows in English are quoted in English, with a translation beside them.
+
 ## v1.122.0 — unreleased
 
 ### Added

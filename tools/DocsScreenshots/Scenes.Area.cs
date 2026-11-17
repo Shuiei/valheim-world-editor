@@ -82,8 +82,11 @@ public sealed partial class Scenes
         Move(e, at);
         e.Send("wait 500");
         var (before, after) = ClickBetweenShots(e, at, "paste-clear-site.jpg", keepMessage: true);
-        Halves(Out("paste-clear-site.jpg"), ("Before the click", "After the click"), before, after, new HalvesCut(720, Keep: [BuildingBarWhilePasting]));
+        Halves(Out("paste-clear-site.jpg"), ClearSitePair, before, after, new HalvesCut(720, Keep: [BuildingBarWhilePasting]));
     }
+
+    /// <summary>paste-clear-site.jpg's halves.</summary>
+    private static readonly Pair ClearSitePair = new("Before the click", "After the click");
 
     /// <summary>
     /// area-backup.jpg: a hut griefed (part of its near wall gone) and a polygon round it with Back to a backup
@@ -125,8 +128,7 @@ public sealed partial class Scenes
         e.Send("key Escape");
         e.Send("click Save to world");
         e.Send("click Save");
-        e.Send("wait 1000");
-        e.Send("click OK");
+        ClickOkWhenShown(e);
         // The game's own backup of the world with the hut, as it makes them when it saves.
         var date = new DateTime(2026, 10, 20, 18, 0, 0, DateTimeKind.Local);
         string backup = System.IO.Path.Combine(root, "Docs_backup_auto-20261020180000");
@@ -172,15 +174,20 @@ public sealed partial class Scenes
         Camera(e, 8, 0, 200, 26, 28);
         e.Send("wait 500");
         string before = Out("before-area-backup.jpg"), after = Out("after-area-backup.jpg");
-        ShotWithList(e, before, 300, 514);
+        // The list's box: its open list is below it, lower in a language whose panel rows above it are taller.
+        int box = (int)e.Send("where Backup").GetProperty("y").GetDouble();
+        ShotWithList(e, before, "Backup");
         e.Send("key Return");
         WaitForMessage(e, "Restored");
         e.Shot(after, keepMessage: true);
         // The open list is the before picture's; the panel's backup line (read by the restore) and the status bar are
         // the after picture's.
-        Halves(Out("area-backup.jpg"), ("Griefed", "After Back to the backup"), before, after,
-            new HalvesCut(1000, AreaPanelRight, Keep: [MaskCard], KeepBefore: [new SKRectI(176, 530, 406, 598)]));
+        Halves(Out("area-backup.jpg"), BackupPair, before, after,
+            new HalvesCut(1000, AreaPanelRight, Keep: [MaskCard], KeepBefore: [new SKRectI(176, box + 16, 406, box + 84)]));
     }
+
+    /// <summary>area-backup.jpg's halves.</summary>
+    private static readonly Pair BackupPair = new("Griefed", "After Back to the backup");
 
     /// <summary>
     /// area-heightmap.jpg: the Heightmap action after Export and Import… of the picture just exported: the
@@ -257,15 +264,38 @@ public sealed partial class Scenes
     /// <summary>The Region panel's right edge in the window: halves of its pictures start there.</summary>
     private const int AreaPanelRight = 432;
 
+    /// <summary>
+    /// Clicks the OK of the dialog a save ends with, once it is shown (up to 30 s: a save takes longer in some runs);
+    /// the last miss is thrown when it never comes.
+    /// </summary>
+    private static void ClickOkWhenShown(Editor e)
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        while (true)
+        {
+            e.Send("wait 500");
+            try
+            {
+                e.Send("click OK");
+                return;
+            }
+            catch (InvalidOperationException) when (watch.Elapsed < TimeSpan.FromSeconds(30))
+            {
+                // Not shown yet: the save is still running.
+            }
+        }
+    }
+
     /// <summary>Waits (up to 30 s) until the status bar's message begins with these words (its English, in any language).</summary>
     private static void WaitForMessage(Editor e, string start)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        while (!(e.Send("wait 300").GetProperty("messageEn").GetString() ?? "").StartsWith(start, StringComparison.Ordinal))
+        string said;
+        while (!(said = e.Send("wait 300").GetProperty("messageEn").GetString() ?? "").StartsWith(start, StringComparison.Ordinal))
         {
             if (watch.Elapsed > TimeSpan.FromSeconds(30))
             {
-                throw new TimeoutException($"no message beginning \"{start}\"");
+                throw new TimeoutException($"no message beginning \"{start}\" (the last: \"{said}\")");
             }
         }
     }
@@ -292,13 +322,13 @@ public sealed partial class Scenes
     /// picture's. The two pictures are deleted.
     /// </summary>
     /// <param name="file">The picture to write.</param>
-    /// <param name="labels">The two halves' labels.</param>
+    /// <param name="labels">The two halves' labels, in English (a field of their own, so that the captions' check finds them).</param>
     /// <param name="before">The picture before the change.</param>
     /// <param name="after">The picture after it.</param>
     /// <param name="at">Where the halves are cut.</param>
     /// <param name="afterHalf">The picture the after half is cut from, when not <paramref name="after"/> (one without the
     /// brush's ring); deleted too.</param>
-    private static void Halves(string file, (string Before, string After) labels, string before, string after, HalvesCut at, string? afterHalf = null)
+    private static void Halves(string file, Pair labels, string before, string after, HalvesCut at, string? afterHalf = null)
     {
         try
         {
@@ -324,8 +354,8 @@ public sealed partial class Scenes
                 }
                 using var line = new SKPaint { Color = new SKColor(20, 24, 30), StrokeWidth = 3 };
                 canvas.DrawLine(at.Left + half, GroundPairTop, at.Left + half, at.Bottom, line);
-                GroundLabel(canvas, labels.Before, at.Left + half / 2f);
-                GroundLabel(canvas, labels.After, at.Left + half * 1.5f);
+                PairLabel(canvas, labels.Before, at.Left + (half / 2f), half - 16);
+                PairLabel(canvas, labels.After, at.Left + (half * 1.5f), half - 16);
             }
             SavePicture(result, file);
         }

@@ -133,26 +133,18 @@ public sealed partial class Scenes
             canvas.DrawRect(new SKRect(658, 389, 780, 512), zone);
             canvas.DrawLine(1014, 260, 1090, 260, band);
             canvas.DrawLine(992, 420, 1092, 420, zone);
-            Tag(canvas, "zone, 64 m", 719, 456);
-            Tag(canvas, "the area: 5 × 5 zones, 320 m", 716, 122);
-            Tag(canvas, "locked edge", 1150, 266);
-            Tag(canvas, "Follow grows the area past here", 1240, 426);
+            WriteNames(canvas, picture.Width, picture.Height, AreaZoneNames);
         }
         SavePicture(picture, path);
     }
 
-    /// <summary>A name written on a picture: white on a dark rounded box, centred on the point.</summary>
-    /// <param name="canvas">The picture's canvas.</param>
-    /// <param name="text">The name.</param>
-    /// <param name="x">Its middle, from the left.</param>
-    /// <param name="y">Its baseline, from the top.</param>
-    private static void Tag(SKCanvas canvas, string text, float x, float y)
-    {
-        using var font = new SKFont(SKTypeface.FromFamilyName("Noto Sans", SKFontStyle.Bold), 17);
-        using var box = new SKPaint { Color = new SKColor(20, 24, 30, 220), IsAntialias = true };
-        using var ink = new SKPaint { Color = SKColors.White, IsAntialias = true };
-        float width = font.MeasureText(text);
-        canvas.DrawRoundRect(new SKRect(x - (width / 2) - 8, y - 17, x + (width / 2) + 8, y + 7), 6, 6, box);
-        canvas.DrawText(text, x, y, SKTextAlign.Center, font, ink);
-    }
+    /// <summary>
+    /// concept-area-zones.jpg's names: the zone's and the area's in the middle of their outlines, the locked edge's and
+    /// Follow's at the end of the lines drawn to them (their boxes growing right, to the picture's edge).
+    /// </summary>
+    private static readonly Name[] AreaZoneNames =
+    [
+        new("zone, 64 m", 719, 454), new("the area: 5 × 5 zones, 320 m", 716, 120),
+        new("locked edge", 1094, 264, FromLeft: true), new("Follow grows the area past here", 1094, 424, FromLeft: true),
+    ];
 }

@@ -81,10 +81,16 @@ public sealed partial class Scenes
         Aim(e, 7, 7, 225, 60, 72);
         Move(e, P(24, -26));
         e.Send("wait 300");
-        ShotWithList(e, Out("brush-shapes.jpg"), 260, 335);
+        ShotWithList(e, Out("brush-shapes.jpg"), "Shape");
         // Each dab's shape under it (where this camera shows them).
-        Label(Out("brush-shapes.jpg"), [("Circle", 478, 545), ("Square", 655, 545), ("Ring", 826, 545), ("Ragged (noise)", 995, 545), ("Stamp: Crater rim", 1163, 545)]);
+        Label(Out("brush-shapes.jpg"), BrushShapeNames);
     }
+
+    /// <summary>brush-shapes.jpg's names: each dab's shape under it.</summary>
+    private static readonly Name[] BrushShapeNames =
+    [
+        new("Circle", 478, 545), new("Square", 655, 545), new("Ring", 826, 545), new("Ragged (noise)", 995, 545), new("Stamp: Crater rim", 1163, 545),
+    ];
 
     /// <summary>
     /// brush-falloffs.jpg: six mounds raised on levelled ground by the same Raise stroke, one per falloff in the list's
@@ -111,8 +117,15 @@ public sealed partial class Scenes
         e.Send("wait 300");
         ShotWithoutRing(e, "brush-falloffs.jpg");
         // Each mound's falloff under it (where this camera shows them).
-        Label(Out("brush-falloffs.jpg"), [("Soft", 458, 565), ("Linear", 600, 565), ("Dome", 745, 565), ("Flat top", 890, 565), ("Peak", 1030, 565), ("Sharp edge (pickaxe)", 1175, 565)]);
+        Label(Out("brush-falloffs.jpg"), BrushFalloffNames);
     }
+
+    /// <summary>brush-falloffs.jpg's names: each mound's falloff under it.</summary>
+    private static readonly Name[] BrushFalloffNames =
+    [
+        new("Soft", 458, 565), new("Linear", 600, 565), new("Dome", 745, 565), new("Flat top", 890, 565), new("Peak", 1030, 565),
+        new("Sharp edge (pickaxe)", 1175, 565),
+    ];
 
     /// <summary>
     /// flatten.jpg: a big mound whose top one Flatten stroke levelled, started on the top with Level to the height where
@@ -176,8 +189,11 @@ public sealed partial class Scenes
         e.Send("wait 300");
         e.Shot(Out("lower-smooth-restore.jpg"));
         // Each brush's name by what it did (where this camera shows them).
-        Label(Out("lower-smooth-restore.jpg"), [("Lower", 492, 468), ("Smooth: right half", 740, 568), ("Restore: right half", 1100, 640)]);
+        Label(Out("lower-smooth-restore.jpg"), LowerSmoothRestoreNames);
     }
+
+    /// <summary>lower-smooth-restore.jpg's names: each brush's name by what it did.</summary>
+    private static readonly Name[] LowerSmoothRestoreNames = [new("Lower", 492, 468), new("Smooth: right half", 740, 568), new("Restore: right half", 1100, 640)];
 
     /// <summary>
     /// naturalize.jpg: levelled ground whose left half was naturalized (Bumps 3, Bump size 12) into soft bumps, the right
@@ -215,7 +231,7 @@ public sealed partial class Scenes
         e.Send("set Strength|0.5");
         Stroke(e, "D1", P(0, 0), 11, hold: 1600, steps: 4);
         Aim(e, 11, 0, 200, 35, 40);
-        GroundPair(e, "erode.jpg", ("Before", "After Erode (Water)"), () =>
+        GroundPair(e, "erode.jpg", ErodePair, () =>
         {
             e.Send("key O");
             e.Send("click Water");
@@ -225,6 +241,9 @@ public sealed partial class Scenes
             e.Send("wait 300");
         });
     }
+
+    /// <summary>erode.jpg's halves.</summary>
+    private static readonly Pair ErodePair = new("Before", "After Erode (Water)");
 
     /// <summary>
     /// landform-pictures.jpg: the Landform tool's built-in pictures put into levelled ground, 6 m high, from the left
@@ -269,12 +288,15 @@ public sealed partial class Scenes
         Aim(e, 14.5, 0, 200, 35, 50);
         Move(e, P(0, 0));
         e.Send("wait 300");
-        GroundPair(e, "landform-picture.jpg", ("Before the click", "After one click"), () =>
+        GroundPair(e, "landform-picture.jpg", OneClickPair, () =>
         {
             Click(e, P(0, 0));
             e.Send("wait 300");
         }, ring: true, left: LandformPanelRight, from: LandformMaskRight);
     }
+
+    /// <summary>The halves of a click's pair: landform-picture.jpg's, place-brush-before-after.jpg's.</summary>
+    private static readonly Pair OneClickPair = new("Before the click", "After one click");
 
     /// <summary>The Landform panel's right edge in the window (it is wider than a brush's panel): the view starts there.</summary>
     private const int LandformPanelRight = 428;
@@ -301,7 +323,7 @@ public sealed partial class Scenes
             Path(e, [P(12, dz), P(-12, dz)], steps: 8, hold: 150);
         }
         Aim(e, 16, 0, 200, 45, 58);
-        GroundPair(e, "paint.jpg", ("Before", "After Clear paint"), () =>
+        GroundPair(e, "paint.jpg", ClearPaintPair, () =>
         {
             e.Send("key D9");
             e.Send("set Size|3");
@@ -310,6 +332,9 @@ public sealed partial class Scenes
             e.Send("wait 300");
         });
     }
+
+    /// <summary>paint.jpg's halves.</summary>
+    private static readonly Pair ClearPaintPair = new("Before", "After Clear paint");
 
     /// <summary>
     /// limit-red.jpg: a Raise stroke held on flat ground until it stops at the game's 8 m, its top tinted red (Limit
@@ -372,7 +397,7 @@ public sealed partial class Scenes
         (double X, double Z)[] stroke = [P(18, 0), P(-18, 0)];
         Path(e, stroke, steps: 12, hold: 150);
         Aim(e, 15, -8, 200, 40, 56);
-        GroundPair(e, "mask.jpg", ("Mask off", "Mask on, slope max 15°"), () =>
+        GroundPair(e, "mask.jpg", MaskPair, () =>
         {
             e.Send("key Z ctrl");
             e.Send("key D8");
@@ -382,6 +407,9 @@ public sealed partial class Scenes
             e.Send("wait 300");
         }, keep: [new SKRectI(GroundPairLeft, GroundPairTop, 712, 450)]);
     }
+
+    /// <summary>mask.jpg's halves: the stroke with the Mask off, then on.</summary>
+    private static readonly Pair MaskPair = new("Mask off", "Mask on, slope max 15°");
 
     /// <summary>mask-warning.jpg: the Mask card alone, Slope min 30 above max 10, its orange warning under the settings.</summary>
     private void MaskWarning(Editor e)
@@ -468,13 +496,13 @@ public sealed partial class Scenes
     /// </summary>
     /// <param name="e">The editor.</param>
     /// <param name="file">The picture's name.</param>
-    /// <param name="labels">The two halves' labels.</param>
+    /// <param name="labels">The two halves' labels, in English (a field of their own, so that the captions' check finds them).</param>
     /// <param name="change">Makes the change between the two pictures, choosing its tool.</param>
     /// <param name="keep">Parts of the after picture drawn over the halves where they are in the window (a card).</param>
     /// <param name="ring">Take the halves with the brush and its ring (a stamp's outline before the click).</param>
     /// <param name="left">The window's column where the view starts right of the tool panel (a wider panel than a brush's).</param>
     /// <param name="from">The window's column the halves are cut from, right of the Mask card beside that panel.</param>
-    private void GroundPair(Editor e, string file, (string Before, string After) labels, Action change, IReadOnlyList<SKRectI>? keep = null, bool ring = false,
+    private void GroundPair(Editor e, string file, Pair labels, Action change, IReadOnlyList<SKRectI>? keep = null, bool ring = false,
         int left = GroundPairLeft, int from = GroundPairCut)
     {
         string before = Out("before-" + file), after = Out("after-" + file), view = Out("view-" + file);
@@ -524,16 +552,14 @@ public sealed partial class Scenes
         }
     }
 
-    /// <summary>A label in a dark rounded box, centred on x near the bottom of the pair's rows.</summary>
-    private static void GroundLabel(SKCanvas canvas, string text, float x)
+    /// <summary>The window's picture with the list beside a label open over it, wherever the language shown puts it.</summary>
+    /// <param name="e">The editor.</param>
+    /// <param name="path">The picture to write.</param>
+    /// <param name="label">The list's label, in English.</param>
+    private static void ShotWithList(Editor e, string path, string label)
     {
-        using var font = new SKFont(SKTypeface.FromFamilyName("Noto Sans", SKFontStyle.Bold), 17);
-        using var ink = new SKPaint { Color = SKColors.White, IsAntialias = true };
-        using var box = new SKPaint { Color = new SKColor(24, 28, 36, 225), IsAntialias = true };
-        float width = font.MeasureText(text) + 28;
-        var r = new SKRect(x - width / 2, GroundPairBottom - 52, x + width / 2, GroundPairBottom - 18);
-        canvas.DrawRoundRect(r, 8, 8, box);
-        canvas.DrawText(text, x, r.Bottom - 11, SKTextAlign.Center, font, ink);
+        var at = e.Send("where " + label);
+        ShotWithList(e, path, (int)at.GetProperty("x").GetDouble(), (int)at.GetProperty("y").GetDouble());
     }
 
     /// <summary>
