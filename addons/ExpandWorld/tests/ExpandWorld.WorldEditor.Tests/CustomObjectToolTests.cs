@@ -21,13 +21,30 @@ public class CustomObjectToolTests
         public Vector3 Rotation => default;
         public Quaternion Orientation => Quaternion.Identity;
         public float Scale => 1;
-        public bool TryGetInt(string key, out int value) => (value = 0) != 0;
-        public bool TryGetLong(string key, out long value) => (value = 0) != 0;
-        public bool TryGetFloat(string key, out float value) => (value = 0) != 0;
-        public bool TryGetVector3(string key, out Vector3 value) => (value = default) != default;
-        public bool TryGetQuaternion(string key, out Quaternion value) => (value = default) != default;
-        public bool TryGetString(string key, out string value) => (value = "").Length > 0;
-        public bool TryGetBytes(string key, out byte[] value) => (value = []).Length > 0;
+        public bool TryGetInt(string key, out int value) => None(out value);
+        public bool TryGetLong(string key, out long value) => None(out value);
+        public bool TryGetFloat(string key, out float value) => None(out value);
+        public bool TryGetVector3(string key, out Vector3 value) => None(out value);
+        public bool TryGetQuaternion(string key, out Quaternion value) => None(out value);
+        public bool TryGetString(string key, out string value)
+        {
+            value = "";
+            return false;
+        }
+
+        public bool TryGetBytes(string key, out byte[] value)
+        {
+            value = [];
+            return false;
+        }
+
+        /// <summary>It holds no value to read: the default, and false.</summary>
+        private static bool None<T>(out T value) where T : struct
+        {
+            value = default;
+            return false;
+        }
+
         public void SetInt(string key, int? value) => Set[key] = value;
         public void SetLong(string key, long? value) => Set[key] = value;
         public void SetFloat(string key, float? value) => Set[key] = value;

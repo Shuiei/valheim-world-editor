@@ -64,7 +64,7 @@ internal static class ToolCommit
             var size = ScaleOf(z);
             change(copy);
             // A size the tool set, or one that differs by axis, is kept as the data has it; else the object's own.
-            AddNew(plan, new NewObject(0, z.Prefab, view.Position, copy.Rotation, ScaleOf(z) is { } set && (set != size || set.X != set.Y || set.Y != set.Z) ? 0 : view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize()));
+            AddNew(plan, new NewObject(0, z.Prefab, view.Position, copy.Rotation, ScaleOf(z) is { } set && (!Same(set, size) || !Same(set, new System.Numerics.Vector3(set.X))) ? 0 : view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize()));
         }
         foreach (var obj in edit.Removed)
         {
@@ -138,6 +138,9 @@ internal static class ToolCommit
         int i = z.Vec3List.FindIndex(v => v.Key == ZdoData.ScaleKey);
         return i < 0 ? null : z.Vec3List[i].Value;
     }
+
+    /// <summary>Whether two sizes are the same on each axis, to what a size is told apart by (none is the same as none).</summary>
+    private static bool Same(System.Numerics.Vector3 a, System.Numerics.Vector3? b) => b is { } other && System.Numerics.Vector3.DistanceSquared(a, other) < 1e-10f;
 
     /// <summary>The persistent flag of an object's save (the game keeps such objects, and saves them).</summary>
     private const ushort Persistent = 0x100;
