@@ -5,20 +5,20 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
-## v1.124.0 — unreleased
+## v1.124.0 — 2026-11-17
 
 ### Added
 - **The editor and its documentation in Filipino.** Choose it under **Settings → Language**; a computer set to
   Filipino or Tagalog shows it from the start. The help pages are translated too, with their pictures taken in Filipino.
 
-## v1.123.0 — unreleased
+## v1.123.0 — 2026-11-17
 
 ### Added
 - **The documentation in French, German, Spanish, Brazilian Portuguese and Thai.** Every page of the Help window is
   translated, with its pictures taken in the editor in that language, so the help names each button as you see it.
   Messages the editor still shows in English are quoted in English, with a translation beside them.
 
-## v1.122.0 — unreleased
+## v1.122.0 — 2026-11-17
 
 ### Added
 - **The help in your language.** The Help window shows each page of the documentation in the editor's language where
@@ -26,7 +26,7 @@ the plugin is unchanged in versions without that part. Mods newly supported, or 
   whose English has changed since it was translated says so, with a button to read the English page. Translators: see
   [Translating the documentation](docs/translating.md#translating-the-documentation).
 
-## v1.121.0 — unreleased
+## v1.121.0 — 2026-11-17
 
 ### Added
 - **The editor in French, German, Spanish, Brazilian Portuguese and Thai.** Choose one under **Settings → Language**;
