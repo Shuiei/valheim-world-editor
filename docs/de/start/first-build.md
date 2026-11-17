@@ -12,7 +12,7 @@ einer Sicherungskopie daneben, wie in [Deine erste Bearbeitung](first-edit.md).
 
 1. Klicke auf der Startseite auf **Die Werkstatt**, dann auf **Werkstatt öffnen**.
 
-![Die Werkstatt auf der Startseite](../images/start-workshop.jpg)
+![Die Werkstatt auf der Startseite](../images/start-workshop.webp)
 ***Die Werkstatt** auf der Startseite: **Werkstatt öffnen**, ob Homestead installiert ist, und deine Baupläne (hier
 drei; deine Liste ist beim ersten Mal leer).*
 
@@ -42,7 +42,7 @@ stehen die Kosten der Hütte.
 4. Suche `wood door`, klicke auf ihre Kachel und setze die Tür in die Lücke.
 5. Setze eine zweite Reihe Wände auf die erste.
 
-![Ein Haus in der Werkstatt, von der Stabilitätsprüfung gefärbt](../images/workshop.jpg)
+![Ein Haus in der Werkstatt, von der Stabilitätsprüfung gefärbt](../images/workshop.webp)
 *Die Stabilitätsprüfung an einem hohen Haus: der Steinsockel hellblau, die Wände darüber grün, dann gelb und orange,
 wenn ihre Stabilität nachlässt, und ein Überhang rot: er würde einstürzen.*
 
@@ -77,7 +77,7 @@ Hammer-Reiter, bereit zum Bauen im Spiel.
    drehen.
 6. Klicke, um sie zu setzen, und drücke dann `Esc`, um das Einfügen zu beenden.
 
-![Das Panel Baupläne in einer Welt, mit einer gespeicherten Hütte](../images/blueprints.jpg)
+![Das Panel Baupläne in einer Welt, mit einer gespeicherten Hütte](../images/blueprints.webp)
 *Das Panel **Baupläne** neben der Werkzeugleiste: eine gespeicherte Hütte mit ihrem Bild, ihren Kosten und ihrer
 Schaltfläche **Einfügen**.*
 

@@ -22,7 +22,7 @@ trouver d'abord, voir [Trouver un objet, un objet dans un coffre ou un panneau](
 Le nombre est ramené à la plus grande pile que le jeu permet pour cet objet. Le contenu modifié reste celui du
 coffre : un coffre que personne n'a ouvert ne se remplit pas par-dessus avec le butin du jeu.
 
-![Un coffre en bois dans l'Inspecteur : trois emplacements remplis, le quatrième recevant IronScrap, Nombre 20](../images/guide-chest-slot.jpg)
+![Un coffre en bois dans l'Inspecteur : trois emplacements remplis, le quatrième recevant IronScrap, Nombre 20](../images/guide-chest-slot.webp)
 *Emplacement 4 cliqué, IronScrap choisi dans **Chercher un objet…** et **Nombre** réglé sur 20 ; Wood, Coins et Resin
 remplissent les trois premiers emplacements. **Appliquer les modifications** les met dans le coffre.*
 

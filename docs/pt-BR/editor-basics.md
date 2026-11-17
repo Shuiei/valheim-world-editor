@@ -8,7 +8,7 @@ câmera, o salvamento, o Histórico e o painel Visão.
 `?` ou `F3` para o cartão de ajuda, `F1` para esta ajuda na ferramenta em uso · **Funciona em:** mundos salvos, ao
 vivo, a Oficina
 
-![O editor 3D com Elevar escolhido: barra de ferramentas, painel de Elevar, barra superior, painel Visão e barra de status](images/overview.jpg)
+![O editor 3D com Elevar escolhido: barra de ferramentas, painel de Elevar, barra superior, painel Visão e barra de status](images/overview.webp)
 *Uma pequena base numa área de 3 × 3, com o pincel Elevar escolhido (o anel dele sobre a grama). À esquerda: a barra de
 ferramentas e o painel da ferramenta. Em cima: a barra superior. À direita: o painel Visão. Embaixo: a barra de status,
 que mostra o terreno sob o ponteiro.*
@@ -28,7 +28,7 @@ Cada alteração fica [pendente](concepts/saving-and-history.md#alterações-pen
 
 ## A página inicial
 
-![A Página inicial da página inicial](images/start-home.jpg)
+![A Página inicial da página inicial](images/start-home.webp)
 *Página inicial: o cartão do jogo em execução com **Editar ao vivo**, depois os mundos e projetos abertos por último.*
 
 O menu lateral tem **Página inicial** e depois duas seções, **Editar um mundo** e **Criar**. Você volta para cá a
@@ -105,7 +105,7 @@ nem isso basta, **Mapa**, **Recarregar**, **Histórico** e **Visão** mostram s�
 Na visão, cada objeto novo ainda não salvo ou aplicado leva um **ponto verde**, exceto enquanto está selecionado (o
 contorno o marca nesse caso). **Visão → Marcas não salvas** oculta os pontos; os objetos continuam.
 
-![Dez faias jovens recém-plantadas em terreno nivelado, cada uma com um ponto verde ao pé, uma ampliada no canto](images/unsaved.jpg)
+![Dez faias jovens recém-plantadas em terreno nivelado, cada uma com um ponto verde ao pé, uma ampliada no canto](images/unsaved.webp)
 *Árvores jovens recém-plantadas: cada uma leva um pequeno ponto verde ao pé até ser salva (uma ampliada no canto), e
 a linha de pendências as conta: "Não salvo: 1 zona, 10 adicionados".*
 
@@ -134,7 +134,7 @@ Na Oficina, ela mantém só **Construir** (`U` ou `T`), **Selecionar** e **Visã
 
 ### Andar e voar
 
-![A base vista da altura dos olhos no modo Andar](images/walk.jpg)
+![A base vista da altura dos olhos no modo Andar](images/walk.webp)
 *Modo Andar (`F`): a base como um jogador em pé ao lado da plantação a vê, com os olhos a 1,8 m do chão.*
 
 `F` alterna entre três visões:
@@ -178,7 +178,7 @@ cresce ou muda de tamanho. Os controles da área não existem na Oficina.
 a pasta do mundo. Feche o Valheim (o jogo ou o servidor) antes de salvar: um jogo em execução grava por cima das suas
 alterações da próxima vez que salvar.
 
-![A pergunta Salvar nos arquivos do mundo sobre uma colina elevada e árvores novas: o que será gravado, a Pasta do mundo, três avisos, Salvar e Cancelar](images/save-confirm.jpg)
+![A pergunta Salvar nos arquivos do mundo sobre uma colina elevada e árvores novas: o que será gravado, a Pasta do mundo, três avisos, Salvar e Cancelar](images/save-confirm.webp)
 *Nada é gravado até você clicar em **Salvar**: a pergunta conta o que entra, nomeia a **Pasta do mundo** e avisa para
 fechar o Valheim antes.*
 
@@ -229,7 +229,7 @@ histórico guardado no último salvamento ou, ao vivo, todos os passos que o jog
 
 ## Histórico
 
-![O painel Histórico depois de cinco edições, a última desfeita](images/history.jpg)
+![O painel Histórico depois de cinco edições, a última desfeita](images/history.webp)
 *A última alteração foi desfeita com **Voltar até aqui**: ela fica acinzentada e oferece **Refazer até aqui**.*
 
 O **Histórico** (`L`) lista todas as alterações da sessão, das mais novas às mais antigas. Cada linha mostra o nome do
@@ -327,7 +327,7 @@ lado dele, a barra mostra "Corte em N m" ou "Corte: desligado". Ele fica desliga
 
 ## O cartão de ajuda
 
-![O cartão de ajuda Controles rolado até o fim: as últimas teclas, depois Este computador com a taxa de quadros e a placa de vídeo](images/help.jpg)
+![O cartão de ajuda Controles rolado até o fim: as últimas teclas, depois Este computador com a taxa de quadros e a placa de vídeo](images/help.webp)
 *O cartão **Controles** (`F3`), rolado até o fim: as últimas teclas, depois **Este computador** com a taxa de quadros,
 a placa de vídeo e **Registrar taxa de quadros**.*
 
@@ -372,7 +372,7 @@ computador. O editor encontra sozinho os lugares usuais: o Valheim em todas as b
 Flatpak e bibliotecas extras), o BepInEx na pasta do Valheim e nos perfis padrão do r2modman e do Thunderstore Mod
 Manager, e os mundos nas próprias pastas de mundos do Valheim (inclusive as do Proton).
 
-![Configurações em duas metades: Idioma, as pastas e Claude (desligado) à esquerda; Extensões de mods, Complementos, Histórico e Salvar à direita](images/settings.jpg)
+![Configurações em duas metades: Idioma, as pastas e Claude (desligado) à esquerda; Extensões de mods, Complementos, Histórico e Salvar à direita](images/settings.webp)
 *As Configurações rolam: o topo à esquerda, o fim à direita, até **Histórico** e **Salvar**. **Desenho** só aparece no
 Windows.*
 

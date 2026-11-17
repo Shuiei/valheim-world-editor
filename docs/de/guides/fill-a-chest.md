@@ -23,7 +23,7 @@ Die Anzahl wird auf den größten Stapel gekürzt, den das Spiel für diesen Geg
 bleiben der Truhe erhalten: Eine Truhe, die noch niemand geöffnet hat, füllt sich nicht mit der Beute des Spiels
 darüber.
 
-![Eine Holztruhe im Inspektor: drei Plätze gefüllt, der vierte nimmt IronScrap auf, Anzahl 20](../images/guide-chest-slot.jpg)
+![Eine Holztruhe im Inspektor: drei Plätze gefüllt, der vierte nimmt IronScrap auf, Anzahl 20](../images/guide-chest-slot.webp)
 *Platz 4 angeklickt, IronScrap in **Gegenstand suchen…** gewählt und **Anzahl** auf 20 gesetzt; Wood, Coins und Resin
 füllen die ersten drei Plätze. **Änderungen anwenden** legt sie in die Truhe.*
 

@@ -20,7 +20,7 @@ Gumuhit ng patag na kalsada na may pantay na rampang paakyat ng burol, sementado
    1 m), at pindutin ulit ang **I-apply (Enter)** sa parehong linya.
 10. I-click ang **I-save sa mundo** (o **I-apply nang live**).
 
-![Isang patag na kalsadang tumatagos sa dalawang punso at sementado sa gitna nito](../images/path-road.jpg)
+![Isang patag na kalsadang tumatagos sa dalawang punso at sementado sa gitna nito](../images/path-road.webp)
 *Isang kalsadang ginawa gamit ang Patagin sa dalawang punso, saka Pintahan ng sementado (Lapad 4 m, Lambot
 1 m) sa parehong linya.*
 

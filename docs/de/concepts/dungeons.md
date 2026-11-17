@@ -33,7 +33,7 @@ dann neu. Fuling-Dörfer und Höfe in den Wiesen werden auf dieselbe Weise angel
 
 ### Räume, Öffnungen und Abschlüsse
 
-![Eine Grabkammer aus den eigenen Räumen des Spiels, aufgeschnitten, orange und blaue Quadrate, wo Räume sich treffen](../images/dungeon-rooms.jpg)
+![Eine Grabkammer aus den eigenen Räumen des Spiels, aufgeschnitten, orange und blaue Quadrate, wo Räume sich treffen](../images/dungeon-rooms.webp)
 *Ein Dungeon des Spiels 5000 m hoch, die Dächer weggeschnitten: jeder Raum ist ein Eintrag der Liste. Die Quadrate
 markieren, wo sich zwei Räume treffen: blau mit einer Tür, orange ohne.*
 

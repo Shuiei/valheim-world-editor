@@ -7,7 +7,7 @@ sofort im Spiel.
 **Du brauchst:** Valheim auf diesem Computer, den Editor und einmalig etwa 5 Minuten, um BepInEx und das Plugin
 WorldEditorBridge zu installieren.
 
-![Mein Spiel vor der Einrichtung: die Karte „Dein Spiel braucht BepInEx und das Plugin WorldEditorBridge“ mit ihren drei Schritten](../images/start-game-setup.jpg)
+![Mein Spiel vor der Einrichtung: die Karte „Dein Spiel braucht BepInEx und das Plugin WorldEditorBridge“ mit ihren drei Schritten](../images/start-game-setup.webp)
 *Was **Mein Spiel** anzeigt, bevor BepInEx und das Plugin installiert sind: die Schritte unten, in Kurzform.*
 
 1. Installiere einmalig **BepInEx** in deinem Valheim: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
@@ -30,7 +30,7 @@ WorldEditorBridge zu installieren.
 7. Nimm eine Änderung vor, zum Beispiel einen kleinen Hügel mit dem Pinsel **Anheben**.
 8. Drücke **Live anwenden** (oder `Ctrl+S`).
 
-![Mein Spiel auf der Startseite: Valheim läuft mit der Welt, die Zahl der Spieler und die Schaltfläche Live bearbeiten](../images/start-game.jpg)
+![Mein Spiel auf der Startseite: Valheim läuft mit der Welt, die Zahl der Spieler und die Schaltfläche Live bearbeiten](../images/start-game.webp)
 *Die Startseite hat das laufende Spiel von selbst bemerkt: **Live bearbeiten** öffnet seine Welt.*
 
 ## Prüfen, ob es geklappt hat

@@ -22,7 +22,7 @@ mundo](back-up-a-world.md)).
 9. Haz clic en **Ir a la entrada** para volver abajo.
 10. Haz clic en **Guardar en el mundo** (o **Aplicar en vivo**).
 
-![La entrada de una mazmorra generada en el suelo](../images/dungeon-entrance.jpg)
+![La entrada de una mazmorra generada en el suelo](../images/dungeon-entrance.webp)
 *La entrada tras **Colocar en el mundo**: el túmulo de una cámara funeraria, con la puerta mirando a la cámara.*
 
 Para cambiar la mazmorra a mano antes de colocarla (mover muebles, llenar cofres), guarda (o aplica) tus cambios y

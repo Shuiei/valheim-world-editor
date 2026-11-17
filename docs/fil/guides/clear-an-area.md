@@ -24,7 +24,7 @@ Alisin ang mga puno, bato at palumpong sa isang lugar at patagin ito para maging
     **Pintahan (Enter)**.
 12. I-click ang **I-save sa mundo** (o **I-apply nang live**).
 
-![Bahagi ng gubat matapos piliin at burahin ang mga object sa loob ng polygon: wala na ang mga puno sa loob, bukas ang panel na Pagpili](../images/area-polygon-done.jpg)
+![Bahagi ng gubat matapos piliin at burahin ang mga object sa loob ng polygon: wala na ang mga puno sa loob, bukas ang panel na Pagpili](../images/area-polygon-done.webp)
 *Pagkatapos ng **Piliin ang mga object (Enter)** at `Del`: wala na ang mga puno sa loob ng polygon, nakatayo pa ang mga
 nasa labas.*
 

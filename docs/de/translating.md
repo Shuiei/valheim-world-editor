@@ -1,4 +1,4 @@
-<!-- source: f7df77d8 -->
+<!-- source: 45d36264 -->
 # Den Editor übersetzen
 
 Die Texte des Editors stehen in Katalogen, einer pro Sprache: eine JSON-Datei mit Texten nach Schlüssel. Englisch,
@@ -66,7 +66,7 @@ Inhaltsverzeichnis des Hilfefensters); die englischen Ordner (`guides/`, `help/`
   übersetzten Datei von `docs/` (`../worldeditor.schema.json`). Links zu einer Seite, die der Ordner noch nicht hat,
   funktionieren im Editor trotzdem (er zeigt die englische Seite), auf GitHub aber erst, wenn die Seite übersetzt ist.
 - **Bilder.** Ein Bild mit Text darin wird in deiner Sprache in `docs/fr/images/` neu aufgenommen, unter demselben Namen,
-  und als `images/x.jpg` geschrieben. Eines ohne etwas zu übersetzen kann das englische bleiben: `../images/x.jpg`.
+  und als `images/x.webp` geschrieben. Eines ohne etwas zu übersetzen kann das englische bleiben: `../images/x.jpg`.
   Solange ein Bild von `images/` nicht in deinem Ordner liegt, zeigt das Hilfefenster das englische gleichen Namens.
 - **Überschriften.** Übersetze sie; ihre IDs ändern sich mit ihnen (GitHub bildet sie aus den Wörtern:
   `#search-the-world` wird zu `#rechercher-dans-le-monde`), und die eigenen Links der Übersetzung nutzen die übersetzten

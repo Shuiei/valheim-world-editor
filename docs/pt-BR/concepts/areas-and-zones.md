@@ -5,7 +5,7 @@ O Valheim divide o mundo em **zonas** quadradas de 64 m, e o editor abre um bloc
 explica por que alguns lugares ainda não podem ser salvos, por que a borda da área nunca se move e por que uma área
 grande é lenta.
 
-![Uma área de 5 × 5 vista de cima com as bordas das zonas, com legendas: uma zona de 64 m, a área de 320 m, a borda travada e a linha de Seguir 12 m para dentro](../images/concept-area-zones.jpg)
+![Uma área de 5 × 5 vista de cima com as bordas das zonas, com legendas: uma zona de 64 m, a área de 320 m, a borda travada e a linha de Seguir 12 m para dentro](../images/concept-area-zones.webp)
 *A área é um bloco de zonas. A linha mais externa de pontos do terreno (amarela) nunca muda; com **Seguir** ligado,
 zonas são adicionadas quando o ponto para onde você olha passa da linha tracejada, 12 m para dentro.*
 

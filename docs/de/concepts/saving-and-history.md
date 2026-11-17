@@ -109,7 +109,7 @@ er betroffen hat. Markierungen sagen, dass ein Schritt **angewendet** (gespeiche
 Sitzung** ist. Er behält standardmäßig jeden Schritt, solange sie weniger als 2 GB Speicher belegen (darüber hinaus fallen die ältesten
 zuerst weg); **Einstellungen → Verlauf → Behaltene Schritte** behält stattdessen nur so viele.
 
-![Das Panel Verlauf nach fünf Bearbeitungen, die letzte rückgängig gemacht](../images/history.jpg)
+![Das Panel Verlauf nach fünf Bearbeitungen, die letzte rückgängig gemacht](../images/history.webp)
 *Der letzte Schritt wurde mit **Zurück bis hier** rückgängig gemacht: Er ist ausgegraut und bietet **Bis hier wiederholen** an.*
 
 Es gibt zwei Wege zurück:

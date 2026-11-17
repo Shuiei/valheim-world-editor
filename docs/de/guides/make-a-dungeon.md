@@ -22,7 +22,7 @@ noch keinen Dungeoneingang hat (vorher eine Sicherung: siehe [Eine Welt sichern]
 9. Klicke auf **Zum Eingang gehen**, um wieder herunterzukommen.
 10. Klicke auf **In Welt speichern** (oder **Live anwenden**).
 
-![Der Eingang eines erzeugten Dungeons am Boden](../images/dungeon-entrance.jpg)
+![Der Eingang eines erzeugten Dungeons am Boden](../images/dungeon-entrance.webp)
 *Der Eingang nach **In der Welt platzieren**: der Hügel einer Grabkammer, ihre Tür zur Kamera gewandt.*
 
 Um den Dungeon vor dem Platzieren von Hand zu ändern (Möbel verschieben, Truhen füllen), speichere (oder wende an) deine

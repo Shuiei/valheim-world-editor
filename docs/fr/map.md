@@ -13,7 +13,7 @@ mondes enregistrés, en direct
 > du monde quand il sauvegarde, et vos modifications, réinitialisations de zones comprises, sont perdues. Pour modifier
 > un monde pendant qu'il tourne, utilisez le [mode direct](live-mode.md).
 
-![La carte du monde avec une zone choisie : le secteur à ouvrir entouré de bleu clair, Modifier en 3D et la liste de taille dans le panneau latéral](images/map.jpg)
+![La carte du monde avec une zone choisie : le secteur à ouvrir entouré de bleu clair, Modifier en 3D et la liste de taille dans le panneau latéral](images/map.webp)
 *Une zone est choisie : le carré bleu clair est le secteur que **Modifier en 3D** ouvrira, à la taille choisie à côté
 du bouton.*
 
@@ -62,7 +62,7 @@ l'autre : modifiez un secteur, revenez à la carte, ouvrez-en un autre, et enre
 
 ## Chercher dans le monde
 
-![Chercher Beech1 dans le monde : chaque hêtre épinglé en orange, l'un choisi avec un anneau doré, les comptes et la liste des résultats](images/map-search.jpg)
+![Chercher Beech1 dans le monde : chaque hêtre épinglé en orange, l'un choisi avec un anneau doré, les comptes et la liste des résultats](images/map-search.webp)
 *Chaque épingle orange est un objet trouvé. Le résultat choisi dans la liste est plus grand, avec un anneau doré, et la
 carte est centrée dessus.*
 
@@ -91,7 +91,7 @@ comme `_ZoneCtrl`) ne sont trouvés que si votre texte commence aussi par `_`.
 
 ## Réinitialiser des zones dans tout le monde
 
-![Réinitialiser des zones dans tout le monde : des zones des Prairies marquées en rouge, des zones de la Forêt noire correspondantes en bleu, la ligne de compte sous les boutons](images/map-reset.jpg)
+![Réinitialiser des zones dans tout le monde : des zones des Prairies marquées en rouge, des zones de la Forêt noire correspondantes en bleu, la ligne de compte sous les boutons](images/map-reset.webp)
 *Les zones des Prairies ont été marquées pour réinitialisation (rouge), puis **Forêt noire** a été choisi et
 **Afficher les correspondances** pressé (bleu). La ligne sous les boutons compte les deux.*
 
@@ -144,7 +144,7 @@ changements de hauteur (`-2.4 … 6.0 m`), et « (non enregistré) » quand de
 appliqué) » dans un monde en direct). Cliquez sur une ligne pour zoomer sur cette zone et la choisir, prête pour
 **Modifier en 3D**.
 
-![La carte de près : quatre zones modifiées entourées de jaune fin et deux d'orange plus épais, la liste Zones modifiées (6) avec les comptes h et p, deux lignes marquées (non enregistré)](images/map-edited-zones.jpg)
+![La carte de près : quatre zones modifiées entourées de jaune fin et deux d'orange plus épais, la liste Zones modifiées (6) avec les comptes h et p, deux lignes marquées (non enregistré)](images/map-edited-zones.webp)
 *Quatre zones enregistrées (jaune fin) et deux modifiées depuis (orange plus épais) : la liste marque celles en attente
 « (non enregistré) ».*
 

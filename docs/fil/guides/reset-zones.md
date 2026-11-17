@@ -23,7 +23,7 @@ makuha ang bagong content ng isang update ng Valheim sa mga lugar na walang nagt
    ang mga gusali mo: basahin ito, saka pumayag. Nagiging pula ang mga zone.
 9. I-click ang **I-save sa mundo** (o **I-apply nang live**).
 
-![I-reset ang mga zone sa buong mundo: asul ang mga tugmang zone, pula ang mga minarkahang zone](../images/map-reset.jpg)
+![I-reset ang mga zone sa buong mundo: asul ang mga tugmang zone, pula ang mga minarkahang zone](../images/map-reset.webp)
 *Tumutugma sa filter ang mga asul na zone; minarkahan para i-reset ang mga pulang zone.*
 
 Para i-reset lang ang mga zone sa ilalim ng isang lugar, gamitin na lang ang tool na [Rehiyon](../area.md#i-reset-ang-mga-zone):

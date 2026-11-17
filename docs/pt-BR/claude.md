@@ -7,7 +7,7 @@ masmorras no mundo ou na Oficina que você tem aberto, a partir de um prompt, en
 **Onde:** página inicial, **Configurações** → **Claude** · **Tecla:** nenhuma · **Funciona em:** mundos salvos, ao vivo
 (com **Auto** desligado), a Oficina
 
-![Configurações, Claude ligado: os dois interruptores, Porta 5731, Novo token, o comando do Claude Code, as linhas do Claude Desktop, Listening on; à direita, Salvar no fim](images/settings-claude.jpg)
+![Configurações, Claude ligado: os dois interruptores, Porta 5731, Novo token, o comando do Claude Code, as linhas do Claude Desktop, Listening on; à direita, Salvar no fim](images/settings-claude.webp)
 *À esquerda: a seção **Claude** ligada e escutando; copie o comando num terminal (Claude Code) ou as linhas na
 configuração do Claude Desktop. À direita: o fim de Configurações, com **Salvar**. O seu comando contém o seu próprio
 token onde esta imagem diz `<token>`, e as linhas, o caminho do seu próprio programa.*
@@ -126,7 +126,7 @@ Trabalho de terreno, florestas e masmorras são as coisas mais fáceis de pedir.
 por peça, podem levar algumas rodadas ("o telhado passa do lado leste, corrija"), ou comece a partir de um dos seus
 projetos.
 
-![O Histórico depois de o Claude aplanar, pavimentar e plantar, com um Elevar seu no meio: linhas com a etiqueta Claude e Reverter as alterações do Claude](images/claude-history.jpg)
+![O Histórico depois de o Claude aplanar, pavimentar e plantar, com um Elevar seu no meio: linhas com a etiqueta Claude e Reverter as alterações do Claude](images/claude-history.webp)
 *Os passos do Claude se chamam "Claude: …" e têm a etiqueta **Claude**; o seu **Elevar** fica entre eles. **Reverter as alterações do Claude**, no alto, remove os passos do Claude e mantém os seus.*
 
 ## Reverter as alterações do Claude

@@ -20,7 +20,7 @@ Tracez une route plane avec une rampe régulière qui monte la colline, pavée e
    nouveau sur **Appliquer (Enter)** sur la même ligne.
 10. Cliquez sur **Enregistrer dans le monde** (ou **Appliquer en direct**).
 
-![Une route plane taillée à travers deux monticules et pavée en son milieu](../images/path-road.jpg)
+![Une route plane taillée à travers deux monticules et pavée en son milieu](../images/path-road.webp)
 *Une route faite avec Aplanir à travers deux monticules, puis Peindre en pavés (Largeur 4 m, Bord adouci 1 m) sur la
 même ligne.*
 

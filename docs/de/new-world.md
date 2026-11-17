@@ -7,7 +7,7 @@ die Welt.
 **Wo:** Startseite, **Erstellen** → **Eine neue Welt** → **Neue Welt erstellen** · **Taste:** keine · **Funktioniert
 in:** der Startseite (es muss keine Welt geöffnet sein)
 
-![Die Welt eines Seeds auf der Seite Neue Welt: Land nach Biom gefärbt, Start, Altäre der Bosse und Orte der Händler markiert, die Fakten des Seeds rechts](images/new-world.jpg)
+![Die Welt eines Seeds auf der Seite Neue Welt: Land nach Biom gefärbt, Start, Altäre der Bosse und Orte der Händler markiert, die Fakten des Seeds rechts](images/new-world.webp)
 *Der rote Punkt ist der Start, lila Rauten sind Altäre der Bosse, die gelben, grünen und rosa Punkte sind die Orte der
 Händler. Die Spalte rechts listet die Fakten des Seeds auf, hier bis zu den nächsten Altären der Bosse
 heruntergescrollt.*
@@ -66,7 +66,7 @@ Valheim (beim ersten Mal ein paar Sekunden).
 
 ## Dungeons
 
-![Derselbe Seed mit vier Dungeonarten als kleine farbige Quadrate und der Liste Dungeons (die nächsten)](images/new-world-dungeons.jpg)
+![Derselbe Seed mit vier Dungeonarten als kleine farbige Quadrate und der Liste Dungeons (die nächsten)](images/new-world-dungeons.webp)
 *Vier Arten eingeschaltet: jedes kleine Quadrat ist ein Dungeon, seine Farbe seine Art, wie bei den Schaltern und in
 **Dungeons (die nächsten)** (Entfernung, Biom, wie viele in der Welt und im Umkreis von 2 km).*
 
@@ -101,7 +101,7 @@ Sumpf. Eine Landmasse ist Land, das mit Land verbunden ist, ohne tieferes Wasser
 
 ## Einen Seed suchen
 
-![Seed suchen: die Wunschliste, dann die besten gefundenen Seeds, jeder als kleine Karte mit Seed und Wertung](images/new-world-find.jpg)
+![Seed suchen: die Wunschliste, dann die besten gefundenen Seeds, jeder als kleine Karte mit Seed und Wertung](images/new-world-find.webp)
 *Die Wünsche (hier eine große Landmasse mit Land ringsum, ein Sumpf innerhalb von 1500 m und Berge innerhalb von 2000 m,
 150 Seeds); die besten gefundenen Seeds unter **Gefundene Seeds**, die besten zuerst. Der erste wurde angeklickt: sein
 Rand leuchtet auf, und seine Welt füllt die große Karte.*

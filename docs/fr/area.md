@@ -7,7 +7,7 @@ une sauvegarde, la nature propre au jeu.
 
 **Où :** barre d'outils, section **ÉDITION** · **Touche :** `B` · **Fonctionne dans :** mondes enregistrés, en direct
 
-![Un cadre tracé autour d'un bosquet dense, Objets choisi, les pastilles de type comptant ce qu'il contient](images/area.jpg)
+![Un cadre tracé autour d'un bosquet dense, Objets choisi, les pastilles de type comptant ce qu'il contient](images/area.webp)
 *Un cadre tracé autour d'un bosquet avec **Objets** choisi : les pastilles de type comptent les arbres, rochers,
 buissons et ramassables à l'intérieur. Rien n'a encore changé : le bouton du bas les sélectionne.*
 
@@ -49,10 +49,10 @@ La ligne sous les boutons donne la surface et le nombre d'objets affichés à l'
 objet(s) affiché(s) à l'intérieur »). La sélection n'est dessinée que dans l'outil Région et pendant un collage ; elle
 est conservée quand vous utilisez un autre outil.
 
-![Un polygone tracé autour d'une partie d'un bois](images/area-polygon.jpg)
+![Un polygone tracé autour d'une partie d'un bois](images/area-polygon.webp)
 *Un polygone fermé autour d'une partie d'un bois, avec **Objets** choisi.*
 
-![Le même bois après Sélectionner les objets puis Supprimer](images/area-polygon-done.jpg)
+![Le même bois après Sélectionner les objets puis Supprimer](images/area-polygon-done.webp)
 *Après **Sélectionner les objets (Enter)**, puis `Del` dans l'outil Sélection : les arbres à l'intérieur du polygone
 ont disparu, ceux de l'extérieur sont toujours debout.*
 
@@ -84,7 +84,7 @@ Sous **Aplanir**, **Élever** et **Abaisser** :
 |---|---|
 | Ligne de déblai et remblai | La quantité de sol que l'action déplacerait (« Aplanir à 35 m : creuser 120 m³, remblayer 340 m³ »), et pour Aplanir ce qui est hors de portée (« (40 m³ hors de portée : limite de ±8 m) » ; avec Sans limite activé, seulement ce qui dépasse ses ±400 m). La seconde ligne, « Sol à l'intérieur : … surélevé(s), … creusé(s) depuis la génération », compare avec le monde tel que généré. Les deux suivent chaque modification, le bord adouci et le Masque. |
 
-![Aplanir sur un cadre au-dessus d'une colline : la ligne de déblai et remblai, avec du sol hors de portée de la limite de ±8 m](images/area-cut-fill.jpg)
+![Aplanir sur un cadre au-dessus d'une colline : la ligne de déblai et remblai, avec du sol hors de portée de la limite de ±8 m](images/area-cut-fill.webp)
 *Un cadre au-dessus d'une colline avec **Aplanir** à 46 m et **Sans limite** désactivé : « Aplanir à 46 m : creuser
 0 m³, remblayer 1.5k m³ (2.2k m³ hors de portée : limite de ±8 m) », et en dessous le sol déjà surélevé à l'intérieur
 depuis la génération du monde.*
@@ -159,7 +159,7 @@ fait pour un rectangle ou un polygone ce que le pinceau [Restaurer](terrain.md#r
 
 ### Faire repousser la nature
 
-![Un cadre nu et le même cadre après Faire repousser la nature, même caméra](images/area-regrow.jpg)
+![Un cadre nu et le même cadre après Faire repousser la nature, même caméra](images/area-regrow.webp)
 *À gauche : un cadre sur un sol nu. À droite : le même cadre après **Faire repousser la nature** : les arbres et
 rochers propres au biome, et la barre d'état qui dit ce qui a poussé.*
 
@@ -196,7 +196,7 @@ types choisis à l'intérieur est retiré, même masqué dans Vue, et chaque obj
 revient. Les pierres runiques ne sont jamais touchées. Quand rien ne diffère, la barre d'état indique « Rien à
 restaurer : la sélection est telle qu'elle était dans la sauvegarde. »
 
-![Une cabane saccagée restaurée depuis la sauvegarde du jeu, avant et après](images/area-backup.jpg)
+![Une cabane saccagée restaurée depuis la sauvegarde du jeu, avant et après](images/area-backup.webp)
 *À gauche : un polygone autour d'une cabane dont une partie du mur avant a disparu, **Revenir à une sauvegarde**
 choisi, la liste **Sauvegarde** ouverte sur la sauvegarde du jeu et **Vos constructions** activé. À droite : après
 **Revenir à la sauvegarde (Enter)**, le mur est de nouveau entier ; la ligne au-dessus du bouton nomme l'enregistrement
@@ -226,14 +226,14 @@ ligne) ou appliquez en direct (WorldEditorBridge 0.10.0 ou plus récent).
 > entrée de donjon, créature et objet au sol des zones disparaît ; les pierres tombales des joueurs restent. Les
 > animaux apprivoisés n'ont pas de bâtisseur, ils partent donc aussi : déplacez-les d'abord hors des zones.
 
-![Deux zones sous un cadre marquées pour réinitialisation, avec un contour rouge](images/area-reset.jpg)
+![Deux zones sous un cadre marquées pour réinitialisation, avec un contour rouge](images/area-reset.webp)
 *Un cadre sur deux zones, **Réinitialiser les zones** avec **Garder mes constructions** et **Annuler aussi leurs
 modifications du sol** activés, après **Réinitialiser les zones… (Enter)** : les deux zones ont un contour rouge, la
 barre d'état les compte. Rien n'est réinitialisé avant l'enregistrement.*
 
 ## Copier et coller
 
-![Collage d'un bois copié : la copie transparente suit le curseur, tournée, avec le panneau Coller](images/paste.jpg)
+![Collage d'un bois copié : la copie transparente suit le curseur, tournée, avec le panneau Coller](images/paste.webp)
 *Un bois copié de quelques dizaines d'arbres et de rochers suit le curseur, transparent et tourné de 30° ; la ligne en
 haut du panneau Coller dit ce que contient le presse-papiers. Un clic le pose.*
 
@@ -268,7 +268,7 @@ pièces de construction sans sa peinture. Elle se colle de la même façon.
 
 ### Coller
 
-![Une cabane collée trois fois vers le haut : une pile de trois étages à côté de l'originale](images/paste-stack.jpg)
+![Une cabane collée trois fois vers le haut : une pile de trois étages à côté de l'originale](images/paste-stack.webp)
 *Un seul clic avec **Copies** à 3 et **Axe** sur vers le haut, vu du sol : à côté de la cabane d'origine, trois copies
 empilées en trois étages (le contour est le prochain collage, qui suit le curseur).*
 
@@ -308,7 +308,7 @@ façonne le sol. La ligne en haut du panneau dit ce que contient le presse-papie
 rotation, miroir. La barre d'état dit ce que le collage a fait : « Collage effectué avec le sol, 54 objet(s),
 7 arbre(s), rocher(s) et autres retirés du site. »
 
-![Une cabane de pierre collée dans le flanc d'une butte avec Dégager le site, avant et après le clic](images/paste-clear-site.jpg)
+![Une cabane de pierre collée dans le flanc d'une butte avec Dégager le site, avant et après le clic](images/paste-clear-site.webp)
 *Avec **Dégager le site** activé (**Forme et peinture du sol** désactivé, **Hauteur** à -1.5 m) : à gauche, la copie
 transparente enfoncée dans le flanc d'une butte ; à droite, après le clic, le sol creusé autour de ses murs.*
 

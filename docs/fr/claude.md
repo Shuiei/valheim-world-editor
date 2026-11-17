@@ -8,7 +8,7 @@ dans la vue 3D.
 **Où :** page d'accueil, **Paramètres** → **Claude** · **Touche :** aucune · **Fonctionne dans :** mondes enregistrés,
 en direct (avec **Auto** désactivé), l'Atelier
 
-![Paramètres, Claude activé : les deux interrupteurs, Port 5731, Nouveau jeton, la commande Claude Code, les lignes de Claude Desktop, l'écoute ; à droite, Enregistrer](images/settings-claude.jpg)
+![Paramètres, Claude activé : les deux interrupteurs, Port 5731, Nouveau jeton, la commande Claude Code, les lignes de Claude Desktop, l'écoute ; à droite, Enregistrer](images/settings-claude.webp)
 *À gauche : la section **Claude** activée et à l'écoute ; copiez la commande dans un terminal (Claude Code) ou les
 lignes dans la configuration de Claude Desktop. À droite : le bas des Paramètres, avec **Enregistrer**. Votre commande
 contient votre propre jeton là où cette image indique `<token>`, et les lignes le chemin de votre propre programme.*
@@ -133,7 +133,7 @@ Les travaux du sol, les forêts et les donjons sont les plus faciles à demander
 pièce peuvent demander quelques allers-retours (« le toit dépasse côté est, corrige-le »), ou partir de l'un de vos
 plans.
 
-![L'Historique après que Claude a aplani, pavé et planté, avec un Élever à vous entre les deux : lignes étiquetées Claude et Annuler les modifications de Claude](images/claude-history.jpg)
+![L'Historique après que Claude a aplani, pavé et planté, avec un Élever à vous entre les deux : lignes étiquetées Claude et Annuler les modifications de Claude](images/claude-history.webp)
 *Les étapes de Claude sont nommées « Claude: … » et étiquetées **Claude** ; votre propre **Élever** se trouve entre
 elles. **Annuler les modifications de Claude**, en haut, retire les étapes de Claude et garde les vôtres.*
 

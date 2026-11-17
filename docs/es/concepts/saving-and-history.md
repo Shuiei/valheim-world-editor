@@ -117,7 +117,7 @@ que lo hizo **Claude** o que es de una **sesión anterior**. Por defecto conserv
 de 2 GB de memoria (a partir de ahí, los más antiguos se van primero); **Configuración → Historial → Pasos guardados**
 conserva solo ese número de pasos.
 
-![El panel Historial después de cinco ediciones, con la última deshecha](../images/history.jpg)
+![El panel Historial después de cinco ediciones, con la última deshecha](../images/history.webp)
 *El último paso se deshizo con **Volver hasta aquí**: aparece en gris y ofrece **Rehacer hasta aquí**.*
 
 Hay dos formas de volver atrás:

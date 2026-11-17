@@ -29,7 +29,7 @@ Die Kopie ist dein Weg zurück: Was immer du als Nächstes tust, du kannst die W
 3. Wähle im Seitenpanel in der Größenliste neben **In 3D bearbeiten** **3 × 3 Zonen (192 m)**, dann klicke auf **In 3D
    bearbeiten**.
 
-![Die Weltkarte, eine Zone gewählt, mit In 3D bearbeiten und der Größenliste](../images/map.jpg)
+![Die Weltkarte, eine Zone gewählt, mit In 3D bearbeiten und der Größenliste](../images/map.webp)
 *Die Karte: Ein Klick hat eine Zone gewählt (das blaue Quadrat); **In 3D bearbeiten** öffnet sie mit der daneben gewählten Größe.*
 
 **Was du sehen solltest:** die 3D-Ansicht deiner Basis und des Landes darum, die Werkzeugleiste links und die obere
@@ -42,7 +42,7 @@ Leiste mit „Alles gespeichert“. Ist die Ansicht weit weg, scrolle mit dem Ma
 3. Halte auf offenem Boden neben deiner Basis die linke Maustaste gedrückt und bewege die Maus ein paar
    Sekunden lang in kleinen Kreisen.
 
-![Der Pinsel Anheben über einem kleinen Hügel, sein Panel offen](../images/sculpt.jpg)
+![Der Pinsel Anheben über einem kleinen Hügel, sein Panel offen](../images/sculpt.webp)
 *Anheben: der Umriss des Pinsels auf dem Boden, ein daneben angehobener Hügel und das Panel mit **Größe** und **Stärke**.*
 
 **Was du sehen solltest:** Der Boden hebt sich unter dem Pinsel, und die obere Leiste zeigt „Ungespeichert: 1 Zone“ in Bernstein. Noch
@@ -54,7 +54,7 @@ wird nichts in die Welt geschrieben: Die Änderung ist [ausstehend](../concepts/
 2. Klicke im Panel **Platzieren** auf **Pinsel**, dann wähle unter **Vorgabe wählen** **Wiesenwäldchen**.
 3. Ziehe die Maus am Fuß deines Hügels entlang.
 
-![Der Pinsel von Platzieren pflanzt Bäume, die Vorgabe Wiesenwäldchen gewählt](../images/plant-brush.jpg)
+![Der Pinsel von Platzieren pflanzt Bäume, die Vorgabe Wiesenwäldchen gewählt](../images/plant-brush.webp)
 *Platzieren mit **Pinsel** und der Vorgabe **Wiesenwäldchen**: Der Pinsel zeigt die nächsten Bäume durchsichtig; die gepflanzten
 stehen um ihn herum.*
 
@@ -78,7 +78,7 @@ Mehr: [Einen Schritt rückgängig machen, eine Änderung zurücknehmen oder alle
 2. Lies die Frage: Sie sagt, was sie schreibt, und nennt den **Weltordner**. Prüfe, dass der Ordner deine Welt ist, nicht die
    Kopie, dann klicke auf **Speichern**.
 
-![Die Frage In die Welt speichern über einem angehobenen Hügel und neuen Bäumen: was geschrieben wird, der Weltordner, drei Warnungen, Speichern und Abbrechen](../images/save-confirm.jpg)
+![Die Frage In die Welt speichern über einem angehobenen Hügel und neuen Bäumen: was geschrieben wird, der Weltordner, drei Warnungen, Speichern und Abbrechen](../images/save-confirm.webp)
 *Die Frage vor dem Speichern: Prüfe die Zeile **Weltordner**, dann klicke auf **Speichern**.*
 
 **Was du sehen solltest:** Die Statusleiste sagt „1 Zone(n), … neue(s) Objekt(e) in Speicherstand #… gespeichert“, die obere Leiste zeigt „Alles

@@ -6,7 +6,7 @@ es enthält.
 
 **Wo:** Werkzeugleiste, Abschnitt **WERKZEUGE** · **Taste:** `E` · **Funktioniert in:** gespeicherten Welten, live, der Werkstatt
 
-![Ein ausgewählter Felsen mit seinen Pfeilen und seinem Ring](images/select-arrows.jpg)
+![Ein ausgewählter Felsen mit seinen Pfeilen und seinem Ring](images/select-arrows.webp)
 *Nah an einem ausgewählten Felsen: sein orangefarbener Umriss, die Pfeile rotes X, grünes Y und blaues Z, die ihn entlang einer Achse verschieben, und
 der orangefarbene Ring, der ihn dreht. Links ist das Panel Auswahl.*
 
@@ -63,7 +63,7 @@ Das Panel Auswahl, von oben nach unten.
 | Doppelklick auf einen Teil eines Schiffs | Wählt das ganze Schiff aus: siehe [Schiffe und andere verbundene Objekte](#schiffe-und-andere-verbundene-objekte). |
 | Klick auf leeren Boden oder `Alt+A` | Hebt die Auswahl auf. |
 
-![Drei Wandteile einer Hütte, mit Ctrl + Klick ausgewählt](images/select-ctrl-click.jpg)
+![Drei Wandteile einer Hütte, mit Ctrl + Klick ausgewählt](images/select-ctrl-click.webp)
 *Ein Klick auf ein Wandteil, dann `Ctrl` + Klick auf zwei weitere: Das zuletzt geklickte ist hellgelb umrandet,
 die anderen orange, und die Statusleiste zählt die drei.*
 
@@ -80,17 +80,17 @@ eine Wand.
 | `Ctrl` + Ziehen | Fügt hinzu, was das Rechteck erfasst. |
 | `Shift` + Ziehen | Nimmt es heraus. |
 
-![Alt + Ziehen über die rechte Hälfte einer Hütte](images/select-box-drawing.jpg)
+![Alt + Ziehen über die rechte Hälfte einer Hütte](images/select-box-drawing.webp)
 *`Alt` + Ziehen von der Mitte einer Hütte über ihre rechte Hälfte: Das Rechteck wird auf dem Bildschirm gezeichnet.*
 
-![Die rechte Hälfte der Hütte ausgewählt](images/select-box.jpg)
+![Die rechte Hälfte der Hütte ausgewählt](images/select-box.webp)
 *Nach dem Loslassen: 27 Bauteile umrandet, die Wände, der zwischen ihnen sichtbare Fußboden und die Feuerstelle; der Fußboden und die Truhe
 hinter der vorderen Wand bleiben außen vor. Die Statusleiste zählt die Objekte.*
 
-![Dasselbe Rechteck mit Durch Objekte wählen](images/select-through.jpg)
+![Dasselbe Rechteck mit Durch Objekte wählen](images/select-through.webp)
 *Dasselbe Rechteck mit **Durch Objekte wählen** an: 34 Bauteile, auch der Fußboden und die Truhe hinter der vorderen Wand.*
 
-![Ein Rechteck über einer Hütte mit Nur Bauteile](images/select-pick.jpg)
+![Ein Rechteck über einer Hütte mit Nur Bauteile](images/select-pick.webp)
 ***Erfasst: Nur Bauteile** und ein Rechteck über der ganzen Hütte zwischen Felsen und Büschen: allein die 58 Bauteile der Hütte.*
 
 Mit **Ziehen zeichnet: Ein Umriss auf dem Boden (alles darüber)** zeichnet Ziehen stattdessen einen Umriss auf dem Boden, und jedes
@@ -101,16 +101,16 @@ Um nach Art in einem genauen Rechteck oder Polygon auszuwählen (jeden Baum oder
 **Objekte auswählen (Enter)** sie aus und wechselt zu Auswahl, wo **Löschen** und **Auswahl ersetzen**
 auf sie wirken.
 
-![Alt + Ziehen um Felsen und Büsche](images/select-zone-drawing.jpg)
+![Alt + Ziehen um Felsen und Büsche](images/select-zone-drawing.webp)
 *`Alt` + Ziehen um Felsen und Büsche: Der Umriss wird gezeichnet, obwohl das Ziehen auf einem Busch begann.*
 
-![Die Auswahl, die der Umriss ergab](images/select-zone.jpg)
+![Die Auswahl, die der Umriss ergab](images/select-zone.webp)
 *Alles Gezeigte darin ist ausgewählt, und **GENAUE POSITION** zeigt, wo die Auswahl ist.*
 
-![Eine Wand angeklickt, dann Ganzes Gebäude](images/select-building.jpg)
+![Eine Wand angeklickt, dann Ganzes Gebäude](images/select-building.webp)
 *Ein Klick auf eine Wand, dann **Ganzes Gebäude**: Jedes verbundene Bauteil der Hütte ist ausgewählt.*
 
-![Eine halbe Hütte ausgeblendet, die die Truhe darin zeigt](images/select-hide.jpg)
+![Eine halbe Hütte ausgeblendet, die die Truhe darin zeigt](images/select-hide.webp)
 *Nah an der Hütte, nachdem `Ctrl+H` ihre umrahmte rechte Hälfte ausgeblendet hat: Die Truhe auf dem Fußboden darin ist frei zu sehen.
 `Alt+H` holt die Wände zurück.*
 
@@ -131,7 +131,7 @@ Die Statusleiste folgt dem Verschieben: „Verschiebe 12 Objekt(e): 4.5 m, gedre
 Objekt behält seine Daten: eine Truhe ihren Inhalt, ein Schild seinen Text, ein Bauteil seinen Erbauer. Siehe
 [Einrasten](concepts/objects.md#einrasten), wie ein Verschieben landet.
 
-![Eine ganz ausgewählte Hütte, deren roter X-Pfeil gezogen wird](images/select-moving.jpg)
+![Eine ganz ausgewählte Hütte, deren roter X-Pfeil gezogen wird](images/select-moving.webp)
 *Ziehen des roten X-Pfeils einer ganz ausgewählten Hütte: Die Statusleiste folgt dem Verschieben, „Verschiebe 40 Objekt(e): 4.5 m“.*
 
 ## Kopieren, ausschneiden und einfügen
@@ -149,7 +149,7 @@ siehe [das Panel Baupläne](workshop.md#panel-baupläne).
 Der Inspektor zeigt alles, was ein Objekt im Speicherstand enthält, und lässt dich es ändern. Öffne ihn mit **Daten ansehen (I)**
 oder per Doppelklick auf eine Truhe (oder ein beliebiges Objekt, das kein Bauteil ist).
 
-![Eine Truhe mit vier Gegenständen, geöffnet im Inspektor](images/inspector.jpg)
+![Eine Truhe mit vier Gegenständen, geöffnet im Inspektor](images/inspector.webp)
 *Nah an einer Truhe mit vier Gegenständen, geöffnet im Inspektor: ihre Plätze wie im Spiel, jeder mit dem Namen des Gegenstands und
 der Anzahl, dann jeder Wert unter DATEN.*
 

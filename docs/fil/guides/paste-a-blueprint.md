@@ -27,7 +27,7 @@ sa kanila ay ang player na pinili sa **Itinayo ni** sa [bar ng Pagtayo](../build
 habang nagpe-paste ka; walang nagtayo ang mga piece ng guho. Iniiwan ang mga piece mula sa mga mod na wala sa mundong
 ito, at inililista sila ng mensahe.
 
-![Isang naaaninag na kubo na sumusunod sa cursor, nakaikot nang 45°, kasama ang panel na I-paste at naka-off ang Linisin ang puwesto](../images/guide-paste-blueprint.jpg)
+![Isang naaaninag na kubo na sumusunod sa cursor, nakaikot nang 45°, kasama ang panel na I-paste at naka-off ang Linisin ang puwesto](../images/guide-paste-blueprint.webp)
 *Pagkatapos ng **I-paste**: sinusundan ng kubo ang cursor nang naaaninag, may balangkas ang sakop nito, nakaikot nang
 45° (`nakaikot nang 45°` sa panel na **I-paste**), naka-off ang **Linisin ang puwesto**. Sa likod nito, ang kubong
 pinagmulan nito.*

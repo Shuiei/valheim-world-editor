@@ -12,7 +12,7 @@ seguridad al lado, como en [Tu primera edición](first-edit.md).
 
 1. En la página de inicio, haz clic en **El Taller** y luego en **Abrir el Taller**.
 
-![El Taller en la página de inicio](../images/start-workshop.jpg)
+![El Taller en la página de inicio](../images/start-workshop.webp)
 *En la página de inicio, **El Taller**: **Abrir el Taller**, si Homestead está instalado, y tus planos (aquí tres; la
 primera vez no tienes ninguno).*
 
@@ -42,7 +42,7 @@ la cabaña.
 4. Busca `wood door`, haz clic en su casilla y pon la puerta en el hueco.
 5. Pon una segunda fila de paredes encima de la primera.
 
-![Una casa en el Taller, teñida por la comprobación de soporte](../images/workshop.jpg)
+![Una casa en el Taller, teñida por la comprobación de soporte](../images/workshop.webp)
 *La comprobación de soporte en una casa alta: la base de piedra en azul claro, las paredes de encima en verde, luego en
 amarillo y naranja a medida que se agota su soporte, y un voladizo en rojo: se caería.*
 
@@ -77,7 +77,7 @@ Homestead del martillo, listo para construirlo en el juego.
    vuelta.
 6. Haz clic para colocarla y luego pulsa `Esc` para dejar de pegar.
 
-![El panel Planos en un mundo, con una cabaña guardada](../images/blueprints.jpg)
+![El panel Planos en un mundo, con una cabaña guardada](../images/blueprints.webp)
 *El panel **Planos** junto a la barra de herramientas: una cabaña guardada con su imagen, su costo y su botón
 **Pegar**.*
 

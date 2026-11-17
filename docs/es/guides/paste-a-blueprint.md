@@ -26,7 +26,7 @@ constructor es el jugador elegido en **Construido por** en [la barra de construc
 que se muestra mientras pegas; las piezas de una ruina se quedan sin constructor. Las piezas de mods que este mundo no
 tiene se omiten, y el mensaje las enumera.
 
-![Una cabaña transparente que sigue al cursor, girada 45°, con el panel Pegar y Despejar el sitio desactivado](../images/guide-paste-blueprint.jpg)
+![Una cabaña transparente que sigue al cursor, girada 45°, con el panel Pegar y Despejar el sitio desactivado](../images/guide-paste-blueprint.webp)
 *Tras **Pegar**: la cabaña sigue al cursor, transparente, con su huella delineada, girada 45° (`turned 45°` en el
 panel **Pegar**), y **Despejar el sitio** desactivado. Detrás, la cabaña de la que se guardó.*
 

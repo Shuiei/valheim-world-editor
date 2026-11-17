@@ -7,7 +7,7 @@ na hora.
 **Você precisa de:** Valheim neste computador, o editor e uns 5 minutos para instalar o BepInEx e o plugin
 WorldEditorBridge uma vez.
 
-![Meu jogo antes da configuração: o cartão "Seu jogo precisa do BepInEx e do plugin WorldEditorBridge" com os três passos](../images/start-game-setup.jpg)
+![Meu jogo antes da configuração: o cartão "Seu jogo precisa do BepInEx e do plugin WorldEditorBridge" com os três passos](../images/start-game-setup.webp)
 *O que **Meu jogo** diz antes de o BepInEx e o plugin estarem instalados: os passos abaixo, em resumo.*
 
 1. Instale o **BepInEx** no seu Valheim, uma vez: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
@@ -28,7 +28,7 @@ WorldEditorBridge uma vez.
 7. Faça uma alteração, por exemplo erga um pequeno morro com o pincel **Elevar**.
 8. Pressione **Aplicar ao vivo** (ou `Ctrl+S`).
 
-![Meu jogo na página inicial: o Valheim está em execução com o mundo, o número de jogadores e o botão Editar ao vivo](../images/start-game.jpg)
+![Meu jogo na página inicial: o Valheim está em execução com o mundo, o número de jogadores e o botão Editar ao vivo](../images/start-game.webp)
 *A página inicial percebeu sozinha o jogo em execução: **Editar ao vivo** abre o mundo dele.*
 
 ## Verificar se funcionou

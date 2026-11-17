@@ -9,7 +9,7 @@ WorldEditorBridge doon at i-restart ito. Para sa game server na inuupahan mula s
 o sa isang pinapatakbo ng game panel gaya ng Pterodactyl sa loob ng container: tingnan ang
 [I-edit ang inuupahang server o server sa panel](edit-a-rented-server.md).
 
-![Ang form ng dedicated server: pangalan, address at SSH port ng server, user at password, SSH key file, token ng plugin, Valheim folder ng server, I-save ang password at Kumonekta](../images/start-server.jpg)
+![Ang form ng dedicated server: pangalan, address at SSH port ng server, user at password, SSH key file, token ng plugin, Valheim folder ng server, I-save ang password at Kumonekta](../images/start-server.webp)
 *Ang form sa ilalim ng **Isang dedicated server**. Pagkatapos ng unang koneksiyon, naka-save ang server sa itaas nito,
 para sa access sa isang click.*
 

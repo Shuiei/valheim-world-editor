@@ -6,7 +6,7 @@ Veja o mundo de uma semente antes que ele exista, busque entre muitas sementes u
 **Onde:** página inicial, **Criar** → **Um mundo novo** → **Criar um mundo novo** · **Tecla:** nenhuma ·
 **Funciona em:** a página inicial (nenhum mundo precisa estar aberto)
 
-![O mundo de uma semente na página Mundo novo: terra colorida por bioma, o ponto inicial, altares dos chefes e pontos dos comerciantes marcados, os dados à direita](images/new-world.jpg)
+![O mundo de uma semente na página Mundo novo: terra colorida por bioma, o ponto inicial, altares dos chefes e pontos dos comerciantes marcados, os dados à direita](images/new-world.webp)
 *O ponto vermelho é o ponto inicial, os losangos roxos são os altares dos chefes, os pontos amarelo, verde e rosa são
 os pontos dos comerciantes. A coluna da direita lista os dados da semente, aqui rolada até os altares mais próximos
 dos chefes.*
@@ -64,7 +64,7 @@ Valheim (alguns segundos, na primeira vez).
 
 ## Masmorras
 
-![A mesma semente com quatro tipos de masmorra mostrados como pequenos quadrados coloridos, e a lista Masmorras (a mais próxima)](images/new-world-dungeons.jpg)
+![A mesma semente com quatro tipos de masmorra mostrados como pequenos quadrados coloridos, e a lista Masmorras (a mais próxima)](images/new-world-dungeons.webp)
 *Quatro tipos ativados: cada pequeno quadrado é uma masmorra, e a cor é o tipo dela, como nos interruptores e em
 **Masmorras (a mais próxima)** (distância, bioma, quantas há no mundo e a até 2 km).*
 
@@ -100,7 +100,7 @@ Pântano. Uma massa de terra é terra ligada a terra sem atravessar água mais f
 
 ## Encontrar uma semente
 
-![Encontrar uma semente: a lista de desejos e depois as melhores sementes encontradas, cada uma como um pequeno mapa com a semente e a pontuação](images/new-world-find.jpg)
+![Encontrar uma semente: a lista de desejos e depois as melhores sementes encontradas, cada uma como um pequeno mapa com a semente e a pontuação](images/new-world-find.webp)
 *Os desejos (aqui uma grande massa de terra com terra em toda a volta, um Pântano em até 1500 m e uma Montanha em até
 2000 m, 150 sementes); as melhores sementes encontradas em **Sementes encontradas**, da melhor para a pior. A primeira
 foi clicada: a borda dela se acende e o mundo dela preenche o mapa grande.*

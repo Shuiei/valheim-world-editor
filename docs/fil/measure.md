@@ -8,7 +8,7 @@ habang gumagamit ka ng kahit anong tool.
 **Saan:** tool rail, seksiyong **GAMIT**; ang mga overlay sa panel na Tanaw · **Key:** `M` · **Gumagana sa:** mga
 naka-save na mundo, live
 
-![Isang sukat sa ibabaw ng bunton na naka-on ang kulay ng dahilig, at ang mga resulta sa panel na Pagsukat](images/measure.jpg)
+![Isang sukat sa ibabaw ng bunton na naka-on ang kulay ng dahilig, at ang mga resulta sa panel na Pagsukat](images/measure.webp)
 *Isang sukat mula sa paanan ng bunton hanggang sa ibabaw nito, naka-on ang kulay ng dahilig. Sumusunod ang linya sa
 lupa; ipinapakita ng panel ang layo, ang mga taas at ang dahilig.*
 
@@ -48,12 +48,12 @@ Kailangan ng dalawa ang **Itsura ng laro** (ang itsura ng lupa sa panel na Tanaw
 gumagamit ka ng ibang tool, at natatandaan. Tumatama ang mga linya ng taas sa mga multiple ng hakbang, kaya laging may
 linya sa antas ng dagat (30 m) at madaling sundan ang baybayin.
 
-![Mga linya ng taas bawat 2 m sa dalawang bunton at isang hukay, naka-scroll ang panel na Tanaw sa seksiyong LUPA nito](images/height-lines.jpg)
+![Mga linya ng taas bawat 2 m sa dalawang bunton at isang hukay, naka-scroll ang panel na Tanaw sa seksiyong LUPA nito](images/height-lines.webp)
 *Mga linya ng taas bawat 2 m sa dalawang bunton at isang hukay, naka-off ang mga hangganan ng zone. Ipinapakita ng
 panel na Tanaw ang **Linya ng taas bawat** 2 m sa ilalim ng **LUPA (itsura ng laro)**; mas madilim ang bawat ikalimang
 linya.*
 
-![Isang bunton na may banayad na gilid at hiwang bangin, kinulayan ayon sa dahilig; ang panel na Tanaw sa seksiyong LUPA nito](images/slope-colours.jpg)
+![Isang bunton na may banayad na gilid at hiwang bangin, kinulayan ayon sa dahilig; ang panel na Tanaw sa seksiyong LUPA nito](images/slope-colours.webp)
 *Kulay ng dahilig sa isang bunton: berde sa patag na lupa, saka dilaw-berde, dilaw at kahel paakyat sa banayad na
 gilid nito, at pula sa banging hiniwa rito. Ipinapakita ng panel na Tanaw na naka-check ang **Kulay ng dahilig** sa
 ilalim ng **LUPA (itsura ng laro)**.*

@@ -23,7 +23,7 @@ chefes que você quer, e depois crie o mundo.
 10. Inicie o Valheim e carregue o mundo uma vez antes de editá-lo no editor: o jogo cria cada lugar quando os jogadores
     chegam perto dele.
 
-![Encontrar uma semente: a lista de desejos e depois as melhores sementes encontradas, cada uma como um pequeno mapa com a semente e a pontuação](../images/new-world-find.jpg)
+![Encontrar uma semente: a lista de desejos e depois as melhores sementes encontradas, cada uma como um pequeno mapa com a semente e a pontuação](../images/new-world-find.webp)
 *Os desejos à esquerda; as melhores sementes em **Sementes encontradas**, a melhor primeiro, cada uma com a pontuação.*
 
 ## Verificar se funcionou

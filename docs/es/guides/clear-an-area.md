@@ -22,7 +22,7 @@ Quita los árboles, las rocas y los arbustos de un lugar y nivélalo para tener 
 11. Opcional: en **Acción**, elige **Pintar**, luego **Tierra** o **Pavimento**, y pulsa **Pintar (Enter)**.
 12. Haz clic en **Guardar en el mundo** (o **Aplicar en vivo**).
 
-![Parte de un bosque después de seleccionar y eliminar los objetos de un polígono: los árboles de dentro han desaparecido, con el panel Selección abierto](../images/area-polygon-done.jpg)
+![Parte de un bosque después de seleccionar y eliminar los objetos de un polígono: los árboles de dentro han desaparecido, con el panel Selección abierto](../images/area-polygon-done.webp)
 *Tras **Seleccionar los objetos (Enter)** y `Del`: los árboles de dentro del polígono han desaparecido; los de fuera
 siguen en pie.*
 

@@ -7,7 +7,7 @@ fois comme le marteau du jeu, ou le long d'une ligne, autour d'un cercle ou d'un
 **Où :** barre d'outils, section **ÉDITION** · **Touche :** `U` (dans l'Atelier, `T` aussi) · **Fonctionne dans :**
 les mondes enregistrés, en direct, l'[Atelier](workshop.md), et les salles d'un donjon avec [Construire ici](dungeons.md)
 
-![L'outil Bâtir dans un monde : une cabane sur un sol aplani, une clôture posée le long d'une ligne à côté, le panneau Bâtir en bas et la barre de construction à côté de la barre d'outils](images/build-world.jpg)
+![L'outil Bâtir dans un monde : une cabane sur un sol aplani, une clôture posée le long d'une ligne à côté, le panneau Bâtir en bas et la barre de construction à côté de la barre d'outils](images/build-world.webp)
 *Bâtir dans un monde : une cabane montée sur un sol aplani et une clôture de rondins posée le long d'une ligne de
 trois points (**Pose** sur **Ligne**, montrée avant **Placer (Enter)**). En bas : le panneau Bâtir avec les pièces de
 l'onglet **Bâtiment** et la rangée **Pose**. En haut : la barre de construction, avec **Aimantation**, **Grille**,
@@ -69,11 +69,11 @@ molette. Repliez le panneau avec **▾** pour gagner de la place.
 | **Placer (Enter)** | Pose ce que montre l'aperçu transparent, en une étape d'annulation. Un double-clic sur le dernier point d'une ligne fait de même. |
 | **Effacer la forme (Esc)** | Retire la ligne, la figure ou le cadre tracés. Ils restent après le placement, leur aperçu vide, jusqu'à ce que vous les effaciez. |
 
-![Une clôture le long d'une ligne passant par des points](images/plant-line.jpg)
+![Une clôture le long d'une ligne passant par des points](images/plant-line.webp)
 *Une clôture posée bout à bout le long d'une ligne passant par quatre points, transparente jusqu'à ce que `Enter` la
 pose.*
 
-![Un anneau de murs de pieux et un rectangle de murs de pierre sur deux couches](images/line-shapes.jpg)
+![Un anneau de murs de pieux et un rectangle de murs de pierre sur deux couches](images/line-shapes.webp)
 *Un **Cercle** (un anneau de murs de pieux) et un **Rectangle** (murs de pierre, **Couches** 2), chacun posé avec
 `Enter`.*
 
@@ -107,7 +107,7 @@ d'un cinquième de son pas (0,1 m pour 0,5 m). `R` tourne d'un quart de tour dan
 Maintenez `Alt` pendant la construction pour placer une pièce par quart de mètre, sans aimantation, quel que soit le
 réglage **Aimantation** (comme maintenir `Alt` en jeu, avec un pas). Voir [Aimantation](concepts/objects.md#aimantation).
 
-![Aimantation manuelle : un mur qui suit le pointeur à côté du mur de la cabane, son deuxième point d'aimantation marqué](images/workshop-snap-manual.jpg)
+![Aimantation manuelle : un mur qui suit le pointeur à côté du mur de la cabane, son deuxième point d'aimantation marqué](images/workshop-snap-manual.webp)
 ***Aimantation** sur **Manuel**, `E` pressé une fois : la barre indique `Point 2 sur 4 · Q / E`, et le mur
 transparent qui suit le pointeur rejoint le mur de la cabane par son coin supérieur, marqué d'une croix.*
 

@@ -8,7 +8,7 @@ itabi ito bilang blueprint na maitatayo sa laro o mai-paste sa kahit anong mundo
 seksiyong **LIKHA**) → **Bagong blueprint** · **Key:** wala · **Gumagana sa:** sariling plot ng Gawaan (gumagana ang
 panel na **Blueprints** sa mga naka-save na mundo at live)
 
-![Isang matangkad na bahay na bato at kahoy sa plot, kinulayan mula mapusyaw na asul sa pundasyon hanggang kahel sa itaas, pula ang nakausli nito](images/workshop.jpg)
+![Isang matangkad na bahay na bato at kahoy sa plot, kinulayan mula mapusyaw na asul sa pundasyon hanggang kahel sa itaas, pula ang nakausli nito](images/workshop.webp)
 *Isang matangkad na bahay na naka-on ang **Suri ng suporta**: mapusyaw na asul ang batong pundasyon, berde ang mga
 dingding na kahoy sa itaas, saka dilaw, saka kahel malapit sa itaas, at ang nakausling lumalabas mula sa pinakamataas na
 hanay ay kahel, saka pula. Nakasulat sa top bar ang `111 piece · 1 ang babagsak · naka-save`.*
@@ -37,7 +37,7 @@ Para baguhin ang naka-save na blueprint, i-click ito sa ilalim ng **Mga blueprin
 **Home**), o i-click ang **Buksan** sa tabi nito sa aklatan (ang panel na Blueprints ng isang mundo, o ang tab na
 **Aklatan** ng Gawaan).
 
-![Ang Gawaan sa panimulang pahina](images/start-workshop.jpg)
+![Ang Gawaan sa panimulang pahina](images/start-workshop.webp)
 *Ang **Ang Gawaan** ng panimulang pahina: **Buksan ang Gawaan**, **Kunin ang Homestead** (hindi ito naka-install
 dito), at tatlong blueprint sa ilalim ng **Mga blueprint mo**, bawat isa kasama ang larawan nito, mula sa pinakabago.*
 
@@ -63,7 +63,7 @@ sa antas ng lupa, ay ang **angkla** ng blueprint, ang puntong pinagsusukatan ng 
 Walang **Itapon**: mag-undo, o buksan ulit ang blueprint. Magtatanong muna kapag aalis nang hindi naka-save bilang
 blueprint ang gusali (**Simula**, pagbukas ng iba, pagsara).
 
-![Ang Gawaan na may maliit na kubong kahoy sa plot at ang panel ng Pagtayo sa mga piece nitong kahoy](images/workshop-overview.jpg)
+![Ang Gawaan na may maliit na kubong kahoy sa plot at ang panel ng Pagtayo sa mga piece nitong kahoy](images/workshop-overview.webp)
 *Ang Gawaan na may maliit na kubo sa plot: ang rail na may **Pagtayo**, **Pagpili** at **Tanaw** lang, ang bar ng
 Pagtayo katabi nito; ang top bar na may **Simula**, **Suri ng suporta**, ang bilang ng piece, **I-save ang blueprint** at
 **Mga materyales**; ang panel na **Mga materyales** sa kanan; ang dock ng Pagtayo sa ibaba sa tab na **Gusali**, kasama
@@ -130,7 +130,7 @@ isang grid: tingnan ang
 | `Shift` + right click | Inaalis ang piece sa ilalim ng pointer (ibinabalik ito ng `Ctrl+Z`). Iniikot pa rin ng right drag ang view, at idinudulas pa rin ito ng `Shift` + right drag. |
 | Middle click | Nagtatayo gamit ang uri ng piece sa ilalim ng pointer, gaya ng eyedropper: napipili ito sa dock at nauuna sa ilalim ng **Kamakailan**. Idinudulas pa rin ng middle drag ang view. |
 
-![Isang hanay ng mga dingding na dina-drag palabas sa tabi ng kubo](images/workshop-row.jpg)
+![Isang hanay ng mga dingding na dina-drag palabas sa tabi ng kubo](images/workshop-row.webp)
 *Isang drag mula sa kaliwa: isang hanay ng mga dingding na kahoy na inilatag nang dulo sa dulo, naaaninag hanggang
 bitawan ang button.*
 
@@ -142,7 +142,7 @@ Hawak ng bar katabi ng tool rail kung paano ilalapag ang piece: **Kapit** (**Aut
 
 ### Tab na Aklatan
 
-![Ang tab na Aklatan na may dalawang blueprint at isang paghahanap](images/workshop-library.jpg)
+![Ang tab na Aklatan na may dalawang blueprint at isang paghahanap](images/workshop-library.webp)
 *Ang tab na **Aklatan** na naghahanap ng "hut": ang paghahanap, **I-import ang file…**, **Bagong blueprint** at **Bumuo
 ng dungeon…** sa itaas na hanay ng dock, saka ang dalawang kubo na magkatabi (hindi kasama ang matangkad na bahay), bawat
 isa kasama ang larawan, mga piece, gastos, paglalarawan, mga tag at ang mga button nitong **Idagdag**, **Buksan**,
@@ -210,7 +210,7 @@ makakausli; mas malayo ang naaabot na usli ng kahoy pero hindi kasingtaas. Tingn
 
 ### Hiwa
 
-![Ang parehong bahay na may Hiwa, tinitingnan mula sa itaas](images/workshop-cut.jpg)
+![Ang parehong bahay na may Hiwa, tinitingnan mula sa itaas](images/workshop-cut.webp)
 *Ang parehong bahay na may **Hiwa sa 3 m**, tinitingnan mula sa itaas: nakatago ang lahat ng nasa itaas ng 3 m, kaya
 nakikita mo ang loob ng ground floor nito, kasama ang fire pit, ang kama, ang mesa at ang chest.*
 
@@ -237,7 +237,7 @@ background), na ginagamit ng Homestead bilang icon nito. Iginuguhit ito gamit an
 editor ang mga ito, kung hindi ay ang hugis ng bawat piece sa kulay ng materyal nito. Ang blueprint na ginawa sa ibang
 lugar nang walang larawan ay iginuguhitan ng isa sa aklatan, sa memory lang.
 
-![Ang dialog na I-save ang blueprint sa ibabaw ng maliit na kubo: pangalan, paglalarawan, mga tag, ang switch ng dungeon at ang gastos](images/workshop-save-dialog.jpg)
+![Ang dialog na I-save ang blueprint sa ibabaw ng maliit na kubo: pangalan, paglalarawan, mga tag, ang switch ng dungeon at ang gastos](images/workshop-save-dialog.webp)
 *Pag-save ng kubo: **Pangalan** "Small hut", **Paglalarawan** "A hut with a fire pit", **Mga tag** "house, wood",
 naka-off ang **Isang dungeon**, at ang linyang **Gastos sa laro** sa itaas ng **I-save**.*
 
@@ -256,7 +256,7 @@ Ang iniingatan:
 
 ## Panel na Blueprints
 
-![Ang panel na Blueprints na may naka-save na kubo](images/blueprints.jpg)
+![Ang panel na Blueprints na may naka-save na kubo](images/blueprints.webp)
 *Ang panel na **Blueprints** sa isang mundo: ang banner ng Homestead, **Maghanap ng blueprint** at **I-import ang
 file…**, **Bagong blueprint**, ang **Clipboard** kasama ang **I-paste** at **I-save bilang blueprint…**, saka isang
 naka-save na kubo kasama ang larawan, mga piece, gastos at ang mga button nitong **I-paste**, **Buksan**,

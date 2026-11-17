@@ -11,7 +11,7 @@ de backup ao lado, como em [Sua primeira edição](first-edit.md).
 
 1. Na página inicial, clique em **A Oficina** e depois em **Abrir a Oficina**.
 
-![A Oficina na página inicial](../images/start-workshop.jpg)
+![A Oficina na página inicial](../images/start-workshop.webp)
 *Na página inicial, **A Oficina**: **Abrir a Oficina**, se o Homestead está instalado, e os seus projetos (três aqui; os
 seus estão vazios na primeira vez).*
 
@@ -40,7 +40,7 @@ suporte total. A barra superior conta "4 peça(s) · não salvo como projeto" e,
 4. Busque `wood door`, clique no bloco dela e coloque a porta na abertura.
 5. Coloque uma segunda fileira de paredes em cima da primeira.
 
-![Uma casa na Oficina, tingida pela verificação de suporte](../images/workshop.jpg)
+![Uma casa na Oficina, tingida pela verificação de suporte](../images/workshop.webp)
 *A verificação de suporte numa casa alta: a base de pedra em azul-claro, as paredes acima em verde, depois amarelo e
 laranja à medida que o suporte acaba, e uma saliência em vermelho: ela cairia.*
 
@@ -74,7 +74,7 @@ martelo do Homestead, pronto para construir no jogo.
 5. Mova o mouse sobre terreno aberto: a cabana o acompanha, transparente. Pressione `R` para girá-la um quarto de volta.
 6. Clique para colocá-la e depois pressione `Esc` para parar de colar.
 
-![O painel Projetos num mundo, com uma cabana salva](../images/blueprints.jpg)
+![O painel Projetos num mundo, com uma cabana salva](../images/blueprints.webp)
 *O painel **Projetos** ao lado da barra de ferramentas: uma cabana salva com a imagem, o custo e o botão **Colar**.*
 
 **O que você deve ver:** a cabana de pé no terreno. Com **Limpar o local** ligado no painel Colar (ele vem ligado), o

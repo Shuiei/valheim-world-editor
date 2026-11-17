@@ -9,7 +9,7 @@ Plugin WorldEditorBridge zu installieren und den Server neu zu starten. Für ein
 Spieleserver (ein Web-Panel und FTP, kein SSH) oder einen, den ein Spiele-Panel wie Pterodactyl in einem Container
 ausführt: siehe [Einen gemieteten oder über ein Panel gehosteten Server bearbeiten](edit-a-rented-server.md).
 
-![Das Formular für dedizierte Server: Name, Serveradresse und SSH-Port, Benutzer und Passwort, SSH-Schlüsseldatei, Plugin-Token, Valheim-Ordner des Servers, Passwort speichern und Verbinden](../images/start-server.jpg)
+![Das Formular für dedizierte Server: Name, Serveradresse und SSH-Port, Benutzer und Passwort, SSH-Schlüsseldatei, Plugin-Token, Valheim-Ordner des Servers, Passwort speichern und Verbinden](../images/start-server.webp)
 *Das Formular unter **Ein dedizierter Server**. Nach der ersten Verbindung wird der Server darüber gespeichert, für
 den Zugriff mit einem Klick.*
 

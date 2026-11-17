@@ -45,7 +45,7 @@ die Steam-Bibliotheken erneut). Sagt die Karte **Die Spieloptik konnte nicht gel
 versuchen** oder prüfe den Ordner in den Einstellungen; schlägt es wieder fehl, melde es mit dem Protokoll
 ([unten](#das-protokoll-und-fehlerberichte)).
 
-![Startseite, Valheim nicht gefunden: die Karte Spieloptik holen mit ihren vier Schritten, dem Ordnerfeld, Durchsuchen… und Verwenden](../images/start-valheim-missing.jpg)
+![Startseite, Valheim nicht gefunden: die Karte Spieloptik holen mit ihren vier Schritten, dem Ordnerfeld, Durchsuchen… und Verwenden](../images/start-valheim-missing.webp)
 *„Valheim wurde auf diesem Computer nicht gefunden.“: wähle den Ordner mit `valheim_Data`, dann **Verwenden**.*
 
 ## Mein Spiel zeigt noch zu erledigende Schritte
@@ -104,7 +104,7 @@ live erreichen: bearbeite stattdessen die Dateien seiner Welt, wie in
 Mit **Eigener Tunnel vorhanden** bedeuten „Nothing answers on 127.0.0.1:…“ (nichts antwortet) oder „No answer from
 127.0.0.1:… within … s“ (keine Antwort innerhalb von … s), dass dein Tunnel nicht offen ist oder der Server nicht mit dem Plugin läuft.
 
-![Das Formular Ein dedizierter Server, ausgefüllt für 127.0.0.1, SSH-Port 2222, nach Verbinden: die Meldung „No answer from 127.0.0.1:2222“ unter der Schaltfläche](../images/start-server-error.jpg)
+![Das Formular Ein dedizierter Server, ausgefüllt für 127.0.0.1, SSH-Port 2222, nach Verbinden: die Meldung „No answer from 127.0.0.1:2222“ unter der Schaltfläche](../images/start-server-error.webp)
 *Verbinden gedrückt, ohne dass unter der Adresse etwas antwortet: „No answer from 127.0.0.1:2222. Check the address and
 that SSH is enabled on the server.“ (Keine Antwort; prüfe die Adresse und ob SSH aktiviert ist.) Prüfe **Serveradresse** und **SSH-Port**.*
 
@@ -161,7 +161,7 @@ Welt gelesen hat, speichert **In Welt speichern** nichts und fragt **Das Spiel h
    geschrieben.
 4. Schließe Valheim (oder stoppe den Server) und drücke dann erneut **In Welt speichern**.
 
-![Die Frage Das Spiel hat diese Welt gespeichert: was passiert ist, was Meine Änderungen übertragen tut, und die Schaltflächen Meine Änderungen übertragen und Nicht jetzt](../images/game-saved-replay.jpg)
+![Die Frage Das Spiel hat diese Welt gespeichert: was passiert ist, was Meine Änderungen übertragen tut, und die Schaltflächen Meine Änderungen übertragen und Nicht jetzt](../images/game-saved-replay.webp)
 *Speichern abgelehnt, weil das Spiel die Welt gespeichert hat, nachdem der Editor sie gelesen hat: **Meine Änderungen
 übertragen** wiederholt deine Änderungen auf dem Speicherstand des Spiels.*
 

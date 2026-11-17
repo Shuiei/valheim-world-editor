@@ -33,7 +33,7 @@ Les villages fuling et les fermes des Prairies sont disposés de la même façon
 
 ### Salles, ouvertures et culs-de-sac
 
-![Un donjon Chambre funéraire fait des salles du jeu, ouvert en coupe, des carrés orange et bleus là où les salles se rejoignent](../images/dungeon-rooms.jpg)
+![Un donjon Chambre funéraire fait des salles du jeu, ouvert en coupe, des carrés orange et bleus là où les salles se rejoignent](../images/dungeon-rooms.webp)
 *Un donjon du jeu à 5 000 m d'altitude, ses toits retirés : chaque salle est une entrée de la liste. Les carrés marquent
 l'endroit où deux salles se rejoignent : bleu avec une porte, orange sans.*
 

@@ -5,7 +5,7 @@ Valheim divide su mundo en **zonas** cuadradas de 64 m, y el editor abre un bloq
 Esto explica por qué algunos lugares todavía no se pueden guardar, por qué el borde del área nunca se mueve y por qué un
 área grande es lenta.
 
-![Un área de 5 × 5 vista desde arriba con los bordes de sus zonas, rotulada: una zona de 64 m, el área de 320 m, su borde bloqueado y la línea de Seguir 12 m hacia dentro](../images/concept-area-zones.jpg)
+![Un área de 5 × 5 vista desde arriba con los bordes de sus zonas, rotulada: una zona de 64 m, el área de 320 m, su borde bloqueado y la línea de Seguir 12 m hacia dentro](../images/concept-area-zones.webp)
 *El área es un bloque de zonas. Su línea exterior de puntos del suelo (amarilla) nunca cambia; con **Seguir**
 activado, se añaden zonas cuando el punto que miras cruza la línea discontinua, 12 m hacia dentro.*
 

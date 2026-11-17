@@ -7,7 +7,7 @@ partes planas de uma colina, nivele o fundo de um vale sem tocar nas encostas, p
 **Onde:** o cartão **Máscara** ao lado do painel da ferramenta · **Tecla:** nenhuma (`Alt`+`Shift`+clique define uma
 faixa de altura) · **Funciona em:** mundos salvos, ao vivo
 
-![O mesmo traço largo de Pavimentado sobre um monte, com a Máscara desligada e ligada, e o cartão Máscara](images/mask.jpg)
+![O mesmo traço largo de Pavimentado sobre um monte, com a Máscara desligada e ligada, e o cartão Máscara](images/mask.webp)
 *O mesmo traço largo de pintura Pavimentado sobre um monte. À esquerda, Máscara desligada: tudo fica pavimentado. À
 direita, Máscara ligada com declives abaixo de 15°: o terreno plano fica pavimentado, as encostas íngremes do monte
 não. O cartão Máscara fica ao lado do painel da ferramenta.*
@@ -38,7 +38,7 @@ para onde você aponta.
 Um aviso laranja aparece embaixo das configurações quando elas não deixam passar nada: um declive máximo de 0°, ou um
 mínimo acima do máximo.
 
-![O cartão Máscara com Declive mín. 30 e máx. 10, e o aviso laranja de que nada corresponde](images/mask-warning.jpg)
+![O cartão Máscara com Declive mín. 30 e máx. 10, e o aviso laranja de que nada corresponde](images/mask-warning.webp)
 *Declive mín. de 30° está acima do máx. de 10°, então o cartão avisa em laranja: "O declive mín. está acima do máx.:
 nada corresponde."*
 

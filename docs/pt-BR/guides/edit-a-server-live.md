@@ -9,7 +9,7 @@ WorldEditorBridge e para reiniciá-lo. Um servidor de jogo alugado de uma hosped
 um que um painel de jogos como o Pterodactyl roda num contêiner: veja
 [Editar um servidor alugado ou hospedado num painel](edit-a-rented-server.md).
 
-![O formulário do servidor dedicado: nome, endereço do servidor e porta SSH, usuário e senha, arquivo de chave SSH, token do plugin, a pasta do Valheim no servidor, Salvar senha e Conectar](../images/start-server.jpg)
+![O formulário do servidor dedicado: nome, endereço do servidor e porta SSH, usuário e senha, arquivo de chave SSH, token do plugin, a pasta do Valheim no servidor, Salvar senha e Conectar](../images/start-server.webp)
 *O formulário em **Um servidor dedicado**. Depois da primeira conexão, o servidor fica salvo acima dele, para acesso
 com um clique.*
 

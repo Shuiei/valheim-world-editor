@@ -22,7 +22,7 @@ wala pang pasukan ng dungeon (gumawa muna ng backup: tingnan ang [Mag-backup ng 
 9. I-click ang **Pumunta sa pasukan** para bumalik pababa.
 10. I-click ang **I-save sa mundo** (o **I-apply nang live**).
 
-![Ang pasukan ng isang binuong dungeon sa lupa](../images/dungeon-entrance.jpg)
+![Ang pasukan ng isang binuong dungeon sa lupa](../images/dungeon-entrance.webp)
 *Ang pasukan pagkatapos ng **Ilagay sa mundo**: ang punso ng isang burial chamber, nakaharap sa camera ang pinto nito.*
 
 Para baguhin nang mano-mano ang dungeon bago ito ilagay (ilipat ang mga kasangkapan, punuin ang mga chest), i-save (o

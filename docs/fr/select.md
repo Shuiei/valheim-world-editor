@@ -7,7 +7,7 @@ ouvrez-en un dans l'Inspecteur pour voir et modifier ce qu'il contient.
 **Où :** barre d'outils, section **OUTILS** · **Touche :** `E` · **Fonctionne dans :** mondes enregistrés, en direct,
 l'Atelier
 
-![Un rocher sélectionné, avec ses flèches et son anneau](images/select-arrows.jpg)
+![Un rocher sélectionné, avec ses flèches et son anneau](images/select-arrows.webp)
 *De près, un rocher sélectionné : son contour orange, les flèches X rouge, Y verte et Z bleue qui le déplacent le long
 d'un axe, et l'anneau orange qui le tourne. Le panneau Sélection est à gauche.*
 
@@ -65,7 +65,7 @@ Le panneau Sélection, de haut en bas.
 | Double-clic sur une partie d'un bateau | Sélectionne le bateau entier : voir [Bateaux et autres objets liés](#bateaux-et-autres-objets-liés). |
 | Clic sur un sol vide, ou `Alt+A` | Vide la sélection. |
 
-![Trois pièces de mur d'une cabane sélectionnées avec Ctrl + clic](images/select-ctrl-click.jpg)
+![Trois pièces de mur d'une cabane sélectionnées avec Ctrl + clic](images/select-ctrl-click.webp)
 *Un clic sur une pièce de mur, puis `Ctrl` + clic sur deux autres : la dernière cliquée est entourée d'un jaune plus
 clair, les autres d'orange, et la barre d'état compte les trois.*
 
@@ -82,18 +82,18 @@ et le haut des murs ; de côté, un mur.
 | `Ctrl` + glisser | Ajoute ce que prend le rectangle. |
 | `Shift` + glisser | Le retire. |
 
-![Alt + glisser sur la moitié droite d'une cabane](images/select-box-drawing.jpg)
+![Alt + glisser sur la moitié droite d'une cabane](images/select-box-drawing.webp)
 *`Alt` + glisser depuis le milieu d'une cabane sur sa moitié droite : le rectangle est tracé à l'écran.*
 
-![La moitié droite de la cabane sélectionnée](images/select-box.jpg)
+![La moitié droite de la cabane sélectionnée](images/select-box.webp)
 *Après avoir relâché : 27 pièces entourées, les murs, le plancher visible entre eux et le foyer ; le plancher et le
 coffre cachés derrière le mur de devant sont exclus. La barre d'état compte les objets.*
 
-![Le même rectangle avec Sélectionner à travers](images/select-through.jpg)
+![Le même rectangle avec Sélectionner à travers](images/select-through.webp)
 *Le même rectangle avec **Sélectionner à travers** activé : 34 pièces, le plancher et le coffre derrière le mur de
 devant aussi.*
 
-![Un rectangle sur une cabane avec Pièces construites uniquement](images/select-pick.jpg)
+![Un rectangle sur une cabane avec Pièces construites uniquement](images/select-pick.webp)
 ***Sélectionne : Pièces construites uniquement** et un rectangle sur toute la cabane au milieu des rochers et des
 buissons : les 58 pièces de la cabane seules.*
 
@@ -106,16 +106,16 @@ là où le [Masque](masks.md) laisse passer le sol), utilisez l'outil [Région](
 **Objets**, son **Sélectionner les objets (Enter)** les sélectionne et passe à Sélection, où **Supprimer** et
 **Remplacer la sélection** agissent sur eux.
 
-![Alt + glisser autour de rochers et de buissons](images/select-zone-drawing.jpg)
+![Alt + glisser autour de rochers et de buissons](images/select-zone-drawing.webp)
 *`Alt` + glisser autour de rochers et de buissons : le contour est tracé même si le glissé a commencé sur un buisson.*
 
-![La sélection faite par le contour](images/select-zone.jpg)
+![La sélection faite par le contour](images/select-zone.webp)
 *Tout ce qui est affiché à l'intérieur est sélectionné, et **POSITION EXACTE** montre où se trouve la sélection.*
 
-![Un mur cliqué, puis Bâtiment entier](images/select-building.jpg)
+![Un mur cliqué, puis Bâtiment entier](images/select-building.webp)
 *Un clic sur un mur, puis **Bâtiment entier** : chaque pièce reliée de la cabane est sélectionnée.*
 
-![La moitié d'une cabane masquée, montrant le coffre à l'intérieur](images/select-hide.jpg)
+![La moitié d'une cabane masquée, montrant le coffre à l'intérieur](images/select-hide.webp)
 *De près, la cabane après que `Ctrl+H` a masqué sa moitié droite encadrée : le coffre posé sur le plancher à
 l'intérieur est bien visible. `Alt+H` ramène les murs.*
 
@@ -137,7 +137,7 @@ La barre d'état suit le déplacement : « Déplacement de 12 objet(s) : 4.5 
 woodwall ». Un objet déplacé garde ses données : un coffre son contenu, un panneau son texte, une pièce son
 constructeur. Voir [Aimantation](concepts/objects.md#aimantation) pour savoir où atterrit un déplacement.
 
-![Une cabane sélectionnée entière, sa flèche X rouge en train d'être tirée](images/select-moving.jpg)
+![Une cabane sélectionnée entière, sa flèche X rouge en train d'être tirée](images/select-moving.webp)
 *En faisant glisser la flèche X rouge d'une cabane sélectionnée entière : la barre d'état suit le déplacement,
 « Déplacement de 40 objet(s) : 4.5 m ».*
 
@@ -157,7 +157,7 @@ sur sa ligne **Copie** : voir [le panneau Plans](workshop.md#panneau-plans).
 L'Inspecteur montre tout ce qu'un objet contient dans la sauvegarde et vous permet de le modifier. Ouvrez-le avec
 **Inspecter les données (I)**, ou double-cliquez sur un coffre (ou tout objet qui n'est pas une pièce de construction).
 
-![Un coffre de quatre objets ouvert dans l'Inspecteur](images/inspector.jpg)
+![Un coffre de quatre objets ouvert dans l'Inspecteur](images/inspector.webp)
 *De près, un coffre contenant quatre objets, ouvert dans l'Inspecteur : ses emplacements comme en jeu, chacun avec le
 nom de l'objet et le nombre, puis chaque valeur sous DONNÉES.*
 

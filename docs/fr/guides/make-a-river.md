@@ -24,7 +24,7 @@ que là où son lit est sous 30 m.
    **Aplanir (Enter)**.
 8. Cliquez sur **Enregistrer dans le monde** (ou **Appliquer en direct**).
 
-![Une rivière creusée à travers la zone, l'eau affichée](../images/path-river.jpg)
+![Une rivière creusée à travers la zone, l'eau affichée](../images/path-river.webp)
 *Une rivière creusée avec Rivière / canal (eau) : la mer la remplit.*
 
 ## Vérifier le résultat

@@ -21,7 +21,7 @@ que vous regrettez, sans ramener en arrière le reste du monde.
 7. Appuyez sur **Revenir à la sauvegarde (Enter)**.
 8. Regardez le résultat. S'il est bon, **Enregistrer dans le monde** (ou **Appliquer en direct**).
 
-![Une cabane saccagée restaurée depuis la sauvegarde du jeu, avant et après](../images/area-backup.jpg)
+![Une cabane saccagée restaurée depuis la sauvegarde du jeu, avant et après](../images/area-backup.webp)
 *À gauche : un polygone autour d'une cabane dont une partie du mur avant a disparu, **Revenir à une sauvegarde**
 choisi, la liste **Sauvegarde** ouverte sur la sauvegarde du jeu et **Vos constructions** activé. À droite : après
 **Revenir à la sauvegarde (Enter)**, le mur est de nouveau entier ; la ligne au-dessus du bouton nomme l'enregistrement

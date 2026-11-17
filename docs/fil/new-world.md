@@ -7,7 +7,7 @@ mundo.
 **Saan:** panimulang pahina, **Likha** → **Isang bagong mundo** → **Gumawa ng bagong mundo** · **Key:** wala ·
 **Gumagana sa:** ang panimulang pahina (hindi kailangang may nakabukas na mundo)
 
-![Mundo ng isang seed sa pahina ng Isang bagong mundo: kalupaang kinulayan ayon sa biome, minarkahan ang simula, mga altar ng boss at mga puwesto ng trader, ang mga detalye ng seed sa kanan](images/new-world.jpg)
+![Mundo ng isang seed sa pahina ng Isang bagong mundo: kalupaang kinulayan ayon sa biome, minarkahan ang simula, mga altar ng boss at mga puwesto ng trader, ang mga detalye ng seed sa kanan](images/new-world.webp)
 *Ang pulang tuldok ang simula, ang mga lilang diyamante ang mga altar ng boss, ang mga dilaw, berde at rosas na tuldok
 ang mga puwesto ng trader. Inililista ng hanay sa kanan ang mga detalye ng seed, dito naka-scroll pababa sa
 pinakamalapit na mga altar ng boss.*
@@ -66,7 +66,7 @@ file ng Valheim mo (ilang segundo, sa unang pagkakataon).
 
 ## Mga dungeon
 
-![Ang parehong seed na may apat na uri ng dungeon na ipinapakita bilang maliliit na may-kulay na parisukat, at ang listahang Mga dungeon (pinakamalapit)](images/new-world-dungeons.jpg)
+![Ang parehong seed na may apat na uri ng dungeon na ipinapakita bilang maliliit na may-kulay na parisukat, at ang listahang Mga dungeon (pinakamalapit)](images/new-world-dungeons.webp)
 *Apat na uri ang naka-on: bawat maliit na parisukat ay isang dungeon, ang kulay nito ang uri nito, gaya sa mga switch
 at sa **Mga dungeon (pinakamalapit)** (layo, biome, ilan sa mundo at sa loob ng 2 km).*
 
@@ -103,7 +103,7 @@ ay lupang nakadugtong sa lupa nang hindi tumatawid sa mas malalim na tubig.
 
 ## Paghahanap ng seed
 
-![Paghahanap ng seed: ang listahan ng mga hiling, saka ang pinakamahusay na mga seed na nahanap, bawat isa ay maliit na mapa kasama ang seed at iskor nito](images/new-world-find.jpg)
+![Paghahanap ng seed: ang listahan ng mga hiling, saka ang pinakamahusay na mga seed na nahanap, bawat isa ay maliit na mapa kasama ang seed at iskor nito](images/new-world-find.webp)
 *Ang mga hiling (dito, malaking kalupaan na may lupa sa buong paligid, Swamp sa loob ng 1500 m at Mountain sa loob ng
 2000 m, 150 seed); ang pinakamahusay na mga seed na nahanap sa ilalim ng **Mga nahanap na seed**, mula sa
 pinakamahusay. Na-click ang una: lumiliwanag ang hangganan nito at pinupuno ng mundo nito ang malaking mapa.*

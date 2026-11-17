@@ -24,7 +24,7 @@ lawa kung saan nasa ibaba ng 30 m ang sahig nito.
    pindutin ang **Patagin (Enter)**.
 8. I-click ang **I-save sa mundo** (o **I-apply nang live**).
 
-![Isang ilog na hinukay sa kabila ng zone, ipinapakita ang tubig](../images/path-river.jpg)
+![Isang ilog na hinukay sa kabila ng zone, ipinapakita ang tubig](../images/path-river.webp)
 *Isang ilog na hinukay gamit ang Ilog / kanal (tubig): pinupuno ito ng dagat.*
 
 ## Tingnan kung gumana

@@ -170,7 +170,7 @@ tinge cada peça com as cores do modo de construção do jogo:
 | Grausten | 2000 | 100 | 33 % | 10 % |
 | Antigo | 5000 | 100 | 25 % | 7 % |
 
-![Paredes de pedra com uma saliência vermelha ao lado de paredes de madeira cuja saliência passa de verde a amarelo e laranja](../images/concept-support-stone-wood.jpg)
+![Paredes de pedra com uma saliência vermelha ao lado de paredes de madeira cuja saliência passa de verde a amarelo e laranja](../images/concept-support-stone-wood.webp)
 *À esquerda, três paredes de pedra empilhadas: azul-claro no terreno, verde acima, e a parede que avança 2 m a partir do
 topo em vermelho, com o "1 cairiam" na barra superior. À direita, paredes de madeira avançando 6 m a partir de um
 poste: verde, depois amarelo, depois laranja.*
@@ -260,7 +260,7 @@ Os **ninhos de criaturas** são o tipo visível: ninhos de greydwarf, pilhas de 
 fazendo criaturas surgirem ao redor deles até serem destruídos ("Greydwarf, Greydwarf_Elite · até 3 ao redor, num raio
 de 5 m").
 
-![Pontos de surgimento de javali e draugr junto a uma cabana, um selecionado e aberto no Inspetor](../images/spawn-points.jpg)
+![Pontos de surgimento de javali e draugr junto a uma cabana, um selecionado e aberto no Inspetor](../images/spawn-points.webp)
 *Pontos de surgimento junto a uma cabana: uma caixa simples para cada um, com um marcador laranja acima. O ponto de
 surgimento de draugr selecionado está aberto no Inspetor, cuja linha diz o que ele faz surgir.*
 
@@ -285,7 +285,7 @@ Uma cópia (da ferramenta Região ou de um projeto) guarda:
 
 A cópia da ferramenta Selecionar é posicionada da mesma forma.
 
-![Uma cabana de pedra colada na encosta de um monte com Limpar o local ligado, antes e depois do clique](../images/paste-clear-site.jpg)
+![Uma cabana de pedra colada na encosta de um monte com Limpar o local ligado, antes e depois do clique](../images/paste-clear-site.webp)
 *Antes do clique (à esquerda), o contorno da colagem corta o monte; depois dele (à direita), o terreno no caminho da
 cabana foi escavado até o piso dela, no mesmo passo de desfazer.*
 

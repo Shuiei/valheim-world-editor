@@ -22,7 +22,7 @@ Remova as árvores, rochas e arbustos de um lugar e aplane-o num terreno plano p
 11. Opcional: em **Ação**, escolha **Pintar**, depois **Terra** ou **Pavimentado**, e pressione **Pintar (Enter)**.
 12. Clique em **Salvar no mundo** (ou **Aplicar ao vivo**).
 
-![Parte de um bosque depois que os objetos dentro de um polígono foram selecionados e excluídos: as árvores de dentro sumiram, o painel Selecionar aberto](../images/area-polygon-done.jpg)
+![Parte de um bosque depois que os objetos dentro de um polígono foram selecionados e excluídos: as árvores de dentro sumiram, o painel Selecionar aberto](../images/area-polygon-done.webp)
 *Depois de **Selecionar os objetos (Enter)** e `Del`: as árvores dentro do polígono sumiram, as de fora continuam de pé.*
 
 ## Verificar se funcionou

@@ -22,7 +22,7 @@ agua donde su lecho está por debajo de 30 m.
    de 2 m de profundidad), pon **Borde suave** en unos 5 m para unas orillas suaves y pulsa **Aplanar (Enter)**.
 8. Haz clic en **Guardar en el mundo** (o **Aplicar en vivo**).
 
-![Un río excavado a través de la zona, con el agua visible](../images/path-river.jpg)
+![Un río excavado a través de la zona, con el agua visible](../images/path-river.webp)
 *Un río excavado con Río / canal (agua): el mar lo llena.*
 
 ## Comprueba que ha funcionado

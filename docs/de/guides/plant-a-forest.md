@@ -17,7 +17,7 @@ Fülle ein Stück Land mit Bäumen in natürlichen Hainen, ein Feld mit Pflanzen
 7. Drücke `Enter`, um ihn zu pflanzen.
 8. Klicke auf **In Welt speichern** (oder **Live anwenden**).
 
-![Wiesenwäldchen als Vorschau in einem Polygon mit Häufung 50 % und Fleckgröße 30 m: Haine und Lichtungen](../images/guide-forest-zone.jpg)
+![Wiesenwäldchen als Vorschau in einem Polygon mit Häufung 50 % und Fleckgröße 30 m: Haine und Lichtungen](../images/guide-forest-zone.webp)
 *Ein Polygon von etwa 58 × 40 m mit **Häufung** 50 % und **Fleckgröße** 30 m (und **Dichte** 1.5): Die durchsichtigen
 Bäume sammeln sich in Hainen mit Lichtungen dazwischen. Die Zeilen von **POLYGONFÜLLUNG** stehen unten im Panel.*
 

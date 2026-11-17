@@ -23,7 +23,7 @@ fica abaixo de 30 m.
    profundidade), defina **Borda suave** em uns 5 m para margens suaves e pressione **Aplanar (Enter)**.
 8. Clique em **Salvar no mundo** (ou **Aplicar ao vivo**).
 
-![Um rio cavado atravessando a zona, com a água visível](../images/path-river.jpg)
+![Um rio cavado atravessando a zona, com a água visível](../images/path-river.webp)
 *Um rio cavado com Rio / canal (água): o mar o enche.*
 
 ## Verificar se funcionou

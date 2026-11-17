@@ -8,7 +8,7 @@ ein beliebiges Werkzeug benutzt.
 **Wo:** Werkzeugleiste, Abschnitt **WERKZEUGE**; die Einblendungen im Panel Ansicht · **Taste:** `M` ·
 **Funktioniert in:** gespeicherten Welten, live
 
-![Eine Messung über einen Erdhügel mit eingeschalteten Neigungsfarben, und die Messwerte im Panel Messen](images/measure.jpg)
+![Eine Messung über einen Erdhügel mit eingeschalteten Neigungsfarben, und die Messwerte im Panel Messen](images/measure.webp)
 *Eine Messung vom Fuß eines Erdhügels über seine Kuppe, mit eingeschalteten Neigungsfarben. Die Linie folgt dem
 Boden; das Panel zeigt die Entfernung, die Höhen und die Neigung.*
 
@@ -48,11 +48,11 @@ Beide brauchen **Spieloptik** (die Bodendarstellung im Panel Ansicht), bleiben a
 benutzt, und werden gespeichert. Höhenlinien liegen auf Vielfachen des Abstands, daher hat der Meeresspiegel (30 m)
 immer eine, und der Küstenlinie lässt sich leicht folgen.
 
-![Höhenlinien alle 2 m über zwei Erdhügeln und einer Mulde, das Panel Ansicht bis zum Abschnitt BODEN gescrollt](images/height-lines.jpg)
+![Höhenlinien alle 2 m über zwei Erdhügeln und einer Mulde, das Panel Ansicht bis zum Abschnitt BODEN gescrollt](images/height-lines.webp)
 *Höhenlinien alle 2 m über zwei Erdhügeln und einer Mulde, Zonengrenzen aus. Das Panel Ansicht zeigt **Höhenlinien
 alle** 2 m unter **BODEN (Spieloptik)**; jede fünfte Linie ist dunkler.*
 
-![Ein Erdhügel mit einer sanften Seite und einer eingeschnittenen Klippe, nach Neigung gefärbt; das Panel Ansicht beim Abschnitt BODEN](images/slope-colours.jpg)
+![Ein Erdhügel mit einer sanften Seite und einer eingeschnittenen Klippe, nach Neigung gefärbt; das Panel Ansicht beim Abschnitt BODEN](images/slope-colours.webp)
 *Neigungsfarben auf einem Erdhügel: grün auf dem flachen Boden, dann gelbgrün, gelb und orange seine sanfte Seite
 hinauf, und rot an der hineingeschnittenen Klippe. Das Panel Ansicht zeigt **Neigungsfarben** angehakt unter
 **BODEN (Spieloptik)**.*

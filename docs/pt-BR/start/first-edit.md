@@ -31,7 +31,7 @@ está agora.
 3. No painel lateral, escolha **3 × 3 zonas (192 m)** na lista de tamanhos ao lado de **Editar em 3D** e clique em
    **Editar em 3D**.
 
-![O mapa do mundo, uma zona escolhida, com Editar em 3D e a lista de tamanhos](../images/map.jpg)
+![O mapa do mundo, uma zona escolhida, com Editar em 3D e a lista de tamanhos](../images/map.webp)
 *O mapa: um clique escolheu uma zona (o quadrado azul); **Editar em 3D** a abre com o tamanho escolhido ao lado.*
 
 **O que você deve ver:** a visão 3D da sua base e das terras em volta, a barra de ferramentas à esquerda e a barra
@@ -45,7 +45,7 @@ gira a visão.
 3. Em terreno aberto ao lado da sua base, segure o botão esquerdo do mouse e mova o mouse em pequenos círculos por
    alguns segundos.
 
-![O pincel Elevar sobre um pequeno monte, com o painel aberto](../images/sculpt.jpg)
+![O pincel Elevar sobre um pequeno monte, com o painel aberto](../images/sculpt.webp)
 *Elevar: o contorno do pincel no chão, um monte elevado ao lado dele e o painel com **Tamanho** e **Intensidade**.*
 
 **O que você deve ver:** o terreno sobe sob o pincel, e a barra superior diz "Não salvo: 1 zona" em âmbar. Nada foi
@@ -57,7 +57,7 @@ gravado no mundo ainda: a alteração está [pendente](../concepts/saving-and-hi
 2. No painel **Colocar**, clique em **Pincel** e escolha **Bosque dos Prados** em **Escolher uma predefinição**.
 3. Arraste o mouse ao longo do pé da sua colina.
 
-![O pincel de Colocar plantando árvores, com a predefinição Bosque dos Prados escolhida](../images/plant-brush.jpg)
+![O pincel de Colocar plantando árvores, com a predefinição Bosque dos Prados escolhida](../images/plant-brush.webp)
 *Colocar com **Pincel** e a predefinição **Bosque dos Prados**: o pincel mostra as próximas árvores transparentes; as
 já plantadas ficam em volta dele.*
 
@@ -82,7 +82,7 @@ Mais: [Desfazer um passo, reverter uma alteração ou descartar tudo](../guides/
 2. Leia a pergunta: ela diz o que vai gravar e a **Pasta do mundo**. Confira se a pasta é a do seu mundo, não a da
    cópia, e clique em **Salvar**.
 
-![A pergunta Salvar nos arquivos do mundo sobre uma colina elevada e árvores novas: o que será gravado, a Pasta do mundo, três avisos, Salvar e Cancelar](../images/save-confirm.jpg)
+![A pergunta Salvar nos arquivos do mundo sobre uma colina elevada e árvores novas: o que será gravado, a Pasta do mundo, três avisos, Salvar e Cancelar](../images/save-confirm.webp)
 *A pergunta antes de salvar: confira a linha **Pasta do mundo** e clique em **Salvar**.*
 
 **O que você deve ver:** a barra de status diz "1 zona(s), … objeto(s) novo(s) salvo(s) no salvamento nº …", a barra

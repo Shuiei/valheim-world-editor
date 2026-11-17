@@ -19,7 +19,7 @@ Rest der Welt zurückzusetzen.
 7. Drücke **Zurück zur Sicherung (Enter)**.
 8. Sieh dir das Ergebnis an. Wenn es stimmt, **In Welt speichern** (oder **Live anwenden**).
 
-![Eine gegriefte Hütte, aus der Sicherung des Spiels wiederhergestellt, vorher und nachher](../images/area-backup.jpg)
+![Eine gegriefte Hütte, aus der Sicherung des Spiels wiederhergestellt, vorher und nachher](../images/area-backup.webp)
 *Links: ein Polygon um eine Hütte, deren vordere Wand teilweise fehlt, **Zurück zu einer Sicherung** gewählt, die Liste **Sicherung**
 auf der Sicherung des Spiels geöffnet und **Deine Gebäude** an. Rechts: nach **Zurück zur Sicherung (Enter)** ist die Wand wieder
 ganz; die Zeile über der Schaltfläche nennt den Speicherstand der Sicherung, die Statusleiste zählt, was zurückkam.*

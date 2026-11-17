@@ -7,7 +7,7 @@ la houe, la pioche et le cultivateur du jeu, mais en plus rapide et en plus gran
 **Où :** barre d'outils, section **SCULPTURE** · **Touches :** `1` à `9`, `0`, `O` · **Fonctionne dans :** mondes
 enregistrés, en direct
 
-![Une butte élevée avec Élever, l'anneau du pinceau à son sommet et le panneau Élever](images/sculpt.jpg)
+![Une butte élevée avec Élever, l'anneau du pinceau à son sommet et le panneau Élever](images/sculpt.webp)
 *Une butte faite de trois coups de pinceau Élever. L'anneau blanc à son sommet est le pinceau ; le panneau de gauche
 contient ses réglages.*
 
@@ -58,7 +58,7 @@ côté du panneau. Le [Masque](masks.md) lui-même, et **Sans limite : au-delà
 | **Anneau** | Seulement une bande : rien à l'intérieur de 40 % de la taille, pleine force à 70 %, rien au bord. Pour les bords de cratère, les douves et les murs de terre. |
 | **Irrégulier (bruit)** | Un pinceau rond dont le bord avance et recule jusqu'à un tiers de la taille. Le motif est fixé au monde : deux coups de pinceau au même endroit ont le même bord. |
 
-![Cinq touches de peinture pavée, une par forme de pinceau, chacune légendée, avec la liste Forme ouverte](images/brush-shapes.jpg)
+![Cinq touches de peinture pavée, une par forme de pinceau, chacune légendée, avec la liste Forme ouverte](images/brush-shapes.webp)
 *Une touche de peinture Pavé par forme, chacune légendée : Cercle, Carré, Anneau, Irrégulier (bruit) et le tampon
 Bord de cratère. La liste Forme est ouverte dans le panneau.*
 
@@ -73,7 +73,7 @@ Bord de cratère. La liste Forme est ouverte dans le panneau.*
 | **Pointe** | Forte seulement près du centre. | Les flèches et les fosses. |
 | **Bord net (pioche)** | Pleine force jusqu'au bord, rien au-delà. | Les parois raides et les coupes droites. |
 
-![Six buttes élevées par le même coup de pinceau, une par atténuation, chacune légendée, vues de haut en biais](images/brush-falloffs.jpg)
+![Six buttes élevées par le même coup de pinceau, une par atténuation, chacune légendée, vues de haut en biais](images/brush-falloffs.webp)
 *Le même coup de pinceau Élever avec chaque atténuation, légendée : Doux, Linéaire, Dôme, Sommet plat, Pointe, Bord net
 (pioche). Les couleurs de pente sont activées : plus le flanc est raide, plus il est rouge.*
 
@@ -89,7 +89,7 @@ Bord de cratère. La liste Forme est ouverte dans le panneau.*
 | **Éroder** | `O` | Altère le sol : les pentes raides glissent vers le bas, ou la pluie creuse des ravines. |
 | **Restaurer** | `5` | Ramène le sol tel que le monde l'a généré, et retire la peinture. |
 
-![Une fosse creusée avec Abaisser, une butte brute à moitié lissée et une butte à moitié restaurée ; le panneau Restaurer](images/lower-smooth-restore.jpg)
+![Une fosse creusée avec Abaisser, une butte brute à moitié lissée et une butte à moitié restaurée ; le panneau Restaurer](images/lower-smooth-restore.webp)
 *Légendés depuis la gauche : une fosse creusée avec Abaisser ; une butte brute dont Lisser a adouci la moitié droite ;
 une butte élevée dont Restaurer a ramené la moitié droite au sol généré, avec l'anneau du pinceau dessus.*
 
@@ -104,7 +104,7 @@ une seconde ou deux au même endroit à la force par défaut.
 
 ### Aplanir
 
-![Le sommet d'une grande butte mis à niveau par un seul coup d'Aplanir commencé dessus](images/flatten.jpg)
+![Le sommet d'une grande butte mis à niveau par un seul coup d'Aplanir commencé dessus](images/flatten.webp)
 *Un seul coup d'Aplanir commencé au sommet de la butte l'a mis à niveau. **Niveler à la hauteur où commence le coup de
 pinceau** est activé : **Hauteur (m)** est donc grisé et affiche la hauteur prise, 43.4 m.*
 
@@ -130,7 +130,7 @@ pinceau voisins se raccordent sans jointure. Le **Renaturer** et l'**Aspect natu
 l'outil [Tracé](path.md) et le **Renaturer** de l'outil [Région](area.md) utilisent les mêmes réglages et le même motif,
 et les affichent dans leurs propres panneaux : une valeur réglée dans l'un l'est dans les trois.
 
-![Un sol aplani avec les couleurs de pente, sa moitié gauche renaturée en bosses, sa moitié droite plate](images/naturalize.jpg)
+![Un sol aplani avec les couleurs de pente, sa moitié gauche renaturée en bosses, sa moitié droite plate](images/naturalize.webp)
 *Un sol aplani avec les couleurs de pente activées. La moitié gauche a été renaturée (Bosses 3 m, Taille bosses
 12 m) : ses bosses apparaissent en taches jaunes. La moitié droite reste plate et uniformément verte.*
 
@@ -146,7 +146,7 @@ Le matériau qui glisse ou ruisselle hors du pinceau peut retomber juste à côt
 [Région](area.md) et [Tracé](path.md) fait les deux à la fois, sur toute une sélection ou le long d'une ligne, avec cet
 **Angle de repos** (leurs panneaux l'affichent aussi).
 
-![La même butte avant et après Éroder (Eau), le panneau Éroder à gauche](images/erode.jpg)
+![La même butte avant et après Éroder (Eau), le panneau Éroder à gauche](images/erode.webp)
 *La même butte, de la même caméra. À gauche : telle qu'elle a été élevée. À droite : après deux secondes d'Éroder
 (Eau) : la pluie a usé son sommet et strié ses flancs de petites ravines.*
 
@@ -181,7 +181,7 @@ maintenez plus longtemps pour la couleur pleine.
 cache donc aussi la terre que le monde a générée à cet endroit. **Restaurer** retire votre peinture : le sol montre à
 nouveau ce que le monde a généré.
 
-![Des bandes de sol pavé, cultivé et de terre, avant et après une bande d'Effacer la peinture en travers](images/paint.jpg)
+![Des bandes de sol pavé, cultivé et de terre, avant et après une bande d'Effacer la peinture en travers](images/paint.webp)
 *À gauche : des bandes pavée, cultivée et de terre. À droite : les mêmes bandes après un coup d'Effacer la peinture en
 travers des trois (le panneau Peinture à gauche).*
 
@@ -215,7 +215,7 @@ Le jeu garde chaque modification du sol à moins de 8 m du sol qu'il a généré
 en rouge, et la barre d'état indique « Limite du jeu atteinte : le sol ne peut s'écarter que de 8 m de sa hauteur
 d'origine (points rouges). » Voir [La limite de 8 m du jeu](concepts/ground-limits.md#la-limite-de-8-m-du-jeu).
 
-![Un coup d'Élever arrêté à la limite de 8 m du jeu, son sommet teinté de rouge, et le message de la barre d'état](images/limit-red.jpg)
+![Un coup d'Élever arrêté à la limite de 8 m du jeu, son sommet teinté de rouge, et le message de la barre d'état](images/limit-red.webp)
 *Élever maintenu jusqu'à ce que le sol s'arrête 8 m plus haut. Avec **Marques de limite** activé, son sommet est teinté
 de rouge ; la barre d'état affiche le message et la lecture sous le curseur se termine par « à la limite de ±8 m ».*
 
@@ -231,7 +231,7 @@ toujours la limite.
 > Enregistrer du sol Sans limite relit le secteur depuis le monde et **efface son Historique** : vous ne pouvez pas
 > annuler au-delà de cet enregistrement. Vérifiez la forme avant d'enregistrer.
 
-![Le même coup d'Élever deux fois : arrêté à 8 m à gauche, une haute flèche avec Sans limite à droite](images/no-limit.jpg)
+![Le même coup d'Élever deux fois : arrêté à 8 m à gauche, une haute flèche avec Sans limite à droite](images/no-limit.webp)
 *Le même coup d'Élever avec Sans limite désactivé (à gauche : arrêté à 8 m, son sommet rouge) et activé (à droite :
 bien plus haut). L'interrupteur est sur la fiche Masque, coché comme pour celui de droite.*
 

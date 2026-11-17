@@ -7,7 +7,7 @@ pico y el cultivador del juego, solo que más rápido y a lo grande.
 **Dónde:** barra de herramientas, sección **ESCULPIR** · **Teclas:** `1` a `9`, `0`, `O` · **Funciona en:** mundos
 guardados, en vivo
 
-![Un montículo levantado con Elevar, el anillo del pincel en su cima y el panel Elevar](images/sculpt.jpg)
+![Un montículo levantado con Elevar, el anillo del pincel en su cima y el panel Elevar](images/sculpt.webp)
 *Un montículo hecho con tres trazos de Elevar. El anillo blanco de su cima es el pincel; el panel de la izquierda
 contiene sus ajustes.*
 
@@ -56,7 +56,7 @@ Dos ajustes valen para todas las herramientas de suelo, no solo para los pincele
 | **Anillo** | Solo una franja: nada dentro del 40 % del tamaño, intensidad completa al 70 %, nada en el borde. Para bordes de cráter, fosos y muros de tierra. |
 | **Irregular (ruido)** | Un pincel redondo cuyo borde entra y sale hasta un tercio del tamaño. El patrón está fijado al mundo, así que dos trazos sobre el mismo sitio tienen el mismo borde. |
 
-![Cinco toques de pintura de pavimento, uno por forma de pincel, cada uno etiquetado, con la lista Forma abierta](images/brush-shapes.jpg)
+![Cinco toques de pintura de pavimento, uno por forma de pincel, cada uno etiquetado, con la lista Forma abierta](images/brush-shapes.webp)
 *Un toque de pintura Pavimento por forma, cada uno etiquetado: Círculo, Cuadrado, Anillo, Irregular (ruido) y el sello
 Borde de cráter. La lista Forma está abierta en el panel.*
 
@@ -71,7 +71,7 @@ Borde de cráter. La lista Forma está abierta en el panel.*
 | **Punta** | Fuerte solo cerca del centro. | Agujas y pozos. |
 | **Borde afilado (pico)** | Intensidad completa hasta el mismo borde, nada más allá. | Paredes empinadas y cortes rectos. |
 
-![Seis montículos levantados con el mismo trazo, uno por atenuación, cada uno etiquetado, vistos desde arriba en ángulo](images/brush-falloffs.jpg)
+![Seis montículos levantados con el mismo trazo, uno por atenuación, cada uno etiquetado, vistos desde arriba en ángulo](images/brush-falloffs.webp)
 *El mismo trazo de Elevar con cada atenuación, etiquetado: Suave, Lineal, Cúpula, Cima plana, Punta, Borde afilado
 (pico). Los colores de pendiente están activados: cuanto más empinada la ladera, más roja.*
 
@@ -87,7 +87,7 @@ Borde de cráter. La lista Forma está abierta en el panel.*
 | **Erosionar** | `O` | Desgasta el suelo: las pendientes empinadas se deslizan hacia abajo, o la lluvia abre cárcavas. |
 | **Restaurar** | `5` | Devuelve el suelo a como lo generó el mundo, y quita la pintura. |
 
-![Un pozo excavado con Bajar, un montículo irregular a medio suavizar y un montículo a medio devolver con Restaurar; el panel Restaurar](images/lower-smooth-restore.jpg)
+![Un pozo excavado con Bajar, un montículo irregular a medio suavizar y un montículo a medio devolver con Restaurar; el panel Restaurar](images/lower-smooth-restore.webp)
 *Etiquetados desde la izquierda: un pozo excavado con Bajar; un montículo irregular cuya mitad derecha igualó
 Suavizar; un montículo elevado cuya mitad derecha devolvió Restaurar al suelo generado, con el anillo del pincel
 encima.*
@@ -103,7 +103,7 @@ pincel Suavizar sobre un sitio durante uno o dos segundos con la intensidad por 
 
 ### Aplanar
 
-![La cima de un gran montículo nivelada por un trazo de Aplanar empezado sobre ella](images/flatten.jpg)
+![La cima de un gran montículo nivelada por un trazo de Aplanar empezado sobre ella](images/flatten.webp)
 *Un trazo de Aplanar empezado en la cima del montículo la ha nivelado. **Nivelar a la altura donde empieza el trazo**
 está activado, así que **Altura (m)** aparece en gris y muestra la altura que tomó: 43.4 m.*
 
@@ -129,7 +129,7 @@ vecinos se unen sin costuras. **Natural** y **Aspecto natural (bordes irregulare
 [Camino](path.md) y **Natural** de la herramienta [Región](area.md) usan los mismos ajustes y el mismo patrón, y los
 muestran en sus propios paneles: un valor ajustado en uno se ajusta en los tres.
 
-![Suelo nivelado con los colores de pendiente activados, su mitad izquierda naturalizada en desniveles y su mitad derecha plana](images/naturalize.jpg)
+![Suelo nivelado con los colores de pendiente activados, su mitad izquierda naturalizada en desniveles y su mitad derecha plana](images/naturalize.webp)
 *Suelo nivelado con los colores de pendiente activados. La mitad izquierda se naturalizó (Amplitud 3 m, Anchura
 12 m): sus desniveles se ven como manchas amarillas. La mitad derecha sigue plana y de un verde
 uniforme.*
@@ -146,7 +146,7 @@ El material que se desliza o que el agua arrastra fuera del pincel puede caer ju
 herramientas [Región](area.md) y [Camino](path.md) hace ambos tipos a la vez, sobre toda una selección o a lo largo de
 una línea, con este **Ángulo de reposo** (sus paneles también lo muestran).
 
-![El mismo montículo antes y después de Erosionar (Agua), con el panel Erosionar a la izquierda](images/erode.jpg)
+![El mismo montículo antes y después de Erosionar (Agua), con el panel Erosionar a la izquierda](images/erode.webp)
 *El mismo montículo desde la misma cámara. Izquierda: tal como se levantó. Derecha: después de dos segundos de
 Erosionar (Agua): la lluvia ha desgastado su cima y ha surcado sus laderas con pequeñas cárcavas.*
 
@@ -181,7 +181,7 @@ pulsado más tiempo para obtener el color completo.
 oculta la tierra que generó el mundo ahí. **Restaurar** quita tu pintura, así que el suelo vuelve a mostrar lo que
 generó el mundo.
 
-![Franjas de suelo pavimentado, cultivado y de tierra, antes y después de una banda de Quitar pintura que las cruza](images/paint.jpg)
+![Franjas de suelo pavimentado, cultivado y de tierra, antes y después de una banda de Quitar pintura que las cruza](images/paint.webp)
 *Izquierda: franjas de pavimento, cultivado y tierra. Derecha: las mismas franjas después de un trazo de Quitar
 pintura que cruza las tres (el panel Pintar a la izquierda).*
 
@@ -213,7 +213,7 @@ El juego mantiene cada cambio del suelo a menos de 8 m del suelo que generó. Un
 de rojo y la barra de estado dice «Se alcanzó el límite del juego: el suelo solo puede moverse 8 m respecto a su
 altura original (puntos rojos).» Consulta [El límite de 8 m del juego](concepts/ground-limits.md#el-límite-de-8-m-del-juego).
 
-![Un trazo de Elevar detenido en el límite de 8 m del juego, con su cima teñida de rojo, y el mensaje de la barra de estado](images/limit-red.jpg)
+![Un trazo de Elevar detenido en el límite de 8 m del juego, con su cima teñida de rojo, y el mensaje de la barra de estado](images/limit-red.webp)
 *Elevar mantenido hasta que el suelo se detuvo 8 m más arriba. Con **Marcas de límite** activado, su cima se tiñe de
 rojo; la barra de estado muestra el mensaje y la lectura del cursor termina en «en el límite de ±8 m».*
 
@@ -229,7 +229,7 @@ Relieve y pegar un lugar copiado siempre van más allá del límite.
 > Guardar suelo de Sin límite vuelve a leer el área desde el mundo y **borra su Historial**: no puedes deshacer más
 > allá de ese guardado. Comprueba la forma antes de guardar.
 
-![El mismo trazo de Elevar dos veces: detenido en 8 m a la izquierda, una aguja alta con Sin límite a la derecha](images/no-limit.jpg)
+![El mismo trazo de Elevar dos veces: detenido en 8 m a la izquierda, una aguja alta con Sin límite a la derecha](images/no-limit.webp)
 *El mismo trazo de Elevar con Sin límite desactivado (izquierda: detenido en 8 m, con la cima roja) y activado
 (derecha: mucho más alto). El interruptor está en la tarjeta Máscara, marcado como para el de la derecha.*
 

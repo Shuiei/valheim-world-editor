@@ -8,7 +8,7 @@ qualquer ferramenta.
 **Onde:** barra de ferramentas, seção **UTILIDADES**; as sobreposições no painel Visão · **Tecla:** `M` · **Funciona
 em:** mundos salvos, ao vivo
 
-![Uma medição atravessando um monte com as cores de declive ligadas, e as leituras do painel Medir](images/measure.jpg)
+![Uma medição atravessando um monte com as cores de declive ligadas, e as leituras do painel Medir](images/measure.webp)
 *Uma medição do pé de um monte até depois do topo, com as cores de declive ligadas. A linha acompanha o terreno; o
 painel mostra a distância, as alturas e o declive.*
 
@@ -48,11 +48,11 @@ As duas precisam de **Visual do jogo** (o aspecto do terreno no painel Visão), 
 outras ferramentas e são lembradas. As curvas de nível caem em múltiplos do passo, então o nível do mar (30 m) sempre
 tem uma e a linha da costa é fácil de seguir.
 
-![Curvas de nível a cada 2 m sobre dois montes e uma depressão, o painel Visão rolado até a seção TERRENO](images/height-lines.jpg)
+![Curvas de nível a cada 2 m sobre dois montes e uma depressão, o painel Visão rolado até a seção TERRENO](images/height-lines.webp)
 *Curvas de nível a cada 2 m sobre dois montes e uma depressão, com as bordas das zonas desligadas. O painel Visão
 mostra **Curvas de nível a cada** 2 m em **TERRENO (visual do jogo)**; uma em cada cinco linhas é mais escura.*
 
-![Um monte com uma encosta suave e um penhasco cortado, colorido pelo declive; o painel Visão na seção TERRENO](images/slope-colours.jpg)
+![Um monte com uma encosta suave e um penhasco cortado, colorido pelo declive; o painel Visão na seção TERRENO](images/slope-colours.webp)
 *Cores de declive num monte: verde no terreno plano, depois verde-amarelado, amarelo e laranja subindo pela encosta
 suave, e vermelho no penhasco cortado nele. O painel Visão mostra **Cores de declive** marcado em **TERRENO (visual do
 jogo)**.*

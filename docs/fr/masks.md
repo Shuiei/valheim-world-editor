@@ -8,7 +8,7 @@ sol non peint.
 **Où :** la fiche **Masque** à côté du panneau de l'outil · **Touche :** aucune (`Alt`+`Shift`+clic règle une plage
 de hauteur) · **Fonctionne dans :** mondes enregistrés, en direct
 
-![Le même large coup de pinceau Pavé sur un monticule, avec le Masque désactivé et activé, et la fiche du Masque](images/mask.jpg)
+![Le même large coup de pinceau Pavé sur un monticule, avec le Masque désactivé et activé, et la fiche du Masque](images/mask.webp)
 *Le même large coup de peinture Pavé sur un monticule. À gauche, Masque désactivé : tout est pavé. À droite, Masque
 activé avec des pentes sous 15° : le sol plat est pavé, les flancs raides du monticule ne le sont pas. La fiche du
 Masque est à côté du panneau de l'outil.*
@@ -38,7 +38,7 @@ Le Masque fonctionne avec les pinceaux de sculpture et le pinceau Peinture, [Rel
 Un avertissement orange s'affiche sous les réglages quand ils ne laissent rien passer : une pente maximale de 0°, ou un
 minimum au-dessus du maximum.
 
-![La fiche du Masque avec Pente min 30 et max 10, et son avertissement orange que rien ne correspond](images/mask-warning.jpg)
+![La fiche du Masque avec Pente min 30 et max 10, et son avertissement orange que rien ne correspond](images/mask-warning.webp)
 *La pente min de 30° est au-dessus de la max de 10°, donc la fiche avertit en orange : « La pente min est supérieure à
 la max : rien ne correspond. »*
 

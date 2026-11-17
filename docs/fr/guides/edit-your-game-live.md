@@ -6,7 +6,7 @@ Modifiez le monde de votre propre partie en cours (en solo, ou le monde que vous
 **Il vous faut :** Valheim sur cet ordinateur, l'éditeur, et environ 5 minutes pour installer une fois BepInEx et le
 plugin WorldEditorBridge.
 
-![Mon jeu avant l'installation : la carte « Votre jeu a besoin de BepInEx et du plugin WorldEditorBridge » avec ses trois étapes](../images/start-game-setup.jpg)
+![Mon jeu avant l'installation : la carte « Votre jeu a besoin de BepInEx et du plugin WorldEditorBridge » avec ses trois étapes](../images/start-game-setup.webp)
 *Ce qu'affiche **Mon jeu** avant l'installation de BepInEx et du plugin : les étapes ci-dessous, en bref.*
 
 1. Installez **BepInEx** dans votre Valheim, une seule fois : [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
@@ -28,7 +28,7 @@ plugin WorldEditorBridge.
 7. Faites une modification, par exemple élevez une petite colline avec le pinceau **Élever**.
 8. Appuyez sur **Appliquer en direct** (ou `Ctrl+S`).
 
-![Mon jeu sur la page d'accueil : Valheim tourne avec le monde, le nombre de joueurs et le bouton Modifier en direct](../images/start-game.jpg)
+![Mon jeu sur la page d'accueil : Valheim tourne avec le monde, le nombre de joueurs et le bouton Modifier en direct](../images/start-game.webp)
 *La page d'accueil a détecté d'elle-même la partie en cours : **Modifier en direct** ouvre son monde.*
 
 ## Vérifier le résultat

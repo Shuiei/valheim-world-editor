@@ -6,7 +6,7 @@ celle-ci : routes, rampes, chaussées, fossés et rivières.
 
 **Où :** barre d'outils, section **ÉDITION** · **Touche :** `P` · **Fonctionne dans :** mondes enregistrés, en direct
 
-![Les cinq points de l'outil Tracé sur deux buttes, Aplanir choisi, avant Appliquer](images/path.jpg)
+![Les cinq points de l'outil Tracé sur deux buttes, Aplanir choisi, avant Appliquer](images/path.webp)
 *Une ligne de cinq points tracée sur deux buttes, avec **Aplanir** choisi, sa **Hauteur** prise sur le sol plat avec
 `Alt`+clic, et **Aspect naturel** activé. Rien n'a encore changé : la bande montre la largeur et les bords adoucis du
 tracé jusqu'à ce que vous appuyiez sur **Appliquer (Enter)** ; les cercles au dernier point sont ceux du pointeur.*
@@ -27,7 +27,7 @@ tracé jusqu'à ce que vous appuyiez sur **Appliquer (Enter)** ; les cercles au
 
 Le panneau indique combien de points compte la ligne et sa longueur.
 
-![La même ligne appliquée : une route plane taillée à travers les deux buttes, pavée en son milieu, la ligne toujours dessinée](images/path-road.jpg)
+![La même ligne appliquée : une route plane taillée à travers les deux buttes, pavée en son milieu, la ligne toujours dessinée](images/path-road.webp)
 *La ligne de la première image, même caméra : **Aplanir** a taillé une route plane à travers les deux buttes, puis
 **Peindre en pavés** avec **Largeur** 4 m et **Bord adouci** 1 m a pavé son milieu. La ligne reste pour l'action
 suivante.*
@@ -48,7 +48,7 @@ suivante.*
 | **Bosses**, **Taille bosses**, **Nouveau motif** | **Renaturer** et **Aspect naturel** : la hauteur et la largeur des bosses, et un autre motif aléatoire pour elles. Ce sont ceux du pinceau [Renaturer](terrain.md#renaturer) : réglés ici, là-bas ou dans l'outil [Région](area.md), ce sont les mêmes valeurs. |
 | **Angle de repos** | **Éroder** : la pente la plus raide qui reste en place, de 10° à 60° (33° par défaut). Celui du pinceau [Éroder](terrain.md#éroder), la même valeur. |
 
-![Deux tranchées creusées avec Abaisser de 3 m côte à côte : à gauche aux parois raides, à droite aux berges larges et inclinées](images/path-soft-edge.jpg)
+![Deux tranchées creusées avec Abaisser de 3 m côte à côte : à gauche aux parois raides, à droite aux berges larges et inclinées](images/path-soft-edge.webp)
 *Deux lignes droites sur un sol plat, chacune **Abaisser** de 3 m avec **Largeur** 6 m, vues dans leur axe. À gauche :
 **Bord adouci** 0, une tranchée aux parois raides et droites. À droite : **Bord adouci** 8 m, les berges descendent en
 pente douce dans le sol.*
@@ -76,7 +76,7 @@ pinceau, l'outil Région par une sélection, l'outil Tracé par une ligne, et le
 
 ### Rampe
 
-![Une rampe vue de côté, qui monte régulièrement du sol jusqu'à une plateforme surélevée, le panneau Tracé avec Début et Fin](images/path-ramp.jpg)
+![Une rampe vue de côté, qui monte régulièrement du sol jusqu'à une plateforme surélevée, le panneau Tracé avec Début et Fin](images/path-ramp.webp)
 *Une rampe de deux points vue de côté, du sol à son pied (**Début** 35.2 m) au sommet d'une plateforme élevée de 8 m
 (**Fin** 43 m). Elle monte régulièrement sur toute sa longueur.*
 
@@ -87,7 +87,7 @@ toute sa longueur.
 
 ### Rivière ou canal
 
-![Une rivière creusée à travers la zone avec Rivière / canal, l'eau affichée](images/path-river.jpg)
+![Une rivière creusée à travers la zone avec Rivière / canal, l'eau affichée](images/path-river.webp)
 *Une rivière creusée à travers la zone avec **Rivière / canal (eau)** : la mer la remplit.*
 
 Valheim n'a pas d'eau courante : l'eau des rivières est la mer, au même niveau (30 m) partout. Une rivière n'a donc de

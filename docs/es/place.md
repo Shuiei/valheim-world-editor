@@ -8,11 +8,11 @@ debajo en la barra.
 **Dónde:** barra de herramientas, sección **EDITAR** · **Tecla:** `T` · **Funciona en:** mundos guardados, en vivo (el
 Taller solo tiene [Construir](build.md))
 
-![El preajuste Bosque de las Praderas en modo Pincel sobre hierba despejada](images/plant-brush.jpg)
+![El preajuste Bosque de las Praderas en modo Pincel sobre hierba despejada](images/plant-brush.webp)
 *Los árboles y arbustos transparentes que hay dentro del círculo del pincel son exactamente lo que coloca un clic; el
 panel muestra el preajuste Bosque de las Praderas y sus tipos.*
 
-![El pincel Bosque de las Praderas sobre una pradera vacía, antes y después de un clic](images/place-brush-before-after.jpg)
+![El pincel Bosque de las Praderas sobre una pradera vacía, antes y después de un clic](images/place-brush-before-after.webp)
 *Izquierda: la vista previa transparente en el círculo del pincel. Derecha: el mismo lugar tras un clic, con los
 árboles y arbustos donde los mostraba la vista previa.*
 
@@ -78,7 +78,7 @@ tipos de los que tu mundo aún no tiene ninguno y los tipos de tus mods. No est�
 tirados ni los cuerpos inertes, ni las piezas del martillo y de la bandeja: esas están en el panel de
 [Construir](build.md). Los retoños y cultivos del cultivador están en ambos. **Listo** la cierra.
 
-![La tarjeta Elegir tipos buscando «rock»](images/place-chooser.jpg)
+![La tarjeta Elegir tipos buscando «rock»](images/place-chooser.webp)
 *La tarjeta Elegir tipos buscando «rock», con BigRock marcado: la categoría Rocas cuenta 1 tipo marcado junto a su
 total, y BigRock encabeza la fila Recientes.*
 
@@ -112,7 +112,7 @@ punto para quitarlo. Hacer doble clic en el último punto coloca la forma, como 
 
 ### Línea
 
-![Colocar en modo Línea: abedules a lo largo de una curva suave por cinco puntos junto a un camino pavimentado, con el panel Colocar en Línea y Puntos](images/place-line.jpg)
+![Colocar en modo Línea: abedules a lo largo de una curva suave por cinco puntos junto a un camino pavimentado, con el panel Colocar en Línea y Puntos](images/place-line.webp)
 *Modo Línea con **Puntos**: abedules cada 4 m a lo largo de una curva suave por cinco puntos, junto a un camino
 pavimentado, antes de **Colocar (Enter)**. Los árboles pálidos son la vista previa.*
 
@@ -137,13 +137,13 @@ pavimentado, antes de **Colocar (Enter)**. Los árboles pálidos son la vista pr
 
 ### Cuadrícula
 
-![Zanahorias y nabos en una cuadrícula girada, vistos desde arriba](images/plant-grid.jpg)
+![Zanahorias y nabos en una cuadrícula girada, vistos desde arriba](images/plant-grid.webp)
 *Zanahorias y nabos en una cuadrícula girada 15°, vistos desde arriba y de cerca para que se vea el cultivo de cada
 celda. La línea naranja del panel avisa de que los cultivos necesitan tierra cultivada.*
 
 ### Polígono
 
-![Un polígono dibujado punto a punto](images/plant-zone.jpg)
+![Un polígono dibujado punto a punto](images/plant-zone.webp)
 *Un polígono dibujado punto a punto, con arbustos y árboles jóvenes en vista previa en puntos aleatorios del interior.*
 
 Los puntos se sortean una vez y se mantienen mientras el polígono no cambie; **Nueva disposición (N)** sortea otros.
@@ -164,7 +164,7 @@ quieres. Los **Nidos de criaturas** (nidos de greydwarfs, montones de huesos...)
 alrededor hasta que se destruyen; su línea dice cuántas y a qué distancia («Greydwarf, Greydwarf_Elite · hasta 3
 alrededor, a menos de 5 m»). Consulta [Puntos de aparición](concepts/objects.md#puntos-de-aparición).
 
-![Puntos de aparición junto a una cabaña, uno seleccionado y abierto en el Inspector](images/spawn-points.jpg)
+![Puntos de aparición junto a una cabaña, uno seleccionado y abierto en el Inspector](images/spawn-points.webp)
 *De cerca, dos puntos de aparición de jabalí y uno de draugr junto a una cabaña. La línea del Inspector del draugr
 seleccionado dice lo que hace aparecer y si vuelve.*
 

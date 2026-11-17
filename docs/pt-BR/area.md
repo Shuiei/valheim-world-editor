@@ -7,7 +7,7 @@ próprio jogo.
 
 **Onde:** barra de ferramentas, seção **EDITAR** · **Tecla:** `B` · **Funciona em:** mundos salvos, ao vivo
 
-![Uma caixa arrastada em volta de um bosque denso, Objetos escolhido, os chips de tipo contando o que há dentro](images/area.jpg)
+![Uma caixa arrastada em volta de um bosque denso, Objetos escolhido, os chips de tipo contando o que há dentro](images/area.webp)
 *Uma caixa arrastada em volta de um bosque com **Objetos** escolhido: os chips de tipo contam as árvores, rochas,
 arbustos e coletáveis que há dentro. Nada mudou ainda: o botão embaixo os seleciona.*
 
@@ -49,10 +49,10 @@ A linha sob os botões dá a superfície e quantos objetos mostrados há dentro 
 mostrado(s) dentro"). A seleção só é desenhada na ferramenta Região e durante a colagem; ela é mantida quando você usa
 outra ferramenta.
 
-![Um polígono desenhado em volta de parte de um bosque](images/area-polygon.jpg)
+![Um polígono desenhado em volta de parte de um bosque](images/area-polygon.webp)
 *Um polígono fechado em volta de parte de um bosque, com **Objetos** escolhido.*
 
-![O mesmo bosque depois de Selecionar os objetos e Excluir](images/area-polygon-done.jpg)
+![O mesmo bosque depois de Selecionar os objetos e Excluir](images/area-polygon-done.webp)
 *Depois de **Selecionar os objetos (Enter)** e então `Del` na ferramenta Selecionar: as árvores dentro do polígono
 sumiram, as de fora continuam de pé.*
 
@@ -84,7 +84,7 @@ Sob **Aplanar**, **Elevar** e **Rebaixar**:
 |---|---|
 | Linha de corte e aterro | Quanto terreno a ação moveria ("Aplanar a 35 m: cavar 120 m³, aterrar 340 m³"), e, para Aplanar, o que fica fora de alcance ("(40 m³ fora de alcance: limite de ±8 m)"; com Sem limite ligado, só o que passa dos ±400 m dele). A segunda linha, "Terreno dentro: … elevado, … cavado desde a geração", compara com o mundo como foi gerado. As duas acompanham cada alteração, a borda suave e a Máscara. |
 
-![Aplanar numa caixa sobre um morro: a linha de corte e aterro, com terreno fora do alcance do limite de ±8 m](images/area-cut-fill.jpg)
+![Aplanar numa caixa sobre um morro: a linha de corte e aterro, com terreno fora do alcance do limite de ±8 m](images/area-cut-fill.webp)
 *Uma caixa sobre um morro com **Aplanar** a 46 m e **Sem limite** desligado: "Aplanar a 46 m: cavar 0 m³, aterrar 1.5k
 m³ (2.2k m³ fora de alcance: limite de ±8 m)", e embaixo o terreno já elevado dentro desde que o mundo foi gerado.*
 
@@ -158,7 +158,7 @@ num polígono o que o pincel [Restaurar](terrain.md#restaurar) faz sob o cursor.
 
 ### Regenerar a natureza
 
-![Uma caixa vazia e a mesma caixa depois de Regenerar a natureza, mesma câmera](images/area-regrow.jpg)
+![Uma caixa vazia e a mesma caixa depois de Regenerar a natureza, mesma câmera](images/area-regrow.webp)
 *À esquerda: uma caixa em terreno vazio. À direita: a mesma caixa depois de **Regenerar a natureza**: as árvores e
 rochas do próprio jogo para o bioma, e a barra de status diz o que cresceu.*
 
@@ -195,7 +195,7 @@ escolhidos que estão dentro são removidos, mesmo ocultos em Visão, e todo obj
 pedras rúnicas nunca são tocadas. Quando nada difere, a barra de status diz "Nada para restaurar: a seleção está como
 estava no backup."
 
-![Uma cabana vandalizada restaurada a partir do backup do jogo, antes e depois](images/area-backup.jpg)
+![Uma cabana vandalizada restaurada a partir do backup do jogo, antes e depois](images/area-backup.webp)
 *À esquerda: um polígono em volta de uma cabana sem parte da parede da frente, **Voltar a um backup** escolhido, a
 lista **Backup** aberta no backup do jogo e **Suas construções** ligado. À direita: depois de **Voltar ao backup
 (Enter)**, a parede está inteira de novo; a linha acima do botão dá o nome do salvamento do backup, a barra de status
@@ -225,14 +225,14 @@ que fica fora da seleção não é redefinida. A redefinição acontece quando v
 > masmorra, criatura e item largado nas zonas some; as lápides dos jogadores ficam. Os animais domados não têm
 > construtor, então também somem: tire-os de lá primeiro.
 
-![Duas zonas sob uma caixa marcadas para redefinir, com contorno vermelho](images/area-reset.jpg)
+![Duas zonas sob uma caixa marcadas para redefinir, com contorno vermelho](images/area-reset.webp)
 *Uma caixa sobre duas zonas, **Redefinir zonas** com **Manter minhas construções** e **Desfazer também as edições de
 terreno delas** ligados, depois de **Redefinir zonas… (Enter)**: as duas zonas com contorno vermelho, a barra de status
 contando-as. Nada é redefinido até você salvar.*
 
 ## Copiar e colar
 
-![Colando um bosque copiado: a cópia transparente segue o cursor, girada, com o painel Colar](images/paste.jpg)
+![Colando um bosque copiado: a cópia transparente segue o cursor, girada, com o painel Colar](images/paste.webp)
 *Um bosque copiado de algumas dezenas de árvores e rochas seguindo o cursor, transparente e girado 30°; a linha no alto
 do painel Colar diz o que está na área de transferência. Um clique o coloca.*
 
@@ -265,7 +265,7 @@ construção deles, sem a pintura. Ela é colada do mesmo jeito.
 
 ### Colar
 
-![Uma cabana colada três vezes para cima: uma pilha de três andares ao lado da original](images/paste-stack.jpg)
+![Uma cabana colada três vezes para cima: uma pilha de três andares ao lado da original](images/paste-stack.webp)
 *Um clique com **Cópias** 3 e **Direção** para cima, visto do chão: ao lado da cabana original, três cópias empilhadas
 em três andares (o contorno é a próxima colagem, seguindo o cursor).*
 
@@ -304,7 +304,7 @@ linha no alto do painel diz o que está na área de transferência: nome, tamanh
 barra de status diz o que a colagem fez: "Colado com o terreno, 54 objeto(s), 7 árvore(s), rocha(s) e afins retirados
 do local."
 
-![Uma cabana de pedra colada na encosta de um monte com Limpar o local, antes e depois do clique](images/paste-clear-site.jpg)
+![Uma cabana de pedra colada na encosta de um monte com Limpar o local, antes e depois do clique](images/paste-clear-site.webp)
 *Com **Limpar o local** ligado (**Forma e pintura do terreno** desligado, **Altura** -1.5 m): à esquerda, a cópia
 transparente afundada na encosta de um monte; à direita, depois do clique, o terreno cavado em volta das paredes.*
 

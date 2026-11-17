@@ -14,10 +14,10 @@ public sealed partial class Scenes
     /// <summary>A picture file, read to be drawn on; throws when it is not a picture.</summary>
     private static SKBitmap LoadBitmap(string file) => SKBitmap.Decode(file) ?? throw new InvalidOperationException($"{file}: not a picture");
 
-    /// <summary>A picture saved as a JPEG, as the editor's shots are (written over the file).</summary>
+    /// <summary>A picture saved as the editor's shots are (JPEG, or WebP for a .webp file) (written over the file).</summary>
     private static void SavePicture(SKBitmap picture, string path)
     {
-        using var jpeg = picture.Encode(SKEncodedImageFormat.Jpeg, Editor.Quality);
+        using var jpeg = Editor.Encode(picture, path);
         using var file = File.Create(path);
         jpeg.SaveTo(file);
     }

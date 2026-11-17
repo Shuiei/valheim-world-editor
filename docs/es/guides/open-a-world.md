@@ -17,7 +17,7 @@ esté en marcha con él.
 6. Opcional: para tener el mundo en la lista siempre, abre **Configuración**, haz clic en **Añadir una carpeta** en
    **Carpetas de mundos**, elige la carpeta del mundo (o una carpeta de mundos) con **Examinar…** y luego **Guardar**.
 
-![Un mundo guardado: los mundos encontrados y, debajo, Otra carpeta de mundos](../images/start-offline.jpg)
+![Un mundo guardado: los mundos encontrados y, debajo, Otra carpeta de mundos](../images/start-offline.webp)
 *Los mundos que el editor encontró por sí solo y, debajo, **Otra carpeta de mundos** con **Examinar…** y **Abrir**.*
 
 ## Comprueba que ha funcionado

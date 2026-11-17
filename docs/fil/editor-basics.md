@@ -8,7 +8,7 @@ ang camera, ang pag-save, ang Kasaysayan at ang panel na Tanaw.
 3D** · **Key:** `?` o `F3` para sa help card, `F1` para sa help na ito sa tool na ginagamit · **Gumagana sa:** mga
 naka-save na mundo, live, ang Gawaan
 
-![Ang 3D editor na napili ang Itaas: tool rail, panel ng Itaas, top bar, panel na Tanaw at status bar](images/overview.jpg)
+![Ang 3D editor na napili ang Itaas: tool rail, panel ng Itaas, top bar, panel na Tanaw at status bar](images/overview.webp)
 *Isang maliit na base sa 3 × 3 na area, napili ang brush na Itaas (ang singsing nito sa damo). Kaliwa: ang tool rail at
 ang panel ng tool. Itaas: ang top bar. Kanan: ang panel na Tanaw. Ibaba: ang status bar, binabasa ang lupa sa ilalim ng
 pointer.*
@@ -28,7 +28,7 @@ i-apply mo ito.
 
 ## Ang panimulang pahina
 
-![Ang Home ng panimulang pahina](images/start-home.jpg)
+![Ang Home ng panimulang pahina](images/start-home.webp)
 *Home: ang card ng tumatakbong laro na may **I-edit nang live**, saka ang mga mundo at blueprint na huling binuksan.*
 
 May **Home** ang side menu, saka dalawang seksiyon, **Mag-edit ng mundo** at **Likha**. Bumabalik ka rito mula sa mapa
@@ -105,7 +105,7 @@ Sa tanaw, may **berdeng tuldok** ang bawat bagong object na hindi pa na-save o n
 (ang balangkas nito ang nagmamarka rito noon). Itinatago ng **Tanaw → Marka ng hindi naka-save** ang mga tuldok;
 nananatili ang mga object.
 
-![Sampung batang beech na katatanim lang sa pinatag na lupa, bawat isa may berdeng tuldok sa paanan, isa ang pinalaki sa sulok](images/unsaved.jpg)
+![Sampung batang beech na katatanim lang sa pinatag na lupa, bawat isa may berdeng tuldok sa paanan, isa ang pinalaki sa sulok](images/unsaved.webp)
 *Mga batang punong katatanim lang: may maliit na berdeng tuldok ang bawat isa sa paanan nito hanggang ma-save ito (isa
 ang pinalaki sa sulok), at binibilang sila ng linya ng nakabinbin: "Hindi naka-save: 1 zone, 10 idinagdag".*
 
@@ -134,7 +134,7 @@ bukas ito). Sa Gawaan, **Pagtayo** (`U` o `T`), **Pagpili** at **Tanaw** lang an
 
 ### Lakad at Lipad
 
-![Ang base na tinitingnan mula sa taas ng mata sa mode na Lakad](images/walk.jpg)
+![Ang base na tinitingnan mula sa taas ng mata sa mode na Lakad](images/walk.webp)
 *Mode na Lakad (`F`): ang base gaya ng nakikita ng player na nakatayo sa tabi ng bukid, ang mata ay 1.8 m sa itaas ng
 lupa.*
 
@@ -181,7 +181,7 @@ Nagtatanong muna ang **I-save sa mundo** (`Ctrl+S`), sa **Pag-save sa mundo**, a
 ng mundo. Isara ang Valheim (ang laro o ang server) bago ka mag-save: sinusulatan ng tumatakbong laro ang mga pagbabago
 mo sa susunod na pag-save nito.
 
-![Ang tanong na Pag-save sa mundo sa ibabaw ng itinaas na burol at mga bagong puno: ang isusulat, ang Folder ng mundo, tatlong babala, I-save at Kanselahin](images/save-confirm.jpg)
+![Ang tanong na Pag-save sa mundo sa ibabaw ng itinaas na burol at mga bagong puno: ang isusulat, ang Folder ng mundo, tatlong babala, I-save at Kanselahin](images/save-confirm.webp)
 *Walang isinusulat hangga't hindi mo kini-click ang **I-save**: binibilang ng tanong ang papasok, pinapangalanan ang
 **Folder ng mundo** at pinapaalalahanan kang isara muna ang Valheim.*
 
@@ -234,7 +234,7 @@ nagtatanong muna ang dalawa: **Umalis pa rin** / **Manatili**, at **Isara pa rin
 
 ## Kasaysayan
 
-![Ang panel na Kasaysayan pagkatapos ng limang edit, na-undo ang huli](images/history.jpg)
+![Ang panel na Kasaysayan pagkatapos ng limang edit, na-undo ang huli](images/history.webp)
 *Na-undo ang huling pagbabago gamit ang **Bumalik dito**: kulay abo ito at iniaalok ang **I-redo hanggang dito**.*
 
 Inililista ng **Kasaysayan** (`L`) ang bawat pagbabago ng session, pinakabago muna. Ipinapakita ng bawat row ang
@@ -337,7 +337,7 @@ editor.
 
 ## Ang help card
 
-![Ang help card na Mga kontrol na naka-scroll hanggang dulo: ang mga huling key, saka Itong computer kasama ang frame rate at graphics card](images/help.jpg)
+![Ang help card na Mga kontrol na naka-scroll hanggang dulo: ang mga huling key, saka Itong computer kasama ang frame rate at graphics card](images/help.webp)
 *Ang card na **Mga kontrol** (`F3`), naka-scroll hanggang dulo: ang mga huling key, saka **Itong computer** kasama ang
 frame rate, ang graphics card at **I-record ang frame rate**.*
 
@@ -382,7 +382,7 @@ computer na ito. Kusang nahahanap ng editor ang mga karaniwang lugar: ang Valhei
 Flatpak Steam at mga dagdag na library), ang BepInEx sa Valheim folder at sa mga default na profile ng r2modman at
 Thunderstore Mod Manager, at ang mga mundo sa sariling mga folder ng mundo ng Valheim (pati sa Proton).
 
-![Mga setting sa dalawang kalahati: Wika, ang mga folder at Claude (naka-off) sa kaliwa; Mga extension ng mod, Mga add-on, Kasaysayan at I-save sa kanan](images/settings.jpg)
+![Mga setting sa dalawang kalahati: Wika, ang mga folder at Claude (naka-off) sa kaliwa; Mga extension ng mod, Mga add-on, Kasaysayan at I-save sa kanan](images/settings.webp)
 *Nag-i-scroll ang Mga setting: ang itaas nito sa kaliwa, ang dulo nito sa kanan, pababa hanggang **Kasaysayan** at
 **I-save**. Sa Windows lang lumalabas ang **Pagguhit**.*
 

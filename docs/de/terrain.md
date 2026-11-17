@@ -7,7 +7,7 @@ Spitzhacke und Kultivator im Spiel, nur schneller und größer.
 **Wo:** Werkzeugleiste, Abschnitt **FORMEN** · **Tasten:** `1` bis `9`, `0`, `O` · **Funktioniert in:** gespeicherten
 Welten, live
 
-![Ein mit Anheben aufgeschütteter Erdhügel, der Pinselring auf seiner Kuppe und das Panel Anheben](images/sculpt.jpg)
+![Ein mit Anheben aufgeschütteter Erdhügel, der Pinselring auf seiner Kuppe und das Panel Anheben](images/sculpt.webp)
 *Ein Erdhügel aus drei Strichen mit Anheben. Der weiße Ring auf seiner Kuppe ist der Pinsel; das Panel links enthält
 seine Einstellungen.*
 
@@ -57,7 +57,7 @@ neben dem Panel: die [Maske](masks.md) selbst und darunter **Ohne Grenze: über 
 | **Ring** | Nur ein Band: nichts innerhalb von 40 % der Größe, volle Stärke bei 70 %, nichts am Rand. Für Kraterränder, Gräben und Erdwälle. |
 | **Zerfranst (Rauschen)** | Ein runder Pinsel, dessen Rand um bis zu ein Drittel der Größe vor- und zurückspringt. Das Muster ist an die Welt gebunden, sodass zwei Striche über dieselbe Stelle denselben Rand haben. |
 
-![Fünf Tupfer Pflasterfarbe, einer pro Pinselform, jeder beschriftet, mit geöffneter Liste Form](images/brush-shapes.jpg)
+![Fünf Tupfer Pflasterfarbe, einer pro Pinselform, jeder beschriftet, mit geöffneter Liste Form](images/brush-shapes.webp)
 *Ein Tupfer Gepflastert pro Form, jeder beschriftet: Kreis, Quadrat, Ring, Zerfranst (Rauschen) und der Stempel
 Kraterrand. Die Liste Form ist im Panel geöffnet.*
 
@@ -72,7 +72,7 @@ Kraterrand. Die Liste Form ist im Panel geöffnet.*
 | **Spitze** | Nur nahe der Mitte stark. | Felsnadeln und Gruben. |
 | **Scharfe Kante (Spitzhacke)** | Volle Stärke bis zum Rand, dahinter nichts. | Steile Wände und gerade Schnitte. |
 
-![Sechs Erdhügel aus demselben Strich, einer pro Abfall, jeder beschriftet, schräg von oben gesehen](images/brush-falloffs.jpg)
+![Sechs Erdhügel aus demselben Strich, einer pro Abfall, jeder beschriftet, schräg von oben gesehen](images/brush-falloffs.webp)
 *Derselbe Strich mit Anheben in jedem Abfall, beschriftet: Weich, Linear, Kuppel, Flache Kuppe, Spitze, Scharfe Kante
 (Spitzhacke). Neigungsfarben sind an: Je steiler die Seite, desto röter.*
 
@@ -88,7 +88,7 @@ Kraterrand. Die Liste Form ist im Panel geöffnet.*
 | **Erodieren** | `O` | Lässt den Boden verwittern: Steile Hänge rutschen ab, oder Regen schneidet Rinnen. |
 | **Urzustand** | `5` | Bringt den Boden zurück in den Zustand, in dem die Welt ihn erzeugt hat, und entfernt Farbe. |
 
-![Eine mit Absenken gegrabene Grube, ein rauer Hügel halb geglättet und ein Hügel halb mit Urzustand zurückgenommen; das Panel Urzustand](images/lower-smooth-restore.jpg)
+![Eine mit Absenken gegrabene Grube, ein rauer Hügel halb geglättet und ein Hügel halb mit Urzustand zurückgenommen; das Panel Urzustand](images/lower-smooth-restore.webp)
 *Beschriftet von links: eine mit Absenken gegrabene Grube; ein rauer Hügel, dessen rechte Hälfte Glätten ausgeglichen
 hat; ein angehobener Hügel, dessen rechte Hälfte Urzustand auf den erzeugten Boden zurückgesetzt hat, mit dem Ring des
 Pinsels darauf.*
@@ -104,7 +104,7 @@ zwei Sekunden auf einer Stelle bei Standardstärke bewirkt.
 
 ### Ebnen
 
-![Die Kuppe eines großen Hügels, eingeebnet durch einen darauf begonnenen Strich mit Ebnen](images/flatten.jpg)
+![Die Kuppe eines großen Hügels, eingeebnet durch einen darauf begonnenen Strich mit Ebnen](images/flatten.webp)
 *Ein auf der Kuppe des Hügels begonnener Strich mit Ebnen hat sie eingeebnet. **Auf die Höhe am Strichanfang ebnen**
 ist an, daher ist **Höhe (m)** ausgegraut und zeigt die übernommene Höhe: 43.4 m.*
 
@@ -130,7 +130,7 @@ benachbarte Striche nahtlos aneinander anschließen. **Naturnah** und **Natürli
 **Naturnah** im Werkzeug [Region](area.md) verwenden dieselben Einstellungen und dasselbe Muster und zeigen sie in
 ihren eigenen Panels: Ein in einem gesetzter Wert gilt in allen dreien.
 
-![Eingeebneter Boden mit eingeschalteten Neigungsfarben, die linke Hälfte zu Buckeln naturnah gemacht, die rechte flach](images/naturalize.jpg)
+![Eingeebneter Boden mit eingeschalteten Neigungsfarben, die linke Hälfte zu Buckeln naturnah gemacht, die rechte flach](images/naturalize.webp)
 *Eingeebneter Boden mit eingeschalteten Neigungsfarben. Die linke Hälfte wurde naturnah gemacht (Buckel 3 m,
 Buckelgröße 12 m): Ihre Buckel erscheinen als gelbe Flecken. Die rechte Hälfte bleibt flach und einfach grün.*
 
@@ -146,7 +146,7 @@ Material, das aus dem Pinsel rutscht oder gespült wird, kann knapp außerhalb d
 Werkzeugen [Region](area.md) und [Pfad](path.md) macht beide Arten auf einmal, über eine ganze Auswahl oder entlang
 einer Linie, mit diesem **Schüttwinkel** (ihre Panels zeigen ihn auch).
 
-![Derselbe Hügel vor und nach Erodieren (Wasser), das Panel Erodieren links](images/erode.jpg)
+![Derselbe Hügel vor und nach Erodieren (Wasser), das Panel Erodieren links](images/erode.webp)
 *Derselbe Hügel aus derselben Kamera. Links: so, wie er angehoben wurde. Rechts: nach zwei Sekunden Erodieren
 (Wasser): Der Regen hat seine Kuppe abgetragen und seine Flanken mit kleinen Rinnen durchzogen.*
 
@@ -181,7 +181,7 @@ einen Übergang; halte länger für die volle Farbe.
 Erde, die die Welt dort erzeugt hat. **Urzustand** entfernt deine Farbe, sodass der Boden wieder zeigt, was die Welt
 erzeugt hat.
 
-![Streifen aus gepflastertem, kultiviertem und Erdboden, vor und nach einem Band Farbe entfernen quer darüber](images/paint.jpg)
+![Streifen aus gepflastertem, kultiviertem und Erdboden, vor und nach einem Band Farbe entfernen quer darüber](images/paint.webp)
 *Links: Streifen aus Pflaster, kultiviertem Boden und Erde. Rechts: dieselben Streifen nach einem Strich Farbe
 entfernen quer über alle drei (das Panel Malen links).*
 
@@ -214,7 +214,7 @@ Das Spiel hält jede Bodenänderung innerhalb von 8 m um den Boden, den es erzeu
 den Punkt rot, und die Statusleiste meldet „Spielgrenze erreicht: Boden kann sich nur 8 m von seiner ursprünglichen
 Höhe entfernen (rote Punkte).“ Siehe [Die 8-m-Grenze des Spiels](concepts/ground-limits.md#die-8-m-grenze-des-spiels).
 
-![Ein Strich mit Anheben, an der 8-m-Grenze des Spiels gestoppt, seine Kuppe rot gefärbt, und die Meldung der Statusleiste](images/limit-red.jpg)
+![Ein Strich mit Anheben, an der 8-m-Grenze des Spiels gestoppt, seine Kuppe rot gefärbt, und die Meldung der Statusleiste](images/limit-red.webp)
 *Anheben gehalten, bis der Boden 8 m höher stoppte. Mit **Grenzen markieren** an ist seine Kuppe rot gefärbt; die
 Statusleiste zeigt die Meldung, und die Cursoranzeige endet mit „an der ±8-m-Grenze“.*
 
@@ -230,7 +230,7 @@ hinaus.
 > Das Speichern von Boden ohne Grenze liest den Bereich neu aus der Welt und **leert seinen Verlauf**: Du kannst nicht
 > über dieses Speichern hinaus rückgängig machen. Prüfe die Form, bevor du speicherst.
 
-![Derselbe Strich mit Anheben zweimal: links bei 8 m gestoppt, rechts eine hohe Felsnadel mit Ohne Grenze](images/no-limit.jpg)
+![Derselbe Strich mit Anheben zweimal: links bei 8 m gestoppt, rechts eine hohe Felsnadel mit Ohne Grenze](images/no-limit.webp)
 *Derselbe Strich mit Anheben, Ohne Grenze aus (links: bei 8 m gestoppt, seine Kuppe rot) und an (rechts: weit
 höher). Der Schalter steht auf der Karte Maske, angehakt wie für den rechten.*
 

@@ -23,7 +23,7 @@ und eine [Sicherung der Welt](back-up-a-world.md): ein gespeichertes Zurücksetz
    Gebäude bleiben: lies sie und stimme dann zu. Die Zonen werden rot.
 9. Klicke auf **In Welt speichern** (oder **Live anwenden**).
 
-![Zonen in der ganzen Welt zurücksetzen: passende Zonen blau, markierte Zonen rot](../images/map-reset.jpg)
+![Zonen in der ganzen Welt zurücksetzen: passende Zonen blau, markierte Zonen rot](../images/map-reset.webp)
 *Blaue Zonen passen zum Filter; rote Zonen sind zum Zurücksetzen markiert.*
 
 Um nur die Zonen unter einer Stelle zurückzusetzen, nutze stattdessen das Werkzeug [Region](../area.md#zonen-zurücksetzen):

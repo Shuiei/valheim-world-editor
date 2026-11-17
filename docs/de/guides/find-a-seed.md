@@ -23,7 +23,7 @@ die du willst, und erstelle dann die Welt.
 10. Starte Valheim und lade die Welt einmal, bevor du sie im Editor bearbeitest: Das Spiel erzeugt jeden Ort, wenn
     Spieler in seine Nähe kommen.
 
-![Seed suchen: die Wunschliste, dann die besten gefundenen Seeds, jeder als kleine Karte mit Seed und Wertung](../images/new-world-find.jpg)
+![Seed suchen: die Wunschliste, dann die besten gefundenen Seeds, jeder als kleine Karte mit Seed und Wertung](../images/new-world-find.webp)
 *Die Wünsche links; die besten Seeds unter **Gefundene Seeds**, der beste zuerst, jeder mit seiner Wertung.*
 
 ## Prüfen, ob es geklappt hat

@@ -20,7 +20,7 @@ na halaman sa kahabaan ng isang linya.
 7. Pindutin ang `Enter` para itanim ito.
 8. I-click ang **I-save sa mundo** (o **I-apply nang live**).
 
-![Kakahuyan ng Meadows na naka-preview sa isang polygon na may Kumpol 50% at Saklaw 30 m: mga kumpol at bakanteng lugar](../images/guide-forest-zone.jpg)
+![Kakahuyan ng Meadows na naka-preview sa isang polygon na may Kumpol 50% at Saklaw 30 m: mga kumpol at bakanteng lugar](../images/guide-forest-zone.webp)
 *Isang polygon na mga 58 × 40 m na may **Kumpol** 50% at **Saklaw** 30 m (at **Kapal** 1.5): nagkukumpol
 ang mga aninag na puno, may mga bakanteng lugar sa pagitan nila. Nasa ibaba ng panel ang mga row ng **Pagpuno ng
 polygon**.*

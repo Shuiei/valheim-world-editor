@@ -178,7 +178,7 @@ center of mass ng bawat piece), at kinukulayan ang bawat piece ng mga kulay ng b
 | Grausten | 2000 | 100 | 33 % | 10 % |
 | Ancient | 5000 | 100 | 25 % | 7 % |
 
-![Mga batong dingding na may pulang usli sa tabi ng mga dingding na kahoy na ang usli ay nagiging berde, dilaw, kahel](../images/concept-support-stone-wood.jpg)
+![Mga batong dingding na may pulang usli sa tabi ng mga dingding na kahoy na ang usli ay nagiging berde, dilaw, kahel](../images/concept-support-stone-wood.webp)
 *Kaliwa, tatlong batong dingding na nakapatong: mapusyaw na asul sa lupa, berde sa itaas, at pula ang isang dingding na
 umuusli nang 2 m mula sa itaas, ang "1 ang babagsak" sa top bar. Kanan, mga dingding na kahoy na nakausli nang 6 m mula
 sa isang poste: berde, saka dilaw, saka kahel.*
@@ -269,7 +269,7 @@ ibang creature, ibang uri ang ilalagay mo.
 Patuloy silang nagpapalitaw ng mga creature sa paligid nila hanggang masira ("Greydwarf, Greydwarf_Elite · hanggang 3
 sa paligid, sa loob ng 5 m").
 
-![Mga spawn point ng boar at draugr sa tabi ng kubo, isa ang napili at nakabukas sa Inspector](../images/spawn-points.jpg)
+![Mga spawn point ng boar at draugr sa tabi ng kubo, isa ang napili at nakabukas sa Inspector](../images/spawn-points.webp)
 *Mga spawn point sa tabi ng kubo: isang payak na kahon para sa bawat isa, may kahel na marka sa itaas nito. Nakabukas sa
 Inspector ang napiling spawn point ng draugr, na ang linya ay nagsasabi kung ano ang pinalilitaw nito.*
 
@@ -294,7 +294,7 @@ Ang kopya (mula sa tool na Rehiyon o isang blueprint) ay may hawak na:
 
 Ganoon din inilalagay ang kopya ng tool na Pagpili.
 
-![Isang batong kubo na na-paste sa gilid ng isang punso na naka-on ang Linisin ang puwesto, bago at pagkatapos ng click](../images/paste-clear-site.jpg)
+![Isang batong kubo na na-paste sa gilid ng isang punso na naka-on ang Linisin ang puwesto, bago at pagkatapos ng click](../images/paste-clear-site.webp)
 *Bago ang click (kaliwa), tumatagos sa punso ang balangkas ng paste; pagkatapos nito (kanan), hinukay ang lupang
 nakaharang sa kubo pababa sa sahig nito, sa parehong hakbang ng undo.*
 

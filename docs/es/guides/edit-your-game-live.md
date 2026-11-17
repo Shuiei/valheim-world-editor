@@ -7,7 +7,7 @@ instante.
 **Necesitas:** Valheim en este equipo, el editor y unos 5 minutos para instalar BepInEx y el plugin
 WorldEditorBridge una sola vez.
 
-![Mi juego antes de prepararlo: la tarjeta «Tu juego necesita BepInEx y el plugin WorldEditorBridge» con sus tres pasos](../images/start-game-setup.jpg)
+![Mi juego antes de prepararlo: la tarjeta «Tu juego necesita BepInEx y el plugin WorldEditorBridge» con sus tres pasos](../images/start-game-setup.webp)
 *Lo que dice **Mi juego** antes de instalar BepInEx y el plugin: los pasos de abajo, en resumen.*
 
 1. Instala **BepInEx** en tu Valheim, una sola vez: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
@@ -28,7 +28,7 @@ WorldEditorBridge una sola vez.
 7. Haz un cambio, por ejemplo eleva una pequeña colina con el pincel **Elevar**.
 8. Pulsa **Aplicar en vivo** (o `Ctrl+S`).
 
-![Mi juego en la página de inicio: Valheim está en marcha con el mundo, el número de jugadores y el botón Editar en vivo](../images/start-game.jpg)
+![Mi juego en la página de inicio: Valheim está en marcha con el mundo, el número de jugadores y el botón Editar en vivo](../images/start-game.webp)
 *La página de inicio ha detectado sola el juego en marcha: **Editar en vivo** abre su mundo.*
 
 ## Comprueba que ha funcionado

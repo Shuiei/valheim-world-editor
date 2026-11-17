@@ -22,7 +22,7 @@ exemplo para ter o conteúdo novo de uma atualização do Valheim em lugares ond
    leia-a e confirme. As zonas ficam vermelhas.
 9. Clique em **Salvar no mundo** (ou **Aplicar ao vivo**).
 
-![Redefinir zonas pelo mundo: zonas correspondentes em azul, zonas marcadas em vermelho](../images/map-reset.jpg)
+![Redefinir zonas pelo mundo: zonas correspondentes em azul, zonas marcadas em vermelho](../images/map-reset.webp)
 *As zonas azuis correspondem ao filtro; as vermelhas estão marcadas para redefinição.*
 
 Para redefinir só as zonas sob um lugar, use a ferramenta [Região](../area.md#redefinir-zonas): desenhe um retângulo sobre

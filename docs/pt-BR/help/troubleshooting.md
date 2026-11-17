@@ -42,7 +42,7 @@ A pasta pode ser alterada depois em **Configurações** → **Pasta do jogo Valh
 bibliotecas do Steam). Se o cartão disser **Não foi possível ler o visual do jogo**, pressione **Tentar de novo** ou
 confira a pasta em Configurações; se falhar de novo, relate o problema com o log ([abaixo](#o-log-e-os-relatórios-de-bugs)).
 
-![Página inicial com o Valheim não encontrado: o cartão Obter o visual do jogo com os quatro passos, a caixa da pasta, Procurar… e Usar](../images/start-valheim-missing.jpg)
+![Página inicial com o Valheim não encontrado: o cartão Obter o visual do jogo com os quatro passos, a caixa da pasta, Procurar… e Usar](../images/start-valheim-missing.webp)
 *"O Valheim não foi encontrado neste computador.": escolha a pasta com `valheim_Data` e depois **Usar**.*
 
 ## Meu jogo mostra passos a fazer
@@ -103,7 +103,7 @@ edite os arquivos do mundo dele, como em
 Com **Criei meu próprio túnel**, "Nothing answers on 127.0.0.1:…" ou "No answer from 127.0.0.1:… within … s"
 (nada responde) significa que o seu túnel não está aberto, ou que o servidor não está em execução com o plugin.
 
-![O formulário Um servidor dedicado preenchido para 127.0.0.1, porta SSH 2222, depois de Conectar: a mensagem "No answer from 127.0.0.1:2222" sob o botão](../images/start-server-error.jpg)
+![O formulário Um servidor dedicado preenchido para 127.0.0.1, porta SSH 2222, depois de Conectar: a mensagem "No answer from 127.0.0.1:2222" sob o botão](../images/start-server-error.webp)
 *Conectar pressionado sem nada respondendo no endereço: "No answer from 127.0.0.1:2222. Check the address and that SSH
 is enabled on the server." Confira **Endereço do servidor** e **Porta SSH**.*
 
@@ -156,7 +156,7 @@ mundo, **Salvar no mundo** não salva nada e pergunta **O jogo salvou este mundo
 3. Revise o resultado: as suas alterações agora estão pendentes sobre o salvamento do jogo. Nada foi gravado ainda.
 4. Feche o Valheim (ou pare o servidor) e pressione **Salvar no mundo** de novo.
 
-![A pergunta O jogo salvou este mundo: o que aconteceu, o que Levar minhas alterações faz, e os botões Levar minhas alterações e Agora não](../images/game-saved-replay.jpg)
+![A pergunta O jogo salvou este mundo: o que aconteceu, o que Levar minhas alterações faz, e os botões Levar minhas alterações e Agora não](../images/game-saved-replay.webp)
 *Salvamento recusado porque o jogo salvou o mundo depois que o editor o leu: **Levar minhas alterações** refaz as suas alterações sobre o salvamento do jogo.*
 
 **Agora não** deixa tudo como estava. Levar as suas alterações pode descartar alguns passos do Histórico (a mensagem

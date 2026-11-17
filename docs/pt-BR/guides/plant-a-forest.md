@@ -18,7 +18,7 @@ linha.
 7. Pressione `Enter` para plantar.
 8. Clique em **Salvar no mundo** (ou **Aplicar ao vivo**).
 
-![Bosque dos Prados em prévia num polígono com Agrupar 50% e Manchas 30 m: bosques e clareiras](../images/guide-forest-zone.jpg)
+![Bosque dos Prados em prévia num polígono com Agrupar 50% e Manchas 30 m: bosques e clareiras](../images/guide-forest-zone.webp)
 *Um polígono de uns 58 × 40 m com **Agrupar** 50% e **Manchas** 30 m (e **Densidade** 1.5): as árvores
 transparentes se juntam em bosques com clareiras entre eles. As linhas de **PREENCHER POLÍGONO** ficam na parte de
 baixo do painel.*

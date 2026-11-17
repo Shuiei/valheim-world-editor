@@ -6,7 +6,7 @@ die 8 m des Spiels hinaus oder ein eigenes Bild, eingeprägt.
 
 **Wo:** Werkzeugleiste, Abschnitt **ERSTELLEN** · **Taste:** `G` · **Funktioniert in:** gespeicherten Welten, live
 
-![Das Panel Gelände mit der Art Formel und sechs ihrer Vorgaben nebeneinander, jede beschriftet, Neigungsfarben an](images/shape.jpg)
+![Das Panel Gelände mit der Art Formel und sechs ihrer Vorgaben nebeneinander, jede beschriftet, Neigungsfarben an](images/shape.webp)
 *Die Art **Formel**. Vordere Reihe von links: Hügel, Kegel, Plateau. Hintere Reihe von links: Krater, Graben (Ringgraben),
 Gerippter Hügel, jede mit dem Standardradius von 16 m und der Standardhöhe von 5 m, mit **Neigungsfarben** in Ansicht an, damit ihre Hänge
 lesbar sind. Das Panel zeigt den Hügel und seine Formel; auf dem Hügel ist der weiße Umriss der Radius und die orangefarbenen Linien
@@ -70,7 +70,7 @@ Eine Form, Punkt für Punkt berechnet. Jede Vorgabe ist eine Formel, die im Feld
 | **Höhe** | Standard 5 m. Sie ist `h` in der Formel. |
 | **Formel** | Wie viele Meter an jedem Punkt im Radius zum Boden addiert werden; eine negative Zahl gräbt. Ein Fehler erscheint unter dem Feld, und nichts lässt sich platzieren, bis er behoben ist. |
 
-![Das Panel Gelände mit einer unfertigen Formel und der Fehlerzeile unter dem Formelfeld](images/shape-formula-error.jpg)
+![Das Panel Gelände mit einer unfertigen Formel und der Fehlerzeile unter dem Formelfeld](images/shape-formula-error.webp)
 *Eine unfertige Formel: Die Liste ist zu **Formel…** gewechselt, und die Zeile unter dem Feld sagt, was falsch ist („die
 Formel endet zu früh“).*
 
@@ -110,7 +110,7 @@ Ein ganzer Berg aus einem Seed, zum vorhandenen Boden addiert, sodass er die eig
 in sie übergeht. Sein Umriss ist nie ein perfekter Kreis, und **Rau** fügt Wölbungen, Grate und Rinnen im
 Verhältnis zu seiner Größe hinzu.
 
-![Die Art Berge des Panels Gelände und die orangefarbene Vorschau eines einzelnen Gipfels mit ihrem Ring; eingesetzt der Ring rot nahe dem Rand des Bereichs](images/mountain-preview.jpg)
+![Die Art Berge des Panels Gelände und die orangefarbene Vorschau eines einzelnen Gipfels mit ihrem Ring; eingesetzt der Ring rot nahe dem Rand des Bereichs](images/mountain-preview.webp)
 *Einzelner Gipfel, 80 m hoch, Radius 120 m, vor dem Klick: Die orangefarbenen Linien zeigen ihn so hoch, wie er aufsteigen wird, und der weiße
 Ring, wie weit er reicht. Eingesetzt, oben rechts: Mit dem Mauszeiger nahe dem Rand des Bereichs wird der Ring rot, und keine Vorschau
 erscheint, weil er nicht hineinpassen würde.*
@@ -126,9 +126,9 @@ erscheint, weil er nicht hineinpassen würde.*
 
 | Einzelner Gipfel | Grat |
 |---|---|
-| ![Ein einzelner Gipfel mit den Bäumen des Bioms an seinen Hängen, von weit unten gesehen](images/mountain-peak.jpg) | ![Ein langer kahler Grat quer durch das Bild](images/mountain-ridge.jpg) |
+| ![Ein einzelner Gipfel mit den Bäumen des Bioms an seinen Hängen, von weit unten gesehen](images/mountain-peak.webp) | ![Ein langer kahler Grat quer durch das Bild](images/mountain-ridge.webp) |
 | **Vulkan** | **Hügelland** |
-| ![Ein kahler Vulkan mit seinem Krater an der Spitze](images/mountain-volcano.jpg) | ![Drei kahle sanfte Hügel nebeneinander](images/mountain-hills.jpg) |
+| ![Ein kahler Vulkan mit seinem Krater an der Spitze](images/mountain-volcano.webp) | ![Drei kahle sanfte Hügel nebeneinander](images/mountain-hills.webp) |
 
 *Vier Vorgaben in der Mitte eines Bereichs von 5 × 5, der vorher geräumt und geebnet wurde, damit jede hervortritt. Auf dem einzelnen Gipfel sind die
 Bäume des Bioms gewachsen; die anderen bleiben kahl, damit ihre Form zu sehen ist.*
@@ -152,10 +152,10 @@ Ein Berg muss ganz in den offenen Bereich passen, zerklüfteter Rand eingeschlos
 Ein Graustufenbild, in den Boden geprägt: Seine weißen Teile gehen die ganze **Höhe**, graue Teile einen Teil davon, schwarze
 Teile bleiben, wie sie sind. Das Bild bedeckt ein Quadrat, doppelt so breit wie **Radius**; der Umriss zeigt es.
 
-![Die drei eingebauten Bilder, jedes einmal auf geebnetem Boden gesetzt](images/landform-pictures.jpg)
+![Die drei eingebauten Bilder, jedes einmal auf geebnetem Boden gesetzt](images/landform-pictures.webp)
 *Die eingebauten Bilder, 6 m hoch bei einem Radius von 8 m. Von links: Rauer Hügel, Dünen, Felsiger Boden.*
 
-![Die Art Bild vor und nach einem Klick: der quadratische Umriss des Bilds und die orangefarbene Vorschau, dann der Hügel](images/landform-picture.jpg)
+![Die Art Bild vor und nach einem Klick: der quadratische Umriss des Bilds und die orangefarbene Vorschau, dann der Hügel](images/landform-picture.webp)
 *Die Vorgabe **Rauer Hügel**, **Radius** 9 m und **Höhe** 8 m. Links: sein quadratischer Umriss und die orangefarbene Vorschau auf flachem Boden
 vor dem Klick. Rechts: der ganze Hügel, mit einem Klick gesetzt.*
 

@@ -171,7 +171,7 @@ cada pieza), y tiñe cada pieza con los colores del modo de construcción del ju
 | Grausten | 2000 | 100 | 33 % | 10 % |
 | Antiguo | 5000 | 100 | 25 % | 7 % |
 
-![Muros de piedra con un voladizo rojo junto a paredes de madera cuyo voladizo pasa a verde, amarillo y naranja](../images/concept-support-stone-wood.jpg)
+![Muros de piedra con un voladizo rojo junto a paredes de madera cuyo voladizo pasa a verde, amarillo y naranja](../images/concept-support-stone-wood.webp)
 *A la izquierda, tres muros de piedra apilados: azul claro sobre el suelo, verde encima, y el único muro que sobresale
 2 m desde lo alto en rojo, con el «1 se caerían» en la barra superior. A la derecha, paredes de madera que sobresalen
 6 m desde un poste: verde, luego amarillo, luego naranja.*
@@ -261,7 +261,7 @@ Los **Nidos de criaturas** son el tipo visible: nidos de greydwarf, montones de 
 aparecer criaturas a su alrededor hasta que se destruyen («Greydwarf, Greydwarf_Elite · hasta 3 alrededor, a menos de
 5 m»).
 
-![Puntos de aparición de jabalí y draugr junto a una cabaña, uno seleccionado y abierto en el Inspector](../images/spawn-points.jpg)
+![Puntos de aparición de jabalí y draugr junto a una cabaña, uno seleccionado y abierto en el Inspector](../images/spawn-points.webp)
 *Puntos de aparición junto a una cabaña: una caja simple para cada uno, con un marcador naranja encima. El punto de
 aparición de draugr seleccionado está abierto en el Inspector, cuya línea dice qué hace aparecer.*
 
@@ -286,7 +286,7 @@ Una copia (de la herramienta Región o de un plano) contiene:
 
 La copia de la herramienta Selección se coloca igual.
 
-![Una cabaña de piedra pegada en la ladera de un montículo con Despejar el sitio activado, antes y después del clic](../images/paste-clear-site.jpg)
+![Una cabaña de piedra pegada en la ladera de un montículo con Despejar el sitio activado, antes y después del clic](../images/paste-clear-site.webp)
 *Antes del clic (izquierda), el contorno de lo pegado se mete en el montículo; después (derecha), el suelo que estorba
 a la cabaña se excava hasta su suelo, en el mismo paso de deshacer.*
 

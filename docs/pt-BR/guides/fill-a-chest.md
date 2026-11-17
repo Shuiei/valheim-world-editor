@@ -21,7 +21,7 @@ veja [Encontrar um objeto, um item de baú ou uma placa](find-things.md).
 Quantos é reduzido à maior pilha que o jogo permite para esse item. O conteúdo alterado continua sendo do próprio baú:
 um baú que ninguém abriu não se enche com o saque do jogo por cima dele.
 
-![Um baú de madeira no Inspetor: três espaços preenchidos, o quarto recebendo IronScrap, Quantos 20](../images/guide-chest-slot.jpg)
+![Um baú de madeira no Inspetor: três espaços preenchidos, o quarto recebendo IronScrap, Quantos 20](../images/guide-chest-slot.webp)
 *Espaço 4 clicado, IronScrap escolhido em **Buscar um item…** e **Quantos** definido como 20; Wood, Coins e Resin
 preenchem os três primeiros espaços. **Aplicar alterações** os põe no baú.*
 

@@ -13,7 +13,7 @@ mga naka-save na mundo, live
 > file ng mundo kapag nagse-save ito, at nawawala ang mga pagbabago mo, kasama ang mga reset ng zone. Para baguhin ang
 > mundo habang tumatakbo ito, gamitin ang [live mode](live-mode.md).
 
-![Ang mapa ng mundo na may napiling zone: nakabalangkas sa mapusyaw na asul ang area na bubuksan, I-edit sa 3D at ang listahan ng laki sa side panel](images/map.jpg)
+![Ang mapa ng mundo na may napiling zone: nakabalangkas sa mapusyaw na asul ang area na bubuksan, I-edit sa 3D at ang listahan ng laki sa side panel](images/map.webp)
 *May napiling zone: ang mapusyaw na asul na parisukat ay ang area na bubuksan ng **I-edit sa 3D**, sa laking napili sa
 tabi ng button.*
 
@@ -61,7 +61,7 @@ area: mag-edit ng isang area, bumalik sa mapa, magbukas ng iba, at i-save ang la
 
 ## Maghanap sa mundo
 
-![Paghahanap ng Beech1 sa mundo: naka-pin sa kahel ang bawat beech, isang napili na may gintong singsing, ang mga bilang at listahan ng resulta](images/map-search.jpg)
+![Paghahanap ng Beech1 sa mundo: naka-pin sa kahel ang bawat beech, isang napili na may gintong singsing, ang mga bilang at listahan ng resulta](images/map-search.webp)
 *Bawat kahel na pin ay isang nahanap na object. Mas malaki ang resultang napili sa listahan, may gintong singsing, at
 nakagitna rito ang mapa.*
 
@@ -90,7 +90,7 @@ nagsisimula sa `_`, gaya ng `_ZoneCtrl`) ay nahahanap lang kapag nagsisimula rin
 
 ## I-reset ang mga zone sa buong mundo
 
-![Pag-reset ng mga zone sa buong mundo: mga zone ng Meadows na may markang i-reset sa pula, mga tugmang zone ng Black Forest sa asul, ang bilang sa ilalim ng mga button](images/map-reset.jpg)
+![Pag-reset ng mga zone sa buong mundo: mga zone ng Meadows na may markang i-reset sa pula, mga tugmang zone ng Black Forest sa asul, ang bilang sa ilalim ng mga button](images/map-reset.webp)
 *Minarkahang i-reset ang mga zone ng Meadows (pula), saka pinili ang **Black Forest** at pinindot ang **Ipakita ang
 tugma** (asul). Binibilang ng linya sa ilalim ng mga button ang dalawa.*
 
@@ -140,7 +140,7 @@ bawat row ang zone, kung ilang punto ng taas (`h`) at punto ng pintura (`p`) ang
 taas (`-2.4 … 6.0 m`), at "(hindi naka-save)" kapag may nakabinbing pagbabago ("(hindi na-apply)" sa live na mundo).
 Mag-click ng row para mag-zoom in sa zone na iyon at piliin ito, handa para sa **I-edit sa 3D**.
 
-![Malapitang mapa: apat na na-edit na zone na manipis na dilaw ang balangkas at dalawang mas makapal na kahel, ang listahang Mga na-edit na zone (6), dalawang row na (hindi naka-save)](images/map-edited-zones.jpg)
+![Malapitang mapa: apat na na-edit na zone na manipis na dilaw ang balangkas at dalawang mas makapal na kahel, ang listahang Mga na-edit na zone (6), dalawang row na (hindi naka-save)](images/map-edited-zones.webp)
 *Apat na zone ang naka-save (manipis na dilaw) at dalawa ang na-edit mula noon (mas makapal na kahel): minamarkahan ng
 listahan ang mga nakabinbin ng "(hindi naka-save)".*
 

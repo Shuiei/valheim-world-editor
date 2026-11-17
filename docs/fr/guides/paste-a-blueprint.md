@@ -27,7 +27,7 @@ constructeur est le joueur choisi dans **Construit par** sur [la barre de constr
 affichée pendant que vous collez ; les pièces d'une ruine restent sans constructeur. Les pièces de mods que ce monde n'a
 pas sont laissées de côté, et le message les liste.
 
-![Une cabane transparente qui suit le curseur, tournée de 45°, avec le panneau Coller et Dégager le site désactivé](../images/guide-paste-blueprint.jpg)
+![Une cabane transparente qui suit le curseur, tournée de 45°, avec le panneau Coller et Dégager le site désactivé](../images/guide-paste-blueprint.webp)
 *Après **Coller** : la cabane suit le curseur en transparence, son emprise soulignée, tournée de 45° (`tourné de 45°` dans
 le panneau **Coller**), **Dégager le site** désactivé. Derrière, la cabane d'où elle a été enregistrée.*
 

@@ -7,7 +7,7 @@ bosque solo en pendientes suaves, terrazas, una plaza pavimentada exactamente a 
 **Dónde:** barra de herramientas, sección **CREAR** · **Tecla:** ninguna (`Ctrl+Enter` ejecuta el script) ·
 **Funciona en:** mundos guardados, en vivo (no en el Taller)
 
-![La herramienta Script: el ejemplo Terraced hill ejecutado en un área de 3 × 3, su código en el panel y la línea de resultado debajo](images/script.jpg)
+![La herramienta Script: el ejemplo Terraced hill ejecutado en un área de 3 × 3, su código en el panel y la línea de resultado debajo](images/script.webp)
 *El ejemplo Terraced hill ejecutado en un área de 3 × 3: el código en el panel y, debajo, la línea de resultado que
 dice lo que cambió el script.*
 
@@ -324,7 +324,7 @@ cambiado nada.
 - «**El área cambió mientras se ejecutaba el script: no ha cambiado nada. Vuelve a ejecutarlo.**» Editaste, deshiciste
   o guardaste mientras se ejecutaba (o se abrió otra área). Vuelve a ejecutarlo y espera a que termine.
 
-![La herramienta Script tras Ejecutar: Groud mal escrito en la línea 2, la salida listando el error y la barra de estado diciendo que no cambió nada](images/script-error.jpg)
+![La herramienta Script tras Ejecutar: Groud mal escrito en la línea 2, la salida listando el error y la barra de estado diciendo que no cambió nada](images/script-error.webp)
 *Un nombre mal escrito: la salida nombra la línea y el error; la barra de estado dice que no ha cambiado nada.*
 
 ### Detener un script

@@ -13,7 +13,7 @@ gespeicherten Welten, live
 > überschreibt beim Speichern die Weltdateien, und deine Änderungen, zurückgesetzte Zonen eingeschlossen, gehen
 > verloren. Um eine Welt zu ändern, während sie läuft, verwende den [Live-Modus](live-mode.md).
 
-![Die Weltkarte mit gewählter Zone: der zu öffnende Bereich hellblau umrandet, In 3D bearbeiten und die Größenliste im Seitenpanel](images/map.jpg)
+![Die Weltkarte mit gewählter Zone: der zu öffnende Bereich hellblau umrandet, In 3D bearbeiten und die Größenliste im Seitenpanel](images/map.webp)
 *Eine Zone ist gewählt: Das hellblaue Quadrat ist der Bereich, den **In 3D bearbeiten** öffnet, in der Größe, die
 neben der Schaltfläche gewählt ist.*
 
@@ -61,7 +61,7 @@ Bearbeite einen Bereich, kehre zur Karte zurück, öffne einen anderen und speic
 
 ## Welt durchsuchen
 
-![Welt durchsuchen nach Beech1: jede Buche orange markiert, eine mit goldenem Ring gewählt, die Zählungen und die Ergebnisliste](images/map-search.jpg)
+![Welt durchsuchen nach Beech1: jede Buche orange markiert, eine mit goldenem Ring gewählt, die Zählungen und die Ergebnisliste](images/map-search.webp)
 *Jede orange Nadel ist ein gefundenes Objekt. Das in der Liste gewählte Ergebnis ist größer, mit goldenem Ring, und
 die Karte ist darauf zentriert.*
 
@@ -90,7 +90,7 @@ gefunden, Objekte, die du gelöscht, aber nicht gespeichert hast, nicht. Die eig
 
 ## Zonen in der ganzen Welt zurücksetzen
 
-![Zonen in der ganzen Welt zurücksetzen: Wiesen-Zonen rot zum Zurücksetzen markiert, passende Schwarzwald-Zonen blau, die Zählzeile unter den Schaltflächen](images/map-reset.jpg)
+![Zonen in der ganzen Welt zurücksetzen: Wiesen-Zonen rot zum Zurücksetzen markiert, passende Schwarzwald-Zonen blau, die Zählzeile unter den Schaltflächen](images/map-reset.webp)
 *Die Zonen der Wiesen wurden zum Zurücksetzen markiert (rot), dann wurde **Schwarzwald** gewählt und **Treffer
 zeigen** gedrückt (blau). Die Zeile unter den Schaltflächen zählt beide.*
 
@@ -141,7 +141,7 @@ nennt die Zone, wie viele Höhenpunkte (`H`) und Farbpunkte (`F`) geändert wurd
 (`-2.4 … 6.0 m`) und „(nicht gespeichert)“, wenn manche Änderungen ausstehen („(nicht angewendet)“ in einer Live-Welt).
 Klicke auf eine Zeile, um auf diese Zone hineinzuzoomen und sie zu wählen, bereit für **In 3D bearbeiten**.
 
-![Die Karte von nah: vier bearbeitete Zonen dünn gelb umrandet und zwei dicker orange, die Liste Bearbeitete Zonen (6) mit H- und F-Zahlen, zwei Zeilen „(nicht gespeichert)“](images/map-edited-zones.jpg)
+![Die Karte von nah: vier bearbeitete Zonen dünn gelb umrandet und zwei dicker orange, die Liste Bearbeitete Zonen (6) mit H- und F-Zahlen, zwei Zeilen „(nicht gespeichert)“](images/map-edited-zones.webp)
 *Vier Zonen gespeichert (dünn gelb) und zwei seitdem bearbeitet (dicker orange): Die Liste kennzeichnet die
 ausstehenden mit „(nicht gespeichert)“.*
 

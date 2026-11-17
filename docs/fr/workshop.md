@@ -8,7 +8,7 @@ gardez le résultat comme plan à construire en jeu ou à coller dans n'importe 
 **CRÉATION**) → **Nouveau plan** · **Touche :** aucune · **Fonctionne dans :** la parcelle propre à l'Atelier (le
 panneau **Plans** fonctionne dans les mondes enregistrés et en direct)
 
-![Une haute maison de pierre et de bois sur la parcelle, colorée du bleu clair à la base jusqu'à l'orange en haut, son surplomb en rouge](images/workshop.jpg)
+![Une haute maison de pierre et de bois sur la parcelle, colorée du bleu clair à la base jusqu'à l'orange en haut, son surplomb en rouge](images/workshop.webp)
 *Une haute maison avec le **Contrôle de stabilité** activé : la base en pierre en bleu clair, les murs de bois
 au-dessus en vert, puis jaune, puis orange près du sommet, et le surplomb qui avance depuis la rangée du haut en orange,
 puis rouge. La barre du haut indique `111 pièce(s) · 1 tomberai(en)t · enregistrée`.*
@@ -36,7 +36,7 @@ Pour modifier un plan enregistré, cliquez dessus sous **Vos plans** sur la page
 cliquez sur **Ouvrir** à côté de lui dans la bibliothèque (le panneau Plans d'un monde, ou l'onglet **Bibliothèque** de
 l'Atelier).
 
-![L'Atelier sur la page d'accueil](images/start-workshop.jpg)
+![L'Atelier sur la page d'accueil](images/start-workshop.webp)
 *Sur la page d'accueil, **L'Atelier** : **Ouvrir l'Atelier**, **Obtenir Homestead** (il n'est pas installé ici), et
 trois plans sous **Vos plans**, chacun avec son image, du plus récent au plus ancien.*
 
@@ -62,7 +62,7 @@ milieu, au niveau du sol, est l'**ancre** du plan, le point depuis lequel Homest
 Il n'y a pas d'**Abandonner** : annulez, ou rouvrez le plan. Partir avec une construction non enregistrée comme plan
 (**Page d'accueil**, ouverture d'un autre plan, fermeture) vous demande d'abord.
 
-![L'Atelier avec une petite cabane en bois sur la parcelle et le panneau Bâtir sur ses pièces en bois](images/workshop-overview.jpg)
+![L'Atelier avec une petite cabane en bois sur la parcelle et le panneau Bâtir sur ses pièces en bois](images/workshop-overview.webp)
 *L'Atelier avec une petite cabane sur la parcelle : la barre d'outils avec seulement **Bâtir**, **Sélection** et
 **Vue**, la barre de construction à côté ; la barre du haut avec **Page d'accueil**, **Contrôle de stabilité**, le
 nombre de pièces, **Enregistrer le plan** et **Matériaux** ; le panneau **Matériaux** à droite ; le panneau Bâtir en bas
@@ -126,7 +126,7 @@ place plutôt la pièce le long d'une ligne, autour d'un cercle ou d'un rectangl
 | `Shift` + clic droit | Retire la pièce sous le pointeur (`Ctrl+Z` la ramène). Un glissé droit tourne toujours la vue, et `Shift` + glissé droit la fait toujours glisser. |
 | Clic milieu | Construit avec le type de la pièce sous le pointeur, comme une pipette : il est choisi dans le panneau et placé en tête de **Récents**. Un glissé milieu fait toujours glisser la vue. |
 
-![Une rangée de murs tirée à côté de la cabane](images/workshop-row.jpg)
+![Une rangée de murs tirée à côté de la cabane](images/workshop-row.webp)
 *Un glissé depuis la gauche : une rangée de murs en bois posés bout à bout, transparents jusqu'au relâchement du
 bouton.*
 
@@ -138,7 +138,7 @@ partagent et où elle a aussi **Construit par** : voir [La barre de constructio
 
 ### Onglet Bibliothèque
 
-![L'onglet Bibliothèque avec deux plans et une recherche](images/workshop-library.jpg)
+![L'onglet Bibliothèque avec deux plans et une recherche](images/workshop-library.webp)
 *L'onglet **Bibliothèque** qui cherche « hut » : la recherche, **Importer un fichier…**, **Nouveau plan** et **Générer
 un donjon…** dans la rangée du haut du panneau, puis les deux cabanes côte à côte (la haute maison est exclue), chacune
 avec son image, ses pièces, son coût, sa description, ses étiquettes et ses boutons **Ajouter**, **Ouvrir**,
@@ -203,7 +203,7 @@ mais ne peut pas avancer en porte-à-faux ; le bois avance plus loin mais ne mo
 
 ### Coupe
 
-![La même maison avec la Coupe, vue d'en haut](images/workshop-cut.jpg)
+![La même maison avec la Coupe, vue d'en haut](images/workshop-cut.webp)
 *La même maison avec **Coupe à 3 m**, vue d'en haut : tout ce qui dépasse 3 m est masqué, et vous voyez l'intérieur
 de son rez-de-chaussée, avec le foyer, le lit, la table et le coffre.*
 
@@ -230,7 +230,7 @@ crée un nouveau, et ne remplace un plan de ce nom qu'après confirmation. Une i
 dessinée avec les modèles du jeu quand l'éditeur peut les lire, sinon avec la forme de chaque pièce dans la couleur de
 son matériau. Un plan créé ailleurs sans image en reçoit une dessinée dans la bibliothèque, en mémoire seulement.
 
-![La boîte de dialogue Enregistrer le plan sur une petite cabane : nom, description, étiquettes, l'interrupteur donjon et le coût](images/workshop-save-dialog.jpg)
+![La boîte de dialogue Enregistrer le plan sur une petite cabane : nom, description, étiquettes, l'interrupteur donjon et le coût](images/workshop-save-dialog.webp)
 *Enregistrement de la cabane : **Nom** « Small hut », **Description** « A hut with a fire pit », **Étiquettes**
 « house, wood », **Un donjon** désactivé, et la ligne **Coût en jeu** au-dessus d'**Enregistrer**.*
 
@@ -250,7 +250,7 @@ Ce qui est gardé :
 
 ## Panneau Plans
 
-![Le panneau Plans avec une cabane enregistrée](images/blueprints.jpg)
+![Le panneau Plans avec une cabane enregistrée](images/blueprints.webp)
 *Le panneau **Plans** dans un monde : la bannière Homestead, **Chercher des plans** et **Importer un fichier…**,
 **Nouveau plan**, le **Copie** avec **Coller** et **Enregistrer comme plan…**, puis une cabane enregistrée avec
 son image, ses pièces, son coût et ses boutons **Coller**, **Ouvrir**, **Détails**, **.vbuild** et **Supprimer**.*

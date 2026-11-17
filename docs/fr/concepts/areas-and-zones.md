@@ -5,7 +5,7 @@ Valheim découpe son monde en **zones** carrées de 64 m, et l'éditeur en ouvre
 page explique pourquoi certains endroits ne peuvent pas encore être enregistrés, pourquoi le bord du secteur ne bouge
 jamais, et pourquoi un grand secteur est lent.
 
-![Un secteur de 5 × 5 vu de dessus avec les limites de ses zones, annoté : une zone de 64 m, le secteur de 320 m, son bord verrouillé et la ligne de Suivre à 12 m à l'intérieur](../images/concept-area-zones.jpg)
+![Un secteur de 5 × 5 vu de dessus avec les limites de ses zones, annoté : une zone de 64 m, le secteur de 320 m, son bord verrouillé et la ligne de Suivre à 12 m à l'intérieur](../images/concept-area-zones.webp)
 *Le secteur est un bloc de zones. Sa ligne de points de sol la plus extérieure (en jaune) ne change jamais ; avec
 **Suivre** activé, des zones sont ajoutées quand le point que vous regardez franchit la ligne pointillée, 12 m à
 l'intérieur.*

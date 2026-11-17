@@ -22,7 +22,7 @@ Entferne Bäume, Felsen und Büsche von einer Stelle und ebne sie zu einem flach
 11. Optional: Wähle unter **Aktion** **Malen**, dann **Erde** oder **Gepflastert**, und drücke **Malen (Enter)**.
 12. Klicke auf **In Welt speichern** (oder **Live anwenden**).
 
-![Ein Stück Wald, nachdem die Objekte in einem Polygon ausgewählt und gelöscht wurden: die Bäume darin sind weg, das Panel Auswahl offen](../images/area-polygon-done.jpg)
+![Ein Stück Wald, nachdem die Objekte in einem Polygon ausgewählt und gelöscht wurden: die Bäume darin sind weg, das Panel Auswahl offen](../images/area-polygon-done.webp)
 *Nach **Objekte auswählen (Enter)** und `Del`: die Bäume im Polygon sind weg, die außerhalb stehen noch.*
 
 ## Prüfen, ob es geklappt hat

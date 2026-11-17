@@ -5,6 +5,12 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.124.1 — 2026-11-17
+
+### Fixed
+- **A smaller download.** The help pages' pictures in the six translations are now WebP files, a third lighter, so
+  the packages that carry them are back under their size limit and v1.124.0's release can go out.
+
 ## v1.124.0 — 2026-11-17
 
 ### Added

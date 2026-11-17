@@ -20,7 +20,7 @@ Portal, und öffne es in 3D.
    [Ändern, was eine Truhe enthält oder ein Schild sagt](fill-a-chest.md)), dann **In Welt speichern** (oder **Live
    anwenden**).
 
-![Welt durchsuchen nach Beech1: jede Buche orange markiert, eine mit goldenem Ring gewählt](../images/map-search.jpg)
+![Welt durchsuchen nach Beech1: jede Buche orange markiert, eine mit goldenem Ring gewählt](../images/map-search.webp)
 *Jede Markierung ist ein gefundenes Objekt; das in der Liste gewählte ist größer, mit einem goldenen Ring.*
 
 ## Prüfen, ob es geklappt hat

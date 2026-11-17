@@ -20,7 +20,7 @@ você se arrepende, sem voltar o resto do mundo.
 7. Clique em **Voltar ao backup (Enter)**.
 8. Confira o resultado. Se estiver certo, use **Salvar no mundo** (ou **Aplicar ao vivo**).
 
-![Uma cabana vandalizada restaurada a partir do backup do jogo, antes e depois](../images/area-backup.jpg)
+![Uma cabana vandalizada restaurada a partir do backup do jogo, antes e depois](../images/area-backup.webp)
 *À esquerda: um polígono em volta de uma cabana com parte da parede da frente faltando, **Voltar a um backup**
 escolhido, a lista **Backup** aberta no backup do jogo e **Suas construções** ligado. À direita: depois de **Voltar ao
 backup (Enter)**, a parede está inteira de novo; a linha acima do botão nomeia o salvamento do backup, e a barra de

@@ -1,4 +1,4 @@
-<!-- source: f7df77d8 -->
+<!-- source: 45d36264 -->
 # Pagsasalin ng editor
 
 Nasa mga catalogue ang mga salita ng editor, isa bawat wika: isang JSON file ng mga teksto ayon sa key. Ang English,
@@ -67,7 +67,7 @@ ng Help window); walang ganoon ang mga English na folder (`guides/`, `help/`, `c
   ng `docs/` na hindi isinasalin (`../worldeditor.schema.json`). Gumagana pa rin sa editor ang mga link sa pahinang wala
   pa sa folder (ipinapakita nito ang English na pahina), pero hindi sa GitHub hangga't hindi naisasalin ang pahina.
 - **Mga larawan.** Kinukunan ulit sa wika mo ang larawang may mga salita sa `docs/fr/images/`, sa parehong pangalan, at
-  isinusulat na `images/x.jpg`. Ang larawang walang isasalin ay maaaring manatiling English: `../images/x.jpg`. Hangga't
+  isinusulat na `images/x.webp`. Ang larawang walang isasalin ay maaaring manatiling English: `../images/x.jpg`. Hangga't
   hindi naidadagdag sa folder mo ang isang larawan ng `images/`, ipinapakita ng Help window ang English na kapangalan
   nito.
 - **Mga heading.** Isalin ang mga ito; nagbabago kasama nila ang mga id nila (ginagawa ito ng GitHub mula sa mga salita:

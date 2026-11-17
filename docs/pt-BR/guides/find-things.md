@@ -17,7 +17,7 @@ Busque no mundo inteiro um objeto, um item em qualquer baú ou um texto numa pla
    [Alterar o que um baú guarda ou o que uma placa diz](fill-a-chest.md)) e depois **Salvar no mundo** (ou
    **Aplicar ao vivo**).
 
-![Busca no mundo por Beech1: cada faia marcada em laranja, uma escolhida com um anel dourado](../images/map-search.jpg)
+![Busca no mundo por Beech1: cada faia marcada em laranja, uma escolhida com um anel dourado](../images/map-search.webp)
 *Cada marcador é um objeto encontrado; o escolhido na lista é maior, com um anel dourado.*
 
 ## Verificar se funcionou

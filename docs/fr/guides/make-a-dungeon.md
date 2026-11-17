@@ -21,7 +21,7 @@ encore d'entrée de donjon (une sauvegarde d'abord : voir [Sauvegarder un monde
 9. Cliquez sur **Aller à l'entrée** pour redescendre.
 10. Cliquez sur **Enregistrer dans le monde** (ou **Appliquer en direct**).
 
-![L'entrée d'un donjon généré sur le sol](../images/dungeon-entrance.jpg)
+![L'entrée d'un donjon généré sur le sol](../images/dungeon-entrance.webp)
 *L'entrée après **Placer dans le monde** : le tertre d'une chambre funéraire, sa porte tournée vers la caméra.*
 
 Pour modifier le donjon à la main avant de le placer (déplacer des meubles, remplir des coffres), enregistrez (ou

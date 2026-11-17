@@ -8,7 +8,7 @@ consérvalo como plano para construirlo en el juego o pegarlo en cualquier mundo
 sección **CREAR**) → **Nuevo plano** · **Tecla:** ninguna · **Funciona en:** la parcela propia del Taller (el panel
 **Planos** funciona en mundos guardados y en vivo)
 
-![Una casa alta de piedra y madera en la parcela, teñida de azul claro en la base a naranja en lo alto, con su voladizo en rojo](images/workshop.jpg)
+![Una casa alta de piedra y madera en la parcela, teñida de azul claro en la base a naranja en lo alto, con su voladizo en rojo](images/workshop.webp)
 *Una casa alta con **Comprobar soporte** activado: la base de piedra en azul claro, las paredes de madera de encima en
 verde, luego en amarillo y en naranja cerca de lo alto, y el voladizo que sale de la fila superior en naranja y luego
 en rojo. La barra superior indica `111 pieza(s) · 1 se caerían · guardado`.*
@@ -35,7 +35,7 @@ Para construir una cabaña y conservarla:
 Para cambiar un plano guardado, haz clic en él en **Tus planos** en la página de inicio (o en **Página de inicio**), o
 haz clic en **Abrir** a su lado en la biblioteca (el panel Planos de un mundo, o la pestaña **Biblioteca** del Taller).
 
-![El Taller en la página de inicio](images/start-workshop.jpg)
+![El Taller en la página de inicio](images/start-workshop.webp)
 *En la página de inicio, **El Taller**: **Abrir el Taller**, **Obtener Homestead** (aquí no está instalado) y tres
 planos en **Tus planos**, cada uno con su imagen, los más recientes primero.*
 
@@ -61,7 +61,7 @@ a ras de suelo, es el **ancla** del plano, el punto desde el que Homestead mide 
 No hay **Descartar**: deshaz, o vuelve a abrir el plano. Salir con una construcción no guardada como plano
 (**Inicio**, abrir otro, cerrar el editor) pregunta antes.
 
-![El Taller con una pequeña cabaña de madera en la parcela y el panel Construir en sus piezas de madera](images/workshop-overview.jpg)
+![El Taller con una pequeña cabaña de madera en la parcela y el panel Construir en sus piezas de madera](images/workshop-overview.webp)
 *El Taller con una pequeña cabaña en la parcela: la barra de herramientas con solo **Construir**, **Selección** y
 **Vista**, y la barra de construcción a su lado; la barra superior con **Inicio**, **Comprobar soporte**, el recuento
 de piezas, **Guardar plano** y **Materiales**; el panel **Materiales** a la derecha; el panel Construir en la parte
@@ -126,7 +126,7 @@ panel, coloca la pieza a lo largo de una línea, alrededor de un círculo o de u
 | `Shift` + clic derecho | Quita la pieza que hay bajo el puntero (`Ctrl+Z` la recupera). Arrastrar con el botón derecho sigue girando la vista, y `Shift` + arrastrar con el botón derecho sigue desplazándola. |
 | Clic central | Construye con el tipo de la pieza que hay bajo el puntero, como un cuentagotas: se elige en el panel y queda la primera en **Recientes**. Arrastrar con el botón central sigue desplazando la vista. |
 
-![Una fila de paredes que se arrastra junto a la cabaña](images/workshop-row.jpg)
+![Una fila de paredes que se arrastra junto a la cabaña](images/workshop-row.webp)
 *Un arrastre desde la izquierda: una fila de paredes de madera extendidas una tras otra, transparentes hasta soltar el
 botón.*
 
@@ -138,7 +138,7 @@ Selección y Pegar y además tiene **Construido por**: consulta [La barra de con
 
 ### Pestaña Biblioteca
 
-![La pestaña Biblioteca con dos planos y una búsqueda](images/workshop-library.jpg)
+![La pestaña Biblioteca con dos planos y una búsqueda](images/workshop-library.webp)
 *La pestaña **Biblioteca** buscando «hut»: la búsqueda, **Importar archivo…**, **Nuevo plano** y **Generar mazmorra…**
 en la fila superior del panel, y luego las dos cabañas una al lado de la otra (la casa alta queda fuera), cada una con
 su imagen, piezas, costo, descripción, etiquetas y sus botones **Añadir**, **Abrir**, **Detalles**, **.vbuild** y
@@ -204,7 +204,7 @@ soporte](concepts/objects.md#la-comprobación-de-soporte).
 
 ### Corte
 
-![La misma casa con Corte, vista desde arriba](images/workshop-cut.jpg)
+![La misma casa con Corte, vista desde arriba](images/workshop-cut.webp)
 *La misma casa con **Corte a 3 m**, vista desde arriba: todo lo que está por encima de 3 m queda oculto, así que ves la
 planta baja, con el hogar, la cama, la mesa y el cofre.*
 
@@ -230,7 +230,7 @@ construcción vista desde arriba en ángulo, sobre fondo transparente), que Home
 modelos del juego cuando el editor puede leerlos; si no, con la forma de cada pieza en el color de su material. Un
 plano hecho en otro sitio sin imagen recibe una dibujada en la biblioteca, solo en memoria.
 
-![El diálogo Guardar plano sobre una pequeña cabaña: nombre, descripción, etiquetas, el interruptor de mazmorra y el costo](images/workshop-save-dialog.jpg)
+![El diálogo Guardar plano sobre una pequeña cabaña: nombre, descripción, etiquetas, el interruptor de mazmorra y el costo](images/workshop-save-dialog.webp)
 *Guardando la cabaña: **Nombre** «Small hut», **Descripción** «A hut with a fire pit», **Etiquetas** «house, wood»,
 **Una mazmorra** desactivado, y la línea **Costo en el juego** encima de **Guardar**.*
 
@@ -250,7 +250,7 @@ Lo que se conserva:
 
 ## Panel Planos
 
-![El panel Planos con una cabaña guardada](images/blueprints.jpg)
+![El panel Planos con una cabaña guardada](images/blueprints.webp)
 *El panel **Planos** en un mundo: el aviso de Homestead, **Buscar planos** e **Importar archivo…**, **Nuevo plano**, el
 **Copia** con **Pegar** y **Guardar como plano…**, y luego una cabaña guardada con su imagen, piezas, costo y sus
 botones **Pegar**, **Abrir**, **Detalles**, **.vbuild** y **Eliminar**.*

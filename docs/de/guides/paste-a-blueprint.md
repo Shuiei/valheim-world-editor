@@ -28,7 +28,7 @@ Spieler, der unter **Erbaut von** in [der Bauleiste](../build.md#die-bauleiste) 
 angezeigt wird; die Bauteile einer Ruine bleiben ohne Erbauer. Bauteile aus Mods, die diese Welt nicht hat, werden
 weggelassen, und die Meldung listet sie auf.
 
-![Eine durchscheinende Hütte folgt dem Cursor, um 45° gedreht, mit dem Panel Einfügen und Platz räumen aus](../images/guide-paste-blueprint.jpg)
+![Eine durchscheinende Hütte folgt dem Cursor, um 45° gedreht, mit dem Panel Einfügen und Platz räumen aus](../images/guide-paste-blueprint.webp)
 *Nach **Einfügen**: die Hütte folgt durchscheinend dem Cursor, ihr Grundriss umrandet, um 45° gedreht (`gedreht 45°` im
 Panel **Einfügen**), **Platz räumen** aus. Dahinter die Hütte, aus der sie gespeichert wurde.*
 

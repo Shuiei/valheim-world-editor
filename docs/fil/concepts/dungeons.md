@@ -33,7 +33,7 @@ buksan ulit ang area. Ganoon din inilalatag ang mga nayon ng Fuling at ang mga b
 
 ### Mga silid, bukana at takip sa dulo
 
-![Isang Burial Chambers na dungeon mula sa sariling mga silid ng laro, nakabukas, may mga kahel at asul na parisukat kung saan nagtatagpo ang mga silid](../images/dungeon-rooms.jpg)
+![Isang Burial Chambers na dungeon mula sa sariling mga silid ng laro, nakabukas, may mga kahel at asul na parisukat kung saan nagtatagpo ang mga silid](../images/dungeon-rooms.webp)
 *Isang dungeon ng laro 5000 m sa itaas, tinanggal ang mga bubong: isang entry ng listahan ang bawat silid. Minamarkahan
 ng mga parisukat kung saan nagtatagpo ang dalawang silid: asul kung may pinto, kahel kung wala.*
 

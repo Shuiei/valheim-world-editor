@@ -19,7 +19,7 @@ Dibuja un camino llano con una rampa uniforme que sube la colina, pavimentado po
    **Aplicar (Enter)** sobre la misma línea.
 10. Haz clic en **Guardar en el mundo** (o **Aplicar en vivo**).
 
-![Un camino llano abierto a través de dos montículos y pavimentado por el centro](../images/path-road.jpg)
+![Un camino llano abierto a través de dos montículos y pavimentado por el centro](../images/path-road.webp)
 *Un camino hecho con Aplanar a través de dos montículos y luego Pintar pavimento (Ancho 4 m, Borde suave 1 m) sobre la
 misma línea.*
 

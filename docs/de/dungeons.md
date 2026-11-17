@@ -7,7 +7,7 @@ baue in ihnen.
 **Wo:** Werkzeugleiste, Abschnitt **ERSTELLEN** · **Taste:** keine · **Funktioniert in:** gespeicherten Welten, live; der Generator auch in der
 Werkstatt (**Bibliothek** → **Dungeon erzeugen…**)
 
-![Eine Grabkammer aus den Räumen des Spiels, aufgeschnitten, mit dem Panel Dungeon](images/dungeon-rooms.jpg)
+![Eine Grabkammer aus den Räumen des Spiels, aufgeschnitten, mit dem Panel Dungeon](images/dungeon-rooms.webp)
 *Ein Dungeon aus den Räumen des Spiels (Grabkammer, 25 Räume), 5000 m hoch und 2 m über dem Boden aufgeschnitten. Orangefarbene und
 blaue Quadrate markieren, wo Räume aneinanderstoßen. **Raum löschen (Del)** ist ausgegraut, bis ein Raum ausgewählt ist.*
 
@@ -32,7 +32,7 @@ Das ganze Platzieren ist ein Schritt zum Rückgängigmachen: `Ctrl+Z` nimmt alle
 Dungeon aus Bauteilen; einer aus [den Räumen des Spiels](#aus-den-räumen-des-spiels) hängt außerdem davon ab, wo sein
 Eingang steht und wohin er zeigt. Die ganze Anleitung findest du unter [Einen Dungeon erzeugen und in die Welt setzen](guides/make-a-dungeon.md).
 
-![Die Vorgaben des Generators im Panel Dungeon und daneben sein Plan beider Stockwerke, größer gezeichnet](images/dungeon-generate.jpg)
+![Die Vorgaben des Generators im Panel Dungeon und daneben sein Plan beider Stockwerke, größer gezeichnet](images/dungeon-generate.webp)
 ***Dungeon erzeugen** für einen Dungeon im Schwarzwald, Mittel, 2 Stockwerke, Boss hinter einem Tor. Neben dem Panel sein Plan,
 größer gezeichnet, ein Stockwerk je Plan: der grüne Schlüsselraum auf Stockwerk 1, die rote Arena mit ihrem magentafarbenen Torpunkt und die goldene
 Schatzkammer auf Stockwerk 2, und die Zusammenfassung darunter.*
@@ -95,7 +95,7 @@ fallen weg`).
 | **In der Werkstatt öffnen** | Schreibt den Dungeon (aus Bauteilen) als Bauplan und öffnet ihn in der [Werkstatt](workshop.md), um ihn zu ändern: siehe [In der Werkstatt öffnen](#in-der-werkstatt-öffnen). Bei **Räume des Spiels** nicht zu sehen. |
 | **Zum Dungeon gehen** / **Zum Eingang gehen** | Zu sehen, sobald der Dungeon platziert ist (und bis `Ctrl+Z` ihn zurücknimmt): bringen die Ansicht hinauf in das erste Stockwerk, die Dächer weggeschnitten, und wieder hinunter. |
 
-![Der Eingang eines erzeugten Dungeons auf dem Boden](images/dungeon-entrance.jpg)
+![Der Eingang eines erzeugten Dungeons auf dem Boden](images/dungeon-entrance.webp)
 *Der Hügel einer Grabkammer, platziert mit **In der Welt platzieren**, seine Tür der Kamera zugewandt. Unter der Zusammenfassung sind jetzt **Zum
 Dungeon gehen** und **Zum Eingang gehen** zu sehen.*
 
@@ -138,7 +138,7 @@ Dort oben folgt die Kamera nicht mehr dem Boden: Kreise, verschiebe und fliege w
 Ein Dungeon, in dessen Nähe noch niemand war, hat noch keine Räume: Das Panel sagt *Das Spiel hat diesen Dungeon noch nicht angelegt (niemand
 war in seiner Nähe).* Besuche ihn im Spiel, dann öffne den Bereich erneut.
 
-![Eine Frosthöhle von oben nach Zum Dungeon gehen, 4 m über dem Boden aufgeschnitten, mit grünen offenen Enden und orangefarbenen Türquadraten](images/dungeon-inside.jpg)
+![Eine Frosthöhle von oben nach Zum Dungeon gehen, 4 m über dem Boden aufgeschnitten, mit grünen offenen Enden und orangefarbenen Türquadraten](images/dungeon-inside.webp)
 *Eine Frosthöhle nach **Zum Dungeon gehen**, ihre Dächer 4 m über dem Fußboden weggeschnitten: Das Panel führt sie auf (`Frosthöhle, Räume: 17, bei
 -640, -350`). Grüne Rahmen markieren offene Enden (ein Raum wurde gelöscht), orangefarbene Quadrate, wo Räume ohne Tür aneinanderstoßen.*
 
@@ -155,7 +155,7 @@ Jeder Raum hat **Öffnungen**, die Durchgänge, an denen er an den nächsten Rau
 Ein Raum, der einen anderen überlappen oder über den Raum des Dungeons hinausgehen würde (bei den meisten Arten 64 × 64 m um die Mitte seiner Zone),
 wird rot, und die Zeile warnt. Das Spiel baut die Liste trotzdem: Es ist nur eine Warnung.
 
-![Ein Eisgang, durchsichtig an einem grünen offenen Ende gezeigt, in der Liste RÄUME gewählt](images/dungeon-add-room.jpg)
+![Ein Eisgang, durchsichtig an einem grünen offenen Ende gezeigt, in der Liste RÄUME gewählt](images/dungeon-add-room.webp)
 *`cave_new_icecorridor01`, unter **RÄUME** gewählt (eingegrenzt mit „icecorridor“) und auf ein offenes Ende gezeigt: Er erscheint
 dort durchsichtig, so verbunden, wie das Spiel es tut. Die Zeile unten lautet `17 Raum/Räume, 4 offene(s) Ende(n).`*
 
@@ -199,7 +199,7 @@ siehe [Eine mit Expand World, Riverheim oder Tunnelheim erstellte Welt bearbeite
 
 ## In der Werkstatt öffnen
 
-![Ein erzeugter Dungeon aus Bauteilen auf der Parzelle der Werkstatt, aufgeschnitten, seine Eingangshalle mit dem Portal](images/workshop-dungeon.jpg)
+![Ein erzeugter Dungeon aus Bauteilen auf der Parzelle der Werkstatt, aufgeschnitten, seine Eingangshalle mit dem Portal](images/workshop-dungeon.webp)
 *Ein erzeugter Dungeon (ein Stockwerk), auf der Parzelle der Werkstatt geöffnet und bei 3 m aufgeschnitten, die Leiste Bauen wieder auf ihrem Reiter
 **Bauteile**: oben die Eingangshalle mit ihrem Portal, wo Spieler ankommen; darunter die Arena des Bosses.*
 

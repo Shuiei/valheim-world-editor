@@ -22,7 +22,7 @@ dort Wasser, wo sein Bett unter 30 m liegt.
    Wasser), stelle **Weichrand** für sanfte Ufer auf etwa 5 m und drücke **Ebnen (Enter)**.
 8. Klicke auf **In Welt speichern** (oder **Live anwenden**).
 
-![Ein quer durch die Zone gegrabener Fluss, mit sichtbarem Wasser](../images/path-river.jpg)
+![Ein quer durch die Zone gegrabener Fluss, mit sichtbarem Wasser](../images/path-river.webp)
 *Ein mit Fluss / Kanal (Wasser) gegrabener Fluss: das Meer füllt ihn.*
 
 ## Prüfen, ob es geklappt hat

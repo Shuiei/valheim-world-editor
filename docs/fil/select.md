@@ -6,7 +6,7 @@ makita at baguhin ang hawak nito.
 
 **Saan:** tool rail, seksiyong **GAMIT** · **Key:** `E` · **Gumagana sa:** mga naka-save na mundo, live, ang Gawaan
 
-![Isang batong napili, kasama ang mga arrow at singsing nito](images/select-arrows.jpg)
+![Isang batong napili, kasama ang mga arrow at singsing nito](images/select-arrows.webp)
 *Malapitan sa isang napiling bato: ang orange na balangkas nito, ang mga arrow na pulang X, berdeng Y at asul na Z na
 naglilipat dito sa isang axis, at ang orange na singsing na umiikot dito. Nasa kaliwa ang panel ng Pagpili.*
 
@@ -64,7 +64,7 @@ Ang panel ng Pagpili, mula itaas pababa.
 | I-double-click ang bahagi ng barko | Pinipili ang buong barko: tingnan ang [Mga barko at iba pang magkaugnay na object](#mga-barko-at-iba-pang-magkaugnay-na-object). |
 | Mag-click sa bakanteng lupa, o `Alt+A` | Inaalis ang pinili. |
 
-![Tatlong piece ng pader ng isang kubo na napili gamit ang Ctrl + click](images/select-ctrl-click.jpg)
+![Tatlong piece ng pader ng isang kubo na napili gamit ang Ctrl + click](images/select-ctrl-click.webp)
 *Isang click sa isang piece ng pader, saka `Ctrl` + click sa dalawa pa: nakabalangkas sa mas mapusyaw na dilaw ang
 huling na-click, orange ang iba, at binibilang ng status bar ang tatlo.*
 
@@ -81,18 +81,18 @@ pader ng gusali; mula sa gilid, iisang pader.
 | `Ctrl` + drag | Idinadagdag ang kinukuha ng kahon. |
 | `Shift` + drag | Tinatanggal ito. |
 
-![Alt + drag sa kanang kalahati ng isang kubo](images/select-box-drawing.jpg)
+![Alt + drag sa kanang kalahati ng isang kubo](images/select-box-drawing.webp)
 *`Alt` + drag mula sa gitna ng kubo sa kanang kalahati nito: iginuguhit ang kahon sa screen.*
 
-![Napili ang kanang kalahati ng kubo](images/select-box.jpg)
+![Napili ang kanang kalahati ng kubo](images/select-box.webp)
 *Pagkatapos bumitaw: 27 piece ang nakabalangkas, ang mga pader, ang sahig na nakikita sa pagitan nila at ang fire pit;
 hindi kasama ang sahig at chest na nakatago sa likod ng malapit na pader. Binibilang ng status bar ang mga object.*
 
-![Ang parehong kahon na may Pumili nang tagos](images/select-through.jpg)
+![Ang parehong kahon na may Pumili nang tagos](images/select-through.webp)
 *Ang parehong kahon na naka-on ang **Pumili nang tagos**: 34 piece, pati ang sahig at ang chest sa likod ng malapit na
 pader.*
 
-![Kahon sa ibabaw ng kubo na may Mga itinayong piece lang](images/select-pick.jpg)
+![Kahon sa ibabaw ng kubo na may Mga itinayong piece lang](images/select-pick.webp)
 ***Pinipili: Mga itinayong piece lang** at isang kahon sa ibabaw ng buong kubo sa gitna ng mga bato at palumpong: ang
 58 piece lang ng kubo.*
 
@@ -105,16 +105,16 @@ pinapadaan ng [Mask](masks.md) ang lupa), gamitin ang tool na [Rehiyon](area.md#
 object**, pinipili sila ng **Piliin ang mga object (Enter)** nito at lumilipat sa Pagpili, kung saan gumagana sa kanila
 ang **Burahin** at **Palitan ang pinili**.
 
-![Alt + drag paikot sa mga bato at palumpong](images/select-zone-drawing.jpg)
+![Alt + drag paikot sa mga bato at palumpong](images/select-zone-drawing.webp)
 *`Alt` + drag paikot sa mga bato at palumpong: iginuguhit ang balangkas kahit nagsimula ang drag sa isang palumpong.*
 
-![Ang piniling ginawa ng balangkas](images/select-zone.jpg)
+![Ang piniling ginawa ng balangkas](images/select-zone.webp)
 *Napili ang lahat ng ipinapakita sa loob, at ipinapakita ng **EKSAKTONG PUWESTO** kung nasaan ang pinili.*
 
-![Isang pader na na-click, saka Buong gusali](images/select-building.jpg)
+![Isang pader na na-click, saka Buong gusali](images/select-building.webp)
 *Isang click sa pader, saka **Buong gusali**: napili ang bawat nakakonektang piece ng kubo.*
 
-![Nakatago ang kalahati ng kubo, kita ang chest sa loob](images/select-hide.jpg)
+![Nakatago ang kalahati ng kubo, kita ang chest sa loob](images/select-hide.webp)
 *Malapitan sa kubo matapos itago ng `Ctrl+H` ang nakakahong kanang kalahati nito: kitang-kita ang chest sa sahig sa
 loob. Ibinabalik ng `Alt+H` ang mga pader.*
 
@@ -136,7 +136,7 @@ Sinusundan ng status bar ang paglipat: "Inililipat ang 12 object: 4.5 m, nakaiko
 woodwall". Pinapanatili ng inilipat na object ang data nito: ang laman ng chest, ang teksto ng karatula, ang nagtayo
 ng piece. Tingnan ang [Pagkapit](concepts/objects.md#pagkapit) kung paano lumalapag ang paglipat.
 
-![Isang kubong napili nang buo, hinihila ang pulang X na arrow nito](images/select-moving.jpg)
+![Isang kubong napili nang buo, hinihila ang pulang X na arrow nito](images/select-moving.webp)
 *Hinihila ang pulang X na arrow ng kubong napili nang buo: sinusundan ng status bar ang paglipat, "Inililipat ang 40
 object: 4.5 m".*
 
@@ -157,7 +157,7 @@ row nitong **Clipboard**: tingnan ang [panel na Blueprints](workshop.md#panel-na
 Ipinapakita ng Inspector ang lahat ng hawak ng isang object sa save at hinahayaan kang baguhin ito. Buksan ito gamit
 ang **Suriin ang data (I)**, o i-double-click ang isang chest (o anumang object na hindi piece ng gusali).
 
-![Isang chest na may apat na item na bukas sa Inspector](images/inspector.jpg)
+![Isang chest na may apat na item na bukas sa Inspector](images/inspector.webp)
 *Malapitan sa chest na may hawak na apat na item, bukas sa Inspector: ang mga slot nito gaya sa laro, bawat isa may
 pangalan ng item at kung ilan, saka ang bawat halaga sa ilalim ng DATA.*
 

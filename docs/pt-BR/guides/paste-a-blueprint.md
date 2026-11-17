@@ -27,7 +27,7 @@ jogador escolhido em **Construído por** na [barra de construção](../build.md#
 cola; as peças de uma ruína ficam sem construtor. Peças de mods que este mundo não tem ficam de fora, e a mensagem as
 lista.
 
-![Uma cabana transparente seguindo o cursor, girada 45°, com o painel Colar e Limpar o local desligado](../images/guide-paste-blueprint.jpg)
+![Uma cabana transparente seguindo o cursor, girada 45°, com o painel Colar e Limpar o local desligado](../images/guide-paste-blueprint.webp)
 *Depois de **Colar**: a cabana segue o cursor transparente, com a área ocupada contornada, girada 45° (`girado 45°` no
 painel **Colar**), **Limpar o local** desligado. Atrás dela, a cabana a partir da qual o projeto foi salvo.*
 

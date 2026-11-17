@@ -1,4 +1,4 @@
-<!-- source: f7df77d8 -->
+<!-- source: 45d36264 -->
 # Traducir el editor
 
 Las palabras del editor están en catálogos, uno por idioma: un archivo JSON de textos por clave. El inglés,
@@ -67,7 +67,7 @@ no tienen ninguno.
   traduce (`../worldeditor.schema.json`). Los enlaces a una página que la carpeta aún no tiene siguen funcionando en el
   editor (muestra la página en inglés), pero no en GitHub hasta que se traduzca la página.
 - **Imágenes.** Una imagen con palabras se vuelve a tomar en tu idioma en `docs/fr/images/`, con el mismo nombre, y se
-  escribe `images/x.jpg`. Una que no tiene nada que traducir puede seguir siendo la inglesa: `../images/x.jpg`. Hasta
+  escribe `images/x.webp`. Una que no tiene nada que traducir puede seguir siendo la inglesa: `../images/x.jpg`. Hasta
   que se añade a tu carpeta una imagen de `images/`, la ventana de Ayuda muestra la inglesa del mismo nombre.
 - **Encabezados.** Tradúcelos; sus ids cambian con ellos (GitHub los forma a partir de las palabras:
   `#search-the-world` pasa a ser `#rechercher-dans-le-monde`), y los propios enlaces de la traducción usan los ids

@@ -7,7 +7,7 @@ wie mit dem Hammer des Spiels, oder entlang einer Linie, rund um einen Kreis ode
 **Wo:** Werkzeugleiste, Abschnitt **BEARBEITEN** · **Taste:** `U` (in der Werkstatt auch `T`) · **Funktioniert in:**
 gespeicherten Welten, live, der [Werkstatt](workshop.md) und den Räumen eines Dungeons mit [Hier bauen](dungeons.md)
 
-![Das Werkzeug Bauen in einer Welt: eine Hütte auf geebnetem Boden, ein Zaun, der daneben entlang einer Linie verlegt wird, die Leiste Bauen am unteren Rand und die Bauleiste neben der Werkzeugleiste](images/build-world.jpg)
+![Das Werkzeug Bauen in einer Welt: eine Hütte auf geebnetem Boden, ein Zaun, der daneben entlang einer Linie verlegt wird, die Leiste Bauen am unteren Rand und die Bauleiste neben der Werkzeugleiste](images/build-world.webp)
 *Bauen in einer Welt: eine Hütte auf geebnetem Boden und ein Rundholzzaun, der entlang einer Linie aus drei Punkten
 verlegt wird (**Verlegen** auf **Linie**, vor **Platzieren (Enter)** gezeigt). Unten: die Leiste Bauen mit den Bauteilen
 des Reiters **Bau** und der Zeile **Verlegen**. Oben: die Bauleiste mit **Einrasten**, **Raster**, **Drehen um**,
@@ -70,10 +70,10 @@ Leiste mit **▾** ein, um mehr Platz zu haben.
 | **Platzieren (Enter)** | Setzt, was die durchsichtige Vorschau zeigt, als ein Rückgängig-Schritt. Ein Doppelklick auf den letzten Punkt einer Linie tut dasselbe. |
 | **Form löschen (Esc)** | Entfernt die gezeichnete Linie, Figur oder den gezeichneten Rahmen. Sie bleibt nach dem Platzieren, mit leerer Vorschau, bis du sie löschst. |
 
-![Ein Zaun entlang einer Linie durch Punkte](images/plant-line.jpg)
+![Ein Zaun entlang einer Linie durch Punkte](images/plant-line.webp)
 *Ein Zaun, Ende an Ende entlang einer Linie durch vier Punkte verlegt, durchsichtig, bis `Enter` ihn setzt.*
 
-![Ein Ring aus Pfahlwänden und ein Rechteck aus Steinwänden, zwei Schichten hoch](images/line-shapes.jpg)
+![Ein Ring aus Pfahlwänden und ein Rechteck aus Steinwänden, zwei Schichten hoch](images/line-shapes.webp)
 ***Kreis** (ein Ring aus Pfahlwänden) und **Rechteck** (Steinwände, **Schichten** 2), jeweils mit `Enter` gesetzt.*
 
 - Eine Linie, die innerhalb von 1 m von einem vorhandenen Bauteil beginnt, setzt es fort, auf seiner Höhe (mit
@@ -106,7 +106,7 @@ Schritt.
 Halte beim Bauen `Alt`, um ein Bauteil in Viertelmetern zu setzen, ohne Einrasten, unabhängig von der Einstellung
 **Einrasten** (wie `Alt` gedrückt halten im Spiel, mit einem Schritt). Siehe [Einrasten](concepts/objects.md#einrasten).
 
-![Manuelles Einrasten: eine Wand, die dem Zeiger neben der Wand der Hütte folgt, ihr zweiter Einrastpunkt markiert](images/workshop-snap-manual.jpg)
+![Manuelles Einrasten: eine Wand, die dem Zeiger neben der Wand der Hütte folgt, ihr zweiter Einrastpunkt markiert](images/workshop-snap-manual.webp)
 ***Einrasten** auf **Manuell**, `E` einmal gedrückt: die Leiste zeigt `Punkt 2 von 4 · Q / E`, und die durchsichtige
 Wand, die dem Zeiger folgt, trifft die Wand der Hütte an ihrer oberen Ecke, mit einem Kreuz markiert.*
 

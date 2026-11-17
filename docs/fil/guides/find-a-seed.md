@@ -25,7 +25,7 @@ malapit, saka gawin ang mundo.
 10. Simulan ang Valheim at i-load ang mundo nang isang beses bago mo ito i-edit sa editor: ginagawa ng laro ang bawat
     lugar habang lumalapit dito ang mga player.
 
-![Paghahanap ng seed: ang mga hiling, saka ang pinakamahusay na seed na nahanap, bawat isa bilang maliit na mapa na may seed at score](../images/new-world-find.jpg)
+![Paghahanap ng seed: ang mga hiling, saka ang pinakamahusay na seed na nahanap, bawat isa bilang maliit na mapa na may seed at score](../images/new-world-find.webp)
 *Ang mga hiling sa kaliwa; ang pinakamahusay na mga seed sa ilalim ng **Mga nahanap na seed**, mula sa pinakamahusay,
 bawat isa kasama ang score nito.*
 

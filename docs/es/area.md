@@ -7,7 +7,7 @@ propia naturaleza del juego.
 
 **Dónde:** barra de herramientas, sección **EDITAR** · **Tecla:** `B` · **Funciona en:** mundos guardados, en vivo
 
-![Un recuadro arrastrado alrededor de un grupo denso de árboles, con Objetos elegido y las fichas de tipo contando lo que hay dentro](images/area.jpg)
+![Un recuadro arrastrado alrededor de un grupo denso de árboles, con Objetos elegido y las fichas de tipo contando lo que hay dentro](images/area.webp)
 *Un recuadro arrastrado alrededor de un grupo de árboles con **Objetos** elegido: las fichas de tipo cuentan los
 árboles, rocas, arbustos y recolectables que hay dentro. Aún no ha cambiado nada: el botón de abajo los selecciona.*
 
@@ -49,10 +49,10 @@ La línea bajo los botones da la superficie y cuántos objetos visibles hay dent
 objeto(s) visible(s) dentro»). La selección solo se dibuja en la herramienta Región y mientras pegas; se conserva
 cuando usas otra herramienta.
 
-![Un polígono dibujado alrededor de parte de un bosque](images/area-polygon.jpg)
+![Un polígono dibujado alrededor de parte de un bosque](images/area-polygon.webp)
 *Un polígono cerrado alrededor de parte de un bosque, con **Objetos** elegido.*
 
-![El mismo bosque después de Seleccionar los objetos y Eliminar](images/area-polygon-done.jpg)
+![El mismo bosque después de Seleccionar los objetos y Eliminar](images/area-polygon-done.webp)
 *Después de **Seleccionar los objetos (Enter)** y luego `Del` en la herramienta Selección: los árboles dentro del
 polígono han desaparecido, los de fuera siguen en pie.*
 
@@ -84,7 +84,7 @@ Bajo **Aplanar**, **Elevar** y **Bajar**:
 |---|---|
 | Línea de desmonte y relleno | Cuánto suelo movería la acción («Aplanar a 35 m: excavar 120 m³, rellenar 340 m³») y, para Aplanar, lo que queda fuera de alcance («(40 m³ fuera de alcance: límite de ±8 m)»; con Sin límite activado, solo lo que pasa de sus ±400 m). La segunda línea, «Suelo de dentro: … elevado, … excavado desde que se generó», compara con el mundo tal como se generó. Ambas siguen cada cambio, el borde suave y la Máscara. |
 
-![Aplanar sobre un recuadro encima de una colina: la línea de desmonte y relleno, con suelo fuera del alcance del límite de ±8 m](images/area-cut-fill.jpg)
+![Aplanar sobre un recuadro encima de una colina: la línea de desmonte y relleno, con suelo fuera del alcance del límite de ±8 m](images/area-cut-fill.webp)
 *Un recuadro sobre una colina con **Aplanar** a 46 m y **Sin límite** desactivado: «Aplanar a 46 m: excavar 0 m³,
 rellenar 1.5k m³ (2.2k m³ fuera de alcance: límite de ±8 m)», y debajo el suelo ya elevado dentro desde que se generó
 el mundo.*
@@ -159,7 +159,7 @@ un recuadro o un polígono lo que el pincel [Restaurar](terrain.md#restaurar) ha
 
 ### Regenerar la naturaleza
 
-![Un recuadro pelado y el mismo recuadro después de Regenerar la naturaleza, con la misma cámara](images/area-regrow.jpg)
+![Un recuadro pelado y el mismo recuadro después de Regenerar la naturaleza, con la misma cámara](images/area-regrow.webp)
 *Izquierda: un recuadro sobre suelo pelado. Derecha: el mismo recuadro después de **Regenerar la naturaleza**: los
 árboles y rocas propios del juego para el bioma, y la barra de estado dice lo que ha crecido.*
 
@@ -196,7 +196,7 @@ elegidos que haya dentro se quita, aunque esté oculto en Vista, y cada objeto d
 vuelve. Las piedras rúnicas nunca se tocan. Cuando no hay ninguna diferencia, la barra de estado dice «Nada que
 restaurar: la selección está como en la copia de seguridad.»
 
-![Una cabaña vandalizada restaurada desde la copia de seguridad del juego, antes y después](images/area-backup.jpg)
+![Una cabaña vandalizada restaurada desde la copia de seguridad del juego, antes y después](images/area-backup.webp)
 *Izquierda: un polígono alrededor de una cabaña a la que le falta parte de la pared cercana, con **Volver a una copia de
 seguridad** elegido, la lista **Respaldo** abierta sobre la copia del juego y **Tus construcciones**
 activado. Derecha: después de **Volver a la copia de seguridad (Enter)**, la pared vuelve a estar entera; la línea
@@ -226,14 +226,14 @@ en vivo (WorldEditorBridge 0.10.0 o posterior).
 > ruinas, entradas de mazmorra, criaturas y objetos tirados de las zonas; las lápidas de los jugadores se quedan. Los
 > animales domados no tienen constructor, así que también desaparecen: sácalos antes.
 
-![Dos zonas bajo un recuadro marcadas para restablecer, con contorno rojo](images/area-reset.jpg)
+![Dos zonas bajo un recuadro marcadas para restablecer, con contorno rojo](images/area-reset.webp)
 *Un recuadro sobre dos zonas, **Restablecer zonas** con **Conservar mis construcciones** y **Deshacer también sus
 ediciones del suelo** activados, después de **Restablecer zonas… (Enter)**: ambas zonas con contorno rojo, y la barra
 de estado contándolas. No se restablece nada hasta que guardas.*
 
 ## Copiar y pegar
 
-![Pegando un bosque copiado: la copia transparente sigue al cursor, girada, con el panel Pegar](images/paste.jpg)
+![Pegando un bosque copiado: la copia transparente sigue al cursor, girada, con el panel Pegar](images/paste.webp)
 *Un bosque copiado de unas decenas de árboles y rocas siguiendo al cursor, transparente y girado 30°; la línea de
 arriba del panel Pegar dice qué hay en el portapapeles. Un clic lo coloca.*
 
@@ -266,7 +266,7 @@ piezas de construcción sin su pintura. Se pega de la misma forma.
 
 ### Pegar
 
-![Una cabaña pegada tres veces hacia arriba: una pila de tres plantas junto a la original](images/paste-stack.jpg)
+![Una cabaña pegada tres veces hacia arriba: una pila de tres plantas junto a la original](images/paste-stack.webp)
 *Un clic con **Copias** en 3 y **A lo largo de** en hacia arriba, visto desde el suelo: junto a la cabaña original, tres
 copias apiladas en tres plantas (el contorno es el siguiente pegado, que sigue al cursor).*
 
@@ -305,7 +305,7 @@ da forma al suelo. La línea de arriba del panel dice qué hay en el portapapele
 reflejado. La barra de estado dice lo que hizo el pegado: «Pegado con el suelo, 54 objeto(s), 7 árbol(es), roca(s) y
 similares retirados del sitio.»
 
-![Una cabaña de piedra pegada en la ladera de un montículo con Despejar el sitio, antes y después del clic](images/paste-clear-site.jpg)
+![Una cabaña de piedra pegada en la ladera de un montículo con Despejar el sitio, antes y después del clic](images/paste-clear-site.webp)
 *Con **Despejar el sitio** activado (**Forma y pintura del suelo** desactivado, **Altura** -1.5 m): a la izquierda, la
 copia transparente hundida en la ladera de un montículo; a la derecha, después del clic, el suelo excavado alrededor de
 sus paredes.*

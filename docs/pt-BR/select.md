@@ -7,7 +7,7 @@ ver e alterar o que ele contém.
 **Onde:** barra de ferramentas, seção **UTILIDADES** · **Tecla:** `E` · **Funciona em:** mundos salvos, ao vivo, a
 Oficina
 
-![Uma rocha selecionada, com as setas e o anel](images/select-arrows.jpg)
+![Uma rocha selecionada, com as setas e o anel](images/select-arrows.webp)
 *De perto, uma rocha selecionada: o contorno laranja, as setas X vermelha, Y verde e Z azul que a movem ao longo de um
 eixo, e o anel laranja que a gira. O painel Selecionar fica à esquerda.*
 
@@ -65,7 +65,7 @@ O painel Selecionar, de cima para baixo.
 | Clique duplo numa parte de um navio | Seleciona o navio inteiro: veja [Navios e outros objetos vinculados](#navios-e-outros-objetos-vinculados). |
 | Clicar no chão vazio, ou `Alt+A` | Limpa a seleção. |
 
-![Três peças de parede de uma cabana selecionadas com Ctrl + clique](images/select-ctrl-click.jpg)
+![Três peças de parede de uma cabana selecionadas com Ctrl + clique](images/select-ctrl-click.webp)
 *Um clique numa peça de parede, depois `Ctrl` + clique em mais duas: a última clicada tem contorno amarelo mais claro,
 as outras laranja, e a barra de status conta as três.*
 
@@ -82,17 +82,17 @@ uma construção; de lado, uma parede.
 | `Ctrl` + arrastar | Adiciona o que o retângulo pega. |
 | `Shift` + arrastar | Retira o que ele pega. |
 
-![Alt + arrastar sobre a metade direita de uma cabana](images/select-box-drawing.jpg)
+![Alt + arrastar sobre a metade direita de uma cabana](images/select-box-drawing.webp)
 *`Alt` + arrastar do meio de uma cabana sobre a metade direita dela: o retângulo é desenhado na tela.*
 
-![A metade direita da cabana selecionada](images/select-box.jpg)
+![A metade direita da cabana selecionada](images/select-box.webp)
 *Depois de soltar: 27 peças com contorno, as paredes, o piso visto entre elas e a fogueira; o piso e o baú escondidos
 atrás da parede da frente ficam de fora. A barra de status conta os objetos.*
 
-![O mesmo retângulo com Selecionar através](images/select-through.jpg)
+![O mesmo retângulo com Selecionar através](images/select-through.webp)
 *O mesmo retângulo com **Selecionar através** ligado: 34 peças, inclusive o piso e o baú atrás da parede da frente.*
 
-![Um retângulo sobre uma cabana com Só peças construídas](images/select-pick.jpg)
+![Um retângulo sobre uma cabana com Só peças construídas](images/select-pick.webp)
 ***Seleciona: Só peças construídas** e um retângulo sobre a cabana inteira entre rochas e arbustos: só as 58 peças da
 cabana.*
 
@@ -105,17 +105,17 @@ Para selecionar por tipo dentro de um retângulo ou polígono exato (todas as á
 **Selecionar os objetos (Enter)** dela os seleciona e passa para Selecionar, onde **Excluir** e **Substituir a
 seleção** atuam sobre eles.
 
-![Alt + arrastar em volta de rochas e arbustos](images/select-zone-drawing.jpg)
+![Alt + arrastar em volta de rochas e arbustos](images/select-zone-drawing.webp)
 *`Alt` + arrastar em volta de rochas e arbustos: o contorno é desenhado mesmo que o arrasto tenha começado num
 arbusto.*
 
-![A seleção que o contorno fez](images/select-zone.jpg)
+![A seleção que o contorno fez](images/select-zone.webp)
 *Tudo o que é mostrado dentro fica selecionado, e **POSIÇÃO EXATA** mostra onde a seleção está.*
 
-![Uma parede clicada, depois Construção inteira](images/select-building.jpg)
+![Uma parede clicada, depois Construção inteira](images/select-building.webp)
 *Um clique numa parede, depois **Construção inteira**: todas as peças ligadas da cabana ficam selecionadas.*
 
-![Metade de uma cabana oculta, mostrando o baú dentro](images/select-hide.jpg)
+![Metade de uma cabana oculta, mostrando o baú dentro](images/select-hide.webp)
 *De perto, a cabana depois que `Ctrl+H` ocultou a metade direita selecionada: o baú no piso de dentro fica à vista.
 `Alt+H` traz as paredes de volta.*
 
@@ -137,7 +137,7 @@ A barra de status acompanha o movimento: "Movendo 12 objeto(s): 4.5 m, girado(s)
 woodwall". Um objeto movido mantém os dados dele: um baú, o conteúdo; uma placa, o texto; uma peça, o construtor. Veja
 [Encaixe](concepts/objects.md#encaixe) para saber onde um movimento termina.
 
-![Uma cabana selecionada inteira, com a seta X vermelha sendo arrastada](images/select-moving.jpg)
+![Uma cabana selecionada inteira, com a seta X vermelha sendo arrastada](images/select-moving.webp)
 *Arrastando a seta X vermelha de uma cabana selecionada inteira: a barra de status acompanha o movimento, "Movendo 40
 objeto(s): 4.5 m".*
 
@@ -156,7 +156,7 @@ Para guardar uma cópia como projeto, abra **Projetos** na barra e clique em **S
 O Inspetor mostra tudo o que um objeto contém no salvamento e deixa você alterar. Abra-o com **Inspecionar dados
 (I)**, ou dê um clique duplo num baú (ou em qualquer objeto que não seja uma peça de construção).
 
-![Um baú com quatro itens aberto no Inspetor](images/inspector.jpg)
+![Um baú com quatro itens aberto no Inspetor](images/inspector.webp)
 *De perto, um baú com quatro itens, aberto no Inspetor: os espaços como no jogo, cada um com o nome do item e a
 quantidade, e depois todos os valores em DADOS.*
 

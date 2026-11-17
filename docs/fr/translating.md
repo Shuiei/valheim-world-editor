@@ -1,4 +1,4 @@
-<!-- source: f7df77d8 -->
+<!-- source: 45d36264 -->
 # Traduire l'éditeur
 
 Les mots de l'éditeur sont dans des catalogues, un par langue : un fichier JSON de textes classés par clé. L'anglais,
@@ -67,7 +67,7 @@ ont pas.
   fonctionnent quand même dans l'éditeur (il affiche la page anglaise), mais pas sur GitHub tant que la page n'est pas
   traduite.
 - **Images.** Une image qui contient des mots est refaite dans votre langue dans `docs/fr/images/`, sous le même nom, et
-  écrite `images/x.jpg`. Une image sans rien à traduire peut rester l'anglaise : `../images/x.jpg`. Tant qu'une image de
+  écrite `images/x.webp`. Une image sans rien à traduire peut rester l'anglaise : `../images/x.jpg`. Tant qu'une image de
   `images/` n'est pas ajoutée à votre dossier, la fenêtre d'aide affiche l'anglaise du même nom.
 - **Titres.** Traduisez-les ; leurs identifiants changent avec eux (GitHub les construit à partir des mots :
   `#search-the-world` devient `#rechercher-dans-le-monde`), et les liens propres à la traduction utilisent les
