@@ -21,6 +21,8 @@ public static partial class Driver
             ["selected"] = w.View.Selected.Count,
             ["mode"] = w.Tools.Mode.ToString(),
             ["message"] = w.MessageText.Text ?? "",
+            // The same message in English whatever the language shown (what Claude reads), for scripts that wait for it.
+            ["messageEn"] = w.LastMessageEn,
             ["added"] = w.World?.Pending.Added ?? 0,
             ["yaw"] = w.View.Camera.Yaw,
             ["distance"] = w.View.Camera.Distance,

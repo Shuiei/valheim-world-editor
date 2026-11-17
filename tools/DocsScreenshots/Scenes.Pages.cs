@@ -418,7 +418,7 @@ public sealed partial class Scenes
         e.Send("click Apply live");
         // Taken as soon as the apply's result shows, before the game's next news replaces it.
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        while (!(e.Send("wait 200").GetProperty("message").GetString() ?? "").StartsWith("Applied", StringComparison.Ordinal) && watch.Elapsed < TimeSpan.FromSeconds(30))
+        while (!(e.Send("wait 200").GetProperty("messageEn").GetString() ?? "").StartsWith("Applied", StringComparison.Ordinal) && watch.Elapsed < TimeSpan.FromSeconds(30))
         {
         }
         e.Shot(Out("live-applied.jpg"), keepMessage: true);

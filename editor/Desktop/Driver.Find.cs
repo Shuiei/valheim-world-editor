@@ -30,20 +30,22 @@ public static partial class Driver
         : string.Join(" ", Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(c).OfType<Avalonia.Controls.TextBlock>().Select(t => t.Text?.Trim()).Where(t => !string.IsNullOrEmpty(t))).Trim();
 
     /// <summary>
-    /// A control's own words in English: each of its texts taken back to its English (<c>Lang.EnglishOf</c>), so a command
-    /// names a control by its English words whatever the language the window is shown in.
+    /// A control's own words in English: each of its texts taken back to its English (<c>Lang.EnglishOf</c>, or
+    /// <c>Lang.EnglishOfFilled</c> for one made with values: "Niveau 2" is "Level 2"), so a command names a control by its
+    /// English words whatever the language the window is shown in.
     /// </summary>
-    internal static string EnglishTextOf(Avalonia.Controls.ContentControl c) => c.Content is string s ? Lang.EnglishOf(s.Trim())
-        : string.Join(" ", Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(c).OfType<Avalonia.Controls.TextBlock>().Select(t => t.Text?.Trim()).Where(t => !string.IsNullOrEmpty(t)).Select(t => Lang.EnglishOf(t!))).Trim();
+    internal static string EnglishTextOf(Avalonia.Controls.ContentControl c) => c.Content is string s ? English(s.Trim())
+        : string.Join(" ", Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(c).OfType<Avalonia.Controls.TextBlock>().Select(t => t.Text?.Trim()).Where(t => !string.IsNullOrEmpty(t)).Select(t => English(t!))).Trim();
+
+    /// <summary>A text shown, in English: a catalogue text's English, one made with values with them, else as it is.</summary>
+    private static string English(string shown) => Lang.EnglishOf(shown) is var en && en != shown ? en : Lang.EnglishOfFilled(shown) ?? shown;
 
     /// <summary>
     /// Whether a text shown is <paramref name="name"/> (any case), as shown or in English, a text made with values too
     /// ("150 graines" is "150 seeds").
     /// </summary>
     internal static bool Says(string? shown, string name) => shown != null
-        && (string.Equals(shown.Trim(), name, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(Lang.EnglishOf(shown.Trim()), name, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(Lang.EnglishOfFilled(shown.Trim()), name, StringComparison.OrdinalIgnoreCase));
+        && (string.Equals(shown.Trim(), name, StringComparison.OrdinalIgnoreCase) || string.Equals(English(shown.Trim()), name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Whether a control's words are <paramref name="name"/> (any case), as shown or in English.</summary>
     internal static bool Says(Avalonia.Controls.ContentControl c, string name) =>
