@@ -3,8 +3,9 @@ using TerrainEditor.DocsScreenshots;
 
 // The documentation's pictures (docs/images), taken in the app (Editor.cs drives it, Scenes.cs holds
 // one scene per picture). The worlds are made from seeds with tools/WorldCheck (see
-// docs/development.md) and never change:
-//   WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     the bare zone the tools are shown on
+// docs/development.md, which also says what to do when the recipe leaves another zone bare than the
+// scenes' -10, -5) and never change:
+//   WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     one zone left bare for the tools
 //   WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     a second world for the start page
 // Each scene opens a fresh editor (a stand-in home: no one's names or folders) and leaves without
 // saving. Run:

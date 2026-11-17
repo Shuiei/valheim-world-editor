@@ -56,7 +56,7 @@ game only knows the objects around its own player. Use the plugin from the same 
 **When you connect**, the editor reads the whole world from the game: every object, the zones the game has made, the
 locations. It is the same data a save holds, so the map, the search and every tool work as offline. On a big world
 this takes a while, up to a few minutes. It also asks for the objects the game knows that are not Valheim's own
-(mods' pieces), so they get their names and show in the Place list and the Workshop.
+(mods' pieces), so they get their names and show in the Place list and the Build dock.
 
 **When you apply** (**Apply live**, or each step at once with **Auto**), it sends what changed since the last apply, in
 this order:

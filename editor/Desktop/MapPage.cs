@@ -111,13 +111,13 @@ public sealed partial class MapPage : IDisposable
         var side = BuildSide(worlds, search, zones);
         var surface = new Border { Background = Brushes.Transparent };
         Map.Attach(surface);
-        var cursor = new Border { Background = PanelBg, BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = Ui.Pad, Margin = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Child = Cursor };
+        var cursor = new Border { Background = PanelBg, BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = Ui.CardRadius, Padding = Ui.Pad, Margin = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Child = Cursor };
         var status = new Border
         {
             Background = PanelBg,
             BorderBrush = Line,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = Ui.CardRadius,
             Padding = Ui.Pad,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
@@ -127,7 +127,7 @@ public sealed partial class MapPage : IDisposable
         Map.Status += t => status.IsVisible = !string.IsNullOrEmpty(t);
         cursor.IsVisible = false;
         Cursor.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) { cursor.IsVisible = !string.IsNullOrEmpty(Cursor.Text); } };
-        View = new Grid { Background = new SolidColorBrush(Color.FromRgb(20, 23, 28)), Children = { Map, surface, Labels, side, cursor, status } };
+        View = new Grid { Background = Ui.Bg, Children = { Map, surface, Labels, side, cursor, status } };
         _players.Tick += async (_, _) => await PollPlayers();
     }
 }

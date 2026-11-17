@@ -8,11 +8,11 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class ShapePanel
 {
-    /// <summary>Builds the panel with the first preset (Mound) picked.</summary>
+    /// <summary>Builds the rows with the first preset (Mound) picked.</summary>
     public ShapePanel()
     {
         PresetBox = new ComboBox { ItemsSource = Presets.Select(p => NameOf(p.Key)).Append(Lang.T("shape.preset.own")).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-        var radiusV = new TextBlock { FontSize = 12, Width = 40, VerticalAlignment = VerticalAlignment.Center, Text = "16 m" };
+        var radiusV = new TextBlock { Text = "16 m" };
         RadiusSlider = new Slider { Minimum = 2, Maximum = 80, SmallChange = 1, TickFrequency = 1, IsSnapToTickEnabled = true, Value = 16 };
         RadiusSlider.ValueChanged += (_, e) => { Radius = (float)e.NewValue; radiusV.Text = $"{e.NewValue:0} m"; Changed?.Invoke(); };
         HeightBox.ValueChanged += (_, e) => { Height = (float)(e.NewValue ?? 0); Changed?.Invoke(); };
@@ -46,30 +46,25 @@ public sealed partial class ShapePanel
         RadiusSlider.Tip("shape.radius");
         HeightBox.Tip("shape.height");
         FormulaBox.Tip("shape.formula");
-        static Control Row(string label, Control input, Control? after = null) => Ui.Row(label, input, after, "60,*,Auto");
-        Card = Ui.AsCard(new Border
+        Ui.StyleValueText(radiusV);
+        // The rows every kind has (preset, radius, height) first and under the same names, then this kind's own.
+        Rows = new StackPanel
         {
-            VerticalAlignment = VerticalAlignment.Top,
-            Child = new StackPanel
+            Spacing = 6,
+            Children =
             {
-                Width = 300,
-                Spacing = 6,
-                Children =
+                Ui.Row(Lang.T("common.preset"), PresetBox),
+                Ui.Row(Lang.T("shape.label.radius"), RadiusSlider, radiusV),
+                Ui.Row(Lang.T("common.height"), HeightBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center }),
+                Labelled(Lang.T("shape.label.formula"), FormulaBox),
+                ErrorText,
+                new TextBlock
                 {
-                    Ui.Title(Lang.T("rail.label.shape"), HelpTopics.Tool(ToolMode.Shape)),
-                    Row(Lang.T("rail.label.shape"), PresetBox),
-                    Row(Lang.T("shape.label.radius"), RadiusSlider, radiusV),
-                    Row(Lang.T("common.height"), HeightBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center }),
-                    Labelled(Lang.T("shape.label.formula"), FormulaBox),
-                    ErrorText,
-                    new TextBlock
-                    {
-                        Text = Lang.T("shape.hint.click"),
-                        FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-                    },
+                    Text = Lang.T("shape.hint.formula"),
+                    FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                 },
             },
-        });
+        };
         Sync();
     }
 

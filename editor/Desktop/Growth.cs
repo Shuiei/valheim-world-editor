@@ -5,7 +5,7 @@ namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// Growing the game's own vegetation (Regrow: the world generator's rules, on the ground as it is now)
-/// over a rectangle of the world, for the Area tool's Regrow and the Mountain tool: the spots kept by
+/// over a rectangle of the world, for the Area tool's Regrow and the Landform tool's mountains: the spots kept by
 /// keep, not where something already stands (a tree still there is not doubled) or near buildings.
 /// </summary>
 public static partial class Growth

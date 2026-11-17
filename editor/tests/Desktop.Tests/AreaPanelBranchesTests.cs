@@ -64,22 +64,21 @@ public class AreaPanelBranchesTests
     public async Task APanelNobodyListensToStillWorks()
     {
         var (w, s) = Open();
-        var p = new AreaPanel(w.View, () => s, Terrain.PrefabCatalog.DisplayName);
-        foreach (var b in new[] { p.CopyButton, p.PasteButton, p.SaveBlueprintButton, p.LibraryButton, p.ToPickButton, p.UnresetButton })
+        var p = new AreaPanel(w.View, () => s, Terrain.PrefabCatalog.DisplayName, w.Tools.Brush);
+        foreach (var b in new[] { p.CopyButton, p.PasteButton, p.SaveBlueprintButton, p.LibraryButton, p.UnresetButton, p.UnresetAllButton })
         {
             Click(b);
         }
-        p.UsePicked(12345);
         p.Replace(s, [], Beech);
-        p.Choose(AreaPanel.Act.Remove);
-        await p.Apply();
-        Assert.Equal(2, s.Scene.Things.Count(t => t.Gone));
+        string? undo = s.UndoLabel;
+        // Select objects with nobody to switch to the Select tool: the objects are selected all the same.
         p.Choose(AreaPanel.Act.Select);
         await p.Apply();
+        Assert.Equal([0, 1], w.View.Selected.Order());
         Click(p.ClearButton);
         Assert.Empty(w.View.Area.Points);
         await p.Apply();
-        Assert.Equal("Area: removed 2 object(s)", s.UndoLabel);
+        Assert.Equal(undo, s.UndoLabel);
     }
 
     [AvaloniaFact]
@@ -89,12 +88,14 @@ public class AreaPanelBranchesTests
         s.Mask.On = true;
         s.Mask.Biomes.Add(8);
         var p = w.AreaPanel;
-        p.Choose(AreaPanel.Act.Remove);
+        p.Choose(AreaPanel.Act.Select);
         await p.Apply();
-        // Only the beech in the Black Forest.
+        // Only the beech in the Black Forest is handed to the Select tool, whose Delete takes it away.
+        Assert.Equal([1], w.View.Selected);
+        Assert.StartsWith("Selected 1 object(s)", w.MessageText.Text);
+        w.View.SelectTool.Delete();
         Assert.False(s.Scene.Things[0].Gone);
         Assert.True(s.Scene.Things[1].Gone);
-        Assert.StartsWith("Removed 1 object(s).", w.MessageText.Text);
     }
 
     [AvaloniaFact]
@@ -106,7 +107,7 @@ public class AreaPanelBranchesTests
         Select(w, -50, -50, -40, -40);
         w.AreaPanel.Choose(AreaPanel.Act.Reset);
         await w.AreaPanel.Apply();
-        Assert.Equal("Select an area first.", w.MessageText.Text);
+        Assert.Equal("Select a region first.", w.MessageText.Text);
         Assert.False(asked);
         Assert.Empty(s.Resets);
     }

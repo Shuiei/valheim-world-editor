@@ -4,8 +4,9 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The Dungeon tool's panel: which dungeon of the area, going inside and cutting its roofs away (and back
-/// down to its entrance), the rooms it can take, and the changes (turn, delete, close the open ends).
+/// The Dungeon tool's panel: which dungeon of the area, going inside with its roofs cut away (and back down to its
+/// entrance), the rooms it can take, and the changes (turn, delete, close the open ends). The roofs are cut by the
+/// view's one cut (ViewCut, the status bar's slider), counted from the dungeon's floor while the tool is in use.
 /// </summary>
 public sealed partial class DungeonPanel
 {
@@ -15,18 +16,21 @@ public sealed partial class DungeonPanel
     internal DungeonGenPanel Gen { get; } = new();
     /// <summary>The generator's expander.</summary>
     private readonly Expander _generate;
-    /// <summary>The view: its dungeon tool, camera and roof cut.</summary>
+    /// <summary>The view: its dungeon tool and camera.</summary>
     private readonly GlView _view;
+    /// <summary>The view's cut, which hides the dungeon's roofs.</summary>
+    private readonly ViewCut _cut;
     /// <summary>The view's Dungeon tool the panel drives.</summary>
     private DungeonTool Tool => _view.Dungeon;
     /// <summary>Builds the panel for the view's Dungeon tool.</summary>
     /// <param name="view">The 3D view.</param>
-    public DungeonPanel(GlView view)
+    /// <param name="cut">The view's cut.</param>
+    public DungeonPanel(GlView view, ViewCut cut)
     {
         _view = view;
+        _cut = cut;
         Wire();
         (_body, _generate, _, Card) = BuildCard();
-        SetCut(CutOff);
     }
 
     /// <summary>
@@ -49,6 +53,7 @@ public sealed partial class DungeonPanel
         {
             Tool.Open(_shown[i]);
             FillRooms();
+            CutFromFloor();
         }
         return true;
     }
@@ -59,6 +64,9 @@ public sealed partial class DungeonPanel
     /// </summary>
     internal void ShowPiecesPlaced(bool yes) => Empty.Text = yes ? Lang.T("dungeon.hint.piecesPlaced") : Lang.T("dungeon.hint.none");
 
-    /// <summary>Leaving the tool: the cut off.</summary>
-    public void Leave() => _view.CutY = null;
+    /// <summary>
+    /// Leaving the tool: the view's cut counts from the ground again (the world's own cut, off unless it was on); the
+    /// dungeon's is kept for when the tool is back.
+    /// </summary>
+    public void Leave() => _cut.FromGround();
 }

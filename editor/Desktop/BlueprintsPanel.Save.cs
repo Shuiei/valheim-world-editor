@@ -38,6 +38,8 @@ public sealed partial class BlueprintsPanel
         }
         Message?.Invoke(Said.Of("blueprints.msg.saved", name, clip.Objects.Count) + GroundNotKept(json) + Reminder);
         Refresh();
+        // The clipboard carries the name it was saved under.
+        ShowClipboard();
         return name;
     }
 

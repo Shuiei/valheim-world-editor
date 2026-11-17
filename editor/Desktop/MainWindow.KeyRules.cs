@@ -29,14 +29,16 @@ public partial class MainWindow
             Take([Key.C], KeyMods.Ctrl, _ => Tools.Mode is ToolMode.Area or ToolMode.Select, _ => Copy()),
             Take([Key.X], KeyMods.Ctrl, _ => Tools.Mode is ToolMode.Area or ToolMode.Select, _ => Cut()),
             Take([Key.V], KeyMods.Ctrl, null, _ => StartPaste()),
-            // Pasting: R turns a quarter, F mirrors, , and . turn by 1° (Shift: 15°), Esc ends it.
+            // Pasting: R turns a quarter, X mirrors (F stays Walk and Fly), , and . turn by the building bar's step
+            // (Shift: 1°), PgUp and PgDn raise and lower it (as Ctrl + wheel), Esc ends it.
             Take([Key.R], KeyMods.NoCtrl, Pasting, _ => View.Paste.TurnBy(90)),
-            Take([Key.F], KeyMods.NoCtrl, Pasting, _ =>
+            Take([Key.X], KeyMods.NoCtrl, Pasting, _ =>
             {
                 View.Paste.Mirror = !View.Paste.Mirror;
                 View.Paste.Notify();
             }),
             Take([Key.OemComma, Key.OemPeriod], KeyMods.NoCtrl, Pasting, p => TurnPaste(p.Key, p.Shift)),
+            Take([Key.PageUp, Key.PageDown], KeyMods.NoCtrl, Pasting, p => CtrlWheel(p.Key == Key.PageUp ? 1 : -1, p.Shift)),
             Take([Key.Escape], KeyMods.NoCtrl, Pasting, _ => Tools.ChooseMode(ToolMode.Area)),
             Take([Key.S], KeyMods.Ctrl, null, p => _ = Save()),
             Take([Key.OemOpenBrackets, Key.OemCloseBrackets], KeyMods.NoCtrl, null, p => Tools.ResizeBrush(p.Key == Key.OemOpenBrackets ? -1 : 1)),
@@ -65,7 +67,7 @@ public partial class MainWindow
             Take([Key.Escape], KeyMods.NoCtrl, _ => InMode(ToolMode.Measure) && View.Tape.A != null, _ => View.Tape.Clear()),
             // The rail's keys: the tool panel acts on them, and they stay unhandled.
             Pass([Key.Escape], KeyMods.NoCtrl, null, _ => Tools.Key("Escape")),
-            Pass([Key.E, Key.M, Key.G, Key.P, Key.B, Key.O, Key.T, Key.H], KeyMods.NoCtrl, null, p => Tools.Key(p.Key.ToString())),
+            Pass([Key.E, Key.M, Key.G, Key.P, Key.B, Key.O, Key.T, Key.U, Key.H], KeyMods.NoCtrl, null, p => Tools.Key(p.Key.ToString())),
             Pass(Digits(Key.D0), KeyMods.NoCtrl, null, p => Tools.Key((p.Key - Key.D0).ToString())),
             Pass(Digits(Key.NumPad0), KeyMods.NoCtrl, null, p => Tools.Key((p.Key - Key.NumPad0).ToString())),
         ];

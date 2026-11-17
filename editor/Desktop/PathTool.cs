@@ -5,11 +5,9 @@ namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// The Path tool, like the web editor's (editor.html, Path tool): draw a line, then apply an action along it with a
-/// width and a soft edge: flatten to a height, ramp from start to end, raise or lower, smooth, dig a river, dig a cave,
-/// or paint. The line is kept after applying, so another action can follow. Cave: a trench along the line (its floor
-/// follows the ground's lie below it, deepest in the middle, with an entrance slope at each end), roofed over with the
-/// game's boulders where it is deep enough (CaveRoof): the ground cannot overhang (one height per point), so the roof
-/// is rocks, like the game's own caves. Points are grid points of the block (x east, z north, one per metre).
+/// width and a soft edge: flatten to a height, ramp from start to end, raise or lower, smooth, dig a river, or paint.
+/// The line is kept after applying, so another action can follow. Points are grid points of the block (x east, z north,
+/// one per metre).
 /// </summary>
 public sealed partial class PathTool
 {
@@ -26,10 +24,14 @@ public sealed partial class PathTool
         Lower,
         /// <summary>Evens out bumps.</summary>
         Smooth,
+        /// <summary>Natural-looking bumps (Naturalize), with the brush's bumps, bump size and pattern.</summary>
+        Naturalize,
+        /// <summary>Weathers the ground: slopes settle to the brush's rest angle and rain cuts gullies.</summary>
+        Erode,
+        /// <summary>Back to the generated ground, paint removed.</summary>
+        Restore,
         /// <summary>Digs a river bed.</summary>
         River,
-        /// <summary>Digs a trench roofed over with the game's boulders.</summary>
-        Cave,
         /// <summary>Paints dirt.</summary>
         PaintDirt,
         /// <summary>Paints paving.</summary>
@@ -40,36 +42,6 @@ public sealed partial class PathTool
         PaintClear,
     }
 
-    /// <summary>
-    /// The boulders a cave's roof is made of. Auto picks them by the biome under each boulder; the others are the
-    /// game's big world rocks of that biome (see <see cref="RoofRocks"/>).
-    /// </summary>
-    public enum CaveRock
-    {
-        /// <summary>Picked by the biome under each boulder.</summary>
-        Auto,
-        /// <summary>Forest boulders (rock4_forest); Auto's pick in most biomes.</summary>
-        Forest,
-        /// <summary>Coast boulders (rock4_coast); Auto's pick over Ocean.</summary>
-        Coast,
-        /// <summary>Heath boulders (rock4_heath); Auto's pick in the Plains.</summary>
-        Heath,
-        /// <summary>Mountain boulders (rock3_mountain); Auto's pick in the Mountains and Deep North.</summary>
-        Mountain,
-    }
-
-    /// <summary>
-    /// Each roof boulder's prefab, how wide it is at least (m, unscaled) and how far its lowest point is below its
-    /// middle (CaveRoof hangs them by their real underside). These rocks keep a saved size. Auto has no entry: it
-    /// stands for one of the others.
-    /// </summary>
-    public static readonly Dictionary<CaveRock, (string Prefab, float Footprint, float Bottom)> RoofRocks = new()
-    {
-        [CaveRock.Forest] = ("rock4_forest", 24.2f, 12.9f),
-        [CaveRock.Coast] = ("rock4_coast", 24.2f, 12.9f),
-        [CaveRock.Heath] = ("rock4_heath", 24.2f, 12.9f),
-        [CaveRock.Mountain] = ("rock3_mountain", 12.7f, 8.2f),
-    };
     /// <summary>The action Apply does.</summary>
     public Action Act { get; set; } = Action.Flatten;
     /// <summary>The full width of the path in metres.</summary>
@@ -90,14 +62,6 @@ public sealed partial class PathTool
     /// Whether the line is a smooth curve through the points (with 3 or more points) instead of straight stretches.
     /// </summary>
     public bool Curved { get; set; } = true;
-    /// <summary>Cave: depth below the ground in the middle, in metres.</summary>
-    public float CaveDepth { get; set; } = 7.5f;
-    /// <summary>Cave: headroom inside, in metres.</summary>
-    public float Headroom { get; set; } = 4.5f;
-    /// <summary>Cave: the roof's boulders.</summary>
-    public CaveRock Rock { get; set; }
-    /// <summary>Cave: the seed that turns and sizes the roof boulders.</summary>
-    public int Seed { get; set; } = Random.Shared.Next();
     /// <summary>
     /// Natural look: the width varies along the line, the edges are ragged and the surface gets bumps (from the brush
     /// noise).

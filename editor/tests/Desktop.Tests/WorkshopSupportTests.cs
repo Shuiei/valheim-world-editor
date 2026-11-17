@@ -25,20 +25,24 @@ public class WorkshopSupportTests
         using var r = new BlueprintsPanelRun();
         var w = r.W;
         await w.OpenWorkshop(null);
-        Assert.True(w.CutBox.IsVisible);
+        // The view's cut counts from the plot in the Workshop.
+        var cut = w.ViewCut;
+        Assert.Equal(ViewCut.Level.Plot, cut.From);
         Assert.Null(w.View.CutY);
-        w.CutSlider.Value = 6;
+        cut.Slider.Value = 6;
         Assert.Equal(Workshop.Ground + 6, w.View.CutY);
         Assert.Equal(Workshop.Ground + 6, w.PlaceTool.CutY);
-        Assert.Equal("Cut at 6 m", w.CutText.Text);
-        w.CutSlider.Value = 0;
+        Assert.Equal("Cut at 6 m", cut.Text.Text);
+        cut.Slider.Value = 0;
         Assert.Equal(Workshop.Ground, w.PlaceTool.CutY);
-        w.CutSlider.Value = MainWindow.CutOff;
+        cut.Slider.Value = ViewCut.End;
         Assert.Null(w.PlaceTool.CutY);
-        Assert.Equal("Cut: off", w.CutText.Text);
-        w.CutSlider.Value = 3;
+        Assert.Equal("Cut: off", cut.Text.Text);
+        cut.Slider.Value = 3;
         await w.LeaveWorkshop();
-        Assert.False(w.CutBox.IsVisible);
+        // Out of the Workshop: a world's cut again, off.
+        Assert.Equal(ViewCut.Level.Ground, cut.From);
+        Assert.False(cut.On);
         Assert.Null(w.View.CutY);
     }
 }

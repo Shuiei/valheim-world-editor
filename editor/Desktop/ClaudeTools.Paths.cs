@@ -8,20 +8,22 @@ public sealed partial class ClaudeTools
     internal static readonly Dictionary<string, PathTool.Action> PathActions = new(StringComparer.OrdinalIgnoreCase)
     {
         ["river"] = PathTool.Action.River,
-        ["cave"] = PathTool.Action.Cave,
         ["ramp"] = PathTool.Action.Ramp,
         ["flatten"] = PathTool.Action.Flatten,
         ["raise"] = PathTool.Action.Raise,
         ["lower"] = PathTool.Action.Lower,
         ["smooth"] = PathTool.Action.Smooth,
+        ["naturalize"] = PathTool.Action.Naturalize,
+        ["erode"] = PathTool.Action.Erode,
+        ["restore"] = PathTool.Action.Restore,
     };
 
     /// <summary>
     /// The Path tool on a line of world points of the scene (in grid points), with the values given; ramp's ends and
     /// flatten's height default to the ground at the line's ends.
     /// </summary>
-    internal static PathTool LineOver(WorldScene scene, float[][] points, PathTool.Action act, float width, float soft, float? depth, float headroom,
-        float? height, float amount, bool natural, bool curved, PathTool.CaveRock rock, int seed)
+    internal static PathTool LineOver(WorldScene scene, float[][] points, PathTool.Action act, float width, float soft, float? depth,
+        float? height, float amount, bool natural, bool curved)
     {
         float ox = scene.OriginX, oz = scene.OriginZ;
         var path = new PathTool
@@ -32,23 +34,13 @@ public sealed partial class ClaudeTools
             Amount = MathF.Max(0, amount),
             Natural = natural,
             Curved = curved,
-            Rock = rock,
-            Seed = seed,
-            Headroom = Math.Clamp(headroom, 2, 30),
             RampEdited = true,
         };
         path.Points.AddRange(points.Select(p => new Vector2(p[0] - ox, p[1] - oz)));
         float first = GroundAt(scene, points[0][0], points[0][1]), last = GroundAt(scene, points[^1][0], points[^1][1]);
         (path.Start, path.End) = (height ?? first, height is null ? last : height.Value);
         path.Height = height ?? first;
-        if (act == PathTool.Action.Cave)
-        {
-            path.CaveDepth = Math.Clamp(depth ?? 7.5f, 2, 40);
-        }
-        else
-        {
-            path.Depth = Math.Clamp(depth ?? 2, 0, 30);
-        }
+        path.Depth = Math.Clamp(depth ?? 2, 0, 30);
         return path;
     }
 

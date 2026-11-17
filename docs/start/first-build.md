@@ -47,7 +47,7 @@ less support. A piece that would fall in game turns red, and the top bar says ho
 [The support check](../concepts/objects.md#the-support-check).
 
 A piece in the wrong place? Press `Ctrl+Z` to undo it, or press `E` (**Select**), click the piece, press `Del`, and
-press `T` to go back to building.
+press `U` to go back to building.
 
 ## 4. Save the blueprint
 

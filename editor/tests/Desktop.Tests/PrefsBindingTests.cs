@@ -49,4 +49,20 @@ public sealed class PrefsBindingTests : PrefsFolder
         other.SelectedIndex = -1;
         Assert.Equal("three", p.Get("k", ""));
     }
+
+    // An entry renamed since the choice was kept (Select's drag on the ground was "A zone on the ground"): the choice
+    // comes back as the entry named now, for that setting only.
+    [AvaloniaFact]
+    public void AChoiceKeptUnderAnEntrysOldNameChoosesTheEntryAsNamedNow()
+    {
+        var p = Prefs.Load(File1);
+        p.Set("select.zone", "A zone on the ground (all above it)");
+        var box = new ComboBox { ItemsSource = new[] { "A box on the screen (what is seen)", "An outline on the ground (all above it)" }, SelectedIndex = 0 };
+        Assert.True(p.Restore(box, "select.zone"));
+        Assert.Equal(1, box.SelectedIndex);
+        p.Set("other", "A zone on the ground (all above it)");
+        box.SelectedIndex = 0;
+        Assert.False(p.Restore(box, "other"));
+        Assert.Equal(0, box.SelectedIndex);
+    }
 }

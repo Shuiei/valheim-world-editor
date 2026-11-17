@@ -36,7 +36,7 @@ public class PlaceToolEdgeTests
     {
         var (t, _) = Tool();
         t.Brush.Radius = 10;
-        t.Brush.Strength = 1;
+        t.Rate = 1;
         t.Density = 5;
         t.Spacing = 3;
         var all = new List<PlaceTool.Placement>();
@@ -44,7 +44,7 @@ public class PlaceToolEdgeTests
         {
             all.AddRange(t.PaintStep(new Vector2(64, 64), 0.1f, all));
         }
-        // About 5 per 100 m² over the brush's 314 m², a little more for the strength: the brush fills up.
+        // About 5 per 100 m² over the brush's 314 m², a little more for the rate: the brush fills up.
         Assert.InRange(all.Count, 8, 40);
         Assert.All(all, p => Assert.True(Vector2.Distance(p.G, new Vector2(64, 64)) <= 10.01f));
         for (int i = 0; i < all.Count; i++)

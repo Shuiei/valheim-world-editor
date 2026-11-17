@@ -175,14 +175,15 @@ public class SelectToolHandleTests
     }
 
     [AvaloniaFact]
-    public void ShiftPageDownLowersByAMetre()
+    public void ShiftPageDownLowersByAFifthOfTheLiftStep()
     {
         var v = Open(T(1, Beech, 40, 30, 40, false));
         var said = SelectToolRun.MessageReader(v.Tool);
         v.Tool.OnGround = false;
         Assert.True(v.Tool.Key(Key.PageDown, true));
-        Assert.Equal("Moving 1 object(s): 0.0 m, -1.00 m", said());
+        // Shift is finer, as in Build and Paste: a fifth of the 0.5 m step.
+        Assert.Equal("Moving 1 object(s): 0.0 m, -0.10 m", said());
         v.Tool.Commit();
-        Assert.Equal(29, v.S.Scene.Things[^1].Position.Y, 2);
+        Assert.Equal(29.9f, v.S.Scene.Things[^1].Position.Y, 2);
     }
 }

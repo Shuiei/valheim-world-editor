@@ -12,24 +12,30 @@ public class SculptFrameTests
     public void TheSnapshotHoldsTheBrushRectangleAndOnePointAround()
     {
         var g = new Ground(5, 5, 0, 0, 2);
-        float[] snap = Sculpt.TakeSnapshot(g, 1, 3, 1, 3);
-        Assert.Equal(25, snap.Length);
-        Assert.Equal(g.HeightOf(0), snap[0]);
-        Assert.Equal(g.HeightOf(2 * 5 + 2), snap[2 * 5 + 2]);
+        var snap = HeightsBefore.Take(g, 1, 1, 3, 3, GroundOps.BrushSmoothReach);
+        Assert.Equal(25, snap.Count);
+        Assert.Equal(g.HeightOf(0), snap.At(0));
+        Assert.Equal(g.HeightOf(2 * 5 + 2), snap.At(2 * 5 + 2));
     }
 
     [Fact]
     public void TheSmoothingAverageIsTheMeanOfTheNineNeighbours()
     {
-        var f = new Sculpt.Frame(0.1f, [.. Enumerable.Range(1, 9).Select(i => (float)i)], 3, 1, 1, null);
-        Assert.Equal(5f, Sculpt.SmoothAverage(f, 1, 1));
+        // A 3 × 3 ground holding 1 to 9: the middle's nine neighbours average 5.
+        var g = new Ground(3, 3, 0, 0, 2);
+        for (int i = 0; i < 9; i++)
+        {
+            g.Base[i] = i + 1;
+        }
+        Assert.Equal(5f, HeightsBefore.Take(g, 1, 1, 1, 1, 1).Average(4, GroundOps.BrushSmoothReach));
     }
 
     [Fact]
     public void AFlatSnapshotAveragesToItsHeight()
     {
-        var f = new Sculpt.Frame(0.1f, [.. Enumerable.Repeat(4f, 9)], 3, 1, 1, null);
-        Assert.Equal(4f, Sculpt.SmoothAverage(f, 1, 1));
+        var g = new Ground(3, 3, 0, 0, 2);
+        Array.Fill(g.Base, 4f);
+        Assert.Equal(4f, HeightsBefore.Take(g, 1, 1, 1, 1, 1).Average(4, GroundOps.BrushSmoothReach));
     }
 
     [Fact]

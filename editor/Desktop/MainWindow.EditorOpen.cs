@@ -24,7 +24,8 @@ public sealed partial class MainWindow
             Msg(Said.Of("top.msg.earlierHistory", kept.SavedAt.ToString("g", System.Globalization.CultureInfo.CurrentCulture), steps) + since);
         }
         bool live = scene.Owner?.IsLive == true;
-        PlayersRow.IsVisible = live;
+        // The player list beside LIVE shows once a player is connected (SetPlayers): empty, it only takes the bar's room.
+        PlayersRow.IsVisible = live && LivePlayers.Count > 0;
         if (live)
         {
             _ = PollPlayers();

@@ -7,8 +7,8 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class AreaPanel
 {
-    // Heightmap: export the area, or import a picture into the selection (or the whole area).
-    /// <summary>Writes the area's heightmap (see <see cref="ExportHeightmap"/>).</summary>
+    // Heightmap: export the selection (or the whole area), or import a picture into it.
+    /// <summary>Writes the selection's heightmap, or the whole area's (see <see cref="ExportHeightmap"/>).</summary>
     internal Button ExportButton { get; } = new() { Content = Lang.T("area.label.export"), FontSize = 12 };
 
     /// <summary>Reads a picture to import (see <see cref="LoadPicture"/>).</summary>

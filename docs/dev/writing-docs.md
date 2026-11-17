@@ -4,7 +4,8 @@ The documentation is for people who play Valheim, not for programmers. Most of t
 undo this?", "why can't I lift this higher?") and read a fifth of a page at most: headings and the first words of each
 paragraph carry the meaning. The same Markdown is shown on GitHub and in the editor's Help window
 (`editor/Desktop/HelpWindow.cs`), which carries every page of `docs/` but this folder, the release notes,
-`architecture.md` and `development.md`.
+`architecture.md`, `development.md` and the pointer pages (`shape.md`, `mountain.md`: a line each, kept so that links
+from outside to a tool page merged into another still lead somewhere).
 
 ## Four kinds of page
 
@@ -24,9 +25,9 @@ Plus `help/`: troubleshooting (by symptom), questions, every shortcut, the gloss
 ```markdown
 # Place
 
-Put trees, rocks, crops, building pieces and spawn points into the world, one at a time or by the hundred.
+Put trees, rocks, bushes, crops and spawn points into the world, one at a time or by the hundred.
 
-**Where:** tool rail, EDIT section · **Key:** `T` · **Works in:** saved worlds, live, the Workshop (pieces only)
+**Where:** tool rail, EDIT section · **Key:** `T` · **Works in:** saved worlds, live
 
 ![What the tool does, in one picture](images/place.jpg)
 *One sentence on what the picture shows.*
@@ -78,7 +79,7 @@ Put trees, rocks, crops, building pieces and spawn points into the world, one at
 - Pictures are taken by `tools/DocsScreenshots` (see [development](../development.md#the-driver---driver)), 1440 × 900,
   so they can be taken again when the app changes. A picture not taken yet is marked in the page with a comment where
   it goes, which neither GitHub nor the Help window shows:
-  `<!-- picture: place-line-end-to-end.jpg: Place, Line mode, End to end on, a fence of 6 posts on a slope -->`
+  `<!-- picture: build-line-slope.jpg: Build, Lay set to Line, a fence of 6 posts laid down a slope -->`
 
 ## The page map
 
@@ -91,8 +92,9 @@ Fixed names, so pages can link to each other. A tool page keeps its file name (l
 | `start/first-edit.md` | Getting started | A copy of a world, open it, raise a hill, plant trees, save, undo, open it in game. |
 | `start/first-build.md` | Getting started | The Workshop: a small hut, the support check, save it as a blueprint, paste it into a world. |
 | `guides/*.md` | How-to | One task each (list in `README.md`). |
-| `editor-basics.md` | Tool reference | The window: start page, top bar, rail, panels, camera, Walk and Fly, the area and Follow, saving, Discard, History, View panel. |
-| `map.md`, `terrain.md` (sculpt and paint brushes), `shape.md`, `mountain.md`, `path.md`, `masks.md`, `measure.md`, `area.md`, `place.md`, `select.md`, `workshop.md`, `dungeons.md`, `new-world.md`, `live-mode.md`, `scripting.md`, `claude.md` | Tool reference | One tool or screen each, on the template. |
+| `editor-basics.md` | Tool reference | The window: start page, top bar, rail, panels, camera, Walk and Fly, the area and Follow, saving, Discard, History, View panel, Cut. |
+| `map.md`, `terrain.md` (sculpt and paint brushes), `landform.md`, `path.md`, `masks.md`, `measure.md`, `area.md` (the Region tool: the page keeps its first name), `place.md`, `build.md`, `select.md`, `workshop.md`, `dungeons.md`, `new-world.md`, `live-mode.md`, `scripting.md`, `claude.md` | Tool reference | One tool or screen each, on the template. |
+| `shape.md`, `mountain.md` | Pointer | One line each, to `landform.md`, which took both tools in. Not carried in the Help window, not listed in `README.md`. |
 | `concepts/areas-and-zones.md` | Concept | `## Zones`, `## The area`, `## The locked edge`, `## Follow` |
 | `concepts/saving-and-history.md` | Concept | `## Pending changes`, `## Saving a world`, `## Applying live`, `## History`, `## Backups` |
 | `concepts/ground-limits.md` | Concept | `## The game's 8 m limit`, `## No limit`, `## Locations level the ground`, `## Limit marks` |

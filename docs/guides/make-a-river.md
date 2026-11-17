@@ -15,9 +15,10 @@ its bed is below 30 m.
 4. Set **Width** (the water's width), **Soft edge** (the banks) and **Depth** (how far below sea level the bed is in
    its middle, 2 m at first).
 5. Press **Apply (Enter)**. The bed fills with water.
-6. For a pond, press `B` ([Area](../area.md)), choose **Polygon** and click round the pond.
-7. Choose **Flatten**, type a **Height** below 30 m (28 m makes water 2 m deep), set **Soft edge** to about 5 m for
-   gentle banks, and press **Flatten (Enter)**.
+6. For a pond, press `B` ([Region](../area.md)), choose **Polygon**, click round the pond and double-click the last
+   corner to close the shape.
+7. In the **Ground** group, choose **Flatten** in **Action**, type a **Height** below 30 m (28 m makes water 2 m
+   deep), set **Soft edge** to about 5 m for gentle banks, and press **Flatten (Enter)**.
 8. Click **Save to world** (or **Apply live**).
 
 ![A river dug across the zone, the water shown](../images/path-river.jpg)
@@ -32,9 +33,12 @@ its bed is below 30 m.
 
 ## Undo it
 
-`Ctrl+Z` takes back the last **Apply** or **Flatten**. The **Restore** brush (`5`) gives back the generated ground
-in one place. After saving, undo and save again (see
+`Ctrl+Z` takes back the last **Apply** or **Flatten**. After saving, undo and save again (see
 [Undo a step, take back one change, or discard everything](undo-changes.md)).
+
+To fill a river in later, when the undo steps are gone, draw the line again (or keep it) and apply the Path tool's
+**Restore**: the ground along it goes back to how the world generated it. The **Restore** brush (`5`) does the same
+in one place.
 
 ## Related
 

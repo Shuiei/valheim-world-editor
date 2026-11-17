@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
@@ -14,18 +15,29 @@ public sealed partial class BlueprintsPanel
         _paste = paste;
         _scene = scene;
         var close = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 0) }.Tip("card.close");
-        Search.Tip("blueprints.search");
         close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
-        Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Render(); } };
-        ImportButton.Tip("blueprints.import");
+        Library.Folder = () => Status.Folder;
+        Library.Older = () => Store;
+        Library.Models = () => Models();
+        Library.PlaceAsked += b => Paste(b.Id);
+        Library.OpenAsked += b => EditAsked?.Invoke(b.Entry!.Path);
+        Library.DetailsAsked += async b => await EditDetails(b.Entry!);
+        Library.ExportAsked += b => Export(b.Id, "vbuild");
+        Library.DeleteAsked += async b => await Delete(b.Id, b.Name);
+        Library.ToHomesteadAsked += b => ToHomestead(b.Id);
         ImportButton.Click += async (_, _) => { if (await PickFile() is string path) { Import(path); } };
-        NewButton.Tip("blueprints.new");
         NewButton.Click += (_, _) => EditAsked?.Invoke(null);
+        PasteClipboardButton.Tip("blueprints.pasteClipboard");
+        PasteClipboardButton.Click += (_, _) => StartPasting();
+        SaveClipboardButton.Tip("blueprints.saveClipboard");
+        SaveClipboardButton.Click += async (_, _) => await Save();
+        _paste.Changed += ShowClipboard;
+        ShowClipboard();
         GetHomesteadButton.Tip("blueprints.getHomestead");
         GetHomesteadButton.Click += async (_, _) => await OpenUrl(new Uri(Homestead.PageUrl));
         _bannerBox = new Border
         {
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = Ui.ControlRadius,
             Padding = new Thickness(8, 6),
             Child = new StackPanel { Spacing = 4, Children = { Banner, GetHomesteadButton } },
         };
@@ -43,22 +55,42 @@ public sealed partial class BlueprintsPanel
                     _bannerBox,
                     new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { Search, Ui.Col(ImportButton, 1) } },
                     NewButton,
-                    new ScrollViewer { MaxHeight = 640, Content = List },
+                    ClipboardRow(),
+                    new ScrollViewer { MaxHeight = 600, Content = List },
                     _folder,
                 },
             },
         });
     }
 
-    /// <summary>A box searching blueprints (here and in the Workshop's Library).</summary>
-    internal static TextBox SearchBox()
+    /// <summary>
+    /// The clipboard, shown as the library's first row: what it holds, Paste and Save as blueprint… (off while it is
+    /// empty).
+    /// </summary>
+    private Border ClipboardRow() => new()
     {
-        return new TextBox { PlaceholderText = Lang.T("blueprints.hint.search"), FontSize = 12 };
-    }
+        Padding = new Thickness(6),
+        BorderBrush = Ui.Line,
+        BorderThickness = new Thickness(1),
+        CornerRadius = Ui.ControlRadius,
+        Child = new StackPanel
+        {
+            Spacing = 3,
+            Children =
+            {
+                new TextBlock { Text = Lang.T("blueprints.clip.head"), FontSize = 12, FontWeight = FontWeight.SemiBold },
+                ClipInfo,
+                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PasteClipboardButton, SaveClipboardButton } },
+            },
+        },
+    };
 
-    /// <summary>Import file… (here and in the Workshop's Library).</summary>
-    internal static Button ImportFileButton()
+    /// <summary>Shows what the clipboard holds, its two buttons on only while it holds something.</summary>
+    private void ShowClipboard()
     {
-        return new Button { Content = Lang.T("blueprints.label.import"), FontSize = 12 };
+        var c = _paste.Clip;
+        ClipInfo.Text = c == null ? Lang.T("blueprints.clip.none")
+            : c.Name != null ? Lang.T("blueprints.clip.named", c.Name, c.W, c.H, c.Objects.Count) : Lang.T("blueprints.clip.holds", c.W, c.H, c.Objects.Count);
+        PasteClipboardButton.IsEnabled = SaveClipboardButton.IsEnabled = c != null;
     }
 }

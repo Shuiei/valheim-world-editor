@@ -18,8 +18,9 @@ public sealed partial class PlacePanel
             _creatableFrom = (w, ModManifests.Generation, ModCatalogue.Generation);
             // Not the prefabs a mod's manifest asks not to offer (its tools, effects, helpers), nor its prefabs the game
             // draws nothing of (sounds, effects), nor chosen any more.
-            _creatable = [.. w.Creatable.Select(p => _nameOf(p)).Where(n => n != null && !NotOffered(n)).Distinct().Select(n => (n!, ObjectKinds.Of(n, false)))];
-            if (T.Chosen.RemoveAll(NotOffered) > 0)
+            _creatable = [.. w.Creatable.Select(p => _nameOf(p)).Where(n => n != null && !NotOffered(n) && !BuiltWithBuild(n)).Distinct().Select(n => (n!, ObjectKinds.Of(n, false)))];
+            // (Not while the Build dock has the tool: its piece is the dock's to choose.)
+            if (!T.Building && T.Chosen.RemoveAll(n => NotOffered(n) || BuiltWithBuild(n)) > 0)
             {
                 // What is chosen changed: shown again, and the tool told.
                 Dispatcher.UIThread.Post(Fill);
@@ -40,6 +41,14 @@ public sealed partial class PlacePanel
     internal static bool NotOffered(string name) =>
         ModManifests.IsHidden(name) || ModCatalogue.ModelOf(name) is { Parts.Count: 0 }
             && PrefabCatalog.ItemKindOf(Save.StableHash.Of(name)) == null && ObjectKinds.Of(name, false) != ObjectKind.Pickables;
+
+    /// <summary>
+    /// Whether a kind is the Build tool's to put down, not the Place tool's: a piece players build with the hammer or
+    /// the serving tray (the game's or a mod's). The cultivator's saplings and crops stay with Place too (fields are
+    /// planted with its brush and grid); parts of ruins and dungeons, which no one builds, are Place's alone.
+    /// </summary>
+    /// <param name="name">The prefab name.</param>
+    internal static bool BuiltWithBuild(string name) => PieceCatalog.Get(Save.StableHash.Of(name)) is { IsBuildPiece: true, Tool: not "cultivator" };
 
     /// <summary>
     /// Whether a kind matches the search: by its name, or for spawn points and nests by a creature they spawn.

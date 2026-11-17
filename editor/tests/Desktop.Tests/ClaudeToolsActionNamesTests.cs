@@ -34,12 +34,14 @@ public sealed class ClaudeToolsActionNamesTests
 
     [Theory]
     [InlineData(PathTool.Action.River, "claude.undo.riverLine")]
-    [InlineData(PathTool.Action.Cave, "claude.undo.caveLine")]
     [InlineData(PathTool.Action.Ramp, "claude.undo.rampLine")]
     [InlineData(PathTool.Action.Flatten, "claude.undo.flattenLine")]
     [InlineData(PathTool.Action.Raise, "claude.undo.raiseLine")]
     [InlineData(PathTool.Action.Lower, "claude.undo.lowerLine")]
     [InlineData(PathTool.Action.Smooth, "claude.undo.smoothLine")]
+    [InlineData(PathTool.Action.Naturalize, "claude.undo.naturalizeLine")]
+    [InlineData(PathTool.Action.Erode, "claude.undo.erodeLine")]
+    [InlineData(PathTool.Action.Restore, "claude.undo.restoreLine")]
     public void EachPathActionIsNamedAsItsHistoryStep(PathTool.Action act, string key)
     {
         Assert.Equal(Lang.T(key), ClaudeTools.PathStep(act));

@@ -114,28 +114,4 @@ public class AreaPanelBackupTests
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
     }
-
-    [AvaloniaFact]
-    public void TheEyedropperPutsAKindTheGameCanMakeInTheWithList()
-    {
-        var (w, s, dir) = Open();
-        try
-        {
-            var p = w.AreaPanel;
-            int kind = s.Scene.World.Creatable.First(c => Terrain.PrefabCatalog.DisplayName(c) != null);
-            string? asked = null;
-            p.PickKindAsked += (action, use) => { asked = action; use(kind); };
-            p.ToPickButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
-            Assert.Equal("Replace", asked);
-            Assert.True(p.ToBox.SelectedIndex >= 0);
-            Assert.StartsWith("Replace with ", w.MessageText.Text);
-            // A kind the game cannot make.
-            p.UsePicked(12345);
-            Assert.Equal("12345 cannot be placed: the game has no such kind to copy.", w.MessageText.Text);
-        }
-        finally
-        {
-            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
-        }
-    }
 }

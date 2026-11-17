@@ -32,8 +32,8 @@ public sealed partial class DungeonPanel
         }
         FillRooms();
         Refresh();
-        // Back from Build here or another tool: the cut the slider shows.
-        SetCut(CutSlider.Value);
+        // Back from Build here or another tool: the cut counts from this dungeon's floor again.
+        CutFromFloor();
     }
 
     /// <summary>Lists the rooms the dungeon can take that match the filter, the one chosen selected.</summary>

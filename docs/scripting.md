@@ -20,8 +20,9 @@ You need nothing installed: the editor compiles the script itself. If you have n
 3. Pick an example or a saved script in the list, or write your own in the code box.
 4. Press **Run (Ctrl+Enter)**. The output box shows "Compiling…", "Running…", then what the script printed and
    what it changed, or what went wrong.
-5. Look at the result. `Ctrl+Z` takes the whole run back in one step. Change the numbers and run again until you
-   like it.
+5. Look at the result. Undo (the arrow in the top bar) takes the whole run back in one step; `Ctrl+Z` does too once
+   you have clicked in the 3D view (in the code box it undoes your typing). Change the numbers and run again until
+   you like it.
 6. Press **Save to world** (or **Apply live**) to keep it, like any other change.
 
 Nothing changes while the script runs: when it has finished, everything it changed goes into the area at once, as
@@ -46,8 +47,8 @@ This lesson raises a mound in the middle of the area, then makes it taller.
 
 3. Press `Ctrl+Enter`. A mound rises in the middle of the area; the output says where its top is and how many ground
    points changed.
-4. Press `Ctrl+Z`. The mound is gone.
-5. In the code, change `10 *` to `20 *` and press `Ctrl+Enter` again. The mound is twice as high.
+4. Click in the 3D view, then press `Ctrl+Z`. The mound is gone.
+5. Click in the code box, change `10 *` to `20 *` and press `Ctrl+Enter` again. The mound is twice as high.
 6. Optional: type a name in the name box and press **Save** to find the script in the list next time.
 
 `Ground.Shape` adds the metres your function returns to every point within 15 m of the middle; `dx` and `dz` are the
@@ -58,7 +59,7 @@ metres from the middle. Every other call is in the [API reference](#api-referenc
 | Setting | What it does |
 |---|---|
 | **List** | The seven examples ("Example: …"), then your saved scripts, newest first. Picking one **replaces** the text in the code box: save your own script first. An example empties the name box; a saved script puts its name there. |
-| **Code box** | The script. `Tab` indents; `Ctrl+Enter` runs it. |
+| **Code box** | The script. `Tab` indents; `Ctrl+Enter` runs it; `Ctrl+Z` undoes your typing, not the run. |
 | **Run (Ctrl+Enter)** | Compiles and runs the script on the open area. Its changes are **one undo step**, named "Script: " and the list entry's name in History. |
 | **Stop** | Stops a running script, whatever it is doing: nothing it did is kept. |
 | Name box, **Save** | Saves the code under the name typed and selects it in the list. Characters a file name cannot hold become `_`. Saving over another saved script asks first. |
@@ -77,7 +78,7 @@ Each example is a whole script, ready to run on any open area. Read them to see 
 |---|---|
 | **Mountain range across the area** | Four Lone peak mountains in a line from the south-west to the north-east, each 35 to 60 m high. `Rnd.Seed = 7`, so it is the same range each run. Saving turns them into ground discs (past the game's 8 m limit). |
 | **Terraced hill** | A hill 30 m high and 60 m in radius, cut into six flat terraces like rice fields. The trees, rocks and bushes it would bury are taken away first (everything else stays); the steep steps are painted dirt. |
-| **Canyon with a river** | A winding canyon 18 m wide from west to east, dug to 3 m below sea level so water fills it, fading out over the last 30 m at the area's edges. |
+| **Canyon with a river** | A winding canyon from west to east, 18 m to each side of its line, dug to 3 m below sea level so water fills it, fading out over the last 30 m at the area's edges. |
 | **Scatter boulders** | Big boulders (`rock4_forest`, `rock4_coast`, `rock4_heath`) every 6 m where the noise is high, more on slopes, each turned and sized at random. Prints how many. |
 | **Ring of trees** | A ring of 36 beeches 40 m from the middle; the trees inside the ring are taken away. |
 | **Flat paved base** | A 40 × 40 m square levelled to its own average height and paved, with a smooth 10 m slope to the ground around it. Keeps within the 8 m limit (`Ground.NoLimit = false`). Prints the height. |
@@ -100,8 +101,8 @@ Each example is a whole script, ready to run on any open area. Read them to see 
   can go up to 400 m above or below the generated ground, and saving turns it into ground discs every player's game
   counts as generated ground. `Ground.NoLimit = false;` keeps within the game's 8 m: points past it stop there, and
   the result line says how many.
-- **No Mask.** The [Mask](masks.md) limits brushes, not scripts. Test what you need in the script (`Ground.Biome`,
-  the height, the slope).
+- **No Mask.** The [Mask](masks.md) limits the tools you use by hand, not scripts. Test what you need in the script
+  (`Ground.Biome`, the height, the slope).
 - **A new start each run.** Variables, `Rnd` and `Objects.All` start over. One script runs at a time.
 
 ## API reference
@@ -128,7 +129,7 @@ The open area.
 | `Ground.Set(x, z, height)` | Puts the ground point there at that height. |
 | `Ground.Raise(x, z, metres)`, `Ground.Lower(x, z, metres)` | Moves it up or down by that much. |
 | `Ground.Shape(x, z, radius, (dx, dz) => metres)` | Adds the metres your function gives to every point within the radius of (x, z). `dx`, `dz`: metres from the middle; `MathF.Sqrt(dx * dx + dz * dz)` is the distance. A negative value digs. |
-| `Ground.Mountain(x, z, "Lone peak", height:, radius:, rough:, turn:, seed:)` | A mountain of the [Mountain](mountain.md) tool, its middle at (x, z): `"Lone peak"`, `"Ridge"`, `"Mountain range"`, `"Mesa"`, `"Volcano"` or `"Rolling hills"`. `height` and `radius` in metres, `rough` from 0 to 1, `turn` in degrees (a ridge's direction). Leave a value out for a random one in the preset's range; the same `seed` gives the same mountain. It reaches about 1.15 × its radius. Trees, rocks, ore, bushes and pickables it buries by more than 2 m are taken away; unlike the tool, it grows no trees on it afterwards. |
+| `Ground.Mountain(x, z, "Lone peak", height:, radius:, rough:, turn:, seed:)` | A mountain of the [Landform](landform.md#mountain) tool, its middle at (x, z): `"Lone peak"`, `"Ridge"`, `"Mountain range"`, `"Mesa"`, `"Volcano"` or `"Rolling hills"`. `height` and `radius` in metres, `rough` from 0 to 1, `turn` in degrees (a ridge's direction). Leave a value out for a random one in the preset's range; the same `seed` gives the same mountain. It reaches about 1.15 × its radius. Trees, rocks, ore, bushes and pickables it buries by more than 2 m are taken away; unlike the tool, it grows no trees on it afterwards. |
 | `Ground.Paint(x, z, "dirt")` | Paints the point: `"dirt"`, `"cultivated"`, `"paved"` or `"clear"` (back to the biome's own ground). A last number from 0 to 1 paints only partly (`0.5f`), blending with the paint there. |
 | `Ground.Biome(x, z)` | The biome there: `"Meadows"`, `"BlackForest"`, `"Swamp"`, `"Mountain"`, `"Plains"`, `"Ocean"`, `"Mistlands"`, `"AshLands"` or `"DeepNorth"` (`"None"` outside the area). |
 | `Ground.NoLimit` | `true` by default: changes go past the game's 8 m. `false`: they stop at it. Its value when the script ends counts. |
@@ -146,7 +147,7 @@ place are not in it, and those you take away are still listed.
 | `Objects.OfKind("Trees")` | Those of a kind (capitals do not matter): `Buildings`, `Ruins`, `Furniture`, `Trees`, `Rocks`, `Ore`, `Bushes`, `Pickables`, `Remains`, `Animals` (tamed), `Creatures` (wild, traders, birds), `SpawnPoints`, `Nests`, `Runestones`, `Dungeons`, `Effects`, `Other`: the kinds of the View panel. |
 | `Objects.Near(x, z, radius)` | Those within the radius of a point, measured flat. |
 | `Objects.Remove(o)` | Takes it away. |
-| `Objects.Place("Beech1", x, z, yaw:, scale:, y:, pitch:, roll:, snap:)` | A new object by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`…: the names the [Place](place.md) tool lists). Without `y` it stands on the ground **as the script leaves it** (dig first, then place: it sits in the hole). `yaw` turns it (0: its front faces north, 90: east), `pitch` and `roll` tilt it, `scale` sizes it (`0.5f` half, `2` double). With `snap: true`, a building piece moves to meet the snap points of pieces within 0.5 m, as the hammer does. A creature placed inside a building piece is stood on top of it (the message says how many). Building pieces are player built, by the builder chosen in View → Building → **Built by** (see [Player-built pieces](concepts/objects.md#player-built-pieces)). A point outside the area (its edge included in the area), a value that is not a number, or a size below 0 stops the script. |
+| `Objects.Place("Beech1", x, z, yaw:, scale:, y:, pitch:, roll:, snap:)` | A new object by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`…: the names the [Place](place.md) tool lists; for a building piece, point at its tile in [Build](build.md)). Without `y` it stands on the ground **as the script leaves it** (dig first, then place: it sits in the hole). `yaw` turns it (0: its front faces north, 90: east), `pitch` and `roll` tilt it, `scale` sizes it (`0.5f` half, `2` double). With `snap: true`, a building piece moves to meet the snap points of pieces within 0.5 m, as the hammer does. A creature placed inside a building piece is stood on top of it (the message says how many). Building pieces are player built, by the builder chosen in **Built by** on [the building bar](build.md#the-building-bar) (see [Player-built pieces](concepts/objects.md#player-built-pieces)). A point outside the area (its edge included in the area), a value that is not a number, or a size below 0 stops the script. |
 | `Objects.Move(o, x:, z:, y:, yaw:, pitch:, roll:, scale:)` | Moves, turns or sizes an object; what you leave out stays as it is (or as an earlier `Move` left it). It keeps what it holds (chest contents, builder…). The size must be above 0, the place within the area, and every value a number. |
 | `Objects.CanPlace("Beech1")` | Whether the editor can make that object. Use it before `Place` when a name may be wrong: `Place` with a name it cannot make stops the script. |
 
@@ -154,7 +155,7 @@ place are not in it, and those you take away are still listed.
 
 | Member | What it gives |
 |---|---|
-| `Noise.At(x, z, scale, seed)` | Smooth natural noise, from about -1 to 1, the kind Valheim's terrain and the Mountain tool are made of. `scale` is the size of its bumps in metres (default 32); another `seed` (default 0) gives another pattern. It repeats every 256 × `scale` metres. |
+| `Noise.At(x, z, scale, seed)` | Smooth natural noise, from about -1 to 1, the kind Valheim's terrain and the Landform tool's mountains are made of. `scale` is the size of its bumps in metres (default 32); another `seed` (default 0) gives another pattern. It repeats every 256 × `scale` metres. |
 | `Rnd.Seed = 42;` | Makes the random numbers below the same on every run (without it, each run differs). |
 | `Rnd.Next()` | A random number from 0 to 1. |
 | `Rnd.Range(min, max)` | A random number between `min` and `max`. |
@@ -327,7 +328,7 @@ every point is not needed.
 |---|---|
 | `Ctrl+Enter` (in the code box) | Run the script |
 | `Tab` (in the code box) | Indent |
-| `Ctrl+Z` | Take the whole run back |
+| `Ctrl+Z` (outside the code box) | Take the whole run back |
 
 ## Tips and limits
 
@@ -352,4 +353,4 @@ every point is not needed.
 - [Let Claude shape or build](guides/connect-claude.md)
 - [Ground limits](concepts/ground-limits.md#no-limit): what happens to ground past 8 m when you save
 - [Safety](concepts/safety.md#scripts-and-claude): what a script can reach on your computer
-- [Mountain](mountain.md) and [Place](place.md): the tools a script's calls follow
+- [Landform](landform.md), [Place](place.md) and [Build](build.md): the tools a script's calls follow

@@ -8,21 +8,21 @@ Fill a stretch of land with trees in natural groves, a field of crops in rows, o
 
 1. Press `T` to open [Place](../place.md).
 2. Under **Choose a preset**, choose **Meadows woods** (or **Black forest**, **Swamp**).
-3. At the top of the panel, choose **Zone**.
+3. At the top of the panel, choose **Polygon**.
 4. Click points on the ground around the forest's outline, or hold and drag to draw it freely.
-5. Optional: under **ZONE FILL**, raise **Clumping** to about 50% for groves with clearings between them, and set
+5. Optional: under **POLYGON FILL**, raise **Clumping** to about 50% for groves with clearings between them, and set
    **Patch size** to how big the groves should be.
-6. Press `R` (**New layout (R)**) until the preview looks right.
+6. Press `N` (**New layout (N)**) until the preview looks right.
 7. Press `Enter` to plant it.
 8. Click **Save to world** (or **Apply live**).
 
-![Meadows woods previewed in a zone with Clumping 50% and Patch size 30 m: groves and clearings](../images/guide-forest-zone.jpg)
-*A zone of about 58 × 40 m with **Clumping** 50% and **Patch size** 30 m (and **Density** 1.5): the see-through
-trees gather in groves with clearings between them. The **ZONE FILL** rows are at the bottom of the panel.*
+![Meadows woods previewed in a polygon with Clumping 50% and Patch size 30 m: groves and clearings](../images/guide-forest-zone.jpg)
+*A polygon of about 58 × 40 m with **Clumping** 50% and **Patch size** 30 m (and **Density** 1.5): the see-through
+trees gather in groves with clearings between them. The **POLYGON FILL** rows are at the bottom of the panel.*
 
 ## A field
 
-1. Paint the field with **Cultivate** (tool rail, PAINT section): crops grow only on cultivated ground.
+1. Paint the field with **Cultivate** (tool rail, **Paint**, or key `7`): crops grow only on cultivated ground.
 2. In Place, click **Choose kinds…**, search `carrot`, tick the crops you want, then click **Done**.
 3. Choose **Grid**, and set **Spacing** under **GRID** (1 m suits carrots).
 4. Drag a box over the cultivated ground, then press `Enter`.
@@ -43,7 +43,7 @@ how many objects were placed. In game, walk there after saving.
 
 ## Undo it
 
-- Before saving: `Ctrl+Z` takes back the last zone, grid, line or brush stroke.
+- Before saving: `Ctrl+Z` takes back the last polygon, grid, line or brush stroke.
 - To remove a few: Brush mode with the same kinds ticked, `Shift` + drag over them.
 - After saving: see [Undo a step, take back one change, or discard everything](undo-changes.md).
 

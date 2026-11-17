@@ -24,11 +24,13 @@ public sealed partial class ClaudeTools
     internal static string PathStep(PathTool.Action act) => act switch
     {
         PathTool.Action.River => Lang.T("claude.undo.riverLine"),
-        PathTool.Action.Cave => Lang.T("claude.undo.caveLine"),
         PathTool.Action.Ramp => Lang.T("claude.undo.rampLine"),
         PathTool.Action.Flatten => Lang.T("claude.undo.flattenLine"),
         PathTool.Action.Raise => Lang.T("claude.undo.raiseLine"),
         PathTool.Action.Lower => Lang.T("claude.undo.lowerLine"),
+        PathTool.Action.Naturalize => Lang.T("claude.undo.naturalizeLine"),
+        PathTool.Action.Erode => Lang.T("claude.undo.erodeLine"),
+        PathTool.Action.Restore => Lang.T("claude.undo.restoreLine"),
         _ => Lang.T("claude.undo.smoothLine"),
     };
 }

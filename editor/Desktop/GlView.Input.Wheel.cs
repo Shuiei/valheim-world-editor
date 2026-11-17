@@ -34,18 +34,16 @@ public sealed partial class GlView
     }
 
     /// <summary>
-    /// Whether the wheel with these modifiers goes to a tool: Ctrl to the building or paste tools, Alt to the tools
-    /// that turn things.
+    /// Whether the wheel with these modifiers goes to a tool: Ctrl to the tools that lift things, Alt to those that
+    /// turn them (the same tools: Place and Build, Paste, Select).
     /// </summary>
     /// <param name="ctrlW">Ctrl is held.</param>
     /// <param name="altW">Alt is held.</param>
     /// <returns>True when a tool may take the wheel.</returns>
     internal bool WheelWanted(bool ctrlW, bool altW)
     {
-        // Ctrl: building lifts the piece; Alt: the tools that turn things turn them. Else the view zooms.
-        return ctrlW
-            ? (Mode == ToolMode.Place && Place?.Tool.Building == true || Mode == ToolMode.Paste) && CtrlWheel != null
-            : altW && AltWheel != null && Mode is ToolMode.Place or ToolMode.Paste or ToolMode.Select;
+        // Ctrl: the tools that lift things lift them; Alt: they turn them. Else the view zooms.
+        return (ctrlW ? CtrlWheel != null : altW && AltWheel != null) && Mode is ToolMode.Place or ToolMode.Paste or ToolMode.Select;
     }
 
     /// <summary>

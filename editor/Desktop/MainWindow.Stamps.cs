@@ -5,53 +5,34 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// What a dug cave says: roofed with some floor open to the sky, too shallow for a roof, or dug (with what was
-    /// taken away, walls that could not rise and the game's limit reached).
-    /// </summary>
-    /// <param name="boulders">How many boulders roof it.</param>
-    /// <param name="uncovered">Floor points left open to the sky.</param>
-    /// <param name="removed">Trees and rocks taken away from the trench.</param>
-    /// <param name="length">The cave's length (m).</param>
-    /// <param name="walls">Points where the walls could not rise to the rock.</param>
-    /// <param name="clamped">Whether part of it reached the game's ±8 m limit.</param>
-    /// <returns>The message, in the language in use and in English.</returns>
-    internal static Said CaveOutcome(int boulders, int uncovered, int removed, float length, int walls, bool clamped)
-    {
-        if (boulders == 0)
-        {
-            return Said.Of("cave.msg.noRoof");
-        }
-        if (uncovered > 0)
-        {
-            return Said.Of("cave.msg.uncovered", boulders, uncovered);
-        }
-        return (removed > 0 ? Said.Of("cave.msg.dugCleared", length, boulders, removed) : Said.Of("cave.msg.dug", length, boulders))
-            + (walls > 0 ? Said.Of("cave.msg.walls", walls) : Said.Empty)
-            + (clamped ? Said.Of("cave.msg.limit") : Said.Of("cave.msg.undo"));
-    }
-
-    /// <summary>
-    /// Stamp once (Raise or Lower with a stamp): the whole picture into the ground, one undo step.
+    /// The Landform tool's click with its Picture kind: the whole picture into the ground there, as high as the
+    /// panel's Height (down when it is negative), one undo step.
     /// </summary>
     /// <param name="gx">Grid point, east.</param>
     /// <param name="gz">Grid point, north.</param>
-    internal void StampAt(float gx, float gz)
+    internal void PutPicture(float gx, float gz)
     {
         if (Session is not { } s)
         {
             return;
         }
-        var b = Tools.Brush;
-        float amount = b.StampHeight * (Tools.Tool == BrushTool.Lower ? -1 : 1);
+        var panel = LandformPanel.Picture;
+        var b = panel.Brush;
+        float amount = panel.Height;
+        if (b.StampData == null || MathF.Abs(amount) < 0.0005f)
+        {
+            Msg("landform.msg.pictureNothing");
+            return;
+        }
         bool clamped = false;
-        s.EditGround(Lang.T("brush.shape.stamp", b.StampLabel), g =>
+        s.EditGround(panel.Label, g =>
         {
             var (t, rect, c) = Sculpt.StampOnce(g, b, gx, gz, amount, s.MaskNow());
             clamped = c;
             return (t, rect);
         });
-        Msg(clamped ? Said.Of("brush.msg.stampLimit")
-            : amount >= 0 ? Said.Of("brush.msg.stampedUp", MathF.Abs(amount)) : Said.Of("brush.msg.stampedDown", MathF.Abs(amount)));
+        Msg(clamped ? Said.Of("landform.msg.pictureLimit")
+            : amount >= 0 ? Said.Of("landform.msg.pictureUp", MathF.Abs(amount)) : Said.Of("landform.msg.pictureDown", MathF.Abs(amount)));
         UpdateSaveBar();
     }
 

@@ -148,6 +148,8 @@ its own download on the [releases page](https://github.com/Shuiei/valheim-world-
 | [Expand World](../../addons/ExpandWorld/README.md) | Worlds made with the Expand World mods (Size, Rivers, Data). |
 | [Riverheim](../../addons/Riverheim/README.md) | Worlds made with Riverheim. |
 | [Tunnelheim](../../addons/Tunnelheim/README.md) | The tunnels Tunnelheim digs, and a Tunnel tool. |
+| [Railroads](../../addons/Railroads/README.md) | Railroads' track, stations and trains. |
+| [ValheimRAFT](../../addons/ValheimRAFT/README.md) | ValheimRAFT's ships and land vehicles, each moved, copied and deleted as one. |
 
 An add-on is code that runs inside the editor: install only those you trust. See
 [Edit a world made with Expand World, Riverheim or Tunnelheim](../guides/use-mods-worlds.md).

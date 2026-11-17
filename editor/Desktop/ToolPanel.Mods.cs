@@ -91,6 +91,14 @@ public sealed partial class ToolPanel
         }
     }
 
+    /// <summary>
+    /// A rail button's name under its picture. It may run 2 px into the button's padding on each side, so a name as
+    /// long as "Landform" or "Blueprints" still shows whole in the bolder letters of the tool in use.
+    /// </summary>
+    /// <param name="label">The tool's short name.</param>
+    private static TextBlock RailName(string label) =>
+        new() { Text = label, FontSize = 10.5, Margin = new Thickness(-2, 0), HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+
     /// <summary>A rail button: its picture, the name under it and the key in its corner.</summary>
     private static Button RailButton(string label, string key, Control picture)
     {
@@ -101,7 +109,7 @@ public sealed partial class ToolPanel
             {
                 Children =
                 {
-                    new StackPanel { Spacing = 1, Children = { picture, new TextBlock { Text = label, FontSize = 10.5, HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis } } },
+                    new StackPanel { Spacing = 1, Children = { picture, RailName(label) } },
                     new TextBlock { Text = key, FontSize = 9, Opacity = 0.6, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -2, -1, 0), FontFamily = new FontFamily("monospace") },
                 },
             },

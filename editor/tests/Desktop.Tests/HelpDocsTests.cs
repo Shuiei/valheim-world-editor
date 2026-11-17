@@ -18,7 +18,9 @@ public class HelpDocsTests
     public void EveryPageOfDocsIsCarriedButTheReleaseNotesAndTheDevelopersPages()
     {
         string docs = Path.Combine(Repo, "docs");
-        string[] notCarried = ["architecture.md", "development.md"];
+        // Not carried: the developers' pages, and the pointer pages kept so that links from outside to a tool page that
+        // was merged into another still lead somewhere (shape.md and mountain.md, now landform.md).
+        string[] notCarried = ["architecture.md", "development.md", "shape.md", "mountain.md"];
         var onDisk = Directory.EnumerateFiles(docs, "*.md", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(docs, f).Replace('\\', '/'))
             .Where(p => !p.StartsWith("releases/", StringComparison.Ordinal) && !p.StartsWith("dev/", StringComparison.Ordinal) && !notCarried.Contains(p))

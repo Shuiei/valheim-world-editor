@@ -50,13 +50,15 @@ The 3D window has five parts:
   world** or **Apply live**, then **History**, **View** and **?**. See [The top bar](#the-top-bar).
 - **Tool rail** (left edge): every tool, with its key in the corner. See [The tool rail](#the-tool-rail).
 - **Tool panel** (next to the rail): the chosen tool's name, a line on how to use it, and its settings. The
-  [Mask](masks.md) shows its own card beside it for the tools it works with (the brushes, Path, Area, Shape,
-  Mountain and Place).
+  [Mask](masks.md) shows its own card beside it for the tools it works with (the brushes, Path, Region, Landform
+  and Place). The same card holds **No limit**, the ground tools' other shared switch (see
+  [No limit](terrain.md#no-limit)).
 - **Right-hand panel**: **View** (`V`), **History** (`L`), the **Controls** help card (`?` or `F3`) or the
   [Inspector](select.md) (`I`). They share one place, so only one shows at a time; the same key or button again
   closes it.
-- **Status bar** (bottom): where the mouse is, the last message, the selection, Walk or Fly, and a reminder of the
-  mouse ("Right drag turns · Wheel zooms · Middle drag slides · ? help").
+- **Status bar** (bottom): where the mouse is, the last message, the selection, Walk or Fly, the **Cut** slider
+  (see [Cut](#cut)) and, in a window about 1500 px wide or more, a reminder of the mouse ("Right drag turns · Wheel
+  zooms · Middle drag slides · ? help"); in a narrower window its place goes to the message.
 
 The mouse readout reads like `x 1250, z -380   ground 32.40 m (original 30.10, +2.30)   zone 20, -6`: the
 position in metres, the ground's height now, its height before any change and the difference, and the zone. At the
@@ -64,9 +66,10 @@ game's limit it adds ", at the ±8 m limit". The selection reads like "Selected:
 with the four most common kinds.
 
 Every slider, switch and button explains itself when you hover it. The editor remembers your choices between runs:
-what View shows, the look options, the brush's shape and falloff, the Area action, the Shape preset and your own
-formula, Select's options, which Place categories are open, the right-hand panel you left open, **Follow**,
-**Auto**, the map's place and the clipboard.
+what View shows, the look options, the brush's shape and falloff, the Region action, the Landform kind, its Formula
+preset and your own formula, Select's options, which Place categories are open, the building bar's settings and the
+Build dock's size, the right-hand panel you left open, **Follow**, **Auto**, the map's place and the clipboard.
+**No limit** is not: it is off each time the editor starts.
 
 ## The top bar
 
@@ -77,6 +80,7 @@ formula, Select's options, which Place categories are open, the right-hand panel
 | **Area** ◀ ▲ ▼ ▶, size list, **Follow** | Move the area, change its size, let it grow as you look around. See [The area](#the-area). |
 | Undo, redo (the curved arrows) | Undo the last change (`Ctrl+Z`); redo it (`Ctrl+Y` or `Ctrl+Shift+Z`). Their hover text names the step, e.g. "Undo Raise (Ctrl+Z)". A step from an earlier session may ask first. |
 | **LIVE** (live) | Shows you are connected to the running game through the WorldEditorBridge plugin. |
+| Player list, **Go** (live) | Beside **LIVE**, while a player is connected: choose a connected player, then **Go**. The camera turns to the player when they are in the area; otherwise the area moves to them. Players show in the view as blue posts with their names. |
 | **Reload** (live) | Loads the world again from the game, after asking when changes are not applied yet (they are dropped, with their steps). The steps the game has stay in History. You stay where you are. |
 | **Auto** (live) | Applies every change to the game as soon as it is done: each stroke when you let go, each tool, undo and redo. Switching it on sends what is waiting at once. Remembered. |
 | Pending line | "Unsaved: 3 zones, 1 deleted, 12 added, 1 reset" (offline) or "Not applied: …" (live), in amber; "All saved" or "All applied" in grey when nothing waits. What it counts: see [Pending changes](concepts/saving-and-history.md#pending-changes). |
@@ -101,15 +105,14 @@ corner), and the pending line counts them: "Unsaved: 1 zone, 10 added".*
 
 | Section | Rail button (key) | What it opens |
 |---|---|---|
-| **SCULPT** | **Raise** (`1`), **Lower** (`2`), **Flatten** (`3`), **Smooth** (`4`), **Natural** (`0`), **Erode** (`O`), **Restore** (`5`) | The ground brushes; **Natural** opens the panel titled **Naturalize**. See [Sculpt and paint](terrain.md). |
-| **EDIT** | **Area** (`B`), **Path** (`P`), **Place** (`T`) | [Area](area.md) (box or polygon actions, copy and paste), [Path](path.md) (roads, ramps, rivers, caves), [Place](place.md) (trees, rocks, pieces, spawn points). |
-| **PAINT** | **Dirt** (`6`), **Cultivate** (`7`), **Paved** (`8`), **Clear** (`9`) | The paint brushes; **Clear** opens the panel titled **Clear paint**. See [Sculpt and paint](terrain.md). |
-| **CREATE** | **Shape** (`G`), **Mountain**, **Cave**, **Dungeon**, **Script**, **Blueprints** | [Shape](shape.md), [Mountain](mountain.md), Cave (the [Path](path.md) tool with its Cave action), [Dungeons](dungeons.md), [Script](scripting.md), and the blueprint library to paste one (see [the Workshop](workshop.md)). Only Shape has a key. |
+| **SCULPT** | **Raise** (`1`), **Lower** (`2`), **Flatten** (`3`), **Smooth** (`4`), **Naturalize** (`0`), **Erode** (`O`), **Restore** (`5`), **Paint** (`6` to `9`) | The ground brushes. **Paint** is one brush for the four paints, chosen in its panel or with a key: Dirt (`6`), Cultivate (`7`), Paved (`8`), Clear paint (`9`). See [Sculpt and paint](terrain.md). |
+| **EDIT** | **Region** (`B`), **Path** (`P`), **Place** (`T`), **Build** (`U`) | [Region](area.md) (box or polygon actions, copy and paste), [Path](path.md) (roads, ramps, rivers), [Place](place.md) (trees, rocks, crops, spawn points), [Build](build.md) (the pieces players build, with the Build dock and the building bar). |
+| **CREATE** | **Landform** (`G`), **Dungeon**, **Script**, **Blueprints** | [Landform](landform.md) (a whole landform in one click: a formula's shape, a mountain or a picture), [Dungeons](dungeons.md), [Script](scripting.md), and the blueprint library to paste one (see [the Workshop](workshop.md)). Only Landform has a key. |
 | **TOOLS** | **Select** (`E`), **Measure** (`M`), **View** (`Esc` or `H`) | [Select](select.md), [Measure](measure.md), and View: look around; a left drag slides the view, a click picks an object, a double-click on one switches to Select with it selected. |
 | **MODS** | One button per tool a mod's [extension](modding.md) brings: its name, its picture or first letter; hovering it names the mod | The mod's tool: its card of settings next to the rail, its help in the tooltip. Its changes go into History and are undone, redone and saved like the editor's own. Shown only when a running extension has a tool. |
 
-The rail scrolls when the window is too short for it. In the Workshop it keeps only **Build** (the Place tool for
-building pieces, `T`), **Select** and **View**.
+The rail scrolls when the window is too short for it (and ends above the Build dock while it is open). In the
+Workshop it keeps only **Build** (`U` or `T`), **Select** and **View**.
 
 ## Camera
 
@@ -153,7 +156,7 @@ works this way: see [Areas and zones](concepts/areas-and-zones.md).
 
 The arrows, Follow and the size list wait while something would be lost, and the status bar says why: objects are
 selected (`Alt+A` in Select clears them), a brush stroke is going on, a path is drawn (apply or clear it), or changes
-are still being sent to the game. They do not wait for an Area box or polygon, a Place line, grid or zone, or a
+are still being sent to the game. They do not wait for a Region box or polygon, a Place line, grid or zone, or a
 measure: those are dropped when the area moves, grows or changes size. The area controls are not in the Workshop.
 
 ## Save, apply and discard
@@ -227,7 +230,7 @@ more.
 | **Back to here** | Undoes every change made after this one. The later changes stay in the list, greyed out. |
 | **Redo to here** | On a greyed-out change: redoes every change up to and including it. |
 | **Remove** | Takes out only this change and keeps everything done after it. The removal is a new step ("Removed: …"), so `Ctrl+Z` brings the change back. The removed change is struck through. |
-| **Take back Claude's changes** | Shown when Claude made changes in this area's history. Removes each of them, as **Remove** does, and keeps yours, even those made after them. Claude's changes made in other areas are taken back from those areas. |
+| **Take back Claude's changes** | Shown when Claude made changes in this area's history. Removes each of them, as **Remove** does, and keeps yours, even those made after them. Claude's changes made in other areas stay, and the status bar says how many: open those areas to take them back there. |
 
 Tags on a row: **applied** (sent to the game, or saved), **Claude** (made through the
 [Claude connection](claude.md)), **earlier session** (kept from an earlier run of the editor). A new change made after
@@ -254,9 +257,10 @@ be picked or selected, so hiding a kind also keeps it safe from a click.
 | | **Unsaved marks** | The green dot over each new object not saved or applied yet. |
 | | **Limit marks** | Red on ground that reached the game's ±8 m limit (in Game look). See [Limit marks](concepts/ground-limits.md#limit-marks). |
 | | **Defaults** / **All** / **Ground** | The usual switches / everything on / only the ground. They set the objects, the water and the overlays, not the look. |
-| BUILDING | **Built by** | The player written as the builder of every piece you place, paste or build. |
 | GROUND (game look) | **Slope colours**, **Height lines every** 1 / 2 / 5 / 10 **m** | Ground overlays, see [Measure](measure.md). |
-| PLAYERS (live) | **Go to** (a player), **Go** | Turns the camera to the player when they are in the area; otherwise the area moves to them. Players show in the view as blue posts with their names. |
+
+Two things about the view are not in this panel, because they are needed where the panel is not: the **Cut** slider
+is in the status bar (see [Cut](#cut)), and going to a connected player is in the top bar, beside **LIVE**.
 
 What the kinds hold:
 
@@ -274,17 +278,36 @@ What the kinds hold:
   the stand.
 - Placing or pasting a kind that is off switches it on, so what you placed stays visible (the message says so).
 
-**Built by** lists the players who built in this world (with their piece counts), the players named on beds, wards
-and tombstones, and the characters on this computer, marked "(this computer)". At first it chooses the player with
-the most pieces, else your own character, else a player named in the world. **Other player id…** asks for any id (a
-whole number). **Nobody (not player built)** places pieces without a builder, as parts of a ruin. With no player known
-at all, pieces get **Unknown player** (id 1): wards and private chests then answer to nobody, so choose your own id
-when you can. The choice is remembered per world. Why the builder matters: see
-[Player-built pieces](concepts/objects.md#player-built-pieces).
+**Built by**, the player written as the builder of the pieces you build, paste or replace, is on
+[the building bar](build.md#the-building-bar), with Build, Select and Paste.
 
 When an area holds locations (or has some within 40 m), a note at the bottom of the view, beside the tool panel, says
 how many, and that the ground already includes the flattening the game does around them. Close it with its ×. See
 [Locations level the ground](concepts/ground-limits.md#locations-level-the-ground).
+
+## Cut
+
+The **Cut** slider in the status bar hides everything above a height, and the cursor goes through what is hidden: look
+into a building from above, select what is inside it, or build there. It is one control for every 3D view; only what
+its metres count from changes.
+
+| Where | The metres count from | Range |
+|---|---|---|
+| A world | The ground (or the sea) in the middle of the view; walking or flying, the ground under the camera. The cut follows the view as it moves. | 0 to 39 m |
+| The [Workshop](workshop.md#cut) | The plot. | 0 to 39 m |
+| A dungeon, with the [Dungeon](dungeons.md) tool or **Build here** | About the floor of the dungeon's entrance. | 0 to 29 m |
+
+The slider moves 1 m a step. Its left end cuts at the ground, the plot or the floor; its right end is off. Beside it,
+the bar reads "Cut at N m" or "Cut: off". It is off each time the editor starts.
+
+- **Objects only.** The cut hides what stands above the height (buildings, trees, rocks, dungeon rooms). The ground and
+  the water are drawn whole.
+- **In a world, the cut moves with the view.** On a slope, turn the view around a building rather than slide it: the
+  height is counted from the ground in the middle of the view.
+- **A world and a dungeon each keep their own cut.** Choosing the Dungeon tool takes the dungeon's cut (off at first;
+  **Go to the dungeon** cuts at 4 m), and leaving it brings the world's back. The Workshop starts with none.
+- **Other ways to see inside**: **View → See-through buildings**, and the [Select](select.md) tool's **Hide** and
+  **Select through**.
 
 ## The help card
 
@@ -315,10 +338,13 @@ In the [Workshop](workshop.md) the window shows a blank plot instead of a world,
 | **Start** | Back to the start page, after asking when the building is not saved as a blueprint. |
 | Name and cost | The building's name, and under it "Cost: …" (hover it for every material and the crafting stations it needs), or "A blank plot: only the building is kept in the blueprint". |
 | **Support check** | On at first: each building piece is tinted the colour the game gives its support in build mode, and pieces that would fall in game are red. Off: build freely. See [The support check](concepts/objects.md#the-support-check). |
-| Cut slider | Hides everything higher than the chosen height above the plot, to see and build inside. It moves 1 m a step from the ground (left end) up to 39 m; the right end (40) is off. It reads "Cut at N m" or "Cut: off". |
 | Pending | "N piece(s)", how many would fall, and "not saved as a blueprint" or "saved"; "No pieces yet" on an empty plot. |
 | **Save blueprint** | Saves the building pieces on the plot as a Homestead blueprint (`Ctrl+S`). Nothing else is kept. |
+| **Materials** | Opens or closes the Materials panel at the right: what the building costs in game. See [Materials](workshop.md#materials). |
 | **History**, **?** | As in a world. |
+
+The **Cut** slider is in the status bar, as in a world: in the Workshop its metres count from the plot (see
+[Cut](#cut)).
 
 The Workshop has no area controls, no **Discard** and no **View** panel: buildings are drawn solid, and zone borders
 and green dots are off.

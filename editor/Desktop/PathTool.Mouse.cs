@@ -12,11 +12,11 @@ public sealed partial class PathTool
     /// <param name="hit">The grid point under the mouse; null off the ground.</param>
     /// <param name="at">The mouse on the view, in pixels.</param>
     /// <param name="screen">Where a grid point is on the view (null behind the camera).</param>
-    /// <param name="ctrl">Ctrl held: remove the point under the mouse.</param>
+    /// <param name="ctrl">Ctrl held: remove the point under the mouse; with Alt on a Ramp, pick the ramp's end
+    /// instead of its start.</param>
     /// <param name="alt">Alt held: pick the height under the mouse instead.</param>
-    /// <param name="shift">With Alt on a Ramp: pick the ramp's end instead of its start.</param>
     /// <param name="heightAt">The ground's height at a grid point.</param>
-    public void Down(Vector2? hit, Point at, Func<Vector2, Point?> screen, bool ctrl, bool alt, bool shift, Func<Vector2, float> heightAt)
+    public void Down(Vector2? hit, Point at, Func<Vector2, Point?> screen, bool ctrl, bool alt, Func<Vector2, float> heightAt)
     {
         if (alt)
         {
@@ -25,7 +25,7 @@ public sealed partial class PathTool
                 float h = MathF.Round(heightAt(a), 1);
                 if (Act == Action.Ramp)
                 {
-                    if (shift)
+                    if (ctrl)
                     {
                         End = h;
                     }

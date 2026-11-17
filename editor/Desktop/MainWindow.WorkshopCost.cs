@@ -109,8 +109,11 @@ public partial class MainWindow
     /// <param name="OnTop">Whether a single piece snapped on top of the piece under the cursor.</param>
     /// <param name="Rotation">The turn it added to every object's facing, in degrees.</param>
     /// <param name="Borders">Whether the zone borders were shown.</param>
+    /// <param name="Elev">The height its objects stood at (above the ground, or the one height).</param>
+    /// <param name="Line">Its line: the shape, whether pieces went end to end (and whether that was set by hand), how many high, closed, curved; and its grid's spacing.</param>
     private sealed record Kept(List<string> Chosen, PlaceTool.Modes Mode, bool OneAtATime, bool OneAtATimeByHand, bool RandomYaw, float Tilt, float SizeMin,
-        float SizeMax, PlaceTool.Elevations Elevation, bool SnapTo, bool OnTop, float Rotation, bool Borders);
+        float SizeMax, PlaceTool.Elevations Elevation, bool SnapTo, bool OnTop, float Rotation, bool Borders, float Elev,
+        (PlaceTool.LineShapes Shape, bool EndToEnd, bool ByHand, int Layers, bool Loop, bool Curve, float Cell) Line);
 
     // (The unsaved marks: everything on the plot is new, so they would only cover the building.)
 
@@ -120,13 +123,13 @@ public partial class MainWindow
     private Kept? _kept;
 
     /// <summary>
-    /// The Place tool's settings, kept while the Workshop's Build (or building in a dungeon) uses it.
+    /// The Place tool's settings, kept while Build (in a world, the Workshop, a dungeon) uses it.
     /// </summary>
     private Kept KeepPlaceTool()
     {
         var t = PlaceTool;
         return new Kept([.. t.Chosen], t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation,
-            View.IsOverlayShown(Overlays.Layer.Borders));
+            View.IsOverlayShown(Overlays.Layer.Borders), t.Elev, (t.LineShape, t.EndToEnd, t.EndToEndByHand, t.Layers, t.Loop, t.Curve, t.Cell));
     }
 
     /// <summary>
@@ -139,11 +142,15 @@ public partial class MainWindow
         t.Chosen.AddRange(k.Chosen);
         (t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation) =
             (k.Mode, k.OneAtATime, k.OneAtATimeByHand, k.RandomYaw, k.Tilt, k.SizeMin, k.SizeMax, k.Elevation, k.SnapTo, k.OnTop, k.Rotation);
+        (t.Elev, t.LineShape, t.EndToEnd, t.EndToEndByHand, t.Layers, t.Loop, t.Curve, t.Cell) = (k.Elev, k.Line.Shape, k.Line.EndToEnd, k.Line.ByHand, k.Line.Layers, k.Line.Loop, k.Line.Curve, k.Line.Cell);
         t.GridStep = 0;
         t.Building = false;
         t.HeightNudge = 0;
         t.AimRay = null;
-        t.CutY = null;
-        PlaceInput.TurnStep = null;
+        // The view's cut stays the Place tool's (a world's or a dungeon's goes on after building).
+        t.CutY = View.CutY;
+        // A line half drawn while building is not the Place tool's.
+        t.ClearShape();
+        PlaceInput.TurnStep = PlaceInput.LiftStep = null;
     }
 }

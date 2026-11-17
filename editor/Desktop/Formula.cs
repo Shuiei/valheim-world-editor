@@ -6,7 +6,7 @@ namespace TerrainEditor.Desktop;
 /// A small, safe formula language, the same as the web editor's (editor/shapes.js compile): numbers, named variables, +
 /// - * / % ^, comparisons, &amp;&amp; ||, !, a ? b : c, pi, n(x, z) (smooth noise) and the functions below. Compiled
 /// once into a function of an environment; a mistake throws a FormatException with a plain message, in the user's language (the
-/// Shape panel shows it).
+/// Landform panel shows it).
 /// </summary>
 public static partial class Formula
 {
@@ -29,7 +29,7 @@ public static partial class Formula
     /// <summary>
     /// JavaScript's truth: 0 and NaN are false.
     /// </summary>
-    private static bool Truthy(double v) => v != 0 && !double.IsNaN(v);
+    private static bool Truthy(double v) => v is not (0d or double.NaN);
 
     /// <summary>
     /// smooth(t): 0 to 1 eased (smoothstep), t clamped to 0..1.

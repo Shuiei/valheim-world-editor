@@ -15,7 +15,7 @@ the distance, the heights and the slope.*
 1. In the tool rail, click **Measure** (`M`).
 2. Click a first point on the ground. The line follows the cursor.
 3. Click a second point to fix the measure. The panel shows the readouts.
-4. Click once more to start a new measure, or press **Clear (Esc)** to remove it.
+4. Click once more to start a new measure, or press **Clear measurement (Esc)** to remove it.
 
 The line is drawn along the ground, so it shows the profile between the two points. The hint at the top of the panel
 says what the next click does.

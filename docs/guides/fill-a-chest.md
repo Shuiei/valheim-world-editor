@@ -46,6 +46,6 @@ chest or read the sign in game.
 
 ## Related
 
-- [Inspector](../select.md) (on the Select page)
+- [Inspector](../select.md#inspector) (on the Select page)
 - [What an object is](../concepts/objects.md#what-an-object-is)
 - [Find an object, a chest's item or a sign](find-things.md)

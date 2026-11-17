@@ -66,7 +66,7 @@ public sealed partial class MainWindow
             Background = new SolidColorBrush(Color.Parse("#2c2416")),
             BorderBrush = new SolidColorBrush(Color.Parse("#7a5a2a")),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = Ui.ControlRadius,
             Padding = new Thickness(10, 6),
             Margin = new Thickness(10, 0, 10, 58),
             MaxWidth = 420,
@@ -95,13 +95,16 @@ public sealed partial class MainWindow
         LocationNote.Margin = new Thickness(tools.Bounds.X + right + Ui.Gap, 0, 10, _panelsBottom);
     };
 
-    /// <summary>The View panel's Go to a player (live worlds).</summary>
+    /// <summary>
+    /// The top bar's Go to a player (live worlds), beside the LIVE badge with the other live things: the player, and
+    /// Go. Their tips keep the view's names: going to a player moves the view and changes nothing in the world.
+    /// </summary>
     private StackPanel PlayersControl()
     {
-        PlayersRow.Children.Add(new TextBlock { Text = Lang.T("live.head.players"), FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, Margin = new Thickness(0, 8, 0, 2) });
         PlayerBox.Tip("view.player");
         GoPlayerButton.Tip("view.goPlayer");
-        PlayersRow.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = Lang.T("live.label.goTo"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, PlayerBox, GoPlayerButton } });
+        PlayersRow.Children.Add(PlayerBox);
+        PlayersRow.Children.Add(GoPlayerButton);
         return PlayersRow;
     }
 

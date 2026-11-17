@@ -70,31 +70,59 @@ public class GlViewPointerTests
         Assert.Empty(s.UndoList);
     }
 
+    // The Mask's gesture is the same with the Path tool as with a brush; a ramp's end has its own (Ctrl + Alt).
     [AvaloniaFact]
-    public void StampOnceAClickOfRaiseOrLowerPutsTheStampIn()
+    public void AltAndShiftWithThePathToolIsTheMasksAndCtrlAndAltTheRampsEnd()
     {
         var s = TestScenes.Flat(2);
-        s.Brush.StampOnce = true;
-        s.Brush.Shape = BrushShape.Stamp;
         var b = new BareGlView(s);
-        var stamped = new List<(float X, float Z)>();
-        b.V.StampClicked += (x, z) => stamped.Add((x, z));
+        var picked = new List<(float Height, bool Mask)>();
+        b.V.BrushAltClick += (h, mask) => picked.Add((h, mask));
+        b.V.Mode = ToolMode.Path;
+        b.V.Path.Act = PathTool.Action.Ramp;
+        b.V.Path.Start = 12;
+        b.V.Path.End = 14;
+        b.Click(b.At(5, 30, 5), RawInputModifiers.Alt | RawInputModifiers.Shift);
+        Assert.Equal(new[] { (30f, true) }, picked);
+        Assert.Equal(12, b.V.Path.Start);
+        Assert.Equal(14, b.V.Path.End);
+        Assert.Empty(b.V.Path.Points);
+        b.Click(b.At(5, 30, 5), RawInputModifiers.Alt | RawInputModifiers.Control);
+        Assert.Equal(30, b.V.Path.End, 1);
+        Assert.Equal(12, b.V.Path.Start);
+        b.Click(b.At(5, 30, 5), RawInputModifiers.Alt);
+        Assert.Equal(30, b.V.Path.Start, 1);
+        Assert.Single(picked);
+        Assert.Empty(b.V.Path.Points);
+    }
+
+    [AvaloniaFact]
+    public void AStampAsTheBrushShapePaintsAStrokeAndTheLandformToolTakesTheClick()
+    {
+        var s = TestScenes.Flat(2);
+        s.Brush.Shape = BrushShape.Stamp;
+        s.Brush.StampData = Stamps.BuiltIn[0].Data;
+        var b = new BareGlView(s);
+        var placed = new List<(float X, float Z)>();
+        b.V.LandformClicked += (x, z) => placed.Add((x, z));
+        // Raise with a stamp as its shape paints a stroke, as with any other shape: the whole picture in one click
+        // is the Landform tool's.
         b.V.Tool = BrushTool.Raise;
-        b.Click(b.At(5, 30, 5));
-        b.V.Tool = BrushTool.Lower;
-        b.Click(b.At(-10, 30, 0));
-        Assert.Equal(2, stamped.Count);
-        AssertGrid(5, 5, stamped[0]);
-        AssertGrid(-10, 0, stamped[1]);
-        Assert.False(b.V.BrushDown);
-        // Another brush paints a stroke, even with Stamp once on; nobody listens for its end here.
-        b.V.Tool = BrushTool.Smooth;
         var p = b.At(0, 30, 0);
         b.W.MouseDown(p, MouseButton.Left);
         Assert.True(b.V.BrushDown);
         b.W.MouseUp(p, MouseButton.Left);
         Assert.False(b.V.BrushDown);
-        Assert.Equal(2, stamped.Count);
+        Assert.Empty(placed);
+        // The Landform tool: each click is told to whoever listens, and no stroke starts.
+        b.V.Tool = null;
+        b.V.Mode = ToolMode.Landform;
+        b.Click(b.At(5, 30, 5));
+        b.Click(b.At(-10, 30, 0));
+        Assert.Equal(2, placed.Count);
+        AssertGrid(5, 5, placed[0]);
+        AssertGrid(-10, 0, placed[1]);
+        Assert.False(b.V.BrushDown);
     }
 
     [AvaloniaFact]

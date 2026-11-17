@@ -37,7 +37,8 @@ public sealed partial class PlacePanel
             {
                 if (!Creatable().Any(c => c.Name == name))
                 {
-                    Say(Said.Of("select.msg.cannotPlace", name));
+                    // A piece of the hammer's is the Build tool's to put down.
+                    Say(BuiltWithBuild(name) ? Said.Of("place.msg.usesBuild", name) : Said.Of("select.msg.cannotPlace", name));
                     return;
                 }
                 // A click places only that kind; Shift + click adds it to the ticked kinds.

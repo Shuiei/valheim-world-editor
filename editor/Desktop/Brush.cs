@@ -16,12 +16,6 @@ public sealed partial class Brush
     public float[]? StampData { get; set; }
     /// <summary>The stamp's name, for the undo step's label.</summary>
     public string StampLabel { get; set; } = "";
-    /// <summary>
-    /// Stamp once: a click of Raise or Lower puts the whole picture in, <see cref="StampHeight"/> metres high.
-    /// </summary>
-    public bool StampOnce { get; set; }
-    /// <summary>Stamp once: how high the picture goes in, in metres.</summary>
-    public float StampHeight { get; set; } = 4;
     /// <summary>Square brushes and stamps turn (degrees).</summary>
     public float Turn { get; set; }
     /// <summary>The radius in metres (half the side for squares).</summary>

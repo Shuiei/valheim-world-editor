@@ -1,41 +1,23 @@
-
 namespace TerrainEditor.Desktop;
 
 public sealed partial class PathTool
 {
     internal sealed partial class ApplyRun
     {
-        /// <summary>Evens out one point: its height moves to the average of the heights around it, from before.</summary>
-        /// <param name="s">The point and what is known about it.</param>
-        internal void Smooth(in PointSample s)
-        {
-            float sum = 0;
-            int n = 0;
-            for (int dz = -2; dz <= 2; dz++)
-            {
-                for (int dx = -2; dx <= 2; dx++)
-                {
-                    // Inside the area on both axes (a flat index would wrap into the next row).
-                    int x = s.Gx + dx, z = s.Gz + dz;
-                    if (x >= 0 && x < _g.W && z >= 0 && z < _g.H)
-                    {
-                        sum += _before![z * _g.W + x];
-                        n++;
-                    }
-                }
-            }
-            _clamped |= _g.SetHeight(s.P, s.H + (sum / n - s.H) * s.W);
-        }
-
         /// <summary>Paints one point with the paint action's colour, by its weight.</summary>
         /// <param name="s">The point and what is known about it.</param>
-        internal void Paint(in PointSample s)
+        internal void Paint(in PointSample s) => GroundOps.Paint(_g, s.P, _colour!, s.W);
+
+        /// <summary>
+        /// Erode: weathers the points the line reached, each by its weight, in one go (as the Area tool erodes a
+        /// selection), and reports the points the erosion changed.
+        /// </summary>
+        /// <returns>The points changed, the rectangle around them (one point wider each way), and whether the game's limit stopped some.</returns>
+        internal (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Erode()
         {
-            _g.StartPaint(s.P);
-            for (int c = 0; c < 4; c++)
-            {
-                _g.Paint[s.P * 4 + c] += (_colour![c] - _g.Paint[s.P * 4 + c]) * s.W;
-            }
+            var set = new HashSet<int>();
+            var ((x0, z0, x1, z1), eroded) = Erosion.Region(_g, _weighed, (_x0, _z0, _x1, _z1), _b.RestAngle, _b.Random, set);
+            return (set.ToList(), (x0 - 1, z0 - 1, x1 + 1, z1 + 1), eroded);
         }
     }
 }

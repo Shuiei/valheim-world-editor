@@ -6,7 +6,7 @@ namespace TerrainEditor.DocsScreenshots;
 public sealed partial class Scenes
 {
     /// <summary>
-    /// area.jpg: the Area tool's Remove objects chosen on a box round a dense clump of trees, rocks, bushes and
+    /// area.jpg: the Region tool's Select objects chosen on a box round a dense clump of trees, rocks, bushes and
     /// mushrooms (Pickables shown in View), not done yet: the kind chips count what is inside.
     /// </summary>
     private void Area(Editor e)
@@ -19,15 +19,15 @@ public sealed partial class Scenes
         {
             Trees(e, P(-16, dz), P(16, dz), density: 5, kinds: kinds);
         }
-        AreaAction(e, P(-14, -13), P(14, 13), "Remove objects", apply: false);
+        AreaAction(e, P(-14, -13), P(14, 13), "Select objects", apply: false);
         Camera(e, 10, 0, 200, 55, 64);
         e.Send("wait 500");
         e.Shot(Out("area.jpg"));
     }
 
     /// <summary>
-    /// area-polygon.jpg: a polygon drawn round part of a wood with the Area tool, and area-polygon-done.jpg: the wood
-    /// after Remove objects took out what the polygon held.
+    /// area-polygon.jpg: a polygon drawn round part of a wood with the Region tool, and area-polygon-done.jpg: the wood
+    /// after Select objects handed what the polygon held to the Select tool, and Delete took it out.
     /// </summary>
     private void AreaPolygon(Editor e)
     {
@@ -40,11 +40,11 @@ public sealed partial class Scenes
             Click(e, p);
         }
         e.Send("key Return");
-        e.Send("choose Remove objects");
+        RegionAction(e, "Select objects");
         Camera(e, 12, 0, 200, 55, 70);
         e.Shot(Out("area-polygon.jpg"));
         e.Send("key Return");
-        e.Send("click Clear (Esc)");
+        e.Send("key Delete");
         e.Shot(Out("area-polygon-done.jpg"));
     }
 
@@ -75,8 +75,7 @@ public sealed partial class Scenes
     {
         Bare(e, unsaved: false, size: 3);
         // The woods round the bare zone taken away: the paste lands on open grass.
-        AreaAction(e, P(-95, -95), P(95, 95), "Remove objects");
-        e.Send("click Clear (Esc)");
+        RemoveObjects(e, P(-95, -95), P(95, 95));
         for (int dz = -16; dz <= 16; dz += 8)
         {
             Trees(e, P(-18, dz), P(18, dz), density: 3, kinds: ["Beech1", "Birch1", "Oak1", "Rock_3", "Rock_7"]);
@@ -84,14 +83,17 @@ public sealed partial class Scenes
         e.Send("key B");
         e.Send("click Box");
         Drag(e, P(-22, -20), P(22, 20));
-        e.Send("choose Copy and paste");
+        RegionAction(e, "Copy and paste");
         e.Send("key C ctrl");
         e.Send("key V ctrl");
         e.Send("set Copies|1");
+        // 30°: two steps of 15° (the building bar's Turn by).
+        e.Send("set Turn by|15°");
         for (int i = 0; i < 2; i++)
         {
-            e.Send("key OemComma shift");
+            e.Send("key OemComma");
         }
+        e.Send("set Turn by|22.5°");
         Camera(e, -44, 0, 200, 42, 110);
         e.Send("wait 300");
         Move(e, P(-62, 1));
@@ -110,19 +112,12 @@ public sealed partial class Scenes
         Bare(e, unsaved: false);
         Level(e, P(-16, -12), P(16, 12));
         Hut(e, P(-3, -3), P(3, 3), layers: 1);
-        // The roof: floor pieces on the walls' tops, 2 m up.
-        Kinds(e, "wood_floor");
-        e.Send("click Grid");
-        e.Send("set Spacing|2");
-        e.Send("choose Above the ground");
-        e.Send("set Height|2");
-        Drag(e, P(-3, -3), P(3, 3));
-        e.Send("key Return");
-        e.Send("choose On the ground");
+        // The roof: floor pieces on the walls' tops, 2 m up (four lifts of half a metre).
+        BuildFloor(e, "wood_floor", P(-3, -3), P(3, 3), halfMetresUp: 4);
         e.Send("key B");
         e.Send("click Box");
         Drag(e, P(-5, -5), P(5, 5));
-        e.Send("choose Copy and paste");
+        RegionAction(e, "Copy and paste");
         e.Send("key C ctrl");
         e.Send("key V ctrl");
         e.Send("set Copies|3");
@@ -197,16 +192,42 @@ public sealed partial class Scenes
         e.Send("wait 500");
     }
 
-    /// <summary>plant-line.jpg: a fence being placed along a line through points, end to end.</summary>
+    /// <summary>
+    /// place-line.jpg: birches every 4 m along a smooth curve through five points beside a paved path (place.md), shown
+    /// before Enter with the Line panel beside it.
+    /// </summary>
+    private void PlaceLine(Editor e)
+    {
+        Bare(e);
+        Level(e);
+        // A paved path for the row of trees to follow.
+        e.Send("key D8");
+        e.Send("set Size|2");
+        e.Send("set Strength|1");
+        Path(e, [P(-24, -6), P(-10, 0), P(4, -2), P(14, 6), P(24, 8)], steps: 8, hold: 150);
+        e.Send("key T");
+        Kinds(e, "Birch1");
+        e.Send("click Line");
+        e.Send("click Points");
+        e.Send("set Every|4");
+        e.Send("check Smooth curve through the points|on");
+        foreach (var p in new[] { P(-24, -11), P(-10, -5), P(4, -7), P(14, 1), P(24, 3) })
+        {
+            Click(e, p);
+        }
+        Move(e, P(24, 20));
+        Camera(e, 10, 0, 200, 42, 56);
+        e.Shot(Out("place-line.jpg"));
+    }
+
+    /// <summary>plant-line.jpg: a fence being laid with Build along a line through points, end to end (build.md).</summary>
     private void PlantLine(Editor e)
     {
         Bare(e);
         Level(e);
-        e.Send("key T");
-        Pieces(e);
-        Kinds(e, "wood_fence");
-        e.Send("click Line");
-        e.Send("click Points");
+        Piece(e, "wood_fence");
+        Lay(e, "Line");
+        e.Send("set Layers|1");
         foreach (var p in new[] { P(-22, -12), P(-6, -2), P(8, -6), P(20, 10) })
         {
             Click(e, p);
@@ -214,35 +235,31 @@ public sealed partial class Scenes
         Move(e, P(20, 10));
         Camera(e, 12, 0, 200, 40, 52);
         e.Shot(Out("plant-line.jpg"));
+        e.Send("click Clear shape (Esc)");
+        Lay(e, "One piece");
     }
 
     /// <summary>
-    /// line-shapes.jpg: Line's other shapes, placed end to end: a stake wall Circle and stone walls in a Rectangle two
-    /// layers high, seen from the side; the Place panel shows End to end and Layers 2.
+    /// line-shapes.jpg: Build's other ways to lay a piece end to end: a stake wall Circle and stone walls in a Rectangle
+    /// two layers high, seen from the side; the dock's foot shows Rectangle and Layers 2 (build.md).
     /// </summary>
     private void LineShapes(Editor e)
     {
         Bare(e, unsaved: false);
         Level(e, P(-30, -20), P(30, 20));
-        e.Send("key T");
-        Pieces(e);
-        Kinds(e, "stake_wall");
-        e.Send("click Line");
-        e.Send("click Circle");
-        Drag(e, P(10, 0), P(18, 0));
-        e.Send("key Return");
-        Kinds(e, "stone_wall_2x1");
-        e.Send("click Rectangle");
-        e.Send("check End to end (snap together, like in game)|on");
+        BuildWalls(e, "stake_wall", P(10, 0), P(18, 0), shape: "Circle");
+        Piece(e, "stone_wall_2x1");
+        Lay(e, "Rectangle");
         e.Send("set Layers|2");
         Drag(e, P(-18, -6), P(-4, 6));
         e.Send("click Place (Enter)");
         // The placed rectangle stays drawn for another placing: cleared, the pieces show as placed.
-        e.Send("click Clear (Esc)");
+        e.Send("click Clear shape (Esc)");
         Camera(e, 2, 0, 200, 22, 44);
         e.Send("wait 300");
         Move(e, P(0, 30));
         e.Shot(Out("line-shapes.jpg"));
+        Lay(e, "One piece");
     }
 
     /// <summary>
@@ -273,14 +290,14 @@ public sealed partial class Scenes
         e.Shot(Out("plant-grid.jpg"));
     }
 
-    /// <summary>plant-zone.jpg: bushes and young trees for a zone drawn point by point, shown before Enter.</summary>
+    /// <summary>plant-zone.jpg: bushes and young trees for a polygon drawn point by point, shown before Enter.</summary>
     private void PlantZone(Editor e)
     {
         Bare(e);
         e.Send("key T");
         Nature(e);
         Kinds(e, "Beech_small1", "Bush01", "RaspberryBush");
-        e.Send("click Zone");
+        e.Send("click Polygon");
         foreach (var p in new[] { P(-20, -14), P(-4, -20), P(16, -12), P(22, 6), P(6, 18), P(-14, 14) })
         {
             Click(e, p);
@@ -334,15 +351,15 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// guide-forest-zone.jpg: Place's Zone mode with the Meadows woods preset, Clumping 50% and Patch size 30 m: a zone
-    /// about 60 × 40 m previewed in groves and clearings, the panel's Zone fill rows in view.
+    /// guide-forest-zone.jpg: Place's Polygon mode with the Meadows woods preset, Clumping 50% and Patch size 30 m: a polygon
+    /// about 60 × 40 m previewed in groves and clearings, the panel's Polygon fill rows in view.
     /// </summary>
     private void GuideForestZone(Editor e)
     {
         Bare(e, unsaved: false);
         e.Send("key T");
         e.Send("choose Meadows woods");
-        e.Send("click Zone");
+        e.Send("click Polygon");
         e.Send("set Density|1.5");
         e.Send("set Clumping|50");
         e.Send("set Patch size|30");
@@ -353,7 +370,7 @@ public sealed partial class Scenes
             Click(e, p);
         }
         Move(e, P(0, 80));
-        // The panel scrolled down to its Zone fill rows.
+        // The panel scrolled down to its Polygon fill rows.
         e.Scroll(270, 600, 6);
         e.Send("wait 500");
         e.Shot(Out("guide-forest-zone.jpg"));
@@ -366,6 +383,7 @@ public sealed partial class Scenes
         Level(e);
         Hut(e, P(-4, -3), P(4, 3));
         e.Send("key E");
+        Settle(e);
         Click(e, P(4, 0));
         e.Send("click Whole building");
         Camera(e, 6, 0, 200, 35, 30);
@@ -378,14 +396,9 @@ public sealed partial class Scenes
         Bare(e, unsaved: false);
         Level(e);
         Hut(e, P(-6, -4), P(6, 4));
-        // On the floor: placed after it (Place puts them on what is under them), between its pieces' middles (One
-        // at a time keeps 0.3 m from any object).
-        Pieces(e);
-        Kinds(e, "piece_chest_wood");
-        Single(e, P(-4, 2));
-        Kinds(e, "fire_pit");
-        Single(e, P(-2, -2));
-        e.Send("check One at a time, exactly at the cursor|off");
+        // On the floor: put down after it (Build puts them on the piece pointed at).
+        BuildOne(e, "piece_chest_wood", P(-4, 2));
+        BuildOne(e, "fire_pit", P(-2, -2));
         e.Send("key E");
         Camera(e, 6, 0, 200, 40, 30);
         // A frame drawn with this camera: the mouse's points are read with the last frame's.
@@ -411,7 +424,7 @@ public sealed partial class Scenes
     }
 
     /// <summary>
-    /// select-zone-drawing.jpg and select-zone.jpg: with "A drag draws: A zone on the ground", a selection ring drawn
+    /// select-zone-drawing.jpg and select-zone.jpg: with "A drag draws: An outline on the ground", a selection ring drawn
     /// with Alt around rocks and bushes, then the selection it made.
     /// </summary>
     private void SelectZone(Editor e)
@@ -419,7 +432,7 @@ public sealed partial class Scenes
         Bare(e, unsaved: false);
         Trees(e, P(-20, -8), P(20, 8), density: 6, kinds: ["Rock_3", "Bush01", "Beech_small1", "RaspberryBush"]);
         e.Send("key E");
-        e.Send("choose A zone on the ground (all above it)");
+        e.Send("choose An outline on the ground (all above it)");
         (double X, double Z)[] ring = [P(-12, -10), P(6, -12), P(14, -2), P(10, 10), P(-6, 12), P(-14, 2), P(-12, -9)];
         Path(e, ring, steps: 2, hold: 30, mods: "alt", release: false);
         Camera(e, 8, 0, 200, 48, 40);

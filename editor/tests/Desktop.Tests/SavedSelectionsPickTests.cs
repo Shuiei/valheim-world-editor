@@ -11,7 +11,7 @@ using static TerrainEditor.Desktop.Tests.SavedSelectionsData;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Picking a kind for the Replace lists (Area and Select) with the eyedropper: a click in the 3D view gives the kind
+/// Picking a kind for the Select tool's Replace with list with the eyedropper: a click in the 3D view gives the kind
 /// clicked, and Esc or a click on nothing cancels.
 /// </summary>
 [Collection("Saved selections")]
@@ -110,45 +110,6 @@ public sealed class SavedSelectionsPickTests : SavedSelectionsFolder
         w.PickKind("Replace", _ => called = true);
         Press(w, empty, MouseButton.Right);
         Assert.NotNull(w.View.PickObjectOnce);
-    }
-
-    [AvaloniaFact]
-    public void TheAreaReplacePickButtonFillsTheWithList()
-    {
-        var (w, s, wall, _) = PickWindow();
-        var a = w.AreaPanel;
-        var messages = new List<string>();
-        a.Message += m => messages.Add(m.Shown);
-        w.Tools.ChooseMode(ToolMode.Area);
-        a.Choose(AreaPanel.Act.Replace);
-        a.Refresh();
-        Assert.True(a.ToPickButton.IsEffectivelyVisible);
-        Click(a.ToPickButton);
-        Assert.NotNull(w.View.PickObjectOnce);
-        Press(w, wall, MouseButton.Left);
-        string name = w.NameOfPrefab(Wall)!;
-        // The wall is a kind the game makes: it is chosen.
-        Assert.Contains(Wall, s.Scene.World.Creatable);
-        Assert.Equal(name, a.ToBox.SelectedItem);
-        Assert.Equal($"Replace with {name}.", messages[^1]);
-    }
-
-    [AvaloniaFact]
-    public void UsePickedTakesOnlyKindsTheGameCanMake()
-    {
-        var (w, s, _, _) = PickWindow();
-        var a = w.AreaPanel;
-        var messages = new List<string>();
-        a.Message += m => messages.Add(m.Shown);
-        a.Refresh();
-        var creatable = s.Scene.World.Creatable.Where(p => w.NameOfPrefab(p) != null).OrderBy(w.NameOfPrefab, StringComparer.OrdinalIgnoreCase).ToList();
-        Assert.NotEmpty(creatable);
-        a.UsePicked(creatable[^1]);
-        Assert.Equal(creatable.Count - 1, a.ToBox.SelectedIndex);
-        Assert.Equal($"Replace with {w.NameOfPrefab(creatable[^1])}.", messages[^1]);
-        a.UsePicked(12345);
-        Assert.Equal(creatable.Count - 1, a.ToBox.SelectedIndex);
-        Assert.Equal("12345 cannot be placed: the game has no such kind to copy.", messages[^1]);
     }
 
     [AvaloniaFact]

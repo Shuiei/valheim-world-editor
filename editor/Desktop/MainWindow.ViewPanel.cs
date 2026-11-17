@@ -8,11 +8,6 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Building: who new pieces are built by (the player ids: the list's entries).
-    /// </summary>
-    internal ComboBox BuilderBox { get; } = new() { FontSize = 12, MinWidth = 200, MaxWidth = 260 };
-
-    /// <summary>
     /// The player id of each Built by entry, in order: the players, then -1 (another id, asked for) and 0 (nobody).
     /// </summary>
     internal List<long> BuilderIds { get; } = [];
@@ -163,13 +158,9 @@ public sealed partial class MainWindow
         }
         GroundButton.Tip("view.ground");
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
-        list.Children.Add(Heading(Lang.T("view.head.building")));
-        BuilderBox.Tip("view.builder");
-        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.builtBy"), FontSize = 12 }, BuilderBox } });
         list.Children.Add(Heading(Lang.T("view.head.ground")));
         list.Children.Add(SlopeBox);
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
-        list.Children.Add(PlayersControl());
         // The web editor's switches.
         foreach (var box in Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(list).OfType<CheckBox>())
         {
@@ -229,7 +220,6 @@ public sealed partial class MainWindow
             Count(Overlays.Layer.Stations, o.Stations);
             Count(Overlays.Layer.Flatten, o.Flattened);
         };
-        BuilderBox.SelectionChanged += async (_, _) => await BuilderChosen();
         SlopeBox.IsCheckedChanged += (_, _) => View.SlopeColours = SlopeBox.IsChecked == true;
         ContourBox.IsCheckedChanged += (_, _) => ShowContours();
         ContourStepBox.SelectionChanged += (_, _) => ShowContours();

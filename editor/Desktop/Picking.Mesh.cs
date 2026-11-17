@@ -45,7 +45,7 @@ public static partial class Picking
     /// <param name="bounds">The mesh's box, in its own frame.</param>
     /// <param name="m">Where the mesh is placed (its frame into the ray's).</param>
     /// <param name="maxY">
-    /// The height (y in the ray's frame) above which the mesh is cut away, as the Workshop's cut hides what is drawn
+    /// The height (y in the ray's frame) above which the mesh is cut away, as the view's cut hides what is drawn
     /// there: a triangle met above it does not count, and the nearest one met below it is the hit.
     /// </param>
     public static float? HitMesh(Vector3 o, Vector3 d, float[] positions, uint[] indices, (Vector3 Min, Vector3 Max) bounds, Matrix4x4 m, float maxY = float.MaxValue)

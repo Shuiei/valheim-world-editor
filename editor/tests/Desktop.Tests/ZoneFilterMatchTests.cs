@@ -3,7 +3,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// ZoneFilter.Match: a zone with pieces never matches, the buildings' clearance and the other filters keep or leave out
+/// ZoneFilter.Match: a zone with pieces never matches while the buildings are kept, the buildings' clearance and the other filters keep or leave out
 /// zones by their ZoneStats row, and the objects of the zones kept are added up.
 /// </summary>
 public class ZoneFilterMatchTests
@@ -23,6 +23,17 @@ public class ZoneFilterMatchTests
         var (zones, objects) = Filter().Match(rows);
         Assert.Equal<(int X, int Z)>([(1, 0)], zones);
         Assert.Equal(2, objects);
+    }
+
+    [Fact]
+    public void AZoneWithPiecesMatchesOnceTheBuildingsAreNotKept()
+    {
+        int[] rows = [.. Row(0, 0, pieces: 1, objects: 5, distance: 0), .. Row(1, 0, objects: 2, distance: 1)];
+        var (zones, objects) = (Filter() with { KeepBuildings = false }).Match(rows);
+        Assert.Equal<(int X, int Z)>([(0, 0), (1, 0)], zones);
+        Assert.Equal(7, objects);
+        // The buildings' clearance still leaves it out, with the zones near it.
+        Assert.Empty((Filter(noBuildings: true, distance: 1) with { KeepBuildings = false }).Match(rows).Zones);
     }
 
     [Fact]

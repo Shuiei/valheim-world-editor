@@ -98,7 +98,7 @@ public sealed partial class HistoryPanel
         {
             BorderThickness = new Thickness(1),
             BorderBrush = current ? Ui.Accent : Brushes.Transparent,
-            CornerRadius = new CornerRadius(7),
+            CornerRadius = Ui.ControlRadius,
             Padding = new Thickness(6),
             Opacity = undone ? 0.5 : 1,
             Child = new Grid

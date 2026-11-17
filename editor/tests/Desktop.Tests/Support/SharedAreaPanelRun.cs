@@ -6,8 +6,8 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// A main window on its own copy of the test world, opened in the Area tool with a zone selected unless told not
-/// to; deleted when disposed. The Area panel tests share it.
+/// A main window on its own copy of the test world, opened in the Region tool (ToolMode.Area) with a zone selected
+/// unless told not to; deleted when disposed. The Region panel's tests (AreaPanel) share it.
 /// </summary>
 internal sealed class SharedAreaPanelRun : IDisposable
 {
@@ -56,16 +56,6 @@ internal sealed class SharedAreaPanelRun : IDisposable
         {
             b.IsChecked = false;
         }
-    }
-
-    /// <summary>Replace chosen with neither of its lists chosen, and applied.</summary>
-    public async Task ReplaceWithNothingChosen()
-    {
-        P.Choose(AreaPanel.Act.Replace);
-        P.Refresh();
-        P.FromBox.SelectedIndex = -1;
-        P.ToBox.SelectedIndex = -1;
-        await P.Apply();
     }
 
     /// <summary>The heightmap exported (Export clicked) into a "maps" folder next to the world; its file.</summary>

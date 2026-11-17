@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace TerrainEditor.DocsScreenshots;
 
-/// <summary>The pointer and key input the scenes send: drags, paths, clicks, holds and the Area tool's box.</summary>
+/// <summary>The pointer and key input the scenes send: drags, paths, clicks, holds and the Region tool's box.</summary>
 public sealed partial class Scenes
 {
     /// <summary>A mouse drag on the ground from a to b (release false: the button stays down).</summary>
@@ -68,7 +68,7 @@ public sealed partial class Scenes
         return Hold(e, at, hold, steps);
     }
 
-    /// <summary>The Area tool: a box from a to b, the action, Enter.</summary>
+    /// <summary>The Region tool: a box from a to b, the action, Enter.</summary>
     /// <param name="e">The editor.</param>
     /// <param name="a">One corner.</param>
     /// <param name="b">The opposite corner.</param>
@@ -79,8 +79,43 @@ public sealed partial class Scenes
         e.Send("key B");
         e.Send("click Box");
         Drag(e, a, b);
-        e.Send($"choose {action}");
+        RegionAction(e, action);
         e.Send(apply ? "key Return" : "state");
+    }
+
+    /// <summary>
+    /// Chooses an action of the Region panel by its name: its group's button, then the action on the group's list (a
+    /// group of one action, Objects or Clipboard, has no list).
+    /// </summary>
+    /// <param name="e">The editor.</param>
+    /// <param name="action">The action's name in the panel.</param>
+    private static void RegionAction(Editor e, string action)
+    {
+        string group = action switch
+        {
+            "Select objects" => "Objects",
+            "Copy and paste" => "Clipboard",
+            "Back to generated ground" or "Back to a backup" or "Regrow nature" or "Reset zones" => "Recover",
+            _ => "Ground",
+        };
+        e.Send($"click {group}");
+        if (group is "Ground" or "Recover")
+        {
+            e.Send($"choose {action}");
+        }
+    }
+
+    /// <summary>
+    /// Takes away the objects of the Region tool's chosen kinds in a box: Select objects hands them to the Select
+    /// tool, Delete removes them there. The Select tool is left on.
+    /// </summary>
+    /// <param name="e">The editor.</param>
+    /// <param name="a">One corner.</param>
+    /// <param name="b">The opposite corner.</param>
+    private static void RemoveObjects(Editor e, (double X, double Z) a, (double X, double Z) b)
+    {
+        AreaAction(e, a, b, "Select objects");
+        e.Send("key Delete");
     }
 
     /// <summary>

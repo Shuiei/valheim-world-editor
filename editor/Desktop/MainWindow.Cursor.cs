@@ -18,11 +18,14 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// The status bar (bottom): the cursor, the last message, the selection, walking or flying, and the controls.
+    /// The status bar (bottom): the cursor, the last message, the selection, walking or flying, the view's cut and the
+    /// controls. The cut is here because the bar is under every 3D view (a world, the Workshop, a dungeon), with the
+    /// other things about the view. The reminder of the mouse shows only in a wide window (<see cref="TipsFrom"/>):
+    /// in a narrower one its place goes to the message.
     /// </summary>
     private Border StatusBar()
     {
-        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"), ColumnSpacing = 18 };
+        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto,Auto"), ColumnSpacing = 18 };
         var tips = new TextBlock { Text = Lang.T("help.statusTips"), FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
         _selection.VerticalAlignment = _eye.VerticalAlignment = VerticalAlignment.Center;
         _selection.TextWrapping = _eye.TextWrapping = TextWrapping.NoWrap;
@@ -31,19 +34,28 @@ public sealed partial class MainWindow
         Grid.SetColumn(MessageText, 1);
         Grid.SetColumn(_selection, 2);
         Grid.SetColumn(_eye, 3);
-        Grid.SetColumn(tips, 4);
+        Grid.SetColumn(ViewCut.Box, 4);
+        Grid.SetColumn(tips, 5);
         bar.Children.Add(CursorText);
         bar.Children.Add(MessageText);
         bar.Children.Add(_selection);
         bar.Children.Add(_eye);
+        bar.Children.Add(ViewCut.Box);
         bar.Children.Add(tips);
         var card = Ui.Card(bar);
         card.Margin = new Thickness(10, 0, 10, 10);
         card.VerticalAlignment = VerticalAlignment.Bottom;
         // A message on two lines makes the bar taller: the panels stop above it still.
-        card.SizeChanged += (_, e) => KeepAboveStatusBar(e.NewSize.Height);
+        card.SizeChanged += (_, e) =>
+        {
+            tips.IsVisible = e.NewSize.Width >= TipsFrom;
+            KeepAboveStatusBar(e.NewSize.Height);
+        };
         return card;
     }
+
+    /// <summary>The status bar's width (px) from which it shows the reminder of the mouse beside the message.</summary>
+    internal const double TipsFrom = 1500;
 
     /// <summary>
     /// Where the panels over the view stop at the bottom: above the status bar (58 px with its usual one line).

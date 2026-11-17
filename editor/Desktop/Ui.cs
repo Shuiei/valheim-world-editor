@@ -6,25 +6,38 @@ using Avalonia.Media;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The look of the whole app, the web editor's (editor.html's :root): dark cards, amber accent, rounded
-/// buttons (plain, "primary" amber, "ghost" flat, "on" chosen), switches, and the same colours for every
+/// The look of the whole app, after Valheim's own menus: near-black panels with a bronze line round them, warm
+/// off-white text in the game's serif (Averia Serif Libre, carried in the program), orange headings and accent,
+/// squared buttons (plain, "primary" orange, "ghost" flat, "on" chosen), switches, and the same colours for every
 /// box and list. Applied once to the application; panels use Card and the classes below.
 /// </summary>
 public static partial class Ui
 {
-    /// <summary>The palette's colours, editor.html's :root variables (background, panels, lines, text, accent...).</summary>
-    public static readonly Color BgColor = Color.Parse("#14171c"), Panel2Color = Color.Parse("#1e232b"), LineColor = Color.Parse("#2e353f"), Line2Color = Color.Parse("#3c4552"),
-        TextColor = Color.Parse("#e6e9ee"), MutedColor = Color.Parse("#8e97a6"), AccentColor = Color.Parse("#e0a64b"), AccentInkColor = Color.Parse("#1b1508"),
-        WarnColor = Color.Parse("#e0604b"), OkColor = Color.Parse("#7bc47f"), HoverColor = Color.Parse("#252b35");
+    /// <summary>
+    /// The palette's colours (background, panels, lines, text, accent...): the dark browns, bronze lines, warm white and
+    /// orange of the game's menus.
+    /// </summary>
+    public static readonly Color BgColor = Color.Parse("#0f0c0a"), Panel2Color = Color.Parse("#241c15"), LineColor = Color.Parse("#4a3a2a"), Line2Color = Color.Parse("#6b543b"),
+        TextColor = Color.Parse("#ece2cf"), MutedColor = Color.Parse("#a8997f"), AccentColor = Color.Parse("#f0a232"), AccentInkColor = Color.Parse("#1c1206"),
+        WarnColor = Color.Parse("#e0553a"), OkColor = Color.Parse("#8cc26a"), HoverColor = Color.Parse("#30251b");
+
+    /// <summary>The text's font, the game's own serif, carried in the program (SIL Open Font License, Assets/Fonts/OFL.txt).</summary>
+    public static readonly FontFamily Font = new("avares://ValheimWorldEditor/Assets/Fonts#Averia Serif Libre");
+
+    /// <summary>The corners of cards and of what is inside them (buttons, boxes, rows): nearly square, as the game's panels are.</summary>
+    public static readonly CornerRadius CardRadius = new(4), ControlRadius = new(3);
 
     /// <summary>
     /// Brushes of the palette's colours; Panel is the cards' slightly see-through background, Live the green tag of
     /// changes already sent to the running game.
     /// </summary>
-    public static readonly IBrush Bg = new SolidColorBrush(BgColor), Panel = new SolidColorBrush(Color.FromArgb(242, 24, 28, 34)), Panel2 = new SolidColorBrush(Panel2Color),
+    public static readonly IBrush Bg = new SolidColorBrush(BgColor), Panel = new SolidColorBrush(Color.FromArgb(240, 20, 15, 11)), Panel2 = new SolidColorBrush(Panel2Color),
         Line = new SolidColorBrush(LineColor), Line2 = new SolidColorBrush(Line2Color), Text = new SolidColorBrush(TextColor), Muted = new SolidColorBrush(MutedColor),
         Accent = new SolidColorBrush(AccentColor), AccentInk = new SolidColorBrush(AccentInkColor), Warn = new SolidColorBrush(WarnColor), Ok = new SolidColorBrush(OkColor),
         Hover = new SolidColorBrush(HoverColor), Live = new SolidColorBrush(Color.Parse("#8ff0b4"));
+
+    /// <summary>The solid background of side bars and dialogs (the cards' colour, not see-through).</summary>
+    public static readonly IBrush Side = new SolidColorBrush(Color.FromRgb(22, 17, 13));
 
     /// <summary>The space inside every card, the same for all of them (whatever their size).</summary>
     public static readonly Thickness Pad = new(10);
@@ -44,22 +57,23 @@ public static partial class Ui
         b.Background = Panel;
         b.BorderBrush = Line;
         b.BorderThickness = new Thickness(1);
-        b.CornerRadius = new CornerRadius(10);
+        b.CornerRadius = CardRadius;
         b.Padding = Pad;
-        b.BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000");
+        // A dark line inside the bronze one, as the game's panels have, and the shadow under the card.
+        b.BoxShadow = BoxShadows.Parse("inset 0 0 0 1 #b3000000, 0 6 24 0 #73000000");
         return b;
     }
 
-    /// <summary>A small grey heading in capitals (VIEW, OVERLAYS...).</summary>
+    /// <summary>A small heading in capitals (VIEW, OVERLAYS...).</summary>
     /// <param name="text">The heading, turned to capitals.</param>
     /// <param name="top">The space above it.</param>
     public static TextBlock Heading(string text, double top = 10) => new()
     {
         Text = text.ToUpperInvariant(),
         FontSize = 11,
-        FontWeight = FontWeight.SemiBold,
+        FontWeight = FontWeight.Bold,
         Foreground = Muted,
-        LetterSpacing = 0.6,
+        LetterSpacing = 1,
         Margin = new Thickness(0, top, 0, 3),
     };
 

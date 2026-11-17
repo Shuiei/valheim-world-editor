@@ -14,7 +14,7 @@ public sealed partial class PlacePanel
     internal Button PlaceButton { get; } = new Button { Content = Lang.T("place.label.place"), FontSize = 12 }.Classed("primary");
 
     /// <summary>Clears the line, grid box or zone.</summary>
-    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("place.label.clear"), FontSize = 12 };
 
     /// <summary>Removes the line's or zone's last point.</summary>
     internal Button UndoPointButton { get; } = new() { Content = Lang.T("place.label.undoPoint"), FontSize = 12 };

@@ -21,7 +21,7 @@ public class HelpTopicsTests
     {
         Assert.Equal(new HelpTarget("select.md"), HelpTopics.Tool(ToolMode.Select));
         Assert.Equal(new HelpTarget("terrain.md", "sculpt-brushes"), HelpTopics.Tool(ToolMode.Brush, BrushTool.Raise));
-        Assert.Equal(new HelpTarget("terrain.md", "paint-brushes"), HelpTopics.Tool(ToolMode.Brush, BrushTool.PaintPaved));
+        Assert.Equal(new HelpTarget("terrain.md", "paint-brush"), HelpTopics.Tool(ToolMode.Brush, BrushTool.PaintPaved));
         Assert.Equal(new HelpTarget("terrain.md", "sculpt-brushes"), HelpTopics.Tool(ToolMode.Brush));
         Assert.Equal(new HelpTarget("area.md", "copy-and-paste"), HelpTopics.Tool(ToolMode.Paste));
         Assert.Equal(HelpTopics.Blueprints, HelpTopics.Tool(ToolMode.Blueprints));

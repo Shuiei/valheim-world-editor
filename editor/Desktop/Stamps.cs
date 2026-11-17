@@ -4,8 +4,9 @@ namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// Stamps, like the web editor's (editor/stamps.js; WorldPainter's custom brushes, Axiom's stamp tool):
-/// a picture as the brush shape. White works fully, black not at all. A few are built in (mountain,
-/// mesa, crater rim…); any picture can be loaded (kept in stamps.json for next time).
+/// a picture as the brush shape, or pressed whole into the ground by the Landform tool's Picture kind. White works
+/// fully, black not at all. A few are built in (a rough hill, mesa, crater rim…); any picture can be loaded (kept in
+/// stamps.json for next time).
 /// </summary>
 public static partial class Stamps
 {
@@ -54,12 +55,19 @@ public static partial class Stamps
     /// <summary>The built-in stamps, always offered first.</summary>
     public static readonly Stamp[] BuiltIn =
     [
-        new("stamp:mountain", "Mountain", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); return d >= 1 ? 0 : Math.Pow(1 - d, 1.6) * (0.75 + 0.5 * Fractal(u * 4 + 7, v * 4 + 3)); })),
+        new("stamp:mountain", "Rough hill", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); return d >= 1 ? 0 : Math.Pow(1 - d, 1.6) * (0.75 + 0.5 * Fractal(u * 4 + 7, v * 4 + 3)); })),
         new("stamp:mesa", "Mesa (flat top)", Render((u, v) => { double d = Math.Sqrt(u * u + v * v) * (1 + 0.12 * (Fractal(u * 3, v * 3) - 0.5)); return d >= 1 ? 0 : d < 0.62 ? 1 : 1 - Math.Pow((d - 0.62) / 0.38, 0.7); })),
         new("stamp:crater", "Crater rim", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); return d >= 1 ? 0 : Math.Pow(Math.Max(0, 1 - Math.Abs(d - 0.72) / 0.28), 1.5); })),
         new("stamp:dunes", "Dunes", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); if (d >= 1) { return 0; } double edge = Math.Min(1, (1 - d) * 3); return edge * Math.Pow(0.5 + 0.5 * Math.Sin(u * 9 + Fractal(u * 2, v * 2) * 3), 2); })),
         new("stamp:rocky", "Rocky ground", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); if (d >= 1) { return 0; } return Math.Min(1, (1 - d) * 2.5) * Math.Max(0, Fractal(u * 6 + 11, v * 6 - 5) * 1.6 - 0.45); })),
     ];
+
+    /// <summary>
+    /// The stamps the Landform tool's Picture kind offers: every stamp but the built-in ones its Formula kind already
+    /// makes (the mesa is its Plateau, the crater rim its Moat turned upside down), which stay brush shapes only.
+    /// </summary>
+    /// <param name="stamps">The stamps, built-in and loaded.</param>
+    public static List<Stamp> Landforms(IEnumerable<Stamp> stamps) => [.. stamps.Where(s => s.Name is not ("stamp:mesa" or "stamp:crater"))];
 
     // ---- Loaded pictures, kept between runs (the weights themselves, 0..255 per pixel).
     /// <summary>A loaded stamp as stamps.json keeps it: the weights as base64, one byte (0..255) per pixel.</summary>

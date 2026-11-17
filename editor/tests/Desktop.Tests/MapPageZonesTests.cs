@@ -83,6 +83,65 @@ public class MapPageZonesTests
         Assert.Equal(0, r.W.World!.Pending.Resets);
     }
 
+    // The map's reset has the Region tool's two choices: the buildings kept (on at first) and the ground edits undone
+    // (off at first) are what each mark carries, and the question says which.
+    [AvaloniaFact]
+    public async Task MarkingCarriesTheKeepBuildingsAndGroundChoices()
+    {
+        using var r = new MapPageRun();
+        await r.Open();
+        r.M.NoBuildBox.IsChecked = false;
+        r.M.OnlyGenBox.IsChecked = false;
+        r.M.NoEditBox.IsChecked = false;
+        string asked = "";
+        r.M.Confirm = q => { asked = q; return Task.FromResult(true); };
+        Assert.True(r.M.KeepBox.IsChecked);
+        await r.M.MarkMatching();
+        var marks = r.W.World!.Edits.Resets;
+        Assert.NotEmpty(marks);
+        Assert.All(marks, m => Assert.True(m.KeepBuildings && !m.Ground));
+        Assert.Contains("(your buildings and players' tombstones stay)", asked);
+        Assert.DoesNotContain("ground edits are undone", asked);
+        // Both switched the other way: the zones are marked again with those choices.
+        r.M.KeepBox.IsChecked = false;
+        r.M.GroundBox.IsChecked = true;
+        await r.M.MarkMatching();
+        marks = r.W.World.Edits.Resets;
+        Assert.All(marks, m => Assert.True(!m.KeepBuildings && m.Ground));
+        Assert.Contains("your buildings too", asked);
+        Assert.Contains("ground edits are undone", asked);
+    }
+
+    // Unmark matching takes the marks off the matching zones only; Unmark all takes off the rest.
+    [AvaloniaFact]
+    public async Task UnmarkMatchingLeavesTheOtherMarks()
+    {
+        using var r = new MapPageRun();
+        await r.Open();
+        r.M.NoBuildBox.IsChecked = false;
+        r.M.OnlyGenBox.IsChecked = false;
+        r.M.NoEditBox.IsChecked = false;
+        // Only zones within 20 km of the middle match.
+        r.M.RMaxBox.Text = "20000";
+        r.M.Confirm = _ => Task.FromResult(true);
+        string told = "";
+        r.M.Tell = t => { told = t; return Task.CompletedTask; };
+        await r.M.MarkMatching();
+        int marked = r.W.World!.Pending.Resets;
+        Assert.True(marked > 0);
+        // A zone 256 km out, marked from elsewhere: the filter leaves it out.
+        r.W.World.Edits.SetReset(new ZoneReset(4000, 0, true, false), true);
+        await r.M.UnmarkMatching();
+        Assert.Equal(1, r.W.World.Pending.Resets);
+        Assert.Equal("", told);
+        // Nothing matching is marked any more: said, and the far zone's mark stays.
+        await r.M.UnmarkMatching();
+        Assert.Equal("No matching zone is marked for reset.", told);
+        Assert.Equal(1, r.W.World.Pending.Resets);
+        await r.M.UnmarkAll();
+        Assert.Equal(0, r.W.World.Pending.Resets);
+    }
+
     [AvaloniaFact]
     public async Task UnmarkingBeforeTheZonesAreReadStillWorks()
     {

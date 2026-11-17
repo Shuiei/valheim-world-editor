@@ -39,7 +39,7 @@ boss's altar) are made again from the location each time the zone loads, so they
 [Locations level the ground](ground-limits.md#locations-level-the-ground)). A runestone is the same: you can delete it,
 which removes its location for good, but not move, copy or inspect it.
 
-**Some mods hide objects far underground**, such as crafting stations 10 km under a house. Boxes, zones, **All** and
+**Some mods hide objects far underground**, such as crafting stations 10 km under a house. Boxes, outlines, **All** and
 **Whole building** leave out what lies more than 10 m under the ground, so those are not taken with what stands above.
 
 ### Linked groups: ships and vehicles
@@ -69,8 +69,8 @@ piece for part of a ruin:
 | Raids | Target it | Ignore it |
 | A ward or a private chest | Answers to its builder | Answers to nobody |
 
-So the editor writes a builder on every piece it places, pastes or builds: the player chosen in **View → Building →
-Built by**. That list offers the players who built in this world (with their piece counts), the players named on
+So the editor writes a builder on every piece it places, pastes or builds: the player chosen in **Built by** on
+[the building bar](../build.md#the-building-bar). That list offers the players who built in this world (with their piece counts), the players named on
 beds, wards and tombstones, and the characters on this computer. It starts with the player with the most pieces, else
 your own character. **Nobody (not player built)** places pieces as parts of a ruin on purpose. With no player known at
 all, pieces get **Unknown player**: they count as built, but wards and private chests answer to nobody, so choose your
@@ -95,8 +95,8 @@ which the editor reads from your Valheim with each piece's real shape (its colli
 two snap points come close, the piece moves so that they meet exactly: walls stand end to end, floors meet edge to
 edge, a wall sits on a floor.
 
-**How the hammer places a piece**, which the Workshop's Build dock and building in a dungeon follow step by step (its
-**Auto** snapping):
+**How the hammer places a piece**, which [Build](../build.md) follows step by step in a world, in the Workshop and in
+a dungeon (its **Auto** snapping):
 
 1. The cursor's line meets the nearest thing: the ground, or a piece's real shape (not its box).
 2. The piece, turned as you set it, is moved so that the point of its shape nearest the hit touches it. Rugs and
@@ -105,21 +105,21 @@ edge, a wall sits on a floor.
    at a wall's top to put the next one on it, near its end to put one beside it.
 4. A snap that would put the piece exactly where the same piece already stands is skipped.
 
-A lift (`Ctrl` + wheel) is added before the snap, so a lifted piece snaps to points near its new height. A grid rounds
+A lift (`PgUp`, `PgDn` or `Ctrl` + wheel) is added before the snap, so a lifted piece snaps to points near its new height. A grid rounds
 only points on the ground: a piece pointed at another piece snaps as usual.
 
-The Workshop's building bar has two more ways. **Manual** keeps step 3 to one snap point of the piece, the one `Q` and
+The building bar has two more ways. **Manual** keeps step 3 to one snap point of the piece, the one `Q` and
 `E` choose (marked on the piece), and lets it reach 1.5 m: in a crowded corner, where the closest pair is the wrong
 edge, pick the point that should meet. **Free**, or holding `Alt` in any mode, skips step 3: the piece stays where it
-touches, and with `Alt` its place across is rounded to a quarter metre from the plot's middle.
+touches, and with `Alt` its place across is rounded to a quarter metre from the area's middle.
 
 The other tools snap by the same snap points, each in its own way:
 
 | Where | How it snaps |
 |---|---|
-| [Place](../place.md), **Snap to pieces already there** | One piece at a time under the cursor. **Beside**: end to end with the piece next to the cursor, at its level, where a pair of snap points meets within 1 m. **On top**: its bottom on the top of the piece under the cursor. A snapped piece faces like the piece it joins. |
-| [Place](../place.md), Line **End to end** | Each piece starts where the last one ends. A piece's two ends are the middles of its two short sides, found from its snap points (kinds without snap points use their model's box). A line that starts within 1 m of a piece continues it. |
-| [Select](../select.md), **Snap to other pieces when moving** | While you move, the closest pair of snap points (one of a moved piece, one of a piece around) within 0.75 m locks together, and the whole selection shifts so they meet. |
+| [Place](../place.md), **Snap to pieces already there** (parts of ruins: the pieces players build go down with Build) | One piece at a time under the cursor. **Beside**: end to end with the piece next to the cursor, at its level, where a pair of snap points meets within 1 m. **On top**: its bottom on the top of the piece under the cursor. A snapped piece faces like the piece it joins. |
+| [Build](../build.md), **Lay** on Line, Circle or Rectangle (and [Place](../place.md)'s Line **End to end**, for parts of ruins) | Each piece starts where the last one ends. A piece's two ends are the middles of its two short sides, found from its snap points (kinds without snap points use their model's box). A line that starts within 1 m of a piece continues it. |
+| [Select](../select.md), with the building bar's **Snap** on **Auto** | While you move, the closest pair of snap points (one of a moved piece, one of a piece around) within 0.75 m locks together, and the whole selection shifts so they meet. |
 | [Script](../scripting.md), `snap: true` | A placed piece meets the snap points of the pieces there within 0.5 m. |
 
 Typed positions (the Select tool's **EXACT PLACE**) never snap: they are exact.
@@ -192,8 +192,8 @@ follow them too, so what you plant grows in game.
 
 Off, you can plant as tightly as you like, but those plants may never grow.
 
-**Crops need cultivated ground.** The game only lets crops grow on cultivated soil, so paint it first (the **Cultivate**
-brush or the Area tool's Paint). The Place panel warns when a ticked crop needs it.
+**Crops need cultivated ground.** The game only lets crops grow on cultivated soil, so paint it first (the Paint
+brush's **Cultivate** or the Region tool's Paint). The Place panel warns when a ticked crop needs it.
 
 **Water.** An object placed on the ground is left out where the ground is more than 0.3 m under the water, except
 kelp and seaweed.
@@ -204,7 +204,7 @@ of the ground is cleared. The pattern is fixed to the world, not to the brush, s
 
 ### How Regrow decides what grows
 
-The Area tool's **Regrow nature** puts back what the game itself would grow, by working out each zone as the game does
+The Region tool's **Regrow nature** puts back what the game itself would grow, by working out each zone as the game does
 when it first makes it:
 
 - **The game's own rules.** It reads the game's vegetation rules from your Valheim and uses the same random numbers,
@@ -222,7 +222,7 @@ when it first makes it:
 - **Locations** keep their ground clear, as when the game first makes a zone.
 
 What it cannot know: the game's physics checks against objects already standing. It works on up to 16 zones at once.
-The Mountain tool's **Grow the biome's trees and rocks on it** uses the same rules on the slopes it raised.
+The Landform tool's **Grow the biome's trees and rocks on it**, for its mountains, uses the same rules on the slopes it raised.
 
 ## Spawn points
 
@@ -251,7 +251,7 @@ them on in the View panel.
 
 ## How a paste clears its site
 
-A copy (from the Area tool or a blueprint) holds:
+A copy (from the Region tool or a blueprint) holds:
 
 - **The objects**, with everything they hold: a pasted chest is full like the original.
 - **The ground under the buildings only**: under each building piece (by its real shape) and 1 m round it, fading into

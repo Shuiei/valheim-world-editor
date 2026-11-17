@@ -67,7 +67,10 @@ public sealed class BuildPanelBranchesTests : IDisposable
             using var f = File.Create(Path.Combine(_dir, "Gate.png"));
             bmp.Encode(f, SKEncodedImageFormat.Png, 100);
         }
-        var p = new MainWindow(load: false).BuildPanel;
+        var w = new MainWindow(load: false);
+        // The editor's older blueprints are listed too: none here (not the ones of whoever runs the tests).
+        w.Blueprints.Store = new BlueprintStore(Path.Combine(_dir, "older"));
+        var p = w.BuildPanel;
         p.Folder = () => _dir;
         p.LibrarySearch.Text = "x";
         p.LibrarySearch.Text = null;

@@ -95,7 +95,7 @@ Then edit as on any server: see [Live mode](../live-mode.md#use-it).
 ## Check it worked
 
 - **A rented game server:** the server starts, and your changes are there in game.
-- **A server in a container:** the top bar shows **LIVE**; after **Apply live**, "All applied" in the status bar.
+- **A server in a container:** the top bar shows **LIVE**, and after **Apply live**, "All applied".
 
 If the editor shows a message instead, see [A server will not connect](../help/troubleshooting.md#a-server-will-not-connect).
 

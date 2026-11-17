@@ -62,12 +62,13 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// , . turn the paste by 1° (Shift: 15°); . is clockwise seen from above, like the other tools.
+    /// , . turn the paste by the building bar's turn step (Shift, finer: 1° at most); . is clockwise seen from above,
+    /// like the other tools.
     /// </summary>
     /// <returns>Always true: the key is taken.</returns>
     private bool TurnPaste(Avalonia.Input.Key key, bool shift)
     {
-        float step = shift ? 15 : 1;
+        float step = BuildingBar.TurnBy(shift);
         View.Paste.TurnBy(key == Avalonia.Input.Key.OemComma ? step : -step);
         return true;
     }

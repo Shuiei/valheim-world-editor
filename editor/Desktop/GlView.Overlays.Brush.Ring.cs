@@ -4,7 +4,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class GlView
 {
     /// <summary>
-    /// The brush's ring as line pairs on the ground: the outline of the brush (or the ring of the Shape tool), and its
+    /// The brush's ring as line pairs on the ground: the outline of the brush (or of the Landform tool), and its
     /// inner edge when the brush has one. Each segment is laid where the ground is, none where there is no ground.
     /// </summary>
     /// <param name="s">The area.</param>
@@ -30,7 +30,7 @@ public sealed partial class GlView
             }
         }
         (float, float) At((float X, float Z) o) => GridToView(s, h.X + o.X, h.Z + o.Z);
-        Loop(Tool == null ? [.. Enumerable.Range(0, n).Select(i => (MathF.Cos(i * MathF.Tau / n) * ShapeRadius, MathF.Sin(i * MathF.Tau / n) * ShapeRadius))] : session.Brush.Outline(n));
+        Loop(Tool != null ? session.Brush.Outline(n) : Landform.Outline(n));
         if (Tool != null && session.Brush.InnerOutline(n) is { } inner)
         {
             Loop(inner);

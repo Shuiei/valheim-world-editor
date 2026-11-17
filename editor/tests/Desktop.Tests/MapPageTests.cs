@@ -207,7 +207,7 @@ public class MapPageTests
         string? asked = null;
         r.M.Confirm = q => { asked = q; return Task.FromResult(false); };
         await r.M.MarkMatching();
-        Assert.Contains("and their ground edits undone", asked);
+        Assert.Contains("Their ground edits are undone.", asked);
         Assert.Equal(0, r.W.World!.Pending.Resets);
         // The filter follows its boxes once shown.
         Assert.NotEmpty(r.M.Matches);

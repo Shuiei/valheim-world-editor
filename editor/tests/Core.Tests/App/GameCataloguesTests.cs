@@ -9,7 +9,7 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// What the editor reads of the game's files at its start (GameCatalogues), on a made-up game (CatalogueGame,
-/// SceneGame): each kind read in the one pass over the bundles, the vegetation rules of the main scene, the cave rocks,
+/// SceneGame): each kind read in the one pass over the bundles, the vegetation rules of the main scene,
 /// the names of object data from the game's code, the English texts, a location's door; and what is said when the files
 /// are not as expected.
 /// </summary>
@@ -245,37 +245,6 @@ public class GameCataloguesTests
         game.Manifest("00000000000000000000000000000001", "scene", "Assets/Scenes/main.unity");
         game.Save();
         Assert.Throws<InvalidDataException>(() => GameCatalogues.VegetationJson(game.Bundles()));
-    }
-
-    [Fact]
-    public void TheCaveRocksAreTheirMeshesScaled()
-    {
-        using var game = new TestGame();
-        var b = game.Bundle("rocks");
-        b.Prefab("rock4_forest");
-        b.Prefab("rock3_mountain");
-        new TestMesh { Name = "Rock4", Positions = [1, 2, 3, 0.5f, 0, 0, 0, 0, -0.25f], Submeshes = [[0, 1, 2]] }.Add(b);
-        new TestMesh { Name = "Rock3", Positions = [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0], Submeshes = [[0, 1, 2], [1, 3, 2]], Wide = true }.Add(b);
-        game.Save();
-        var json = JsonNode.Parse(GameCatalogues.CaveRocksJson(game.Bundles()))!;
-        // Scaled 4 times; triangles wound the other way (as through an OBJ file).
-        Assert.Equal("[[4.0,8.0,12.0],[2.0,0.0,0.0],[0.0,0.0,-1.0]]", json["rock4_forest"]!["v"]!.ToJsonString());
-        Assert.Equal("[2,1,0]", json["rock4_forest"]!["t"]!.ToJsonString());
-        Assert.Equal("[2,1,0,2,3,1]", json["rock3_mountain"]!["t"]!.ToJsonString());
-    }
-
-    [Fact]
-    public void ACaveRockMissingIsSaid()
-    {
-        using var game = new TestGame();
-        var b = game.Bundle("rocks");
-        b.Prefab("rock4_forest");
-        game.Save();
-        var e = Assert.Throws<InvalidDataException>(() => GameCatalogues.CaveRocksJson(game.Bundles()));
-        Assert.Contains("Rock4", e.Message);
-        using var none = new TestGame();
-        none.Save();
-        Assert.Throws<InvalidDataException>(() => GameCatalogues.CaveRocksJson(none.Bundles()));
     }
 
     /// <summary>

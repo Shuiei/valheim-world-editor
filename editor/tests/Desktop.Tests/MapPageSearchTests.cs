@@ -207,7 +207,7 @@ public class MapPageSearchTests
             Assert.NotNull(asked);
             Assert.Contains("(at once where players are, once applied)", asked);
             Assert.Contains("Apply live does it", asked);
-            Assert.DoesNotContain("ground edits undone", asked);
+            Assert.DoesNotContain("ground edits are undone", asked);
             // Answered no: still the one reset only, said in the zone line.
             Assert.Equal(1, w.World.Pending.Resets);
             Assert.Contains("· 1 marked for reset", m.ZoneInfo.Text);

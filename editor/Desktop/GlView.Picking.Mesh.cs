@@ -8,7 +8,7 @@ public sealed partial class GlView
     /// <summary>
     /// How far along the ray a thing's drawn shape is met: by its solid parts, and by its foliage parts
     /// (leaves, bushes, grass), null each where the ray misses them. Without its model (the stand-in
-    /// box), its box's distance counts as solid. What the Workshop's cut hides (above <see cref="CutY"/>)
+    /// box), its box's distance counts as solid. What the view's cut hides (above <see cref="CutY"/>)
     /// is not met, as it is not drawn: a wall crossing the cut is met below it or not at all.
     /// </summary>
     /// <param name="s">The scene.</param>

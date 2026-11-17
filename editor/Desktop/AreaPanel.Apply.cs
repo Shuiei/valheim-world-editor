@@ -72,14 +72,8 @@ public sealed partial class AreaPanel
     {
         switch (act)
         {
-            case Act.Remove:
-                return RemoveInside(session, poly);
             case Act.Select:
-                _view.Select(ThingsInside(poly, chosenKindsOnly: true));
-                SwitchToSelect?.Invoke();
-                return true;
-            case Act.Replace:
-                return ReplaceChosen(session, poly);
+                return SelectInside(poly);
             case Act.Reset:
                 await ResetZones(session);
                 return true;

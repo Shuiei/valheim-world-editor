@@ -101,7 +101,7 @@ public class StampsTests
     }
 
     [Fact]
-    public void StampOnceRaisesByThePicture()
+    public void TheWholeStampAtOnceRaisesByThePicture()
     {
         var s = TestScenes.Flat(2);
         var b = s.Brush;
@@ -123,14 +123,15 @@ public class StampsTests
         var t = w.Tools;
         t.ShapeBox.SelectedIndex = 4;
         Assert.Equal(BrushShape.Stamp, t.Brush.Shape);
-        Assert.Equal("Mountain", t.Brush.StampLabel);
-        Assert.True(t.StampOnceBox.IsEffectivelyVisible);
+        Assert.Equal("Rough hill", t.Brush.StampLabel);
         Assert.False(t.FalloffBox.IsEffectivelyVisible);
-        t.StampOnceBox.IsChecked = true;
-        t.StampHeightBox.Value = 3;
-        w.StampAt(64, 64);
+        // The whole picture in one click is the Landform tool's Picture kind, with a size and height of its own.
+        var picture = w.LandformPanel.Picture;
+        Assert.Same(Stamps.BuiltIn[0], picture.Stamp);
+        picture.HeightBox.Value = 3;
+        w.PutPicture(64, 64);
         Assert.Equal(30 + 3 * Stamps.Sample(Stamps.BuiltIn[0].Data, 0, 0), H(s, 64, 64), 2);
-        Assert.Equal("Stamp: Mountain", s.UndoLabel);
+        Assert.Equal("Landform: Rough hill", s.UndoLabel);
         // A loaded picture is kept for next time, and can be forgotten.
         int before = t.StampList.Count;
         t.AddStamp("Disc", [.. Enumerable.Repeat(1f, 128 * 128)]);

@@ -12,28 +12,32 @@ public sealed partial class PathTool
             switch (_tool.Act)
             {
                 case Action.Raise:
-                    _clamped |= _g.SetHeight(s.P, s.H + (_tool.Amount + s.Bump) * s.W);
+                    _clamped |= GroundOps.Move(_g, s.P, (_tool.Amount + s.Bump) * s.W);
                     break;
                 case Action.Lower:
-                    _clamped |= _g.SetHeight(s.P, s.H - (_tool.Amount + s.Bump) * s.W);
+                    _clamped |= GroundOps.Move(_g, s.P, -((_tool.Amount + s.Bump) * s.W));
                     break;
                 case Action.Flatten:
-                    _clamped |= _g.SetHeight(s.P, s.H + (_tool.Height + s.Bump - s.H) * s.W);
+                    _clamped |= GroundOps.Toward(_g, s.P, _tool.Height + s.Bump, s.W);
                     break;
                 case Action.Ramp:
-                {
-                    float target = _tool.Start + (_tool.End - _tool.Start) * (s.Along / _total) + s.Bump;
-                    _clamped |= _g.SetHeight(s.P, s.H + (target - s.H) * s.W);
+                    _clamped |= GroundOps.Toward(_g, s.P, _tool.Start + (_tool.End - _tool.Start) * (s.Along / _total) + s.Bump, s.W);
                     break;
-                }
                 case Action.River:
                     DigRiver(s);
                     break;
-                case Action.Cave:
-                    DigCave(s);
-                    break;
                 case Action.Smooth:
-                    Smooth(s);
+                    _clamped |= GroundOps.Smooth(_g, _before!, s.P, s.W);
+                    break;
+                case Action.Naturalize:
+                    _clamped |= GroundOps.Naturalize(_g, _b, _before!, s.P, s.W);
+                    break;
+                case Action.Restore:
+                    GroundOps.Restore(_g, s.P, s.W, s.W);
+                    break;
+                case Action.Erode:
+                    // Erosion works on the whole reach of the line at once (Run does it, once every point is weighed).
+                    _weighed.Add((s.P, s.W));
                     break;
                 default:
                     Paint(s);
@@ -51,24 +55,7 @@ public sealed partial class PathTool
             float bed = _water - _tool.Depth * MathF.Max(0, 1 - r * r) + s.Bump * 0.3f;
             if (bed < s.H)
             {
-                _clamped |= _g.SetHeight(s.P, s.H + (bed - s.H) * s.W);
-            }
-        }
-
-        /// <summary>Digs the cave's floor under one point; it only digs.</summary>
-        /// <param name="s">The point and what is known about it.</param>
-        internal void DigCave(in PointSample s)
-        {
-            // The floor across the cave's width; the soft edge makes its walls. It only digs, and keeps
-            // within the game's ±8 m unless No limit is on (bumps above the ground's lie would reach it).
-            float floor = s.CaveFloor + s.Bump * 0.3f;
-            if (!_g.NoLimit)
-            {
-                floor = MathF.Max(floor, _g.Original(s.P) - Editing.EditStore.MaxLevel + 0.1f);
-            }
-            if (floor < s.H)
-            {
-                _clamped |= _g.SetHeight(s.P, s.H + (floor - s.H) * s.W);
+                _clamped |= GroundOps.Toward(_g, s.P, bed, s.W);
             }
         }
     }

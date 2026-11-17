@@ -118,6 +118,35 @@ public sealed partial class Scenes
         e.Send("wait 1000");
     }
 
+    /// <summary>
+    /// build-world.jpg: the Build tool in a world (build.md): a hut built on levelled ground (its floor laid in a grid,
+    /// its walls round a rectangle two high, a chest on the floor), and a fence being laid along a line beside it; the
+    /// Build dock along the bottom with Lay on Line, the building bar beside the rail with Built by.
+    /// </summary>
+    private void BuildWorld(Editor e)
+    {
+        Bare(e, unsaved: false);
+        // Nothing of nature in the way (the docs' zone is bare already).
+        RemoveObjects(e, P(-31, -31), P(31, 31));
+        Level(e, P(-22, -22), P(22, 22));
+        Hut(e, P(-8, -12), P(0, -4));
+        BuildOne(e, "piece_chest_wood", P(-6, -10));
+        Piece(e, "wood_fence");
+        Lay(e, "Line");
+        e.Send("set Layers|1");
+        foreach (var p in new[] { P(-14, -18), P(8, -18), P(8, -2) })
+        {
+            Click(e, p);
+        }
+        Move(e, P(8, -2));
+        // The dock hides the lower part of the view: the camera looks at a point nearer than the hut.
+        Camera(e, -2, 4, 200, 50, 44);
+        e.Send("wait 500");
+        e.Shot(Out("build-world.jpg"));
+        e.Send("click Clear shape (Esc)");
+        Lay(e, "One piece");
+    }
+
     /// <summary>The Build panel's Pieces tab on its Building tab, its list scrolled down to the wooden pieces.</summary>
     private static void WoodPieces(Editor e)
     {
@@ -149,7 +178,7 @@ public sealed partial class Scenes
         e.Send("wait 500");
     }
 
-    /// <summary>A hut on levelled ground, copied with the Area tool and saved as a blueprint under this name.</summary>
+    /// <summary>A hut on levelled ground, copied with the Region tool and saved as a blueprint under this name.</summary>
     private static void SaveHut(Editor e, string name, int layers)
     {
         Level(e, P(-12, -10), P(12, 10));
@@ -157,7 +186,7 @@ public sealed partial class Scenes
         e.Send("key B");
         e.Send("click Box");
         Drag(e, P(-7, -6), P(7, 6));
-        e.Send("choose Copy and paste");
+        RegionAction(e, "Copy and paste");
         e.Send("key C ctrl");
         e.Send("click Save blueprint…");
         e.Send("wait 500");
@@ -180,10 +209,10 @@ public sealed partial class Scenes
         e.Send("click Paste");
         e.Send("wait 500");
         e.Send("check Clear the site (dig the ground in its way, take away trees and rocks)|off");
-        // 45°: three steps of 15° (Shift and the turn key).
-        for (int i = 0; i < 3; i++)
+        // 45°: two steps of the building bar's 22.5°.
+        for (int i = 0; i < 2; i++)
         {
-            e.Send("key OemComma shift");
+            e.Send("key OemComma");
         }
         e.Send("panel none");
         // Away from the hut it was saved from, over the open meadow.
@@ -336,8 +365,8 @@ public sealed partial class Scenes
     private static void PlanPicture(string top, IReadOnlyList<string> levels, string to)
     {
         // The plan box and the Level buttons under it; the summary under those (window pixels).
-        var plan = new SKRectI(108, 464, 390, 688);
-        var summary = new SKRectI(108, 688, 390, 742);
+        var plan = new SKRectI(108, 478, 390, 700);
+        var summary = new SKRectI(108, 700, 390, 752);
         const float Scale = 1.6f, Left = 456, Top = 120, Gap = 24;
         using var window = LoadBitmap(top);
         using (var canvas = new SKCanvas(window))
@@ -434,7 +463,7 @@ public sealed partial class Scenes
         // The list's Go to the dungeon frames the dungeon's rooms (wherever its layout put them) and cuts their roofs at 4 m.
         e.Send("click Go to the dungeon");
         e.Send("wait 1500");
-        e.Send("set Cut 4 m above the floor|2");
+        e.Send("set Cut at 4 m|2");
         // Closer, with the wheel over the rooms in the middle of the view (Go to the dungeon frames them from afar).
         e.Scroll(730, 470, -2);
         // Off the rooms (onto the sky), so none is marked as hovered.

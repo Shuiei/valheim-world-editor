@@ -15,7 +15,7 @@ public sealed partial class AreaPanel
     internal Button PolyButton { get; } = new() { Content = Lang.T("area.label.poly"), FontSize = 12 };
 
     /// <summary>Clears the selection.</summary>
-    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("area.label.clear"), FontSize = 12 };
 
     /// <summary>The selection's size and what is inside, or how to make one.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
@@ -23,8 +23,14 @@ public sealed partial class AreaPanel
     /// <summary>The soft edge, 0 to 20 m: how far inwards from the outline an action fades in.</summary>
     internal Slider SoftSlider { get; }
 
-    /// <summary>The action list.</summary>
+    /// <summary>One button per group (Ground, Objects, Recover, Clipboard): the one shown is on.</summary>
+    internal Dictionary<Group, Button> GroupButtons { get; } = [];
+
+    /// <summary>The shown group's actions.</summary>
     internal ComboBox ActionBox { get; }
+
+    /// <summary>The Action list's row, hidden for a group of one action.</summary>
+    private readonly Control _actionRow;
 
     /// <summary>Flatten: the height to flatten to, in metres.</summary>
     internal NumericUpDown HeightBox { get; } = new() { Value = 35, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
@@ -37,15 +43,6 @@ public sealed partial class AreaPanel
 
     /// <summary>Paint: which paint (one of <c>Paints</c>).</summary>
     internal ComboBox PaintBox { get; } = new() { ItemsSource = Paints.Select(PaintLabel).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-
-    /// <summary>
-    /// Flatten, Raise and Lower: No limit, the ground goes past the game's ±8 m (the brush options' switch, the
-    /// same one shown here; the window keeps the two together).
-    /// </summary>
-    internal CheckBox NoLimitBox { get; } = new() { Content = Lang.T("brush.label.noLimit"), FontSize = 12 };
-
-    /// <summary>No limit was switched here (on: true).</summary>
-    public event Action<bool>? NoLimitChanged;
 
     /// <summary>Flatten, Raise and Lower: the cut and fill the action would move.</summary>
     internal TextBlock VolumeText { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };

@@ -17,12 +17,14 @@ public sealed partial class PlaceInput
         _pointer = at;
         _size = size;
         // Building: Alt held places by a fine step, without snapping.
-        Tool.Fine = Tool.Building && alt;
+        Tool.Fine = Tool.Hammering && alt;
         var hit = _view.GridAt(at, size);
         // Building: the build ray itself (the piece goes where it hits, a piece or the ground).
-        if (Tool.Building)
+        if (Tool.Hammering)
         {
             Tool.AimRay = _view.WorldRay(at, size);
+            // The view's cut as it is now (in a world it follows the view): what it hides is not pointed at.
+            Tool.CutY = _view.CutY;
             hit ??= Tool.AimRay != null ? Vector2.Zero : null;
         }
         _at = hit;

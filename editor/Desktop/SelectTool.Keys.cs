@@ -4,8 +4,8 @@ namespace TerrainEditor.Desktop;
 public sealed partial class SelectTool
 {
     /// <summary>
-    /// The tool's keys (Esc, Del; with a selection: , . turn, PgUp PgDn lift, End drops; Shift for bigger steps);
-    /// true when the key was one.
+    /// The tool's keys (Esc, Del; with a selection: , . turn by <see cref="TurnStep"/>, R turns a quarter, PgUp PgDn
+    /// lift by <see cref="LiftStep"/>, End drops; Shift for finer steps, as in Build and Paste); true when the key was one.
     /// </summary>
     public bool Key(Avalonia.Input.Key key, bool shift)
     {
@@ -26,8 +26,9 @@ public sealed partial class SelectTool
         {
             return false;
         }
-        // 1° (Shift: 15°), like the web editor.
-        float step = shift ? 15 : 1;
+        // The building bar's steps; Shift, finer: 1° at most, a fifth of the lift.
+        float step = shift ? MathF.Min(BuildingBar.FineTurn, TurnStep) : TurnStep;
+        float lift = shift ? MathF.Round(LiftStep / 5, 2) : LiftStep;
         switch (key)
         {
             case Avalonia.Input.Key.OemComma:
@@ -36,11 +37,15 @@ public sealed partial class SelectTool
             case Avalonia.Input.Key.OemPeriod:
                 Turn(step);
                 return true;
+            // A quarter turn, as R turns the paste and the Place preview.
+            case Avalonia.Input.Key.R:
+                Turn(90);
+                return true;
             case Avalonia.Input.Key.PageUp:
-                Lift(shift ? 1 : 0.25f);
+                Lift(lift);
                 return true;
             case Avalonia.Input.Key.PageDown:
-                Lift(shift ? -1 : -0.25f);
+                Lift(-lift);
                 return true;
             case Avalonia.Input.Key.End:
                 Drop();

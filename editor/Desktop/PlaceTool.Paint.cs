@@ -8,7 +8,7 @@ public sealed partial class PlaceTool
 {
     /// <summary>
     /// Brush painting: the placements a frame of a drag adds (around the cursor), kept apart from what stands and from
-    /// what this stroke already placed. More per second with a stronger brush.
+    /// what this stroke already placed. More per second with a higher <see cref="Rate"/>.
     /// </summary>
     /// <param name="at">The cursor's grid point.</param>
     /// <param name="dt">Seconds since the last step (counted as 0.1 at most).</param>
@@ -27,7 +27,7 @@ public sealed partial class PlaceTool
         {
             hash.Add(o.G);
         }
-        float r = Brush.Radius, want = Density / 100 * MathF.PI * r * r * MathF.Min(dt, 0.1f) * (0.5f + 2.5f * Brush.Strength);
+        float r = Brush.Radius, want = Density / 100 * MathF.PI * r * r * MathF.Min(dt, 0.1f) * (0.5f + 2.5f * Rate);
         int n = (int)MathF.Floor(want) + (_rand.NextSingle() < want % 1 ? 1 : 0);
         var mask = Mask();
         for (int tries = 0; n > 0 && tries < n * 6; tries++)

@@ -1,10 +1,9 @@
-using TerrainEditor.App;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The panel's camera: into the dungeon, back to its entrance, and the roof cut.
+/// The panel's camera: into the dungeon, back to its entrance, and the view's cut counted from the dungeon's floor.
 /// </summary>
 public sealed partial class DungeonPanel
 {
@@ -26,12 +25,8 @@ public sealed partial class DungeonPanel
         _view.Orbit(x, z, _view.Camera.Yaw * 180f / MathF.PI, 55, 40);
     }
 
-    /// <summary>The cut off: the roofs shown (the slider at its right end).</summary>
-    internal void ShowRoofs()
-    {
-        CutSlider.Value = CutOff;
-        SetCut(CutOff);
-    }
+    /// <summary>The cut off: the roofs shown (the view's cut slider at its right end).</summary>
+    internal void ShowRoofs() => _cut.Off();
 
     /// <summary>
     /// The camera to the middle of the dungeon's rooms (its dungeon object when it has none), looking down into it;
@@ -45,22 +40,30 @@ public sealed partial class DungeonPanel
         }
         var p = d.Rooms.Count > 0 ? d.Rooms.Aggregate(System.Numerics.Vector3.Zero, (a, r) => a + r.Position) / d.Rooms.Count : d.Thing.Position;
         _view.Orbit(p.X, p.Z, 30, 55, 70, p.Y);
-        if (CutSlider.Value >= CutOff)
+        CutFromFloor();
+        if (!_cut.On)
         {
-            CutSlider.Value = 4;
+            _cut.Set(InsideCut);
         }
-        SetCut(CutSlider.Value);
     }
 
+    /// <summary>The cut Go to the dungeon puts on when there is none: 4 m above the floor shows the rooms' insides.</summary>
+    internal const double InsideCut = 4;
+
     /// <summary>
-    /// Cuts the view's roofs away above a height: from about the floor of the dungeon's entrance (3 m under the
-    /// dungeon object); <see cref="CutOff"/> metres: off.
+    /// The view's cut counts from the open dungeon's floor: about the floor of its entrance (3 m under the dungeon
+    /// object, as in the game's caves). Coming from the world, the cut is the one the dungeon had last (off at first);
+    /// changing dungeon, it keeps its metres. Without a dungeon open, it counts from the ground, as in the world.
     /// </summary>
-    private void SetCut(double metres)
+    private void CutFromFloor()
     {
-        // From about the floor of the dungeon's entrance (3 m under the dungeon object, as in the game's caves).
-        float? y = metres < CutOff && Tool.Dungeon is { } d ? d.Thing.Position.Y - 3 + (float)metres : null;
-        _view.CutY = y;
-        _cutText.Text = metres < CutOff ? Lang.T("dungeon.label.cut", metres) : Lang.T("dungeon.label.cutOff");
+        if (Tool.Dungeon is { } d)
+        {
+            _cut.FromDungeon(d.Thing.Position.Y - 3);
+        }
+        else
+        {
+            _cut.FromGround();
+        }
     }
 }

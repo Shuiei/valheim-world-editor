@@ -10,7 +10,7 @@ using static TerrainEditor.Desktop.Tests.AreaToolTestScene;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Area tool in the window: its panel's info and actions (remove, replace, reset, select) and dragging a box to flatten it.
+/// The Region tool (ToolMode.Area) in the window: its panel's info and actions (select objects, replace, reset) and dragging a box to flatten it.
 /// </summary>
 public class AreaToolPanelTests
 {
@@ -54,13 +54,18 @@ public class AreaToolPanelTests
     }
 
     [AvaloniaFact]
-    public async Task RemoveTakesTheChosenKindsOnly()
+    public async Task SelectObjectsThenDeleteTakesTheChosenKindsOnly()
     {
         var (w, s) = Open();
-        w.AreaPanel.Choose(AreaPanel.Act.Remove);
-        Assert.Equal(AreaPanel.Act.Remove, w.AreaPanel.Current);
+        w.AreaPanel.Choose(AreaPanel.Act.Select);
+        Assert.Equal(AreaPanel.Act.Select, w.AreaPanel.Current);
+        Assert.Equal(AreaPanel.Group.Objects, w.AreaPanel.CurrentGroup);
         w.AreaPanel.KindButtons[ObjectKind.Rocks].IsChecked = false;
         await w.AreaPanel.Apply();
+        // Handed to the Select tool, whose Delete takes them away as one step.
+        Assert.Equal(ToolMode.Select, w.View.Mode);
+        Assert.StartsWith("Selected 2 object(s)", w.MessageText.Text);
+        w.View.SelectTool.Delete();
         Assert.True(s.Scene.Things[0].Gone && s.Scene.Things[1].Gone);
         Assert.False(s.Scene.Things[2].Gone);
         Assert.False(s.Scene.Things[3].Gone);
@@ -71,13 +76,40 @@ public class AreaToolPanelTests
     }
 
     [AvaloniaFact]
+    public async Task OnlyNarrowsSelectObjectsToOneKindOfObject()
+    {
+        var (w, _) = Open();
+        var p = w.AreaPanel;
+        p.Choose(AreaPanel.Act.Select);
+        // Every chosen kind first, then the objects of the chosen kinds inside, the most common first.
+        var only = p.OnlyBox.Items.OfType<string>().ToList();
+        Assert.Equal(["Every chosen kind", "Beech1 (2)", "rock4_coast (1)"], only);
+        Assert.Equal(0, p.OnlyBox.SelectedIndex);
+        Assert.Null(p.OnlyName());
+        p.OnlyBox.SelectedIndex = 2;
+        Assert.Equal("rock4_coast", p.OnlyName());
+        // The choice stays while that object is still offered, and the list follows the kind switches.
+        p.Refresh();
+        Assert.Equal(2, p.OnlyBox.SelectedIndex);
+        p.KindButtons[ObjectKind.Trees].IsChecked = false;
+        Assert.Equal(["Every chosen kind", "rock4_coast (1)"], p.OnlyBox.Items.OfType<string>());
+        Assert.Equal("rock4_coast", p.OnlyName());
+        await p.Apply();
+        Assert.Equal(ToolMode.Select, w.View.Mode);
+        Assert.Equal([2], w.View.Selected);
+        // Its kind switched off: the list goes back to every chosen kind.
+        w.Tools.ChooseMode(ToolMode.Area);
+        p.KindButtons[ObjectKind.Rocks].IsChecked = false;
+        Assert.Null(p.OnlyName());
+        Assert.Equal(0, p.OnlyBox.SelectedIndex);
+    }
+
+    [AvaloniaFact]
     public void ReplacePutsAnotherKindInTheSamePlaces()
     {
         var (w, s) = Open();
         var p = w.AreaPanel;
-        p.Choose(AreaPanel.Act.Replace);
-        Assert.StartsWith("Beech1 (2)", (string)p.FromBox.SelectedItem!);
-        // Headless there is no world file, so nothing to choose from: replace directly.
+        // The Select tool's Replace the selection, which the panel does.
         p.Replace(s, [0, 1], Rock);
         Assert.True(s.Scene.Things[0].Gone);
         var added = s.Scene.Things.Skip(5).ToList();
@@ -135,7 +167,7 @@ public class AreaToolPanelTests
         w.AreaPanel.HeightBox.Value = 32;
         w.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "\r");
         Assert.Equal(32, H(s, 64, 60), 2);
-        Assert.Equal("Area: Flatten", s.UndoLabel);
+        Assert.Equal("Region: Flatten", s.UndoLabel);
         w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         Assert.Null(w.View.Area.Polygon());
     }

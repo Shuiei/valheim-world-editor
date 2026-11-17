@@ -8,19 +8,19 @@ rest of the world.
 [live mode](edit-a-server-live.md).
 
 1. Open the world and find the place on the [map](../map.md). Press **Edit in 3D**.
-2. Press `B` ([Area](../area.md)), choose **Polygon** and click round the damaged place, a little wider than it.
-3. In **Action**, choose **Restore from a backup**.
+2. Press `B` ([Region](../area.md)), choose **Polygon** and click round the damaged place, a little wider than it.
+3. Choose **Recover**, then **Back to a backup** in **Action**.
 4. In **Backup**, choose a date before the damage ("Game · date"). For a server backup or another copy, choose
    **Another folder…** and pick it (live, this is the only way). The line under it says which save it is.
 5. Choose the kind chips to bring back. For a building, turn on **Your buildings**.
 6. Leave **Ground (height and paint)** and **Objects of the kinds chosen above** ticked, or untick the one you do not
    want back.
-7. Press **Restore the selection (Enter)**.
+7. Press **Back to the backup (Enter)**.
 8. Look at the result. If it is right, **Save to world** (or **Apply live**).
 
 ![A griefed hut restored from the game's backup, before and after](../images/area-backup.jpg)
-*Left: a polygon round a hut with part of its near wall gone, **Restore from a backup** chosen, the **Backup**
-list open on the game's backup and **Your buildings** on. Right: after **Restore the selection**, the wall is
+*Left: a polygon round a hut with part of its near wall gone, **Back to a backup** chosen, the **Backup**
+list open on the game's backup and **Your buildings** on. Right: after **Back to the backup (Enter)**, the wall is
 whole again; the line above the button names the backup's save, the status bar counts what came back.*
 
 ## Check it worked
@@ -32,11 +32,12 @@ whole again; the line above the button names the backup's save, the status bar c
 
 ## Undo it
 
-`Ctrl+Z` takes the restore back before you save. Objects of the chosen kinds that are not in the backup are removed,
-so restore again from a newer backup if you lost something you built later.
+`Ctrl+Z` takes the restore back: it is one step in History. After a save, undo it and save again. Objects of the
+chosen kinds that are not in the backup are removed, so restore again from a newer backup if you lost something you
+built later.
 
 ## Related
 
-- [Area: Restore from a backup](../area.md#restore-from-a-backup)
+- [Region: Back to a backup](../area.md#back-to-a-backup)
 - [Back up a world before editing](back-up-a-world.md)
 - [Backups](../concepts/saving-and-history.md#backups)

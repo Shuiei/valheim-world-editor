@@ -20,7 +20,7 @@ public sealed partial class PlacePanel
             if (box.IsChecked == true)
             {
                 // A kind no longer offered since the list was filled (the mods' catalogue changed): not chosen.
-                if (NotOffered(n))
+                if (NotOffered(n) || BuiltWithBuild(n))
                 {
                     box.IsChecked = false;
                     return;

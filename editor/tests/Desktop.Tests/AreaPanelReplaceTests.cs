@@ -1,55 +1,60 @@
 using System.Globalization;
-using System.Numerics;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
-using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Area panel's Replace action: the two lists chosen and applied, a kind whose name holds a bracket, a ship's root and parts replaced, and the With list worked out again for another world.
+/// The Region panel's objects handed to the Select tool and replaced there: Select objects narrowed to one kind of
+/// object (one whose name holds a bracket too), Replace the selection on them, and a ship's root and parts replaced.
 /// </summary>
 [Collection("World files")]
 public class AreaPanelReplaceTests
 {
     [AvaloniaFact]
-    public async Task ReplaceUsesTheTwoLists()
+    public async Task SelectObjectsHandsThemOverAndTheSelectToolReplacesThem()
     {
         using var r = new SharedAreaPanelRun();
-        await r.ReplaceWithNothingChosen();
-        Assert.Equal("Choose what to replace, and with what.", r.Said);
-        var from = ((IEnumerable<object>)r.P.FromBox.ItemsSource!).Cast<string>().ToList();
-        Assert.NotEmpty(from);
-        r.P.FromBox.SelectedIndex = 0;
-        string name = from[0].Split(" (")[0];
-        int count = int.Parse(from[0].Split(" (")[1].TrimEnd(')'), CultureInfo.InvariantCulture);
-        var to = ((IEnumerable<object>)r.P.ToBox.ItemsSource!).Cast<string>().ToList();
-        r.P.ToBox.SelectedIndex = to.FindIndex(t => t != name);
+        r.P.Choose(AreaPanel.Act.Select);
+        var names = SharedAreaPanelRun.Entries(r.P.OnlyBox);
+        Assert.True(names.Count > 1, "the test world has objects of the chosen kinds in zone 0, 0");
+        r.P.OnlyBox.SelectedIndex = 1;
+        string name = names[1].Split(" (")[0];
+        int count = int.Parse(names[1].Split(" (")[1].TrimEnd(')'), CultureInfo.InvariantCulture);
         await r.P.Apply();
+        // The objects of that one kind, selected in the Select tool.
+        Assert.Equal(ToolMode.Select, r.W.Tools.Mode);
+        Assert.Equal($"Selected {count} object(s): Delete removes them, Replace the selection turns them into another kind.", r.Said);
+        Assert.Equal(count, r.W.View.Selected.Count);
+        Assert.All(r.W.View.Selected, i => Assert.Equal(name, r.W.NameOfPrefab(r.S.Scene.Things[i].Prefab)));
+        // Replace the selection (the Select panel's): one undo step, as the panel's Replace made it.
+        int other = r.S.Scene.World.Creatable.First(k => r.W.NameOfPrefab(k) is string n && n != name);
+        r.W.SelectPanel.UsePicked(other);
+        SharedButtons.Click(r.W.SelectPanel.ReplaceButton);
         Assert.StartsWith($"Replaced {count} object(s) with", r.Said);
         Assert.StartsWith($"Replaced {count} with", r.S.UndoLabel);
     }
 
     [AvaloniaFact]
-    public async Task ReplaceFindsAKindWhoseNameHoldsABracket()
+    public async Task OnlyFindsAKindWhoseNameHoldsABracket()
     {
-        // The kind was cut out of the list's entry at " (", so a mod's "Beech1 (mod)" matched nothing: 0 replaced.
+        // The name is the list's own, not cut out of its entry at " (": a mod's "Beech1 (mod)" would match nothing.
         using var r = new SharedAreaPanelRun();
-        var p = new AreaPanel(r.W.View, () => r.S, k => (Terrain.PrefabCatalog.DisplayName(k) ?? k.ToString(CultureInfo.InvariantCulture)) + " (mod)");
+        var p = new AreaPanel(r.W.View, () => r.S, k => (Terrain.PrefabCatalog.DisplayName(k) ?? k.ToString(CultureInfo.InvariantCulture)) + " (mod)", r.W.Tools.Brush);
         string said = "";
         p.Message += m => said = m.Shown;
-        p.Choose(AreaPanel.Act.Replace);
+        p.Choose(AreaPanel.Act.Select);
         p.Refresh();
-        var from = ((IEnumerable<object>)p.FromBox.ItemsSource!).Cast<string>().ToList();
-        p.FromBox.SelectedIndex = 0;
-        int cut = from[0].LastIndexOf(" (", StringComparison.Ordinal);
-        string kind = from[0][..cut];
-        int count = int.Parse(from[0][(cut + 2)..^1], CultureInfo.InvariantCulture);
-        var to = ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>().ToList();
-        p.ToBox.SelectedIndex = to.FindIndex(t => t != kind);
+        var names = SharedAreaPanelRun.Entries(p.OnlyBox);
+        p.OnlyBox.SelectedIndex = 1;
+        int cut = names[1].LastIndexOf(" (", StringComparison.Ordinal);
+        Assert.EndsWith(" (mod)", names[1][..cut]);
+        Assert.Equal(names[1][..cut], p.OnlyName());
+        int count = int.Parse(names[1][(cut + 2)..^1], CultureInfo.InvariantCulture);
         await p.Apply();
-        Assert.StartsWith($"Replaced {count} object(s) with", said);
+        Assert.StartsWith($"Selected {count} object(s)", said);
+        Assert.Equal(count, r.W.View.Selected.Count);
     }
 
     [AvaloniaFact]
@@ -80,55 +85,23 @@ public class AreaPanelReplaceTests
     }
 
     [AvaloniaFact]
-    public void TheWithListIsWorkedOutAgainForAnotherWorld()
+    public void TheReplaceWithListIsLeftAloneUntilTheWorldChangesAndKeepsItsChoice()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        // Two worlds, each with a kind of its own to copy (named here: the game's catalogue does not place them); the
-        // first is the live snapshot, for a live merge to bring it a kind.
-        int first = StableHash.Of("mod_first"), second = StableHash.Of("mod_second"), live = StableHash.Of("mod_live");
-        string? Name(int h) => h == first ? "mod_first" : h == second ? "mod_second" : h == live ? "mod_live" : Terrain.PrefabCatalog.DisplayName(h);
-        var p = new AreaPanel(w.View, () => w.Session, Name);
-        var a = TestScenes.Flat(1, new WorldScene.Thing(first, first, new Vector3(10, 30, 10), Vector3.Zero, 0, true));
-        a.Scene.World = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
-        a.Scene.World.Templates[first] = 0;
-        var b = TestScenes.Flat(1, new WorldScene.Thing(second, second, new Vector3(10, 30, 10), Vector3.Zero, 0, true));
-        b.Scene.World.Templates[second] = 0;
-        w.View.Show(a.Scene, null);
-        w.Edit(a);
-        p.UsePicked(first);
-        var with = ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>().ToList();
-        Assert.Contains("mod_first", with);
-        Assert.DoesNotContain("mod_second", with);
-        Assert.DoesNotContain("mod_live", with);
-        Assert.Equal("mod_first", p.ToBox.SelectedItem);
-        // The game brings the same world a kind it had none of: offered after the next refresh, the choice kept.
-        Assert.NotNull(a.Scene.World.MergeLive([(10, 10)], [(4242, 1, MadeObjects.Piece("mod_live", new Vector3(640, 30, 640), 777, "Astrid"))], _ => false, _ => false));
-        p.Refresh();
-        with = [.. ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>()];
-        Assert.Contains("mod_live", with);
-        Assert.Equal("mod_first", p.ToBox.SelectedItem);
-        // A kind both worlds have (one the game places) stays chosen in the other world; the first world's own kinds
-        // are not offered there.
-        int shared = Terrain.PrefabCatalog.Placeable.Select(i => StableHash.Of(i.Name)).First(h => Name(h) != null);
+        using var r = new SharedAreaPanelRun();
+        var p = r.W.SelectPanel;
+        // A kind the game places: every world can make it.
+        int shared = Terrain.PrefabCatalog.Placeable.Select(i => StableHash.Of(i.Name)).First(h => r.W.NameOfPrefab(h) != null);
         p.UsePicked(shared);
-        w.View.Show(b.Scene, null);
-        w.Edit(b);
-        p.Refresh();
-        with = [.. ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>()];
-        Assert.DoesNotContain("mod_first", with);
-        Assert.DoesNotContain("mod_live", with);
-        Assert.Contains("mod_second", with);
-        Assert.Equal(Terrain.PrefabCatalog.DisplayName(shared), p.ToBox.SelectedItem);
-        p.UsePicked(second);
-        Assert.Equal("mod_second", p.ToBox.SelectedItem);
-        w.View.Show(a.Scene, null);
-        w.Edit(a);
-        p.Refresh();
-        Assert.Equal(-1, p.ToBox.SelectedIndex);
-        // No world open: the list is empty and the last world is let go of.
-        w.View.Show(TestScenes.FlatScene(), null);
-        p.Refresh();
-        Assert.Empty((IEnumerable<object>)p.ToBox.ItemsSource!);
+        Assert.Equal(shared, p.ReplaceKinds[p.ReplaceBox.SelectedIndex]);
+        // The same world, nothing new in it: switching to the Select tool leaves the list as it is.
+        var before = p.ReplaceBox.ItemsSource;
+        r.W.Tools.ChooseSelect();
+        Assert.Same(before, p.ReplaceBox.ItemsSource);
+        // Another session opened: worked out again for its world, the kind chosen still chosen.
+        var scene = WorldScene.Load(r.Dir, 0, 0, 1);
+        r.W.View.Show(scene, null);
+        r.W.Edit(scene.Session!);
+        Assert.NotSame(before, p.ReplaceBox.ItemsSource);
+        Assert.Equal(shared, p.ReplaceKinds[p.ReplaceBox.SelectedIndex]);
     }
 }

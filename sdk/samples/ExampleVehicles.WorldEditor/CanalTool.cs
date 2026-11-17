@@ -35,7 +35,7 @@ public sealed class CanalTool : IEditorTool
         new SliderControl("depth", "Depth", 0.5f, 4, 1.5f) { Step = 0.5f, Unit = "m" },
         new TextControl("points", "No points yet."),
         new ButtonControl("dig", "Dig (Enter)"),
-        new ButtonControl("clear", "Clear (Esc)"),
+        new ButtonControl("clear", "Clear points (Esc)"),
     ];
 
     /// <inheritdoc/>

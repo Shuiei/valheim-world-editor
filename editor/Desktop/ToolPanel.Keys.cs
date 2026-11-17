@@ -21,6 +21,11 @@ public sealed partial class ToolPanel
             ChooseMode(ToolMode.Place);
             return true;
         }
+        if (key == "U")
+        {
+            ChooseBuild();
+            return true;
+        }
         if (key == "B")
         {
             ChooseMode(ToolMode.Area);
@@ -33,7 +38,7 @@ public sealed partial class ToolPanel
         }
         if (key == "G")
         {
-            ChooseMode(ToolMode.Shape);
+            ChooseMode(ToolMode.Landform);
             return true;
         }
         if (key == "M")

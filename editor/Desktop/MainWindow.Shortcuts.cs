@@ -7,27 +7,36 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Ctrl + wheel: pasting, the paste is lowered (into a mountain: Clear the site digs it out) or raised; building
-    /// (the Workshop), the piece is lifted; otherwise (false) the wheel is not taken.
+    /// Ctrl + wheel (and PgUp, PgDn): pasting, the paste is lowered (into a mountain: Clear the site digs it out) or
+    /// raised; building, the piece is lifted; with Select, the selection; with Place, the height its objects stand at.
+    /// One step of the building bar's Lift a notch; otherwise (false) the wheel is not taken.
     /// </summary>
     /// <param name="dir">The wheel's direction: 1 up, -1 down.</param>
     /// <param name="shift">Shift held: finer steps.</param>
     /// <returns>Whether a tool took it.</returns>
-    private bool CtrlWheel(int dir, bool shift)
+    internal bool CtrlWheel(int dir, bool shift)
     {
         // Pasting: the paste lowered (into a mountain: Clear the site digs it out) or raised.
         if (Tools.Mode == ToolMode.Paste)
         {
-            PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (shift ? 0.1m : 0.5m), 2);
+            PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (decimal)BuildingBar.LiftBy(shift), 2);
             Msg("view.msg.pasteHeight", PastePanel.OffsetBox.Value);
             return true;
         }
-        if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
+        if (Tools.SelectMode)
+        {
+            if (View.Selected.Count == 0)
+            {
+                return false;
+            }
+            View.SelectTool.Lift(dir * BuildingBar.LiftBy(shift));
+            return true;
+        }
+        if (Tools.Mode != ToolMode.Place)
         {
             return false;
         }
-        PlaceInput.Lift(dir * (shift ? 0.1f : 0.5f));
-        BuildPanel.ShowLift();
+        PlaceInput.Raise(dir, shift);
         return true;
     }
 

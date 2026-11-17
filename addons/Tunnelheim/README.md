@@ -23,10 +23,11 @@ does with them. Tunnelheim itself is unchanged and stays in `BepInEx/plugins`; t
   Each click is one step of the history. The edits go into the mod's records as the game saves its own: each kept
   by every 16 m column it changed, a column dug for the first time getting a record with the ground it was dug from.
   Checked on a server running the mod: the game rebuilds the same rock, to the bit, as the editor draws.
-- **Tunnels go with copies and blueprints**: copying an area (or the Select tool's objects) keeps the edits dug there,
-  and pasting plays them again where each copy lands, turned and mirrored with it, kept by the records already there
-  (never a second record in a column). Checked on a server running the mod: it builds the pasted tunnels as the editor
-  draws them. What the mod has baked into a column's checkpoint is no longer a list of edits and is not copied.
+- **Tunnels go with copies and blueprints**: copying the Region tool's selection (or the Select tool's objects) keeps
+  the edits dug there, and pasting plays them again where each copy lands, turned and mirrored with it, kept by the
+  records already there (never a second record in a column). Checked on a server running the mod: it builds the pasted
+  tunnels as the editor draws them. What the mod has baked into a column's checkpoint is no longer a list of edits and
+  is not copied.
 - **Shows tunnel records in words** in the inspector.
 - **Follows the mod's settings** as the world's game has them (live, a server's own, which its players get; else the
   ones in your BepInEx folder): the building height Add Earth and the levelling tools stop at, and whether Ashlands

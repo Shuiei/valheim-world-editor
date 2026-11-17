@@ -20,8 +20,8 @@ with it. ValheimRAFT itself is unchanged and stays in `BepInEx/plugins`; this re
   Checked on a server running ValheimRAFT 5.1.3, as on 5.1.1 and 5.0.9 before it: on tilted ships, every piece the
   editor draws stands where the mod built it, to a few hundredths of a millimetre.
 - **Moves, copies and deletes them whole.** Selecting any piece takes the whole vehicle, as with any
-  [linked objects](../../docs/select.md#ships-and-other-linked-objects): moving, turning, deleting, the Area tool's
-  Remove objects, copies and blueprints. What a vehicle carries goes with it. Each pasted vehicle gets ids of its own;
+  [linked objects](../../docs/select.md#ships-and-other-linked-objects): moving, turning, deleting (from the
+  Region tool's selection too), copies and blueprints. What a vehicle carries goes with it. Each pasted vehicle gets ids of its own;
   its ropes, sails, switches and plants follow the copy, and a rope to something that was not copied is let go. A
   pasted vehicle is not docked (the mod would hold it at the original's dock clamp) and the mod works out its hull
   shape again (a mirrored copy's would be the original's).
@@ -36,7 +36,7 @@ with it. ValheimRAFT itself is unchanged and stays in `BepInEx/plugins`; this re
 - **Names the mod's values** in the inspector (the vehicle a piece is built on, its place there, a swivel's settings,
   a sail's corners, mast and colours, a vehicle's build mode, hull shape and the dock clamp it is docked at), with a
   rope anchor's ropes and a sail's colours in words. Values the mod sets itself are read-only.
-- **Sorts the mod's pieces** in the Workshop's Build panel (**Mods** tab) under the vehicle hammer's own headings:
+- **Sorts the mod's pieces** in the Build dock's **Mod pieces** tab (in a world and in the Workshop) under the vehicle hammer's own headings:
   Hull, Structure, Propulsion, Power and mechanisms, Vehicles, Tools and Old hull pieces. The hull boundary tools and
   the build mode toggle, which delete themselves once placed, are not offered.
 

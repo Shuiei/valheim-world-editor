@@ -28,7 +28,7 @@ public sealed partial class BuildPanel
     /// <summary>Where the dock's height, whether it is folded and the pieces picked last are kept between runs.</summary>
     private Prefs _prefs = Prefs.InMemory();
 
-    /// <summary>The Library's own row in the dock's top row: its search, Import file… and Generate dungeon….</summary>
+    /// <summary>The Library's own row in the dock's top row: its search, Import file…, New blueprint and Generate dungeon….</summary>
     private readonly StackPanel _libraryBar = new() { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>The hammer's tabs in their scrolling row, with the line before them: shown on the Pieces tab only.</summary>
@@ -56,7 +56,8 @@ public sealed partial class BuildPanel
     {
         _prefs = prefs;
         _body.Height = Math.Clamp(prefs.Get("build.dockHeight", DefaultHeight), MinHeight, MaxHeight);
-        SetSnapMode(Enum.TryParse(prefs.Get("build.snapMode", ""), out PlaceTool.SnapModes mode) ? mode : PlaceTool.SnapModes.Auto);
+        Bar.Remember(prefs);
+        RememberLay(prefs);
         _recent.Clear();
         _recent.AddRange(prefs.Get<string[]>("build.recent", []).Where(p => p.Length > 0).Distinct(StringComparer.Ordinal).Take(MaxRecent));
         RenderRecent();
@@ -133,11 +134,12 @@ public sealed partial class BuildPanel
     /// </summary>
     private Grid Header()
     {
-        var title = Ui.Title(Lang.T("rail.label.build"), HelpTopics.Workshop);
+        var title = Ui.Title(Lang.T("rail.label.build"), HelpTopics.Build);
         title.ColumnSpacing = 6;
         var views = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center, Children = { PiecesTab, ModsTab, LibraryTab } };
         _libraryBar.Children.Add(LibrarySearch);
         _libraryBar.Children.Add(ImportButton);
+        _libraryBar.Children.Add(NewButton);
         _libraryBar.Children.Add(GenerateButton);
         var tabs = new ScrollViewer
         {
@@ -159,7 +161,7 @@ public sealed partial class BuildPanel
         return head;
     }
 
-    /// <summary>The dock's foot: the pieces picked last at the left, the chosen piece's name and cost at the right.</summary>
+    /// <summary>The dock's foot: Lay at the left (one piece, or along a line), the pieces picked last, and the chosen piece's name and cost at the right.</summary>
     private Grid Footer()
     {
         var recent = new StackPanel
@@ -175,57 +177,23 @@ public sealed partial class BuildPanel
         var chosen = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Right, Children = { Chosen, Cost } };
         var foot = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
             ColumnSpacing = 10,
             Margin = new Thickness(0, 8, 0, 0),
             Children =
             {
-                new ScrollViewer
+                LayRow,
+                Ui.Col(new ScrollViewer
                 {
                     HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
                     VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
                     Content = recent,
-                },
-                Ui.Col(chosen, 1),
+                }, 1),
+                Ui.Col(chosen, 2),
             },
         };
         DockPanel.SetDock(foot, Dock.Bottom);
         return foot;
-    }
-
-    /// <summary>
-    /// The bar of building settings: Snap to pieces, the grid, the turn step and the lift (with its Reset), each with
-    /// its label, in one row.
-    /// </summary>
-    private Border BuildToolbar()
-    {
-        static Control Labelled(string label, params Control[] controls)
-        {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
-            row.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center });
-            row.Children.AddRange(controls);
-            return row;
-        }
-        static Border Sep() => new() { Width = 1, Height = 22, Background = Ui.Line, VerticalAlignment = VerticalAlignment.Center };
-        var bar = Ui.Card(new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 12,
-            Children =
-            {
-                Labelled(Lang.T("build.label.snapMode"), SnapModes, SnapPointText),
-                Sep(),
-                Labelled(Lang.T("build.label.grid"), GridBox),
-                Labelled(Lang.T("build.label.turnBy"), TurnBox),
-                Sep(),
-                Labelled(Lang.T("build.label.lift"), LiftText, LiftReset),
-            },
-        });
-        bar.Padding = new Thickness(12, 6);
-        bar.VerticalAlignment = VerticalAlignment.Top;
-        bar.IsVisible = false;
-        ToolTip.SetTip(bar, Lang.T("build.hint.hammer"));
-        return bar;
     }
 
     /// <summary>

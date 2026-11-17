@@ -169,7 +169,7 @@ public static class Dialogs
         SizeToContent = SizeToContent.Height,
         CanResize = false,
         WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
+        Background = Ui.Side,
     };
 
     /// <summary>A dialog's buttons in a row on the right.</summary>

@@ -16,8 +16,9 @@ Not every text comes from the catalogue yet. These do:
   messages and players;
 - the status bar's readouts, the History panel, the View panel, the help card, and what the status bar and History say
   of Claude's changes;
-- the tools: the brushes with their stamps, Measure, Mask, Script, Path, Cave, Shape, Mountain, Select, Paste, Place,
-  Area, the Dungeon tool with its generator, the Blueprints panel, the Workshop and its Build panel, and the Inspector;
+- the tools: the brushes with their stamps, Measure, Mask, Script, Path, Landform, Select, Paste, Place, Build
+  (its dock and the building bar), Region, the Dungeon tool with its generator, the Blueprints panel, the Workshop,
+  and the Inspector;
 - the biome names.
 
 The rest moves over window by window. A catalogue made now keeps working as more texts are added: the new ones show in
@@ -42,7 +43,7 @@ carries is laid over it, text by text. There, a key you leave out (or a text tha
 keeps the carried translation; English shows only where neither has the text.
 
 To have a catalogue carried by the editor, open a pull request adding it to `editor/Core/Lang/` (keys
-only from `en.json`; `LangTests` checks them).
+only from `en.json`; `LangCatalogueTests` checks them).
 
 ## For developers
 
@@ -51,7 +52,7 @@ only from `en.json`; `LangTests` checks them).
   `Lang.T("settings.port")`, or `Lang.T("settings.worldNotFound", path)` with values for its
   `{0}`… places (put in with the invariant culture). A hover tip is a `tip.` key, given with
   `.Tip("settings.port")` (see `editor/Desktop/Tips.cs`).
-- Write the key in full in the code, even when it is passed along: `LangTests` checks that every
+- Write the key in full in the code, even when it is passed along: `LangCatalogueTests` checks that every
   key asked for is in `en.json` and every key of `en.json` is asked for somewhere.
 - Texts for Claude (the MCP tools' descriptions and answers), the log, command-line output and
   file formats stay in English and outside the catalogue. A text shown to the user that Claude is
@@ -62,7 +63,8 @@ only from `en.json`; `LangTests` checks them).
 ### Naming keys
 
 - The first part is the window, spelled as its tip keys are (`area`, `place`, `select`, `path`,
-  `blueprints`, `newWorld`…). Shared prefixes: `common.*` for a word used in three windows or more
+  `blueprints`, `newWorld`…). A tool renamed in the window keeps its keys: the Region tool's are `area.*`, and the
+  Landform tool's kinds keep `shape.*` (Formula) and `mountain.*` beside `landform.*`. Shared prefixes: `common.*` for a word used in three windows or more
   (OK, Yes, Cancel, Save, Discard, Stay, Keep them…), `dialog.*` for the small dialogs, `save.*` for
   the save, apply, discard and leave questions, `biome.*` for biome names.
 - The middle part says what kind of text it is: `label` (row labels, buttons, switches), `head`

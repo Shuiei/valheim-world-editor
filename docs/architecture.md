@@ -7,7 +7,7 @@ hold across files, and where a new feature goes. Building, CI, the game's files 
 Files are named from the repository's root (`editor/Core/Save/WorldWriter.cs`). Many comments in the code
 still say "like the web editor's": the editor began as a page in the browser, which the native app
 replaced. Tests from that time check that what it did still works (`KeysAndMouseTests`,
-`ViewFeaturesTests`, `WebEditorFeaturesTests`, `WorldControlsTests`, `PrefsTests`, `SavedSelectionsTests`).
+`ViewFeaturesTests`, `PrefsTests`, `SavedSelectionsTests`).
 
 ## The projects
 
@@ -30,7 +30,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 `editor/Core/WorldGen/` has two namespaces: `ValheimGen` for the generator itself (`WorldGenerator*.cs`,
 `GenMath.cs`, `Vector2.cs`, `Vector3.cs`, `Mathf.cs`, `UnityNative.cs`, `FastNoise.cs`, `TerrainService.cs`, `MapData.cs`,
 `SeedLocations.cs`, `DumpVerifier.cs`), and `TerrainEditor.Terrain` for what it is given from the
-game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`, `CaveRocks`,
+game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`,
 `ZdoKeys`). Core gives its internals to the app and the tests (`InternalsVisibleTo` in the csproj).
 
 ## A world from disk to the screen and back
@@ -133,11 +133,16 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Area | Types | Notes |
 |---|---|---|
 | Start and pages | `Program`, `Options`, `App` (`editor/Desktop/Program.cs`), `MainWindow` (+ `.Editor`, `.Workshop`, `.Dungeon` partials), `StartPage`, `MapPage` (+ `.Zones` partial), `NewWorldPage`, `SettingsDialog` | `MainWindow` holds the pages and the 3D editor: top bar, tool rail (`ToolPanel`, `ToolMode`), the right-hand panels, keys. |
-| Help | `HelpWindow` (+ `.Side`), `HelpView` (+ `.Text`, `.Table`), `HelpDocs`, `HelpContents`, `HelpSearch`, `HelpText` | The documentation in the app: `docs/` (pages and pictures, not the release notes) is carried in the program as `Docs/...` resources and read with Markdig as GitHub reads it (tables, alerts, heading ids). `HelpContents` takes the contents from `docs/README.md`'s lists; `HelpView` draws a page with the app's controls; links to anything not carried open on GitHub. `HelpDocsTests` checks every link and picture of every page. |
+| Help | `HelpWindow` (+ `.Side`), `HelpView` (+ `.Text`, `.Table`), `HelpDocs`, `HelpContents`, `HelpSearch`, `HelpText` | The documentation in the app: `docs/` (pages and pictures; not the release notes, the developers' pages or the pointer pages, see [writing-docs.md](dev/writing-docs.md)) is carried in the program as `Docs/...` resources and read with Markdig as GitHub reads it (tables, alerts, heading ids). `HelpContents` takes the contents from `docs/README.md`'s lists; `HelpView` draws a page with the app's controls; links to anything not carried open on GitHub. `HelpDocsTests` checks every link and picture of every page. |
 | 3D view | `GlView` (one partial file per concern: `.Camera`, `.Input`, `.Tools`, `.Render`, `.Terrain`, `.Models`, `.Objects`, `.Cells`, `.Shapes`, `.Picking`, `.Overlays`, and `.Overlays.<tool>` for each tool's marks), `GlObjects`, `Shaders`, `GameLookGl` (with `WaterTint`, its water colours), `ModelStore`, `BundleModels`, `LocationParts`, `StandItems`, `SceneReads`, `Picking`, `Overlays`, `Gizmo` | OpenGL 3.3 or ES 3.0; objects drawn instanced. The view mirrors z (Unity is left-handed): see the comment at the top of `WorldScene`. |
 | Open world | `WorldSession`, `WorldScene`, `EditSession`, `Ground`, `HistoryFile` | One `WorldSession` per open world, one `WorldScene` + `EditSession` per open area. |
-| Tools | `Sculpt`, `Erosion`, `Mountain`, `PathTool`, `AreaTool`, `PlaceTool`, `SelectTool`, `MeasureTool`, `DungeonTool`, `Mask`, `Formula`, each with its `*Panel` | A tool works on the `EditSession`; its panel is a card next to the rail. |
-| Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoReader`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`editor/Core/Save/`) | Byte formats follow the game's `ZPackage`. |
+| Tools | `Sculpt`, `Erosion`, `PathTool`, `AreaTool`, `PasteTool`, `PlaceTool`, `SelectTool`, `MeasureTool`, `DungeonTool`, `Mask`, each with its `*Panel` (the brushes' options are `ToolPanel`'s own, the Mask's `MaskPanel`) | A tool works on the `EditSession`; its panel is a card next to the rail. The rail (`ToolPanel.Layout.cs`) is in sections: Sculpt (the brushes, and one Paint button whose options choose the paint, `ToolPanel.Paint`, `PaintButtons`), Edit, Create, Tools, and Mods for mods' tools. The tool the window calls **Region** keeps its first name in the code and the docs: `ToolMode.Area`, `AreaTool`, `AreaPanel`, the `area.` text keys, `docs/area.md`. |
+| Landform | `LandformPanel` (`LandformKind`), `ShapePanel` + `Formula`, `MountainPanel` + `Mountain`, `StampPanel` + `Sculpt.StampOnce`, `LandformGhost` | One tool, `ToolMode.Landform`, for a whole landform in a click. Its panel holds one panel per kind (Formula, Mountain, Picture) and shows the chosen one; each kind keeps its own engine. `LandformPanel.Ghost` gives the 3D view the preview and outline of what a click would put (`GlView.Landform`), and `MainWindow.OnLandformClicked` puts it. |
+| Building | `BuildPanel` (the Build dock; `.Lay`: one piece, or along a line, a circle, a rectangle or a grid), `BuildingBar`, `PlaceTool` + `PlaceInput`, `PlacePanel` | Build and Place are one `ToolMode.Place`: `ToolPanel.BuildMode` says which (always Build in the Workshop). Build puts pieces down with the `Hammer`'s snapping through the `PlaceTool`; in a world `MainWindow.BuildInWorld` keeps the Place tool's own settings aside while it is on. `PlacePanel` offers what is not built (`PlacePanel.BuiltWithBuild`). `BuildingBar` holds what Build, Select and Paste share: snapping, grid, turn and lift steps, Built by. |
+| Blueprints | `BlueprintLibrary`, `BlueprintsPanel`, `BuildPanel.Library` | One list of the library (`BlueprintLibrary`: search, rows, their buttons), shown by a world's Blueprints panel and by the Library tab of the Workshop's Build dock; what a button does is its host's. |
+| Look | `Ui` (+ `.Styles`, `.Text`, `.Help`), `Icons`, `ViewCut` | The palette, the font (Averia Serif Libre, carried in the program: `editor/Desktop/Assets/Fonts`, `NOTICE.md`), the corners (`Ui.CardRadius`, `Ui.ControlRadius`) and the styles of every control, applied once to the application. Panels are made with `Ui.Card` and the palette's brushes, not colours of their own. `Icons.Paths` are looked up by name as a control is made: a name that is not there throws then, not in the build. `ViewCut` is the status bar's Cut slider, one for the world, the Workshop and a dungeon. |
+| Ground actions | `GroundOps`, `HeightsBefore`, `Erosion.Region`, `BrushRows` | What Raise, Lower, Flatten, Smooth, Naturalize, Restore and Paint do to a grid point, written once. `Sculpt` (a brush stroke), `AreaTool` (a selection) and `PathTool` (a line) only say where and weigh the points; `Erosion.Region` is the Erode the last two apply in one go. `BrushRows` builds the rows of the brush settings more than one panel shows (Bumps, Bump size, New pattern, Rest angle), all set on the one `Brush`. |
+| Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoReader`, `ZdoBuilder` (`ZdoTools.cs`), `ZdoData`, `InventoryData`, `ChunkMath` (`editor/Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`editor/Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser`, `LocationPrefabs` (`editor/Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data; what the game makes of a location it spawns (for new worlds). `Dungeons.UseMod` lays the open world's Expand World Data room and dungeon files (`DungeonRules`) over the game's catalogue when an area opens; `Dungeons.Scope` does it for one flow of work (the tests). |
 | Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`editor/Core/App/ObjectLinks.cs`), `ObjectTies`, `TieRule` (objects tied to a root naming them: groups, and ids made new in pasted copies; `EditSession.Ties.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `AddOns`, `ModComponents`, `ObjectView`, `CopyView`, `GroundCuts` (`editor/Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
@@ -164,7 +169,7 @@ no data tables. Everything is read at run time from the player's install:
 - `editor/Core/App/GameLook.cs` finds Valheim and keeps the one bundle reader, `editor/Core/App/GameBundles.cs`
   (AssetsTools.NET, with an index cached in `game-index.json`).
 - `editor/Core/App/GameData.cs` lists each kind of data the editor needs (`terrain-modifiers`, `prefabs`,
-  `pieces`, `piece-support`, `piece-place`, `zdo-keys`, `cave-rocks`, `piece-cost`, `vegetation`,
+  `pieces`, `piece-support`, `piece-place`, `zdo-keys`, `piece-cost`, `vegetation`,
   `dungeon-rooms`): how it is read, who takes it (`TerrainModifiers.Use`, `PrefabCatalog.Use`…) and
   how its test copy is trimmed. Each is cached as `game-<kind>.json` until the game's files change.
   Most are read in one pass over the bundles (`GameCatalogues.ReadAtStart`, the `AtStart` list); the
@@ -243,7 +248,7 @@ no data tables. Everything is read at run time from the player's install:
   (glass the game draws all but clear still shows as a tint; refracting glass is drawn at that). A `_Mode`
   2 or 3 left on a shader without modes (the game's pieces and rocks keep one) still cuts out at half.
   `GlView` draws see-through batches after every opaque one (`DrawGlass`; rooms' and locations' in
-  `DrawInstances`), blended, depth tested without writing depth (`uBlend` in the object shader);
+  `DrawSolid`), blended, depth tested without writing depth (`uBlend` in the object shader);
   `BuildingPicture` blends them over the opaque triangles the same way.
 - The tests run without Valheim on trimmed copies in `editor/tests/fixtures/<kind>.json`
   (`GameData.UseCopies`; the driver's `gamedata <folder>`), made again after a game update with
@@ -281,7 +286,7 @@ the game's. So:
 - **Check.** `WorldGeneratorReferenceTests` compares Unity's random numbers, Perlin noise, 3000 heights and
   biomes, eight whole zones and the water's count with values recorded in the game
   (`editor/tests/fixtures/worldgen-reference.txt`, seed `5DCcdIcuYJ`); any change that moves away from the
-  game fails there. `MapDataTests`, `TerrainModifiersTests` and `UnityShimTests` cover the map,
+  game fails there. The `MapData*Tests`, `TerrainModifiersTests` and `UnityShimTests` cover the map,
   the flattening and the helpers. For a refactor, also compare `WorldCheck look <seed> <metres>` (and
   `verify` against a dump, where you have one) before and after: the output must be identical.
 - **Thread-safety.** The game has one static generator; the editor has one per world
@@ -612,13 +617,13 @@ after it. `VersionTests` checks `CHANGELOG.md` has its section. Steps in
 
 | To add | Where | Then |
 |---|---|---|
-| A tool | A value in `ToolMode` (`editor/Desktop/ToolPanel.cs`) and its rail button there; `<Name>Tool.cs` for the mouse (wired in `GlView`, like `Tape` for Measure) and `<Name>Panel.cs` with its `Card`, built and added to the tool column in `MainWindow.cs`, shown when its mode is on. Changes go through `EditSession` (`Commit`, `EditGround`…) so they are pending and undoable. | A tip for each control in `editor/Core/Lang/en.json` (`tip.` keys, `TipsTests` fails otherwise) and its other texts there too; `<Name>ToolTests` and `<Name>PanelTests` files; a `docs/<tool>.md` page on the tool template of `docs/dev/writing-docs.md`, listed in `docs/README.md` (the Help window's contents), and its keys in `docs/help/shortcuts.md`. |
+| A tool | A value in `ToolMode` (`editor/Desktop/ToolPanel.cs`) and its rail button in `ToolPanel.Layout.cs`, in the section it belongs to, with an icon of `Icons.Paths`; `<Name>Tool.cs` for the mouse (wired in `GlView`, like `Tape` for Measure) and `<Name>Panel.cs` with its `Card`, a property of `MainWindow` added to the tool column (`MainWindow.BuildToolColumn`) and shown when its mode is on (`MainWindow.OnToolChanged`, which also shows the Mask card, and its No limit switch for the tools `GovernedByNoLimit` names). Changes go through `EditSession` (`Commit`, `EditGround`…) so they are pending and undoable; a ground action the brushes have too is `GroundOps`', not written again. | A tip for each control in `editor/Core/Lang/en.json` (`tip.` keys, `TipsTests` fails otherwise) and its other texts there too; `<Name>ToolTests` and `<Name>PanelTests` files, and the rail's order in `ToolPanelTests`; a `docs/<tool>.md` page on the tool template of `docs/dev/writing-docs.md`, listed in `docs/README.md` (the Help window's contents), its keys in `docs/help/shortcuts.md`, and its pictures' scenes in `tools/DocsScreenshots`. |
 | A Claude tool | A `[McpServerTool]` method in `editor/Desktop/ClaudeTools.cs`, run through `OnUi`, `CannotEdit` first. | `ClaudeToolsTests`; the table in `docs/claude.md`. |
 | A script API member | `editor/Desktop/ScriptApi.csx` (and what it calls in `ScriptHost`). Add, do not rename. | `ScriptHostTests`; `docs/scripting.md`. |
 | A kind of game data | A reader in `editor/Core/App/GameCatalogues*.cs` (an `IStartScan` in the one pass when it is in the bundles, listed in `AtStart`), a `Kind` line in `GameData.Kinds` with its `Use` and trim, and the type that takes it (often in `editor/Core/WorldGen/`, namespace `TerrainEditor.Terrain`). | `--export-test-data editor/tests/fixtures` for its copy; `NOTICE.md`; the list in `docs/development.md`; a test in `editor/tests/Core.Tests` reading the copy. |
-| A value of an object (a chest, a sign) | `ObjectField` on `NewObject`, read and written through `ZdoData` (`editor/Core/Save/ZdoData.cs`) and `ObjectData` (`editor/Core/App/ObjectData.cs`); item formats in `InventoryData`, `StandData`. | `ObjectDataTests`, `ZdoDataTests`; check the bytes against the game's with `WorldCheck objects`. |
+| A value of an object (a chest, a sign) | `ObjectField` on `NewObject`, read and written through `ZdoData` (`editor/Core/Save/ZdoData.cs`) and `ObjectData` (`editor/Core/App/ObjectData.cs`); item formats in `InventoryData`, `StandData`. | `ObjectDataTests`, the `ZdoData*Tests`; check the bytes against the game's with `WorldCheck objects`. |
 | Something saved with the world | `WorldWriter.Save` writes it, and `WorldWriter.Verify` must check it read back; `WorldSave` reads it. Live, the same change needs its endpoint in the plugin. | `WorldWriterTests`, `WorldWriterCheckTests`, `WorldSaveIntegrityTests`, `SaveSafetyTests`; `WorldCheck selftest-save` on a copy. |
-| A text the user sees | A key in `editor/Core/Lang/en.json`, asked for with `Lang.T("key")` (`editor/Core/App/Lang.cs`); a hover tip is a `tip.` key given with `.Tip("key")`. Texts for Claude, the log and the command line stay in English; a status-bar message goes through `MainWindow.Msg` with a `Said` (`editor/Core/App/Said.cs`), which keeps its English for Claude. | `LangTests` (every key asked for is there and the other way round); a `<Window>LangTests` under the tests' made-up language (`PseudoLang`); [translating.md](translating.md). |
+| A text the user sees | A key in `editor/Core/Lang/en.json`, asked for with `Lang.T("key")` (`editor/Core/App/Lang.cs`); a hover tip is a `tip.` key given with `.Tip("key")`. Texts for Claude, the log and the command line stay in English; a status-bar message goes through `MainWindow.Msg` with a `Said` (`editor/Core/App/Said.cs`), which keeps its English for Claude. | `LangCatalogueTests` (every key asked for is there and the other way round); a `<Window>LangTests` under the tests' made-up language (`PseudoLang`); [translating.md](translating.md). |
 | A remembered choice | A `Prefs` bind where the control is made; a setting in `AppSettings` (with the Settings dialog). | `PrefsTests`, `SettingsDialogTests`. |
 
 ### Which tests cover what
@@ -631,9 +636,9 @@ The tests are laid out like the code: a test class per file, named after the fil
 | Files | Cover | CI job |
 |---|---|---|
 | `editor/tests/Core.Tests/{App,Editing,Save,WorldGen}/` | Core without a window, file by file: saves (`WorldSave*`, `WorldWriter*`, `ValheimReader`, `ZdoData`), the generator (`WorldGenerator*`, `MapData`, `TerrainModifiers`), live mode against a stand-in (`LiveBridge`), the game's files read without the game (`GameBundles`, `TerrainShader`), dungeons, the hammer, support, blueprints, the SSH tunnel (`Tunnel`, a real local `sshd`) | `core-tests` |
-| `editor/tests/Core.Tests/Integration/` | Core across files: the home folder (`HomeFolderTests`), the shared data on the test world (`AppDataTests`), the save's small parts; the real game's terrain and map (`GameFilesTests`, `Category=Game`, not in CI: needs Valheim) | `core-tests` |
+| `editor/tests/Core.Tests/Integration/` | Core across files: the home folder (the `HomeFolder*Tests`), the shared data on the test world (the `AppData*Tests`), the save's small parts; the real game's terrain and map (`GameFilesTests`, `Category=Game`, not in CI: needs Valheim) | `core-tests` |
 | `editor/tests/Desktop.Tests/*Tests.cs` | One tool, panel, page or part of the app, with real mouse and key events (`PlaceToolTests`, `AreaPanelTests`, `StartPageTests`, `ClaudeToolsTests`, `ScriptHostTests`, `WorkshopTests`…) | `app-tests` |
-| `editor/tests/Desktop.Tests/Integration/` | The window's workflows end to end (`WindowFlowTests`, `PagesTests`, `SaveSafetyTests`, `StartupTests`, `LiveTests`, `LiveFollowTests`), what the old web editor did (`KeysAndMouseTests`, `ViewFeaturesTests`, `WebEditorFeaturesTests`, `WorldControlsTests`), `VERSION` | `app-tests` |
+| `editor/tests/Desktop.Tests/Integration/` | The window's workflows end to end (`WindowFlowTests`, `PagesTests`, `SaveSafetyTests`, `StartupTests`, `LiveTests`, `LiveFollowTests`), what the old web editor did (`KeysAndMouseTests`, `ViewFeaturesTests`), `VERSION` | `app-tests` |
 | `editor/tests/Desktop.Tests/Integration/*VisualTests.cs` (`Category=Visual`) | The real app over `--driver`, drawing with OpenGL | `app-tests` (on a virtual screen) |
 
 Helpers are in `Support/` folders: each project's own, and `editor/tests/Support/` for both. Tests never

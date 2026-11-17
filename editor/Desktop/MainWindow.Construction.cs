@@ -41,11 +41,15 @@ public sealed partial class MainWindow
         MeasurePanel = new MeasurePanel(View);
         ModToolPanel = new ModToolPanel(Prefs);
         WireModTools();
-        DungeonPanel = new DungeonPanel(View);
+        ViewCut = new ViewCut(View, PlaceTool);
+        // The Place tool's preview follows the cut: what it points at may be hidden or shown again.
+        ViewCut.Changed += () => PlaceInput?.Refresh();
+        DungeonPanel = new DungeonPanel(View, ViewCut);
         WireDungeonPanel();
         PathPanel = new PathPanel(View, Tools.Brush);
         PathPanel.ApplyAsked += ApplyPath;
-        AreaPanel = new AreaPanel(View, () => Session, prefab => _models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab));
+        PathPanel.Message += Msg;
+        AreaPanel = new AreaPanel(View, () => Session, prefab => _models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab), Tools.Brush);
         WireAreaPanel();
         PastePanel = new PastePanel(View.Paste);
         SetUpPlaceTool();
@@ -53,8 +57,9 @@ public sealed partial class MainWindow
         PlaceInput.Message += s => { Msg(s); UpdateSaveBar(); };
         View.Place = PlaceInput;
         PlacePanel = new PlacePanel(PlaceInput, () => View.Scene, NameOfPrefab);
-        BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
+        BuildPanel = new BuildPanel(PlaceInput, BuildingBar) { Models = () => _models, BuilderOffered = () => !InWorkshop };
         BuildPanel.Remember(Prefs);
+        WireBuildingBar();
         SetUpLibrary();
         WirePlacePanel();
         PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
@@ -84,6 +89,7 @@ public sealed partial class MainWindow
         SetUpDrops(surface);
         SetUpEditorWorld();
         KeepNoteBesideTools(tools);
+        KeepBuildingBarInView(tools);
         ViewPanelCard = ViewPanel();
         LayOutRightPanels();
         _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, BuildPanel.Card, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, Materials.Card, TopBar(), StatusBar() } };

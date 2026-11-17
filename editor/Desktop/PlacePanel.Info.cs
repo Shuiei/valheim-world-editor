@@ -52,7 +52,7 @@ public sealed partial class PlacePanel
     private readonly TextBlock _brushHint;
 
     /// <summary>Rows and groups that <see cref="Sync"/> shows or hides by mode, shape and what is chosen.</summary>
-    private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineShapeBox, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow;
+    private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineShapeBox, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow, _rateRow;
 
     private readonly TextBlock _modeHead = Head("");
 

@@ -3,7 +3,7 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The Mountain tool's kinds of shape; each has a preset in <c>Mountain.Presets</c>.
+/// The kinds of mountain the Landform tool's Mountain kind makes; each has a preset in <c>Mountain.Presets</c>.
 /// </summary>
 public enum MountainKind
 {
@@ -39,7 +39,7 @@ public sealed record MountainSpec(MountainKind Kind, float Height, float Radius,
 }
 
 /// <summary>
-/// The Mountain tool's shapes: how many metres a mountain adds to the ground at each point around its middle, made from
+/// The Landform tool's mountains: how many metres a mountain adds to the ground at each point around its middle, made from
 /// a seed so a mountain can be made again or rolled anew (Randomize). Natural detail comes from the editor's fractal
 /// noise (Noise): the outline is warped, the slopes get ridges and gullies. The ground goes past the game's ±8 m (No
 /// limit), so saving turns it into ground discs.
@@ -62,7 +62,7 @@ public static class Mountain
             MountainKind.Peak => Lang.T("mountain.preset.peak"),
             MountainKind.Ridge => Lang.T("mountain.preset.ridge"),
             MountainKind.Range => Lang.T("mountain.preset.range"),
-            MountainKind.Mesa => Lang.T("shape.preset.mesa"),
+            MountainKind.Mesa => Lang.T("mountain.preset.mesa"),
             MountainKind.Volcano => Lang.T("mountain.preset.volcano"),
             MountainKind.Hills => Lang.T("mountain.preset.hills"),
             _ => throw new InvalidOperationException($"No name for the mountain kind {Kind}."),
@@ -82,7 +82,7 @@ public static class Mountain
     }
 
     /// <summary>
-    /// The presets the Mountain panel offers, in its order.
+    /// The presets the Landform panel's Mountain kind offers, in its order.
     /// </summary>
     public static readonly Preset[] Presets =
     [

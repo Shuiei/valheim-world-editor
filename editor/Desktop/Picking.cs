@@ -30,7 +30,7 @@ public static partial class Picking
     /// <param name="min">The box's lowest corner.</param>
     /// <param name="max">The box's highest corner.</param>
     /// <param name="maxY">
-    /// The height above which the box is cut away, as the Workshop's cut hides what is drawn there: a ray entering
+    /// The height above which the box is cut away, as the view's cut hides what is drawn there: a ray entering
     /// above it does not meet the box (the cut leaves it open, with no face at the cut, and its inside faces are not
     /// drawn).
     /// </param>

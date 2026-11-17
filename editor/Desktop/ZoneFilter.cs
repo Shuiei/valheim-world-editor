@@ -17,6 +17,12 @@ namespace TerrainEditor.Desktop;
 public sealed partial record ZoneFilter(IReadOnlySet<int> Biomes, bool NoBuildings, int Distance, bool NoEdits, bool OnlyGenerated, float? MinRadius, float? MaxRadius)
 {
     /// <summary>
+    /// The reset keeps the players' buildings (Keep my buildings, on unless switched off): a zone with pieces then
+    /// never matches. Off, such a zone matches like any other, and its buildings go with the rest.
+    /// </summary>
+    public bool KeepBuildings { get; init; } = true;
+
+    /// <summary>
     /// The biomes offered (the map's filter, the Mask), in the web editor's order.
     /// </summary>
     private static readonly ValheimGen.Heightmap.Biome[] Offered =

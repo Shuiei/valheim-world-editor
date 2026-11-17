@@ -113,22 +113,22 @@ public class BlueprintsPanelTests
         var keys = r.B.List.GetLogicalDescendants().OfType<Button>().Select(b => $"{b.Content} {Tips.KeyOf(b)}").ToList();
         Assert.Equal(
         [
-            "Paste blueprints.paste", "Edit blueprints.edit", "Details blueprints.details", ".vbuild blueprints.vbuild", "Delete blueprints.delete",
+            "Paste blueprints.paste", "Open blueprints.open", "Details blueprints.details", ".vbuild blueprints.vbuild", "Delete blueprints.delete",
             "Paste blueprints.paste", "To Homestead blueprints.toHomestead", ".vbuild blueprints.vbuildOld", "Delete blueprints.deleteOld",
         ], keys);
     }
 
-    // Edit asks for the blueprint's file (the window opens it in the Workshop). Alone in its test: the
+    // Open asks for the blueprint's file (the window opens it in the Workshop). Alone in its test: the
     // Workshop opens in the background and changes the tools, which steps after it would meet half way.
     [AvaloniaFact]
-    public void EditAsksForTheBlueprintsFile()
+    public void OpenAsksForTheBlueprintsFile()
     {
         using var r = new BlueprintsPanelRun();
         r.Keep("Gate", "woodwall", "wood_floor");
         r.B.Toggle(true);
         string? edit = "none";
         r.B.EditAsked += p => edit = p;
-        SharedButtons.Click(r.RowButtons("Edit").Single());
+        SharedButtons.Click(r.RowButtons("Open").Single());
         Assert.Equal(Path.Combine(r.Homestead, "Gate.blueprint"), edit);
     }
 

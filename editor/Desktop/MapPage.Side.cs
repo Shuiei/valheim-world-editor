@@ -24,7 +24,7 @@ public sealed partial class MapPage
             Background = PanelBg,
             BorderBrush = Line,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = Ui.CardRadius,
             Padding = Ui.Pad,
             Margin = new Thickness(10),
             Width = 340,

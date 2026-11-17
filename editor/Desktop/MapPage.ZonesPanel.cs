@@ -8,7 +8,8 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The zone filter's panel: the biome toggles, the boxes, the distance from the centre, and the zone buttons.
+/// The zone filter's panel: the biome toggles, the boxes, the distance from the centre, the reset's two choices (as
+/// the Region tool's Reset zones has them) and the zone buttons.
 /// </summary>
 public sealed partial class MapPage
 {
@@ -28,11 +29,14 @@ public sealed partial class MapPage
         NoBuildBox.Tip("map.noBuild");
         NoEditBox.Tip("map.noEdit");
         OnlyGenBox.Tip("map.onlyGen");
+        KeepBox.Tip("map.keep");
         GroundBox.Tip("map.ground");
         ShowMatchButton.Tip("map.show");
         MarkButton.Tip("map.mark");
+        UnmarkMatchButton.Tip("map.unmarkMatch");
         UnmarkButton.Tip("map.unmark");
-        foreach (var c in new[] { NoBuildBox, NoEditBox, OnlyGenBox })
+        // Keep my buildings is part of the filter too: while on, zones holding buildings never match.
+        foreach (var c in new[] { NoBuildBox, NoEditBox, OnlyGenBox, KeepBox })
         {
             c.IsCheckedChanged += (_, _) => Refilter();
         }
@@ -41,6 +45,7 @@ public sealed partial class MapPage
         RMaxBox.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Refilter(); } };
         ShowMatchButton.Click += async (_, _) => await ShowMatching();
         MarkButton.Click += async (_, _) => await MarkMatching();
+        UnmarkMatchButton.Click += async (_, _) => await UnmarkMatching();
         UnmarkButton.Click += async (_, _) => await UnmarkAll();
         return Section(Lang.T("map.head.zones"), false,
             new TextBlock { Text = Lang.T("map.hint.zones"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
@@ -49,8 +54,9 @@ public sealed partial class MapPage
             new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Children = { NoBuildBox, Ui.Col(DistBox, 1), Ui.Col(new TextBlock { Text = Lang.T("map.label.zones"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, 2) } },
             NoEditBox, OnlyGenBox,
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = Lang.T("map.label.fromCentre"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMinBox, new TextBlock { Text = Lang.T("map.label.to"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMaxBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
+            KeepBox,
             GroundBox,
-            new WrapPanel { Children = { Spaced(ShowMatchButton), Spaced(MarkButton), Spaced(UnmarkButton) } },
+            new WrapPanel { Children = { Spaced(ShowMatchButton), Spaced(MarkButton), Spaced(UnmarkMatchButton), Spaced(UnmarkButton) } },
             ZoneInfo);
     }
 }

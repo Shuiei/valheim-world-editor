@@ -19,16 +19,14 @@ public sealed partial class GlView
     public bool SelectMode => Mode == ToolMode.Select;
     /// <summary>The Measure tool's tape.</summary>
     public MeasureTool Tape { get; } = new();
-    /// <summary>Shape tool: a click on the ground (grid point).</summary>
-    public event Action<float, float>? ShapeClicked;
-    /// <summary>The radius the Shape tool's outline shows, in metres.</summary>
-    public float ShapeRadius { get; set; } = 16;
+    /// <summary>Landform tool: a click on the ground (grid point).</summary>
+    public event Action<float, float>? LandformClicked;
 
     /// <summary>
-    /// The Mountain tool's shape (metres added east and north of the middle), drawn under the pointer as
-    /// a mesh on the ground before clicking; null: none.
+    /// What the Landform tool shows under the pointer before a click: its outline, and what it would add to the
+    /// ground as a mesh.
     /// </summary>
-    internal Func<float, float, float>? MountainPreview
+    internal LandformGhost Landform
     {
         get; set
         {
@@ -36,12 +34,13 @@ public sealed partial class GlView
             _previewKey = null;
             RequestNextFrameRendering();
         }
-    }
+    } = LandformGhost.None;
     /// <summary>The Path tool's state (its points, width, soft edge).</summary>
     public PathTool Path { get; } = new();
-    /// <summary>Stamp once: a click on the ground (grid point).</summary>
-    public event Action<float, float>? StampClicked;
-    /// <summary>Alt + click with a brush: the ground's height there (shift: Alt + Shift).</summary>
+    /// <summary>
+    /// Alt + click with a brush: the ground's height there (shift: Alt + Shift, for the Mask's band; the Path tool
+    /// sends that one too).
+    /// </summary>
     public event Action<float, bool>? BrushAltClick;
     /// <summary>The Area tool's state (its outline).</summary>
     public AreaTool Area { get; } = new();

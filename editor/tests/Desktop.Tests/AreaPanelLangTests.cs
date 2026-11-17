@@ -35,8 +35,8 @@ public sealed class AreaPanelLangTests
         void Check()
         {
             Dispatcher.UIThread.RunJobs();
-            // The prefab names of the Replace lists are data, shown as they are.
-            string[] data = [.. new[] { p.FromBox, p.ToBox }.SelectMany(b => b.Items.OfType<string>())];
+            // The object names of the Only list are data, shown as they are.
+            string[] data = [.. p.OnlyBox.Items.OfType<string>().Skip(1)];
             Assert.Empty(PseudoLang.Untranslated(p.Card, data));
         }
 
@@ -82,7 +82,7 @@ public sealed class AreaPanelLangTests
         await r.OpenArea();
         using var pseudo = new PseudoLang();
         string said = await r.T.ShapeGround("restore", -10, -10, 10, 10, edge: 0);
-        Assert.StartsWith("Restore the ground: ", said);
+        Assert.StartsWith("Back to generated ground: ", said);
         Assert.DoesNotContain(PseudoLang.Open, said[..said.IndexOf(" Now pending", StringComparison.Ordinal)]);
         // The History names the step in the language, behind the English "Claude: " mark it is found by.
         Assert.Equal("Claude: " + PseudoLang.Wrap("restore the ground"), r.W.Session!.UndoLabel);
@@ -121,25 +121,21 @@ public sealed class AreaPanelLangTests
         Assert.Matches(@"^⟦Ground inside: ⟦[\d.]+k? m³⟧ raised, ⟦[\d.]+k? m³⟧ dug since generated\.⟧$", lines[1]);
         await r.P.Apply();
         StepShown(r);
-        // Remove with none of the kinds chosen, then trees removed and regrown.
+        // Select objects with none of the kinds chosen, then the trees handed to the Select tool, deleted there and
+        // regrown.
         r.ChooseNoKinds();
-        r.P.Choose(AreaPanel.Act.Remove);
+        r.P.Choose(AreaPanel.Act.Select);
         await r.P.Apply();
         r.P.KindButtons[ObjectKind.Trees].IsChecked = true;
-        await r.P.Apply();
+        await RegionObjects.Remove(r.W);
         StepShown(r);
         r.P.Choose(AreaPanel.Act.Regrow);
         await r.P.Apply();
         StepShown(r);
-        // Replace without its lists chosen, then with them.
-        await r.ReplaceWithNothingChosen();
-        var from = r.P.FromBox.Items.OfType<string>().ToList();
-        r.P.FromBox.SelectedIndex = 0;
-        r.P.ToBox.SelectedIndex = r.P.ToBox.Items.OfType<string>().ToList().FindIndex(t => t != from[0].Split(" (")[0]);
-        await r.P.Apply();
+        // The selection replaced (the Select tool's Replace the selection, which the panel does).
+        r.P.Replace(r.S, [r.S.Scene.Things.FindIndex(t => !t.Gone)], Save.StableHash.Of("Beech1"));
         StepShown(r);
-        ShownAndReadInEnglish(told, "Raise applied to", "No objects of the chosen kinds", "Removed ", "Regrew ",
-            "Choose what to replace, and with what.", "Replaced ");
+        ShownAndReadInEnglish(told, "Raise applied to", "No objects of the chosen kinds", "Selected ", "Regrew ", "Replaced ");
     }
 
     [AvaloniaFact]
@@ -180,7 +176,7 @@ public sealed class AreaPanelLangTests
         await TestWindows.Until(() => r.P.PictureInfo.Text?.StartsWith(PseudoLang.Open) == true);
         Click(r.P.PutButton);
         StepShown(r);
-        ShownAndReadInEnglish(told, "1 zone(s) marked for reset", "Reset cancelled for 1 zone(s).", "No zone marked for reset",
+        ShownAndReadInEnglish(told, "1 zone(s) marked for reset", "1 zone(s) unmarked: they will not be reset.", "No zone marked for reset",
             "Choose a backup first.", "Nothing to restore", "Heightmap written to", "That picture cannot be used", "Imported");
     }
 

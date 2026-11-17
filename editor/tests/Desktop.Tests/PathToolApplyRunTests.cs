@@ -35,31 +35,11 @@ public class PathToolApplyRunTests
     private static void OnCentrePoint(PathTool tool, EditSession s, Action<PathTool.ApplyRun, Ground, int, float> body) =>
         OnGround(s, g =>
         {
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
+            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, tool.Curve());
             run.Prepare();
             int p = 10 * g.W + 15;
             body(run, g, p, g.HeightOf(p));
         });
-
-    /// <summary>
-    /// Digs a cave line's floor at its centre point to 20 m on a flat ground, with the game's limit on or off, and gives
-    /// the game's lowest depth there and the height after the dig.
-    /// </summary>
-    /// <param name="noLimit">Whether the ground's no-limit setting is on.</param>
-    private static (float Limit, float After) DigCaveFloorAtCentre(bool noLimit)
-    {
-        var s = TestScenes.Flat(2);
-        var tool = Line(PathTool.Action.Cave, (10, 10), (20, 10));
-        (float Limit, float After) result = default;
-        OnCentrePoint(tool, s, (run, g, p, h) =>
-        {
-            g.NoLimit = noLimit;
-            float limit = g.Original(p) - Editing.EditStore.MaxLevel + 0.1f;
-            run.DigCave(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 20f, 0, 0));
-            result = (limit, g.HeightOf(p));
-        });
-        return result;
-    }
 
     [Fact]
     public void PrepareReachesTheWidthAndTheSoftEdgeBeyondTheLine()
@@ -70,7 +50,7 @@ public class PathToolApplyRunTests
         s.EditGround("test", g =>
         {
             // Half the width (4) plus the soft edge (4) plus one, around the line from x 10 to 20 at z 10.
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, s.Scene.Water, null, null, tool.Curve());
+            var run = new PathTool.ApplyRun(tool, g, s.Brush, s.Scene.Water, null, tool.Curve());
             run.Prepare();
             rect = run.Run().Rect;
             return (new List<int>(), rect);
@@ -86,7 +66,7 @@ public class PathToolApplyRunTests
         tool.Amount = 2;
         OnCentrePoint(tool, s, (run, g, p, h) =>
         {
-            run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 0.5f, 0, 0.25f, 0, 0, 0));
+            run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 0.5f, 0, 0.25f, 0, 0));
             Assert.Equal(h + (2 + 0.25f) * 0.5f, g.HeightOf(p), 2);
         });
     }
@@ -99,7 +79,7 @@ public class PathToolApplyRunTests
         tool.Amount = 2;
         OnCentrePoint(tool, s, (run, g, p, h) =>
         {
-            run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0, 0));
+            run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0));
             Assert.Equal(h - 2, g.HeightOf(p), 2);
         });
     }
@@ -112,7 +92,7 @@ public class PathToolApplyRunTests
         tool.Height = 30;
         OnCentrePoint(tool, s, (run, g, p, h) =>
         {
-            run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0, 0));
+            run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0));
             Assert.Equal(30f, g.HeightOf(p), 2);
         });
     }
@@ -127,36 +107,21 @@ public class PathToolApplyRunTests
         {
             int p = 10 * g.W + 15;
             float h = g.HeightOf(p);
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 30, null, null, tool.Curve());
+            var run = new PathTool.ApplyRun(tool, g, s.Brush, 30, null, tool.Curve());
             run.Prepare();
             // In the middle of the bed (no distance): the water less the depth, 28 m.
-            run.DigRiver(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0, 4));
+            run.DigRiver(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 4));
             Assert.Equal(28f, g.HeightOf(p), 2);
             // A point already below the bed is left alone.
             int q = 11 * g.W + 15;
             float low = g.HeightOf(q);
-            run.DigRiver(new PathTool.ApplyRun.PointSample(15, 11, q, 20f, 1f, 0, 0, 0, 0, 4));
+            run.DigRiver(new PathTool.ApplyRun.PointSample(15, 11, q, 20f, 1f, 0, 0, 0, 4));
             Assert.Equal(low, g.HeightOf(q), 2);
         });
     }
 
     [Fact]
-    public void ACaveFloorIsNotDugBelowTheGamesLimitUnlessNoLimitIsOn()
-    {
-        var (limit, after) = DigCaveFloorAtCentre(noLimit: false);
-        // The floor asked for is 20 m, but the game's limit (8 m below the ground) is higher, so the limit is the floor.
-        Assert.Equal(Math.Max(20f, limit), after, 2);
-    }
-
-    [Fact]
-    public void ACaveFloorWithNoLimitGoesStraightToItsFloor()
-    {
-        var (_, after) = DigCaveFloorAtCentre(noLimit: true);
-        Assert.Equal(20f, after, 2);
-    }
-
-    [Fact]
-    public void SmoothAveragesTheFiveByFiveAroundThePointBeforeTheChange()
+    public void SmoothAveragesTheGroundWithinThreeMetresOfThePointBeforeTheChange()
     {
         var s = TestScenes.Flat(2);
         var tool = Line(PathTool.Action.Smooth, (10, 10), (20, 10));
@@ -165,11 +130,12 @@ public class PathToolApplyRunTests
             int centre = 10 * g.W + 10, p = 10 * g.W + 11;
             float flat = g.HeightOf(p);
             g.SetHeight(centre, flat + 5);
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
+            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, tool.Curve());
             // The heights are read before the change: the raised centre counts in its neighbours' average.
             run.Prepare();
-            run.Smooth(new PathTool.ApplyRun.PointSample(11, 10, p, g.HeightOf(p), 1f, 0, 0, 0, 0, 0));
-            Assert.Equal(flat + 5f / 25, g.HeightOf(p), 2);
+            run.ActOn(new PathTool.ApplyRun.PointSample(11, 10, p, g.HeightOf(p), 1f, 0, 0, 0, 0));
+            // The 7 × 7 square round the point (the Area tool's and the brush's kernel): one point of 49 is 5 m up.
+            Assert.Equal(flat + 5f / 49, g.HeightOf(p), 3);
         });
     }
 
@@ -180,7 +146,7 @@ public class PathToolApplyRunTests
         var tool = Line(PathTool.Action.PaintDirt, (10, 10), (20, 10));
         OnCentrePoint(tool, s, (run, g, p, h) =>
         {
-            run.Paint(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0, 0));
+            run.Paint(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0));
             float[] colour = Brush.PaintOf(BrushTool.PaintDirt)!;
             for (int c = 0; c < 4; c++)
             {
@@ -196,7 +162,7 @@ public class PathToolApplyRunTests
         var tool = Line(PathTool.Action.Raise, (10, 10), (20, 10));
         OnGround(s, g =>
         {
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
+            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, tool.Curve());
             float expected = s.Brush.Noise.Fbm((g.OriginX + 3) / (s.Brush.NoiseSize * 2), (g.OriginZ + 4) / (s.Brush.NoiseSize * 2));
             Assert.Equal(expected, run.WorldNoise(3, 4, 2), 5);
         });
@@ -210,7 +176,7 @@ public class PathToolApplyRunTests
         tool.Amount = 2;
         OnGround(s, g =>
         {
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
+            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, tool.Curve());
             run.Prepare();
             // The extents of the run, as Prepare works them out: x 1..29, z 1..19.
             var near = PathTool.NearestOnLine(tool.Curve(), 1, 1, 29, 19, 9);

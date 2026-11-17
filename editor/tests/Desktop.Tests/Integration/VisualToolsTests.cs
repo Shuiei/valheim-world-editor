@@ -23,8 +23,8 @@ public sealed class VisualToolsTests : VisualEditorPictures
     public void DrawingAZoneSelectsAndShowsTheHandles()
     {
         Open();
-        // A zone on the ground (a drag draws a box on the screen by default).
-        Do("area 0 0 3", "key E", "choose A zone on the ground (all above it)");
+        // An outline on the ground (a drag draws a box on the screen by default).
+        Do("area 0 0 3", "key E", "choose An outline on the ground (all above it)");
         Do("mouse down -40 -40", "mouse move 40 -40", "mouse move 40 40", "mouse move -40 40");
         // The zone being drawn.
         ShowsSomething(Picture("lasso"));
@@ -109,7 +109,7 @@ public sealed class VisualToolsTests : VisualEditorPictures
         Assert.Equal("Area", Do("area 0 0 3", "key B", "click Polygon", "mouse down -20 -20", "mouse up -20 -20", "mouse down 20 -20", "mouse up 20 -20", "mouse move 0 20").GetProperty("mode").GetString());
         ShowsSomething(Picture("polygon-line"));
         // A box over the middle zone, marked for reset when saving (asked first).
-        Do("click Box", "mouse down -20 -20", "mouse move 0 0", "mouse move 20 20", "mouse up 20 20", "choose Reset zones", "click Reset zones…", "click Reset when saving");
+        Do("click Box", "mouse down -20 -20", "mouse move 0 0", "mouse move 20 20", "mouse up 20 20", "click Recover", "choose Reset zones", "click Reset zones…", "click Reset when saving");
         // The answer is taken a moment after the click.
         var s = Editor.Send("state");
         for (int i = 0; i < 20 && !s.GetProperty("message").GetString()!.StartsWith("1 zone(s) marked", StringComparison.Ordinal); i++)

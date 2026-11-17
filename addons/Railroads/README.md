@@ -47,7 +47,7 @@ mod keeps in a world, following what the mod does with them. Railroads itself is
   load, and its wagons turned to face its back stay turned; the server gives it a number of its own, as to a train just
   built), a pasted flatbed carries the copy's own deck, a wagon pasted without its locomotive stands loose, and a piece
   pasted without its flatbed is an ordinary piece where it lands.
-- **Groups the pieces** in the Workshop's Build panel (**Mods** tab) as Track (with the buffer stop), Stations, Trains
+- **Groups the pieces** in the Build dock's **Mod pieces** tab (in a world and in the Workshop) as Track (with the buffer stop), Stations, Trains
   and Other (the crossing lights and barrier, the train workshop); the pieces the mod retired (its 6 m switches, and the feedback post since Railroads
   0.4.5) are not offered, those in worlds still show. The old station, back on the hammer since Railroads 0.3.5, is
   offered again.

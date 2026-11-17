@@ -8,7 +8,7 @@ public sealed partial class ClaudeTools
 {
     /// <summary>import_heightmap: a greyscale picture's heights into a rectangle of the ground, as one pending step.</summary>
     [McpServerTool(Name = "import_heightmap", Title = "Import a heightmap")]
-    [Description("Puts a heightmap picture (a PNG file on this computer, greyscale: black low, white high) into the ground of a rectangle of the open area, as the Area tool's Heightmap import does: stretched over the rectangle, from lowest (black) to highest (white) metres, fading in over a soft edge going inwards. Pictures the editor exported carry their own lowest and highest; otherwise they default to the range of the ground there now. A mask limits it to some ground. One pending step; the game's ±8 m limit holds.")]
+    [Description("Puts a heightmap picture (a PNG file on this computer, greyscale: black low, white high) into the ground of a rectangle of the open area, as the Region tool's Heightmap import does: stretched over the rectangle, from lowest (black) to highest (white) metres, fading in over a soft edge going inwards. Pictures the editor exported carry their own lowest and highest; otherwise they default to the range of the ground there now. A mask limits it to some ground. One pending step; the game's ±8 m limit holds.")]
     public Task<string> ImportHeightmap(
         [Description("The PNG picture's path.")] string path,
         [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,

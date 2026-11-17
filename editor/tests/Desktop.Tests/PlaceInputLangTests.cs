@@ -67,8 +67,8 @@ public sealed class PlaceInputLangTests
         Assert.Contains("Lift: none (where the cursor points).", english);
         Assert.Contains(english, e => e.StartsWith("Placed ", StringComparison.Ordinal) && e.EndsWith("Save writes them to the world.", StringComparison.Ordinal));
         Assert.Contains(english, e => e.StartsWith("Removed ", StringComparison.Ordinal));
-        Assert.Contains("Draw a zone first, then turn it.", english);
-        Assert.Contains("Draw a zone first (click points around it, or drag).", english);
+        Assert.Contains("Draw a polygon first, then turn it.", english);
+        Assert.Contains("Draw a polygon first (click points around it, or drag).", english);
         Assert.Contains("Drag a box first, then turn it.", english);
         Assert.Contains("Drag a box on the ground first.", english);
         Assert.Contains("Draw a line first (click points on the ground).", english);

@@ -1,12 +1,12 @@
-
 namespace TerrainEditor.Desktop;
 
 // Naturalize: the height each point is pulled towards, worked out once per stroke.
 public static partial class Sculpt
 {
     /// <summary>
-    /// Naturalize's aim: the ground's broad shape (blurred, from the start of the stroke) plus detail noise, in world
-    /// coordinates so the pattern is continuous across areas.
+    /// Naturalize's aim: the ground's broad shape (its average round the point, from the start of the stroke) plus the
+    /// brush's bumps, as the Area and Path tools aim (<see cref="GroundOps.NaturalTarget"/>). Kept for the stroke, so
+    /// going over a point again pulls it to the same height.
     /// </summary>
     private static float NaturalTarget(Ground g, Brush b, Stroke s, int p)
     {
@@ -14,20 +14,7 @@ public static partial class Sculpt
         {
             return t;
         }
-        int gx = p % g.W, gz = p / g.W, r = Math.Max(2, Math.Min(8, (int)MathF.Round(b.NoiseSize / 3)));
-        float sum = 0;
-        int n = 0;
-        for (int dz = -r; dz <= r; dz += 2)
-        {
-            for (int dx = -r; dx <= r; dx += 2)
-            {
-                int x = Math.Clamp(gx + dx, 0, g.W - 1), z = Math.Clamp(gz + dz, 0, g.H - 1);
-                sum += s.StartHeight(g, z * g.W + x);
-                n++;
-            }
-        }
-        float wx = g.OriginX + gx, wz = g.OriginZ + gz;
-        t = sum / n + b.NoiseAmp * b.Noise.Fbm(wx / b.NoiseSize, wz / b.NoiseSize);
+        t = GroundOps.NaturalTarget(g, b, p, GroundOps.Average(g.W, g.H, p, GroundOps.NaturalReach(b), i => s.StartHeight(g, i)));
         s.Natural[p] = t;
         return t;
     }

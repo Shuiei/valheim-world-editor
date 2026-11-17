@@ -3,12 +3,12 @@ using TerrainEditor.Editing;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The Mountain tool: a mountain put into the ground, clearing the natural objects it buries.
+/// The Landform tool's mountains: a mountain put into the ground, clearing the natural objects it buries.
 /// </summary>
 public sealed partial class EditSession
 {
     /// <summary>
-    /// Puts a mountain into the ground around grid point (cx, cz) (Mountain tool), past the game's ±8 m (saving turns
+    /// Puts a mountain into the ground around grid point (cx, cz) (the Landform tool's Mountain kind), past the game's ±8 m (saving turns
     /// it into ground discs). One undo step.
     /// </summary>
     /// <param name="cx">The middle, a grid x.</param>

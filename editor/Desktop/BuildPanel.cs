@@ -5,11 +5,12 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The Workshop's Build panel: the hammer's pieces in its tabs (Building, Heavy building, Furniture…),
-/// each with a small picture, searchable; the one clicked is what the Place tool puts down, one at a
-/// time under the cursor. Snapping to the pieces already there, stacking on the one under the cursor,
-/// a grid for the rest, and the step , and . turn by. What the piece costs in game. Its Library: the
-/// blueprints, and Generate dungeon (a dungeon of building pieces made onto the plot).
+/// The Build dock (the Build tool in a world, the Workshop, Build here in a dungeon): the hammer's pieces in its tabs
+/// (Building, Heavy building, Furniture…), each with a small picture, searchable; the one clicked is what the Place
+/// tool puts down, one at a time under the cursor, or end to end along a line, circle or rectangle (Lay). Snapping
+/// to the pieces already there, a grid for the rest, and the steps come from the building bar. What the piece costs
+/// in game. Its Library (the Workshop): the blueprints (<see cref="BlueprintLibrary"/>, the same list and row buttons
+/// as a world's Blueprints panel), and Generate dungeon (a dungeon of building pieces made onto the plot).
 /// </summary>
 public sealed partial class BuildPanel
 {
@@ -47,11 +48,8 @@ public sealed partial class BuildPanel
         _ => throw new ArgumentOutOfRangeException(nameof(category), category, "Not one of the Build panel's tabs."),
     };
 
-    /// <summary>The grid steps behind <see cref="GridBox"/>'s entries, in metres (0: off).</summary>
-    private static readonly float[] Grids = [0, 0.5f, 1, 2];
-
-    /// <summary>The turn steps behind <see cref="TurnBox"/>'s entries, in degrees.</summary>
-    private static readonly float[] Turns = [1, 15, 22.5f, 45, 90];
+    /// <summary>The building bar, whose snapping, grid and steps the pieces are built with (shared with Select and Paste).</summary>
+    internal BuildingBar Bar { get; }
 
     /// <summary>The Place tool's input, whose tool puts the pieces down.</summary>
     private readonly PlaceInput _input;
@@ -78,34 +76,16 @@ public sealed partial class BuildPanel
     private static ((int Data, int Manifests) Generation, List<(string Prefab, string Name, int Category)> List) _pieceList = ((-1, -1), []);
 
     /// <summary>The blueprints' folder (Homestead's).</summary>
-    internal Func<string> Folder { get; set; } = () => "";
-
-    /// <summary>Open: the blueprint alone on the plot; Add: with what is there (in the middle). Given its file.</summary>
-    public event Action<string>? OpenAsked, AddAsked;
-
-    /// <summary>Import file… was clicked.</summary>
-    public event Action? ImportAsked;
+    internal Func<string> Folder { get => Library.Folder; set => Library.Folder = value; }
 
     /// <summary>What a blueprint dragged from the list carries: its file.</summary>
-    internal static readonly DataFormat<string> BlueprintFormat = DataFormat.CreateInProcessFormat<string>("vwe-blueprint");
+    internal static DataFormat<string> BlueprintFormat => BlueprintLibrary.DragFormat;
 
     /// <summary>Whether the Library is shown.</summary>
     internal bool LibraryShown => _library.IsVisible;
 
     /// <summary>Whether the dungeon generator is shown.</summary>
     internal bool DungeonShown => _dungeon.IsVisible;
-
-    /// <summary>The blueprints last read from the folder, and that folder: searched through again as the search changes.</summary>
-    private (string Folder, List<Homestead.Entry> Entries)? _libraryRead;
-
-    /// <summary>
-    /// Pictures of blueprints without one (made elsewhere), drawn from their pieces, by file and its last write time.
-    /// Kept in memory only (the folder is left as it is).
-    /// </summary>
-    private readonly Dictionary<(string, DateTime), Bitmap?> _blueprintPictures = [];
-
-    /// <summary>Pictures being drawn, with the images waiting for each: a blueprint shown again meanwhile is not drawn twice.</summary>
-    private readonly Dictionary<(string, DateTime), List<Image>> _blueprintDrawing = [];
 
     /// <summary>The Place tool the panel sets.</summary>
     private PlaceTool Tool => _input.Tool;

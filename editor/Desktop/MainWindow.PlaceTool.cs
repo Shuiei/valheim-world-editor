@@ -54,7 +54,7 @@ public sealed partial class MainWindow
             Margin = new Thickness(10, 70, 10, 58),
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
-            Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ModToolPanel.Card, DungeonPanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, Blueprints.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Toolbar, MaskPanel.Card },
+            Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ModToolPanel.Card, DungeonPanel.Card, LandformPanel.Card, ScriptPanel.Card, Blueprints.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildingBar.Card, MaskPanel.Card },
         };
         // Every panel of the column scrolls when the window is too short for it (a bar only then).
         foreach (var card in tools.Children.OfType<Border>())
@@ -65,54 +65,58 @@ public sealed partial class MainWindow
                 card.Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = inner };
             }
         }
-        SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ModToolPanel.Card.IsVisible = DungeonPanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = ScriptPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
+        SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ModToolPanel.Card.IsVisible = DungeonPanel.Card.IsVisible = LandformPanel.Card.IsVisible = ScriptPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
         Tools.Options.VerticalAlignment = VerticalAlignment.Top;
         Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
         return tools;
     }
 
     /// <summary>
-    /// Wires the Shape and Mountain panels to the 3D view's preview and clicks, and the Path panel's cave to the rail.
+    /// Wires the Landform panel to the 3D view's preview and clicks, to the brushes' stamps (its Picture kind's
+    /// pictures) and to No limit.
     /// </summary>
     private void WireShapePanels()
     {
-        ShapePanel.Changed += () => View.ShapeRadius = ShapePanel.Radius;
-        MountainPanel.Changed += OnMountainChanged;
-        View.ShapeClicked += OnShapeClicked;
-        Tools.CaveChosen += () =>
+        LandformPanel.Changed += ShowLandform;
+        View.LandformClicked += OnLandformClicked;
+        LandformPanel.Picture.Fill(Tools.StampList);
+        Tools.StampsChanged += () => LandformPanel.Picture.Fill(Tools.StampList);
+        LandformPanel.Picture.LoadAsked += async () => await LoadStampAsync(forLandform: true);
+        LandformPanel.Picture.ForgetAsked += stamp =>
         {
-            PathPanel.ChooseCave();
-            Tools.MarkCave(true);
+            if (!Tools.ForgetStamp(stamp))
+            {
+                Msg("brush.msg.notLoaded");
+            }
         };
-        PathPanel.ActionChanged += a => Tools.MarkCave(a == PathTool.Action.Cave);
+        MaskPanel.NoLimitChanged += LandformPanel.ShowNoLimit;
     }
 
     /// <summary>
-    /// The Mountain panel changed: with the Mountain tool on, the preview follows.
+    /// The Landform panel changed, or another tool was chosen: with the Landform tool on, the 3D view's outline and
+    /// preview follow the kind and its settings; otherwise there is none.
     /// </summary>
-    private void OnMountainChanged()
-    {
-        if (Tools.Mode == ToolMode.Mountain)
-        {
-            View.ShapeRadius = MountainPanel.Spec.Reach;
-            View.MountainPreview = Mountain.Shape(MountainPanel.Spec);
-        }
-    }
+    private void ShowLandform() => View.Landform = Tools.Mode == ToolMode.Landform ? LandformPanel.Ghost(() => Tools.Brush.Noise) : LandformGhost.None;
 
     /// <summary>
-    /// A click with the Shape or Mountain tool: puts the shape, or the mountain, there.
+    /// A click with the Landform tool: puts the kind chosen's landform there (a formula's shape, a mountain or a
+    /// picture).
     /// </summary>
     /// <param name="x">Where, east-west.</param>
     /// <param name="z">Where, north-south.</param>
-    private void OnShapeClicked(float x, float z)
+    private void OnLandformClicked(float x, float z)
     {
-        if (Tools.Mode == ToolMode.Mountain)
+        switch (LandformPanel.Kind)
         {
-            _ = PutMountain(x, z);
-        }
-        else
-        {
-            PutShape(x, z);
+            case LandformKind.Mountain:
+                _ = PutMountain(x, z);
+                break;
+            case LandformKind.Picture:
+                PutPicture(x, z);
+                break;
+            default:
+                PutShape(x, z);
+                break;
         }
     }
 

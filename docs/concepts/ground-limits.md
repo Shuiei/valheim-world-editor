@@ -33,16 +33,17 @@ What this means in practice:
 ## No limit
 
 The **No limit: past the game's ±8 m** switch lets the ground tools move the ground up to 400 m from the generated
-ground: mountains, cliffs, canyons, deep caves. It is in the brush options and under the Area tool's Flatten, Raise
-and Lower (the same switch), and it is off each time the editor starts. The [Mountain](../mountain.md) tool and
-pasting a copy always go past the limit when they need to, and scripts do unless told not to.
+ground: mountains, cliffs, canyons, deep pits. It is one switch, on the **Mask** card next to the panel of every
+tool it governs (the sculpt brushes, Landform's formulas and pictures, Path and Region), and it is off each time the
+editor starts. The [Landform](../landform.md) tool's mountains and pasting a copy always go past the limit when they
+need to, and scripts do unless told not to.
 
 While you work, the part past ±8 m is kept as a separate lift on top of the ground; undo, History and **Restore** treat
 it like any other change. The status bar says which way the switch is each time you turn it.
 
 ![The same Raise stroke twice on flat ground: on the left stopped at 8 m with a red top, on the right a spire far higher](../images/no-limit.jpg)
 *The same stroke without and with No limit. Left, the ground stops 8 m up and its top turns red; right, it keeps
-rising. The brush panel shows the No limit switch.*
+rising. The switch is on the Mask card.*
 
 ### How it is saved: ground discs
 
@@ -120,9 +121,9 @@ The other tools say it their way:
 
 | Tool | How it shows the limit |
 |---|---|
-| [Path](../path.md) | The points of the line turn red, and the status bar says so. |
-| [Area](../area.md): Flatten, Raise, Lower | The cut-and-fill line says how much is out of reach: "(40 m³ out of reach: ±8 m limit)". |
-| Area: Heightmap | Points that cannot reach their height turn red, and the status bar counts them. |
+| [Path](../path.md) | The ground points that reached it turn red, and the status bar says so. |
+| [Region](../area.md): Flatten | The cut-and-fill line says how much is out of reach: "(40 m³ out of reach: ±8 m limit)". For Raise and Lower the line counts only the ground the limit lets move. |
+| Region: Heightmap | Points that cannot reach their height turn red, and the status bar counts them. |
 | [Script](../scripting.md) | With `Ground.NoLimit = false`, the result line counts the points that stopped. |
 
 Red ground is not an error: it is ground the game would not let go further. To go on, turn on **No limit**, or change
@@ -132,8 +133,9 @@ the plan (a river that follows low ground, a pad cut a little higher).
 
 **One height per metre.** The ground has one height point per metre: 65 × 65 points in a 64 m zone, neighbouring
 zones sharing their edge points. So a wall of ground always spans about a metre: it cannot be more upright than that,
-in the editor or in game, and the ground can never overhang. That is why a cave is dug ground roofed with rocks, like
-the game's own (see the [Path](../path.md) tool's Cave).
+in the editor or in game, and the ground can never overhang. A real tunnel or cave under the ground needs a
+mod that digs them, such as Tunnelheim (see
+[Edit a world made with Expand World, Riverheim or Tunnelheim](../guides/use-mods-worlds.md)).
 
 **Two triangles per square metre.** Each square metre is drawn as two triangles split along the same diagonal as in
 game, from its south-east to its north-west corner. An edge running north-west to south-east comes out clean; one
@@ -170,11 +172,11 @@ through, the tool works as usual.
 
 **A brush stroke is judged on the ground as it was when the stroke started.** So a Raise stroke on ground below the
 Mask's height keeps rising past it until you let go, and a stroke that changes the slope does not switch itself off
-halfway. Edits made all at once (Mountain, Shape, a paste, Stamp once, Path, the Area tool's actions) are each judged on
+halfway. Edits made all at once (Landform, a paste, Path, the Region tool's actions) are each judged on
 the ground just before them.
 
 Because there is no soft edge, sculpting with a Mask can leave a step where matching ground meets ground left out,
-most of all with Raise, Lower and Mountain. Smooth it afterwards with the Mask off.
+most of all with Raise, Lower and a Landform. Smooth it afterwards with the Mask off.
 
 ## How the tools shape the ground
 
@@ -198,7 +200,7 @@ ground towards the result. Because the aim stays the same, a second stroke over 
 and more bumps: it only comes closer to the same ground.
 
 The pattern is fixed to the world, not to the brush, so neighbouring strokes and areas join without seams. The
-Path tool's natural look, the Area tool's Naturalize and the Shape tool's `n(x, z)` use the same pattern; **New
+Path tool's natural look, the Region tool's Naturalize and the Landform tool's `n(x, z)` in a formula use the same pattern; **New
 pattern** changes it for all of them.
 
 ### Erosion
@@ -230,24 +232,3 @@ so the edge follows the line straight instead of stepping from point to point. W
 by up to 45 % either way and the edges are ragged, from the Naturalize pattern. A river's bed is a U shape below sea
 level that only digs, so it can run into a lake or the sea.
 
-### How a cave is built
-
-The ground cannot overhang, so a cave is dug ground roofed with rock, like the game's own. The Path tool's **Cave**
-builds it in four steps, as one undo step:
-
-1. **The floor** follows the lie of the land: at each point of the line it is the ground's average height over 6 m
-   either way along the line, minus **Depth**. Near each end the depth eases to nothing over 2.5 times the depth (at
-   least 8 m), which makes the entrances. Without No limit the floor stays within the game's 8 m.
-2. **The roof.** Boulders go only where the cave is deeper than **Headroom** by 1.5 m, so the entrances stay open:
-   one every 0.9 × **Width** metres, then more wherever the floor still sees the sky. Each is turned upside down, so
-   its flat side makes an even ceiling, then turned, tilted a little and sized at random, and set just high enough
-   that its underside clears the headroom.
-3. **The walls** are raised half a metre into the rock wherever a boulder's underside is above them, so no daylight
-   comes in at the sides.
-4. **Clearing.** Trees, rocks, ore, bushes and pickables in the trench (where it is more than half a metre deep) are
-   taken away.
-
-**By biome**, the roof uses heath boulders in the Plains, mountain rocks in the Mountains and the Deep North, coast
-boulders in the Ocean and forest boulders elsewhere. From above the roof looks like a rocky outcrop. Players can mine
-the boulders like any others, so a cave is not a safe vault. A closed loop makes a ring-shaped cave with one entrance
-where the ends meet.

@@ -34,15 +34,22 @@ public class TipsTests
         }
         w.MaskPanel.OnBox.IsChecked = true;
         Check(missing, w);
-        foreach (var m in new[] { ToolMode.Measure, ToolMode.Shape, ToolMode.Path, ToolMode.View })
+        foreach (var m in new[] { ToolMode.Measure, ToolMode.Path, ToolMode.View })
         {
             w.Tools.ChooseMode(m);
             Check(missing, w);
         }
-        w.Tools.ChooseMode(ToolMode.Area);
-        for (int i = 0; i < w.AreaPanel.ActionBox.ItemCount; i++)
+        // The Landform tool: each kind's rows.
+        w.Tools.ChooseMode(ToolMode.Landform);
+        foreach (var kind in Enum.GetValues<LandformKind>())
         {
-            w.AreaPanel.ActionBox.SelectedIndex = i;
+            w.LandformPanel.KindBox.SelectedIndex = (int)kind;
+            Check(missing, w);
+        }
+        w.Tools.ChooseMode(ToolMode.Area);
+        foreach (var act in AreaPanel.Actions)
+        {
+            w.AreaPanel.Choose(act);
             Check(missing, w);
         }
         w.Tools.ChooseMode(ToolMode.Place);
@@ -62,6 +69,14 @@ public class TipsTests
         Click(w.PlacePanel.KindsButton);
         Click(w.PlacePanel.KindsButton);
         Check(missing, w);
+        // Build in the world: the dock's tiles, the building bar, and each way to lay a piece.
+        w.Tools.ChooseBuild();
+        foreach (var lay in Enum.GetValues<BuildPanel.Lays>())
+        {
+            w.BuildPanel.SetLay(lay);
+            Check(missing, w);
+        }
+        w.BuildPanel.SetLay(BuildPanel.Lays.One);
         w.Tools.ChooseSelect();
         w.View.Select([0]);
         Check(missing, w);

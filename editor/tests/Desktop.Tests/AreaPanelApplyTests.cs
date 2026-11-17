@@ -26,7 +26,28 @@ public class AreaPanelApplyTests
         Assert.Single(r.S.Resets);
         Click(r.P.UnresetButton);
         Assert.Empty(r.S.Resets);
-        Assert.StartsWith("Cancelled reset of 1 zone(s)", r.S.UndoLabel);
+        Assert.StartsWith("Unmarked 1 zone(s)", r.S.UndoLabel);
+    }
+
+    [AvaloniaFact]
+    public async Task UnmarkAllTakesOffEveryMarkAsOneStepAndSaysWhenThereIsNone()
+    {
+        using var r = new SharedAreaPanelRun();
+        Click(r.P.UnresetAllButton);
+        Assert.Equal("No zone is marked for reset.", r.Said);
+        // One zone marked under the selection, one marked elsewhere (as the map marks them), outside the area shown.
+        r.P.Confirm = _ => Task.FromResult(true);
+        r.P.Choose(AreaPanel.Act.Reset);
+        await r.P.Apply();
+        r.S.Edits.SetReset(new Editing.ZoneReset(40, 40, true, false), true);
+        Assert.Equal(2, r.S.Resets.Count);
+        Click(r.P.UnresetAllButton);
+        Assert.Empty(r.S.Resets);
+        Assert.Equal("2 zone(s) unmarked: they will not be reset.", r.Said);
+        Assert.Equal("Unmarked 2 zone(s)", r.S.UndoLabel);
+        // One step: undone, both marks are back.
+        r.S.Undo();
+        Assert.Equal(2, r.S.Resets.Count);
     }
 
     [AvaloniaFact]

@@ -154,7 +154,7 @@ public sealed partial class HelpView
         }
         var bitmap = new Bitmap(stream);
         var image = new Image { Source = bitmap, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, MaxWidth = bitmap.Size.Width };
-        var frame = new Border { Child = image, CornerRadius = new CornerRadius(6), ClipToBounds = true, BorderBrush = Ui.Line, BorderThickness = new Thickness(1) };
+        var frame = new Border { Child = image, CornerRadius = Ui.ControlRadius, ClipToBounds = true, BorderBrush = Ui.Line, BorderThickness = new Thickness(1) };
         // A button: a click, or Enter and Space from the keyboard, shows it full size.
         var button = new Button
         {
@@ -204,10 +204,10 @@ public sealed partial class HelpView
     /// <summary>A code block: its lines as written, in a fixed-width font, scrolled sideways when wider than the page.</summary>
     private static Border Code(CodeBlock code) => new()
     {
-        Background = new SolidColorBrush(Color.Parse("#0f1216")),
+        Background = new SolidColorBrush(Color.Parse("#0d0a08")),
         BorderBrush = Ui.Line,
         BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(6),
+        CornerRadius = Ui.ControlRadius,
         Padding = new Thickness(12, 9),
         Child = new ScrollViewer
         {
@@ -240,7 +240,7 @@ public sealed partial class HelpView
             Background = new SolidColorBrush(colour, 0.08),
             BorderBrush = new SolidColorBrush(colour),
             BorderThickness = new Thickness(3, 0, 0, 0),
-            CornerRadius = new CornerRadius(0, 6, 6, 0),
+            CornerRadius = new CornerRadius(0, 3, 3, 0),
             Padding = new Thickness(12, 8),
         };
     }

@@ -48,7 +48,7 @@ public sealed partial class NewWorldPage : IDisposable
         var v = new TextBlock { Text = value, FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
         Grid.SetColumn(v, 2);
         row.Children.Add(v);
-        var item = new Border { Child = row, Padding = new Thickness(6, 4), CornerRadius = new CornerRadius(5), Background = Brushes.Transparent };
+        var item = new Border { Child = row, Padding = new Thickness(6, 4), CornerRadius = Ui.ControlRadius, Background = Brushes.Transparent };
         if (show != null)
         {
             item.Cursor = new Cursor(StandardCursorType.Hand);

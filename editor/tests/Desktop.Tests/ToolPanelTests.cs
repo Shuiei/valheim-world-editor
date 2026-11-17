@@ -52,10 +52,9 @@ public class ToolPanelTests
         var names = rail.Children.SkipLast(1).Select(c => c is TextBlock t ? t.Text : ((TextBlock)((StackPanel)((Grid)((Button)c).Content!).Children[0]).Children[1]).Text).ToList();
         Assert.Equal(
             [
-                "SCULPT", "Raise", "Lower", "Flatten", "Smooth", "Natural", "Erode", "Restore",
-                "EDIT", "Area", "Path", "Place",
-                "PAINT", "Dirt", "Cultivate", "Paved", "Clear",
-                "CREATE", "Shape", "Mountain", "Cave", "Dungeon", "Script", "Blueprints",
+                "SCULPT", "Raise", "Lower", "Flatten", "Smooth", "Naturalize", "Erode", "Restore", "Paint",
+                "EDIT", "Region", "Path", "Place", "Build",
+                "CREATE", "Landform", "Dungeon", "Script", "Blueprints",
                 "TOOLS", "Select", "Measure", "View",
             ],
             names);
@@ -83,7 +82,7 @@ public class ToolPanelTests
         w.Tools.ChooseMode(ToolMode.Path);
         w.PathPanel.NaturalBox.IsChecked = true;
         var brush = w.Session!.Brush;
-        var sliders = w.PathPanel.Card.GetLogicalDescendants().OfType<Slider>().Where(s => s.Maximum is 4 or 60).ToList();
+        var sliders = w.PathPanel.Card.GetLogicalDescendants().OfType<Slider>().Where(s => s.Maximum == 4 || (s.Maximum == 60 && s.Minimum == 4)).ToList();
         Assert.Equal(2, sliders.Count);
         sliders.Single(s => s.Maximum == 4).Value = 2.5;
         sliders.Single(s => s.Maximum == 60).Value = 30;

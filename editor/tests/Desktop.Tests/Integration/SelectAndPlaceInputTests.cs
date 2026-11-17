@@ -140,9 +140,9 @@ public class SelectAndPlaceInputTests
         Assert.StartsWith("Placed", s.UndoLabel);
         // The keys turn the pieces placed with the brush.
         Assert.True(input.Key(Key.OemPeriod, false, false));
-        Assert.Equal(1, w.PlaceTool.Rotation, 3);
+        Assert.Equal(15, w.PlaceTool.Rotation, 3);
         Assert.True(input.Key(Key.OemComma, true, false));
-        Assert.Equal(-14, w.PlaceTool.Rotation, 3);
+        Assert.Equal(14, w.PlaceTool.Rotation, 3);
     }
 
     [AvaloniaFact]

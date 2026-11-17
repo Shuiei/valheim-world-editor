@@ -70,13 +70,31 @@ public class PathToolBranchesTests
     public void AltPicksTheHeightOrTheRampsStart()
     {
         var p = new PathTool { Act = PathTool.Action.Flatten };
-        p.Down(new Vector2(5, 5), new Point(0, 0), Nowhere, ctrl: false, alt: true, shift: false, _ => 41.27f);
+        p.Down(new Vector2(5, 5), new Point(0, 0), Nowhere, ctrl: false, alt: true, _ => 41.27f);
         Assert.Equal(41.3f, p.Height, 3);
         p.Act = PathTool.Action.Ramp;
-        p.Down(new Vector2(5, 5), new Point(0, 0), Nowhere, ctrl: false, alt: true, shift: false, _ => 12f);
+        p.Down(new Vector2(5, 5), new Point(0, 0), Nowhere, ctrl: false, alt: true, _ => 12f);
         Assert.Equal(12, p.Start);
         Assert.True(p.RampEdited);
         Assert.Empty(p.Points);
+    }
+
+    // Ctrl + Alt, not Alt + Shift: that one is the Mask's height band, with a brush and with the Path tool alike.
+    [Fact]
+    public void CtrlAndAltPickTheRampsEnd()
+    {
+        var p = new PathTool { Act = PathTool.Action.Ramp };
+        float start = p.Start;
+        p.Down(new Vector2(5, 5), new Point(0, 0), Nowhere, ctrl: true, alt: true, _ => 18.04f);
+        Assert.Equal(18, p.End, 3);
+        Assert.Equal(start, p.Start);
+        Assert.True(p.RampEdited);
+        Assert.Empty(p.Points);
+        // Any other action has one height: Ctrl changes nothing.
+        p.Act = PathTool.Action.Flatten;
+        p.Down(new Vector2(5, 5), new Point(0, 0), Nowhere, ctrl: true, alt: true, _ => 22f);
+        Assert.Equal(22, p.Height);
+        Assert.Equal(18, p.End, 3);
     }
 
     [Fact]
@@ -86,7 +104,7 @@ public class PathToolBranchesTests
         p.Moved(null);
         p.Moved(new Vector2(1, 1));
         Assert.Empty(p.Points);
-        p.Down(new Vector2(10, 10), new Point(0, 0), Nowhere, ctrl: false, alt: false, shift: false, _ => 30);
+        p.Down(new Vector2(10, 10), new Point(0, 0), Nowhere, ctrl: false, alt: false, _ => 30);
         Assert.True(p.Drawing);
         p.Moved(null);
         p.Moved(new Vector2(11, 10));

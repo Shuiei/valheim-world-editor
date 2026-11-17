@@ -105,9 +105,9 @@ public class PathToolWindowTests
         w.PathPanel.EndBox.Value = 37;
         Assert.True(w.View.Path.RampEdited);
         Assert.Equal(37, w.View.Path.End);
-        // Alt + Shift + click: the ground's height for the end.
+        // Ctrl + Alt + click: the ground's height for the end.
         s.Shape(64, 20, Formula.Compile("2", []), 3, 0, "x");
-        Click(w, screen(64, 20), RawInputModifiers.Alt | RawInputModifiers.Shift);
+        Click(w, screen(64, 20), RawInputModifiers.Control | RawInputModifiers.Alt);
         Assert.Equal(32, w.View.Path.End, 1);
         Assert.Equal(2, w.View.Path.Points.Count);
     }

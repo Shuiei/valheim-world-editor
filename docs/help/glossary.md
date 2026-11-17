@@ -2,11 +2,12 @@
 
 The words the editor and this help use, A to Z. Each entry links to where it is explained.
 
-**Add-on.** A separate download that teaches the editor about a mod (Expand World, Riverheim, Tunnelheim), unpacked
-into the `addons` folder next to the editor. See [Install the editor](../start/install.md#add-ons-for-mods).
+**Add-on.** A separate download that teaches the editor about a mod (Expand World, Riverheim, Tunnelheim, Railroads,
+ValheimRAFT), unpacked into the `addons` folder next to the editor. See
+[Install the editor](../start/install.md#add-ons-for-mods).
 
 **Alt biome.** A variant of a biome the game gives some areas from the seed (Dark Meadows, Rock Black Forest…), with
-what grows there. The map's readout names it. See [Area, copy and paste](../area.md) (Regrow nature).
+what grows there. The map's readout names it. See [Region, copy and paste](../area.md) (Regrow nature).
 
 **Anchor.** The middle of the Workshop's plot, at ground level: the point a Homestead blueprint measures every piece
 from. See [The Workshop](../workshop.md).
@@ -16,9 +17,6 @@ can still be undone. See [Applying live](../concepts/saving-and-history.md#apply
 
 **Area.** The block of zones open in the 3D window, from 3 × 3 to 17 × 17 zones. See
 [The area](../concepts/areas-and-zones.md#the-area).
-
-**Area tool.** The tool (`B`) that selects a box or polygon of ground to level, clear, copy, restore or reset. Not the
-same as the area above. See [Area, copy and paste](../area.md).
 
 **Auto.** A live-mode switch that applies every change to the game as soon as you make it. See
 [Live mode](../live-mode.md).
@@ -38,14 +36,24 @@ pasted into any world. See [The Workshop](../workshop.md).
 
 **Bridge.** Short for WorldEditorBridge, the editor's plugin in the game. See **Plugin**.
 
-**Brush.** A tool you drag over the ground: the sculpt brushes (Raise, Lower, Flatten…) and the paint brushes (Dirt,
-Cultivate, Paved, Clear paint). Place has a brush too. See [Sculpt and paint](../terrain.md).
+**Brush.** A tool you drag over the ground: the sculpt brushes (Raise, Lower, Flatten…) and the Paint brush with its
+four paints (Dirt, Cultivate, Paved, Clear paint). Place has a brush too. See [Sculpt and paint](../terrain.md).
 
-**Built by.** The player written as the builder of the pieces you place, chosen in the View panel. See
+**Build dock.** The Build tool's panel along the bottom of the window, with the game's pieces by tab, in a world and
+in the Workshop. See [The Build dock](../build.md#the-build-dock).
+
+**Building bar.** The bar of building settings beside the tool rail, shared by Build, Select and Paste: Snap, Grid,
+Turn by, Lift and Built by. See [The building bar](../build.md#the-building-bar).
+
+**Built by.** The player written as the builder of the pieces you build, paste or replace, chosen on
+[the building bar](../build.md#the-building-bar). See
 [Player-built pieces](../concepts/objects.md#player-built-pieces).
 
 **Clipboard.** What the last copy or cut holds, kept until you copy again, even after the editor restarts. See
-[Area, copy and paste](../area.md).
+[Region, copy and paste](../area.md).
+
+**Cut (the view's).** The status bar's slider that hides every object above a height, to see and work inside
+buildings. Not the same as cutting to the clipboard (`Ctrl+X`). See [Cut](../editor-basics.md#cut).
 
 **Discard.** The top bar's button that undoes everything not saved or applied yet. See
 [Undo a step, take back one change, or discard everything](../guides/undo-changes.md).
@@ -82,6 +90,9 @@ the hammer. Not needed to paste blueprints in the editor. See [The Workshop](../
 **Inspector.** The panel that shows and changes what an object holds: a chest's items, a sign's text, a portal's tag.
 See [Select](../select.md).
 
+**Landform.** A mound, crater, mountain or height picture put into the ground whole, with one click of the Landform
+tool (`G`). See [Landform](../landform.md).
+
 **Limit marks.** Red on ground that reached the game's 8 m limit. See
 [Limit marks](../concepts/ground-limits.md#limit-marks).
 
@@ -103,7 +114,8 @@ neighbours. See [The locked edge](../concepts/areas-and-zones.md#the-locked-edge
 **MCP.** The way Claude Code and Claude Desktop call the editor's tools when you allow Claude to connect. See
 [Claude](../claude.md).
 
-**No limit.** A brush setting that moves ground past the game's 8 m limit, saved as ground discs. See
+**No limit.** A switch on the Mask card that lets the ground tools move ground past the game's 8 m limit, saved as
+ground discs. See
 [No limit](../concepts/ground-limits.md#no-limit).
 
 **Pending.** A change made in the editor and not saved or applied yet. The top bar counts them. See
@@ -116,6 +128,10 @@ neighbours. See [The locked edge](../concepts/areas-and-zones.md#the-locked-edge
 editor read and change the running world. See [Install the editor](../start/install.md#the-plugin-for-live-editing).
 
 **Prefab.** The game's internal name for a kind of object, like `Beech1` or `woodwall`. Searches accept it.
+
+**Region tool.** The tool (`B`) that selects a box or polygon of ground to level, paint, copy or bring back, or to
+pick the objects inside it for the Select tool. Not the same as the **Area**, the block of zones open in 3D. See
+[Region, copy and paste](../area.md).
 
 **Reload.** In live mode, reading the world again from the game. See [Live mode](../live-mode.md).
 
@@ -143,8 +159,8 @@ and checks it. See [Saving a world](../concepts/saving-and-history.md#saving-a-w
 **Step.** One change in History: a brush stroke, a click, a paste, a script run. `Ctrl+Z` undoes one step. See
 [Pending changes](../concepts/saving-and-history.md#pending-changes).
 
-**Stamp.** A brush shape made from a height picture, put into the ground whole or painted. See
-[Sculpt and paint](../terrain.md).
+**Stamp.** A brush shape made from a height picture: you paint with it. The [Landform](../landform.md#picture) tool
+puts the same pictures into the ground whole, in one click. See [Sculpt and paint](../terrain.md#stamps).
 
 **Support check.** The Workshop's colours for how well each piece is held up, as in the game's build mode. See
 [The support check](../concepts/objects.md#the-support-check).

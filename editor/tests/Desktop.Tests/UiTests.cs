@@ -16,8 +16,8 @@ public class UiTests
     {
         var child = new TextBlock();
         var b = Ui.AsCard(new Border { VerticalAlignment = VerticalAlignment.Top, Width = 200, Child = child });
-        Assert.Equal((Ui.Panel, Ui.Line, Ui.Pad, 10.0), (b.Background, b.BorderBrush, b.Padding, b.CornerRadius.TopLeft));
-        Assert.Equal(1, b.BoxShadow.Count);
+        Assert.Equal((Ui.Panel, Ui.Line, Ui.Pad, Ui.CardRadius), (b.Background, b.BorderBrush, b.Padding, b.CornerRadius));
+        Assert.Equal(2, b.BoxShadow.Count);
         Assert.Equal((VerticalAlignment.Top, 200.0), (b.VerticalAlignment, b.Width));
         Assert.Same(child, b.Child);
     }

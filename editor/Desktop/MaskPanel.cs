@@ -9,7 +9,8 @@ namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// The Mask's panel (brushes, Path, Shape and Area), like the web editor's: on or off, biomes, height and slope ranges,
-/// and paint. An empty box means no limit.
+/// and paint. An empty box means no limit. Under the mask, on the same card, the ground tools' other shared setting:
+/// No limit, for every tool it governs.
 /// </summary>
 public sealed class MaskPanel
 {
@@ -67,6 +68,31 @@ public sealed class MaskPanel
     /// The mask's warning about settings that let (almost) nothing through; hidden when there is none.
     /// </summary>
     internal TextBlock WarningText { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(240, 150, 90)), TextWrapping = TextWrapping.Wrap };
+
+    /// <summary>
+    /// No limit: the ground tools go past the game's ±8 m (Ground.NoLimit); off at every start. The one switch for
+    /// every tool it governs (the sculpt brushes and stamps, Shape, Path, Area and its heightmap imports).
+    /// </summary>
+    internal CheckBox NoLimitBox { get; } = new CheckBox { Content = Lang.T("mask.label.noLimit"), FontSize = 12 }.Tip("mask.noLimit");
+    /// <summary>
+    /// No limit was switched (on: true).
+    /// </summary>
+    public event Action<bool>? NoLimitChanged;
+    /// <summary>
+    /// No limit's row, under the mask: shown for the tools it governs (<see cref="ShowNoLimit"/>).
+    /// </summary>
+    private readonly Control _noLimitRow;
+
+    /// <summary>
+    /// Shows No limit's row, or hides it: the window shows it with the tools No limit governs.
+    /// </summary>
+    /// <param name="shown">Whether the tool in use keeps to the game's ±8 m unless No limit is on.</param>
+    internal void ShowNoLimit(bool shown) => _noLimitRow.IsVisible = shown;
+
+    /// <summary>
+    /// Whether No limit's row is shown (for tests).
+    /// </summary>
+    internal bool NoLimitShown => _noLimitRow.IsVisible;
 
     /// <summary>
     /// A number box that starts empty (no limit).
@@ -139,10 +165,19 @@ public sealed class MaskPanel
                 new TextBlock { Text = Lang.T("mask.hint.limits"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
             },
         };
+        NoLimitBox.IsCheckedChanged += (_, _) => NoLimitChanged?.Invoke(NoLimitBox.IsChecked == true);
+        // A line apart from the mask: it is another setting, kept here because it too holds for every ground tool.
+        _noLimitRow = new Border
+        {
+            BorderBrush = Ui.Line,
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(0, 6, 0, 0),
+            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { NoLimitBox, Ui.Col(Ui.HelpButton(() => HelpTopics.NoLimit), 1) } },
+        };
         Card = Ui.AsCard(new Border
         {
             VerticalAlignment = VerticalAlignment.Top,
-            Child = new StackPanel { Width = 280, Spacing = 6, Children = { new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { OnBox, Ui.Col(Ui.HelpButton(() => HelpTopics.Mask), 1) } }, _body } },
+            Child = new StackPanel { Width = 280, Spacing = 6, Children = { new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { OnBox, Ui.Col(Ui.HelpButton(() => HelpTopics.Mask), 1) } }, _body, _noLimitRow } },
         });
         mask.Changed += Fill;
         Fill();

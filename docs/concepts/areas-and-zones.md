@@ -52,7 +52,7 @@ and drop what it drops (see [Follow](#follow)). Opening another area shows hidde
 
 ## The locked edge
 
-The outermost line of ground points of the area never changes. No brush, path, Area action, paste or script moves
+The outermost line of ground points of the area never changes. No brush, path, Region action, paste or script moves
 it, and the Place tool puts nothing on it.
 
 The reason: those points are shared with the zones just outside the area, which the editor has not loaded. If the
@@ -79,21 +79,21 @@ way (about 1 km) and says so; then move the area with the arrows, or open anothe
 
 Follow waits, and the status bar says why, while growing would lose something: the world is being saved or read,
 objects are selected, a brush stroke is under way, a path is drawn and not applied, or changes are still being sent to
-a live game. It does not wait for an Area box, a Place line, grid or zone or a measure: growing drops them.
+a live game. It does not wait for a Region box, a Place line, grid or polygon or a measure: growing drops them.
 
 ## Resetting zones
 
 A reset makes the game generate a zone again, as if nobody had ever been there. Use it to get a Valheim update's new
-content in places nobody built, or to bring back a wood or a dungeon. You mark zones with the [Area](../area.md) tool
+content in places nobody built, or to bring back a wood or a dungeon. You mark zones with the [Region](../area.md) tool
 or across the whole world from the [map](../map.md); nothing happens until you save or apply live.
 
 When the reset is written:
 
 - **Everything in the zone goes**: trees, rocks, ore, pickables, ruins, dungeon entrances and their rooms, spawners,
   items lying about and creatures, tamed animals included (move them out first).
-- **Some things stay**: players' tombstones always; player-built pieces with **Keep my buildings** on (the map's
-  reset always keeps them, and by default leaves out zones that hold any); the ground edits, unless you
-  chose to undo them too.
+- **Some things stay**: players' tombstones always; player-built pieces with **Keep my buildings** on (on the map,
+  zones that hold any are then left out altogether; switched off, buildings go with the rest); the ground edits,
+  unless you chose to undo them too.
 - **The game makes it again** the next time a player comes near: new vegetation, and its location built again at its
   place, with fresh loot and creatures. Live, a zone with a player near it is made again at once.
 

@@ -15,7 +15,7 @@ public sealed partial class PlaceTool
     public Func<string, (Vector3 Min, Vector3 Max)?> ModelBox { get; set; } = _ => null;
 
     /// <summary>
-    /// The brush's radius (shared with the sculpt brushes) and strength; its noise also drives Clumping.
+    /// The brush's radius (shared with the sculpt brushes); its noise also drives Clumping.
     /// </summary>
     public Brush Brush { get; set; } = new();
 
@@ -119,8 +119,20 @@ public sealed partial class PlaceTool
     /// </summary>
     public float GridStep { get; set; }
 
-    /// <summary>Building pieces one by one (the Workshop's Build): no brush circle, no painting by dragging.</summary>
+    /// <summary>
+    /// Building pieces (the Build dock drives the tool: in a world, the Workshop, a dungeon): no brush circle, no
+    /// painting by dragging, no mask.
+    /// </summary>
     public bool Building { get; set; }
+
+    /// <summary>
+    /// Building one piece at a time where the game's hammer would put it (see <see cref="AimRay"/>), not along a line
+    /// drawn on the ground.
+    /// </summary>
+    public bool Hammering => Building && Mode == Modes.Brush;
+
+    /// <summary>The brush's planting rate while dragging, 0.05 to 1 (the Place panel's Rate): more a second the higher.</summary>
+    public float Rate { get; set; } = 0.5f;
 
     /// <summary>How a building piece snaps (see <see cref="SnapMode"/>).</summary>
     public enum SnapModes
@@ -159,7 +171,10 @@ public sealed partial class PlaceTool
     /// </summary>
     public (Vector3 O, Vector3 D, float? GroundT)? AimRay { get; set; }
 
-    /// <summary>Building: Ctrl + wheel lifts (or lowers) the piece from where the cursor points, in metres.</summary>
+    /// <summary>
+    /// Building: PgUp, PgDn and Ctrl + wheel lift (or lower) the piece from where the cursor points, in metres; a line's
+    /// pieces stand that much above the ground.
+    /// </summary>
     public float HeightNudge { get; set; }
 
     /// <summary>Building: the cut (world height); pieces above it are not pointed at.</summary>

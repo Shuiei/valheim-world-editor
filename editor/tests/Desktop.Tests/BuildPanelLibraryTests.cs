@@ -42,6 +42,8 @@ public sealed class BuildPanelLibraryTests : IDisposable
     public void TheLibraryIsSearchedByNameDescriptionAndTags()
     {
         var w = new MainWindow(load: false);
+        // The editor's older blueprints are listed too: none here (not the ones of whoever runs the tests).
+        w.Blueprints.Store = new BlueprintStore(Path.Combine(_dir, "older"));
         var p = w.BuildPanel;
         p.Folder = () => _dir;
         // No folder yet: nothing to list.

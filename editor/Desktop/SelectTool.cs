@@ -35,8 +35,14 @@ public sealed partial class SelectTool
     /// (see Landed; pieces as one block: see GroundBlock).
     /// </summary>
     public bool OnGround { get; set; } = true;
-    /// <summary>Snap moved building pieces to the pieces around.</summary>
+    /// <summary>Snap moved building pieces to the pieces around (the building bar's Snap: Auto, not Free).</summary>
     public bool SnapToPieces { get; set; } = true;
+    /// <summary>The grid moved pieces that are not snapped go by, in metres (the building bar's; 0: off).</summary>
+    public float GridStep { get; set; }
+    /// <summary>The step , and . turn the selection by, in degrees (the building bar's); Shift, finer: 1° at most.</summary>
+    public float TurnStep { get; set; } = 22.5f;
+    /// <summary>The step PgUp, PgDn and Ctrl + wheel lift the selection by, in metres (the building bar's); Shift, finer: a fifth.</summary>
+    public float LiftStep { get; set; } = 0.5f;
     /// <summary>
     /// A drag on empty ground draws an outline on the ground that picks everything above it, from the ground up; off
     /// (the default), a rectangle on the screen that picks only what is seen inside it (see ScreenBox).

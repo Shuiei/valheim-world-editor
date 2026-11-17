@@ -27,7 +27,7 @@ SFTP or a web panel's file manager): most game servers rented from a host do not
 
 ## Settings
 
-Live mode works as offline, with these controls in the top bar and the View panel:
+Live mode works as offline, with these controls in the top bar:
 
 | Control | What it does |
 |---|---|
@@ -36,7 +36,7 @@ Live mode works as offline, with these controls in the top bar and the View pane
 | **Auto** | On: every stroke, placement and undo is applied at once, without pressing **Apply live**. Switching it on sends what is already waiting. Remembered between runs. |
 | Pending counter | "Not applied: …" in amber, or "All applied". The map's line reads "Not applied yet: …". |
 | **Apply live** | Takes the place of **Save to world**. Sends every pending change to the game. |
-| **View → PLAYERS** | Connected players by name. Choose one under **Go to**, then **Go** (see [Players](#players)). |
+| Player list, **Go** | Beside **LIVE**, while a player is connected: the connected players by name. Choose one, then **Go** (see [Players](#players)). |
 
 ## Apply live, Auto and Reload
 
@@ -83,10 +83,10 @@ The details are in [Following the game](concepts/live-editing.md#following-the-g
 ## Players
 
 Connected players are drawn at their place with their name: blue posts in the 3D view, blue dots on the map.
-They move as the players do (every 2 seconds in 3D, every 5 on the map). In **View → PLAYERS**, pick a player
-under **Go to** and press **Go**: the camera goes to them, and the area moves to them when they are outside it.
+They move as the players do (every 2 seconds in 3D, every 5 on the map). In the top bar, beside **LIVE**, pick a
+player in the list and press **Go**: the camera goes to them, and the area moves to them when they are outside it.
 
-<!-- picture: live-players.jpg: live world with two players connected, 3D view at about 60 m showing two blue posts with their names over a base, View panel open on PLAYERS with a name chosen under Go to and the Go button visible -->
+<!-- picture: live-players.jpg: live world with two players connected, 3D view at about 60 m showing two blue posts with their names over a base, the top bar's player list beside LIVE with a name chosen and the Go button visible -->
 
 ## Moving things
 
@@ -120,10 +120,10 @@ asked once before undoing or redoing them.
 
 Mods make most of their objects while the game runs, so the editor learns them from the game when a live world
 opens. A modded game's objects then have their names, the [Place](place.md) list offers them, the
-[Workshop](workshop.md)'s Build dock lists the mods' pieces on its **Mod pieces** tab with their cost (one mod at a
-time, chosen in the list down its side; at most 300 pieces show, search for the others; the mods installed on this
-computer are listed there even without a live game, with their cost unknown), and the inspector says which
-mod an object comes from ("From the mod …" when Jötunn is installed, else "From a mod").
+[Build](build.md) dock, in a world as in the [Workshop](workshop.md), lists the mods' pieces on its **Mod pieces** tab
+with their cost (one mod at a time, chosen in the list down its side; at most 300 pieces show, search for the others;
+the mods installed on this computer are listed there even without a live game, with their cost unknown), and the
+inspector says which mod an object comes from ("From the mod …" when Jötunn is installed, else "From a mod").
 
 What the editor learns is kept (`mod-catalogue.json` in the editor's data folder), so the same server's world
 opened later from its files shows the mods' objects too. Each connection adds to it.

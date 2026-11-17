@@ -67,10 +67,17 @@ public class MainWindowKeysTests
         w.View.Paste.Clip = BlueprintsPanelRun.Clip("Hut", "Beech1");
         Press(w, Key.V, PhysicalKey.V, "v", RawInputModifiers.Control);
         Assert.Equal(ToolMode.Paste, w.Tools.Mode);
-        // F mirrors.
+        // X mirrors; F does not (it is Walk and Fly everywhere).
         bool mirror = w.View.Paste.Mirror;
+        Press(w, Key.X, PhysicalKey.X, "x");
+        Assert.NotEqual(mirror, w.View.Paste.Mirror);
         Press(w, Key.F, PhysicalKey.F, "f");
         Assert.NotEqual(mirror, w.View.Paste.Mirror);
+        Assert.Equal(GlView.EyeMode.Walk, w.View.Eye);
+        // Back to the usual view.
+        w.View.CycleEye();
+        w.View.CycleEye();
+        Assert.Equal(GlView.EyeMode.Orbit, w.View.Eye);
         // Ctrl + wheel lifts the paste (Shift: by 0.1 m).
         decimal offset = w.PastePanel.OffsetBox.Value ?? 0;
         Assert.True(w.View.CtrlWheel!(1, false));
@@ -84,7 +91,7 @@ public class MainWindowKeysTests
         Assert.False(w.View.CtrlWheel!(1, false));
         // Enter with no area drawn: nothing to apply; Backspace with no point does nothing.
         Press(w, Key.Enter, PhysicalKey.Enter, "\r");
-        Assert.Equal("Select an area first.", w.MessageText.Text);
+        Assert.Equal("Select a region first.", w.MessageText.Text);
         Press(w, Key.Back, PhysicalKey.Backspace, null);
         Assert.Empty(w.View.Area.Points);
     }
@@ -138,9 +145,12 @@ public class MainWindowKeysTests
         Assert.Null(w.View.PickObjectOnce);
         Assert.Equal("Picking cancelled.", w.MessageText.Text);
         Assert.Equal(ToolMode.Paste, w.Tools.Mode);
-        // The Paste tool's F is taken, so the view's F (walk) never sees it.
-        Assert.True(Handled(w, Key.F));
-        Assert.Equal(GlView.EyeMode.Orbit, w.View.Eye);
+        // The Paste tool takes X (mirror) and leaves F to the view, where it is Walk and Fly as in every tool.
+        Assert.True(Handled(w, Key.X));
+        Assert.True(w.View.Paste.Mirror);
+        Assert.False(Handled(w, Key.F));
+        Assert.True(w.View.Paste.Mirror);
+        Assert.Equal(GlView.EyeMode.Walk, w.View.Eye);
         // The Dungeon tool turns Delete down with no room chosen, and no later rule takes it.
         w.Tools.ChooseMode(ToolMode.Dungeon);
         Assert.False(Handled(w, Key.Delete));

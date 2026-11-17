@@ -99,7 +99,7 @@ public sealed partial class MainWindow
             Orientation = Orientation.Horizontal,
             Spacing = 4,
             VerticalAlignment = VerticalAlignment.Center,
-            Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, SupportBox, CutBox, _pendingPill, DiscardButton, SaveButton, Sep(), MaterialsButton, HistoryButton, ViewButton, HelpButton },
+            Children = { UndoButton, RedoButton, Sep(), _liveBadge, PlayersControl(), ReloadButton, AutoApplyBox, SupportBox, _pendingPill, DiscardButton, SaveButton, Sep(), MaterialsButton, HistoryButton, ViewButton, HelpButton },
         };
         Grid.SetColumn(right, 1);
         bar.Children.Add(left);
@@ -135,15 +135,15 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Keeps the right-hand panels above the Build dock while it is shown (it spans the bottom of the view), and back down
-    /// to the status bar when it goes.
+    /// Keeps the right-hand panels and the tool column (the rail scrolls when it is too short) above the Build dock while
+    /// it is shown (it spans the bottom of the view), and back down to the status bar when it goes.
     /// </summary>
     private void KeepRightPanelsAboveDock()
     {
         void Fit()
         {
             double bottom = BuildPanel.Card.IsVisible ? BuildPanel.Card.Margin.Bottom + BuildPanel.Card.Bounds.Height + Ui.Gap : 58;
-            foreach (var right in new[] { ViewPanelCard, History.Card, Inspector.Card, HelpCard, Materials.Card })
+            foreach (var right in new[] { ViewPanelCard, History.Card, Inspector.Card, HelpCard, Materials.Card, Tools.Rail.Parent as Control }.OfType<Control>())
             {
                 right.Margin = new Thickness(right.Margin.Left, right.Margin.Top, right.Margin.Right, bottom);
             }

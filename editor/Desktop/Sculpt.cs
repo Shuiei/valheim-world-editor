@@ -30,8 +30,8 @@ public static partial class Sculpt
         {
             return ErodeFrame(g, b, s, cx, cz, reach, rate, mask);
         }
-        // Smoothing reads the heights from before this frame: the brush rectangle and a point around it, row by row.
-        var frame = new Frame(rate, s.Tool == BrushTool.Smooth ? TakeSnapshot(g, x0, x1, z0, z1) : null, x1 - x0 + 3, x0, z0, Brush.PaintOf(s.Tool));
+        // Smoothing reads the heights from before this frame: the brush rectangle and the kernel's reach round it.
+        var frame = new Frame(rate, s.Tool == BrushTool.Smooth ? HeightsBefore.Take(g, x0, z0, x1, z1, GroundOps.BrushSmoothReach) : null, Brush.PaintOf(s.Tool));
         float ox = g.OriginX, oz = g.OriginZ;
         bool any = false;
         foreach (var (gx, gz) in Unlocked(g, x0, z0, x1, z1))
@@ -49,7 +49,7 @@ public static partial class Sculpt
             }
             s.Touched.Add(p);
             any = true;
-            ApplyPoint(g, b, s, frame, gx, gz, p, w);
+            ApplyPoint(g, b, s, frame, p, w);
         }
         // Nothing changed (locked ground, the mask or the brush's shape left it all out): nothing to redraw.
         return any ? (x0 - 1, z0 - 1, x1 + 1, z1 + 1) : null;

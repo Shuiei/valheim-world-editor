@@ -29,7 +29,7 @@ public static class ClaudeGuide
 		has loaded it, so use preview_seed's landmarks until then.
 
 		Every control of the editor is yours to use too, as the user would: list_controls lists them
-		(View switches, the Workshop's Cut and Support check, every tool's settings, the rail of tools,
+		(View switches, the view's Cut, the Workshop's Support check, every tool's settings, the rail of tools,
 		buttons) with their ids and values, set_control sets one. Use them to see what you need (hide
 		trees, cut the roofs away, switch off the support colours) and put them back when done.
 
@@ -59,7 +59,7 @@ public static class ClaudeGuide
 
 		The game's dungeons (Frost Caves, crypts, mines), 5000 m above their entrances: list_dungeons,
 		dungeon_rooms, then add_dungeon_room, remove_dungeon_room, close_dungeon_ends, set_dungeon_door.
-		Rivers, moats, tunnels and caves, ramps: dig_path. Hills, mesas, craters, dunes: stamp; a
+		Rivers, moats, ramps: dig_path. Hills, mesas, craters, dunes: stamp; a
 		heightmap picture: import_heightmap. A mask keeps a change to some ground (gentle slopes, low
 		ground, a biome, paved ground). To make worked ground look natural again:
 		shape_ground (smooth, naturalize, erode, restore) and regrow_nature. reset_zones throws away

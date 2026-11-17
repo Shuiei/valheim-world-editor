@@ -6,7 +6,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// Claude's ground tools while the window shows another language (the made-up one: PseudoLang): biomes are still
 /// found by their English names, and what Claude is told about a wrong biome, settings that let nothing through, or
-/// a path or cave dug along a line stays English.
+/// a path dug along a line stays English.
 /// </summary>
 [Collection("DataDir")]
 public sealed class ClaudeToolsGroundLangTests
@@ -25,16 +25,13 @@ public sealed class ClaudeToolsGroundLangTests
     }
 
     [AvaloniaFact]
-    public async Task ClaudesPathsAndCavesStayEnglish()
+    public async Task ClaudesPathsStayEnglish()
     {
         using var pseudo = new PseudoLang();
         using var r = new ClaudeRun();
         await r.OpenArea();
         string flat = await r.T.DigPath("flatten", [[-20f, 0f], [20f, 0f]]);
-        Assert.StartsWith("Flatten to height along ", flat);
+        Assert.StartsWith("Flatten along ", flat);
         Assert.DoesNotContain(PseudoLang.Open, flat);
-        string cave = await r.T.DigPath("cave", [[-20f, 15f], [20f, 15f]], depth: 8, headroom: 4);
-        Assert.StartsWith("Dug ", cave);
-        Assert.DoesNotContain(PseudoLang.Open, cave);
     }
 }

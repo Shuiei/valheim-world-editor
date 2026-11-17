@@ -239,10 +239,10 @@ public class WindowFlowTests
         // Copy, cut and paste with nothing to work on.
         w.Tools.ChooseMode(ToolMode.Area);
         w.Copy();
-        Assert.Equal("Select an area first.", w.MessageText.Text);
+        Assert.Equal("Select a region first.", w.MessageText.Text);
         w.MessageText.Text = "";
         w.Cut();
-        Assert.Equal("Select an area first.", w.MessageText.Text);
+        Assert.Equal("Select a region first.", w.MessageText.Text);
         w.Tools.ChooseSelect();
         w.Copy();
         Assert.Equal("Select objects to copy first.", w.MessageText.Text);
@@ -250,11 +250,11 @@ public class WindowFlowTests
         w.Cut();
         Assert.Equal("Select objects to copy first.", w.MessageText.Text);
         w.StartPaste();
-        Assert.Equal("Copy an area first (Area tool, Ctrl+C).", w.MessageText.Text);
+        Assert.Equal("Copy a region first (Region tool, Ctrl+C).", w.MessageText.Text);
         // A path needs two points; a shape a formula that works.
         w.ApplyPath();
         Assert.Equal("Draw a line with at least two points first.", w.MessageText.Text);
-        w.ShapePanel.FormulaBox.Text = "x +* 2";
+        w.LandformPanel.Formula.FormulaBox.Text = "x +* 2";
         w.PutShape(32, 32);
         Assert.Equal("Fix the formula first.", w.MessageText.Text);
         // The number pad picks tools like the number row.

@@ -47,6 +47,23 @@ public sealed partial class PasteTool
     public float Gap { get; set; }
     /// <summary>Where the mouse is (grid point), for the preview.</summary>
     public Vector2? At { get; set; }
+
+    /// <summary>The grid the paste goes by, in metres from the area's middle (the building bar's; 0: off).</summary>
+    public float GridStep { get; set; }
+
+    /// <summary>A grid point as the paste takes it: rounded to <see cref="GridStep"/> from the block's middle when the grid is on.</summary>
+    /// <param name="g">The grid point under the cursor.</param>
+    /// <param name="w">The block's width in points.</param>
+    /// <param name="h">The block's depth in points.</param>
+    public Vector2 OnGrid(Vector2 g, int w, int h)
+    {
+        if (GridStep <= 0)
+        {
+            return g;
+        }
+        float mx = (w - 1) / 2f, mz = (h - 1) / 2f;
+        return new Vector2(mx + MathF.Round((g.X - mx) / GridStep) * GridStep, mz + MathF.Round((g.Y - mz) / GridStep) * GridStep);
+    }
     /// <summary>A setting or the clip changed.</summary>
     public event Action? Changed;
     /// <summary>Raises <see cref="Changed"/>.</summary>

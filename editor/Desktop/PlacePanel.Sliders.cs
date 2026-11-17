@@ -8,6 +8,9 @@ public sealed partial class PlacePanel
     /// <summary>Brush: its radius, 1 to 30 m.</summary>
     internal Slider SizeSlider { get; private set; } = null!;
 
+    /// <summary>Brush: how fast a drag plants, 0.05 to 1 (the tool's own: not the sculpt brushes' strength).</summary>
+    internal Slider RateSlider { get; private set; } = null!;
+
     /// <summary>Objects per 100 m², 0.2 to 20.</summary>
     internal Slider DensitySlider { get; private set; } = null!;
 
@@ -45,6 +48,8 @@ public sealed partial class PlacePanel
     private void WireSizeSliders(PlaceTool t)
     {
         SizeSlider = Slide(1, 30, 0.5, t.Brush.Radius, _sizeV, v => $"{v:0.#} m", v => { t.Brush.Radius = v; t.Notify(); });
+        RateSlider = Slide(0.05, 1, 0.05, t.Rate, _rateV, v => $"{v:0.00}", v => { t.Rate = v; if (!_filling) { Memory.Rate = v; Memory.SaveLater(); } });
+        RateSlider.Tip("place.rate");
         DensitySlider = Slide(0.2, 20, 0.2, t.Density, _densV, v => $"{v:0.0}", v => { t.Density = v; t.Notify(); });
         SpacingSlider = Slide(0.5, PlaceTool.MaxSpacing, 0.5, t.Spacing, _spV, v => $"{v:0.#} m", v => { t.Spacing = v; t.Notify(); });
         ClumpSlider = Slide(0, 100, 5, t.Clump, _clV, v => $"{v:0}%", v => { t.Clump = v; Sync(); t.Notify(); });
@@ -73,5 +78,5 @@ public sealed partial class PlacePanel
 
     /// <summary>The heading of the mode's own settings (Brush, Along the line, Grid, Zone fill).</summary>
     /// <summary>The size slider's shown value.</summary>
-    private readonly TextBlock _sizeV = new(), _densV = new(), _spV = new(), _clV = new(), _paV = new(), _tiV = new(), _roV = new(), _evV = new(), _wiV = new(), _ceV = new();
+    private readonly TextBlock _sizeV = new(), _densV = new(), _spV = new(), _clV = new(), _paV = new(), _tiV = new(), _roV = new(), _evV = new(), _wiV = new(), _ceV = new(), _rateV = new();
 }

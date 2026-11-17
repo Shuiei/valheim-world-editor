@@ -159,19 +159,19 @@ public class GlViewSelectPointerTests
     }
 
     [AvaloniaFact]
-    public void PasteAndShapeClicksGoToWhoeverListens()
+    public void PasteAndLandformClicksGoToWhoeverListens()
     {
         var b = new BareGlView(TestScenes.Flat(2));
         var at = b.At(5, 30, 5);
         // Nobody listening yet: nothing happens.
         b.V.Mode = ToolMode.Paste;
         b.Click(at);
-        b.V.Mode = ToolMode.Shape;
+        b.V.Mode = ToolMode.Landform;
         b.Click(at);
         var pasted = new List<Vector2>();
         var shaped = new List<(float X, float Z)>();
         b.V.PasteClicked += pasted.Add;
-        b.V.ShapeClicked += (x, z) => shaped.Add((x, z));
+        b.V.LandformClicked += (x, z) => shaped.Add((x, z));
         b.Click(at);
         b.V.Mode = ToolMode.Paste;
         b.Click(at);

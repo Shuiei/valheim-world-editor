@@ -5,7 +5,7 @@ public sealed partial class AreaTool
 {
     /// <summary>The action inside the selection, faded by the soft edge; locked points are left alone.</summary>
     /// <param name="g">The ground to change.</param>
-    /// <param name="b">The brush: Naturalize's bumps and size, Erode's rest angle and random.</param>
+    /// <param name="b">The brush: Naturalize's bumps, bump size and pattern, Erode's rest angle and random.</param>
     /// <param name="act">The action.</param>
     /// <param name="height">Flatten's height, in metres.</param>
     /// <param name="amount">Raise and Lower's amount, in metres.</param>
@@ -22,14 +22,12 @@ public sealed partial class AreaTool
         if (act == GroundAction.Erode)
         {
             var set = new HashSet<int>();
-            var ((x0, z0, x1, z1), eroded) = Erosion.Area(g, a, b.RestAngle, b.Random, set);
+            var ((x0, z0, x1, z1), eroded) = Erosion.Region(g, a.Cells, (a.X0, a.Z0, a.X1, a.Z1), b.RestAngle, b.Random, set);
             return (set.ToList(), (x0 - 1, z0 - 1, x1 + 1, z1 + 1), eroded);
         }
-        int rNat = Math.Max(2, Math.Min(8, (int)MathF.Round(b.NoiseSize / 3)));
-        // The heights before the action, for Smooth and Naturalize's blur only: over the selection's box and the
-        // blur's reach round it (every point a blur reads).
-        int reach = act == GroundAction.Smooth ? 3 : act == GroundAction.Natural ? rNat : -1;
-        var change = new CellChange(g, b, act, height, amount, paint, HeightSnapshot.Take(g, a, reach), rNat);
+        // The heights before the action, for Smooth and Naturalize only: over the selection's box and the reach round
+        // it (every point they read).
+        var change = new CellChange(g, b, act, height, amount, paint, HeightsBefore.Take(g, a.X0, a.Z0, a.X1, a.Z1, ReachOf(act, b)));
         bool clamped = false;
         foreach (var (p, w) in a.Cells)
         {
