@@ -7,7 +7,7 @@ das Speichern, der Verlauf und das Panel Ansicht.
 **Wo:** Zuerst öffnet sich die Startseite; eine Welt öffnet sich auf ihrer [Karte](map.md), dann **In 3D bearbeiten** · **Taste:** `?` oder
 `F3` für die Hilfekarte, `F1` für diese Hilfe beim aktiven Werkzeug · **Funktioniert in:** gespeicherten Welten, live, der Werkstatt
 
-![Der 3D-Editor mit gewähltem Anheben: Werkzeugleiste, Panel Anheben, obere Leiste, Panel Ansicht und Statusleiste](images/overview.jpg)
+![Der 3D-Editor mit gewähltem Anheben: Werkzeugleiste, Panel Anheben, obere Leiste, Panel Ansicht und Statusleiste](images/overview.webp)
 *Eine kleine Basis in einem Bereich von 3 × 3, der Pinsel Anheben gewählt (sein Ring auf dem Gras). Links: die Werkzeugleiste und das
 Werkzeugpanel. Oben: die obere Leiste. Rechts: das Panel Ansicht. Unten: die Statusleiste, die den Boden unter dem Mauszeiger anzeigt.*
 
@@ -25,7 +25,7 @@ Jede Änderung wartet als [ausstehend](concepts/saving-and-history.md#ausstehend
 
 ## Die Startseite
 
-![Die Startseite des Editors](images/start-home.jpg)
+![Die Startseite des Editors](images/start-home.webp)
 *Startseite: die Karte des laufenden Spiels mit **Live bearbeiten**, dann die zuletzt geöffneten Welten und Baupläne.*
 
 Das Seitenmenü hat **Startseite**, dann zwei Abschnitte, **Welt bearbeiten** und **Erstellen**. Hierher kommst du von der Karte
@@ -98,7 +98,7 @@ zeigen **Karte**, **Neu laden**, **Verlauf** und **Ansicht** nur noch ihre Symbo
 In der Ansicht trägt jedes neue Objekt, das noch nicht gespeichert oder angewendet ist, einen **grünen Punkt**, außer solange es ausgewählt ist (dann markiert es
 sein Umriss). **Ansicht → Ungespeichertes markieren** blendet die Punkte aus; die Objekte bleiben.
 
-![Zehn junge Buchen, frisch gepflanzt auf geebnetem Boden, jede mit einem grünen Punkt am Fuß, einer in der Ecke vergrößert](images/unsaved.jpg)
+![Zehn junge Buchen, frisch gepflanzt auf geebnetem Boden, jede mit einem grünen Punkt am Fuß, einer in der Ecke vergrößert](images/unsaved.webp)
 *Frisch gepflanzte junge Bäume: Jeder trägt einen kleinen grünen Punkt am Fuß, bis er gespeichert ist (einer in der Ecke
 vergrößert), und die Zeile der ausstehenden Änderungen zählt sie: „Ungespeichert: 1 Zone, 10 hinzugefügt“.*
 
@@ -127,7 +127,7 @@ Werkstatt behält sie nur **Bauen** (`U` oder `T`), **Auswahl** und **Ansicht**.
 
 ### Gehen und Fliegen
 
-![Die Basis aus Augenhöhe im Modus Gehen](images/walk.jpg)
+![Die Basis aus Augenhöhe im Modus Gehen](images/walk.webp)
 *Modus Gehen (`F`): die Basis, wie ein Spieler sie sieht, der am Feld steht, die Augen 1,8 m über dem Boden.*
 
 `F` wechselt reihum zwischen drei Ansichten:
@@ -168,7 +168,7 @@ Messung: Diese fallen weg, wenn der Bereich sich verschiebt, wächst oder seine 
 Welt. Schließe Valheim (das Spiel oder den Server), bevor du speicherst: Ein laufendes Spiel überschreibt deine Änderungen, wenn es das nächste
 Mal speichert.
 
-![Die Frage In die Welt speichern über einem angehobenen Hügel und neuen Bäumen: was geschrieben wird, der Weltordner, drei Warnungen, Speichern und Abbrechen](images/save-confirm.jpg)
+![Die Frage In die Welt speichern über einem angehobenen Hügel und neuen Bäumen: was geschrieben wird, der Weltordner, drei Warnungen, Speichern und Abbrechen](images/save-confirm.webp)
 *Nichts wird geschrieben, bevor du auf **Speichern** klickst: Die Frage zählt, was hineinkommt, nennt den **Weltordner** und warnt dich, Valheim vorher zu schließen.*
 
 Das Ergebnis sagt, was gespeichert wurde („4 Zone(n), 2 gelöschte(s) Objekt(e), 12 neue(s) Objekt(e) in Speicherstand #37 gespeichert.“), und führt
@@ -217,7 +217,7 @@ beenden** / **Weiter bearbeiten**.
 
 ## Verlauf
 
-![Das Panel Verlauf nach fünf Bearbeitungen, die letzte rückgängig gemacht](images/history.jpg)
+![Das Panel Verlauf nach fünf Bearbeitungen, die letzte rückgängig gemacht](images/history.webp)
 *Die letzte Änderung wurde mit **Zurück bis hier** rückgängig gemacht: Sie ist ausgegraut und bietet **Bis hier wiederholen** an.*
 
 **Verlauf** (`L`) führt jede Änderung der Sitzung auf, die neueste zuerst. Jede Zeile zeigt den Namen des Schritts (das Werkzeug oder die
@@ -312,7 +312,7 @@ liest die Leiste „Schnitt bei N m“ oder „Schnitt: aus“. Er ist bei jedem
 
 ## Die Hilfekarte
 
-![Die Hilfekarte Steuerung bis zum Ende gescrollt: die letzten Tasten, dann Dieser Computer mit der Bildrate und der Grafikkarte](images/help.jpg)
+![Die Hilfekarte Steuerung bis zum Ende gescrollt: die letzten Tasten, dann Dieser Computer mit der Bildrate und der Grafikkarte](images/help.webp)
 *Die Karte **Steuerung** (`F3`), bis zum Ende gescrollt: die letzten Tasten, dann **Dieser Computer** mit der Bildrate, der
 Grafikkarte und **Bildraten aufzeichnen**.*
 
@@ -357,7 +357,7 @@ Editor findet die üblichen Orte selbst: Valheim in jeder Steam-Bibliothek (auch
 BepInEx im Valheim-Ordner und in den Standardprofilen von r2modman und Thunderstore Mod Manager, und Welten in
 den eigenen Weltordnern von Valheim (auch denen von Proton).
 
-![Einstellungen in zwei Hälften: Sprache, die Ordner und Claude (aus) links; Mod-Erweiterungen, Add-ons, Verlauf und Speichern rechts](images/settings.jpg)
+![Einstellungen in zwei Hälften: Sprache, die Ordner und Claude (aus) links; Mod-Erweiterungen, Add-ons, Verlauf und Speichern rechts](images/settings.webp)
 *Die Einstellungen scrollen: ihr Anfang links, ihr Ende rechts, bis hinunter zu **Verlauf** und **Speichern**. **Darstellung** erscheint nur
 unter Windows.*
 

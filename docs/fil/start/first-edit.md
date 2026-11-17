@@ -30,7 +30,7 @@ tabi nito. Higit pa tungkol sa mga kopya: [Mag-backup ng mundo bago mag-edit](..
 3. Sa side panel, piliin ang **3 × 3 zone (192 m)** sa listahan ng laki sa tabi ng **I-edit sa 3D**, saka i-click ang
    **I-edit sa 3D**.
 
-![Ang mapa ng mundo, may napiling zone, kasama ang I-edit sa 3D at ang listahan ng laki](../images/map.jpg)
+![Ang mapa ng mundo, may napiling zone, kasama ang I-edit sa 3D at ang listahan ng laki](../images/map.webp)
 *Ang mapa: pumili ng zone ang isang click (ang asul na parisukat); binubuksan ito ng **I-edit sa 3D** sa laking
 napili sa tabi nito.*
 
@@ -45,7 +45,7 @@ ang tanaw.
 3. Sa bukas na lupa sa tabi ng base mo, pindutin nang matagal ang kaliwang button ng mouse at igalaw ang mouse nang
    paikot-ikot nang ilang segundo.
 
-![Ang brush na Itaas sa ibabaw ng maliit na punso, bukas ang panel nito](../images/sculpt.jpg)
+![Ang brush na Itaas sa ibabaw ng maliit na punso, bukas ang panel nito](../images/sculpt.webp)
 *Itaas: ang balangkas ng brush sa lupa, isang punsong itinaas sa tabi nito, at ang panel na may **Laki** at **Lakas**.*
 
 **Ang dapat mong makita:** tumataas ang lupa sa ilalim ng brush, at sinasabi ng top bar ang "Hindi naka-save: 1 zone"
@@ -59,7 +59,7 @@ pagbabago.
    preset**.
 3. I-drag ang mouse sa paanan ng burol mo.
 
-![Ang brush ng Paglagay na nagtatanim ng mga puno, napili ang preset na Kakahuyan ng Meadows](../images/plant-brush.jpg)
+![Ang brush ng Paglagay na nagtatanim ng mga puno, napili ang preset na Kakahuyan ng Meadows](../images/plant-brush.webp)
 *Paglagay gamit ang **Brush** at ang preset na **Kakahuyan ng Meadows**: ipinapakita ng brush nang aninag ang mga
 susunod na puno; nakatayo sa paligid nito ang mga naitanim na.*
 
@@ -84,7 +84,7 @@ Higit pa: [Mag-undo ng hakbang, bawiin ang isang pagbabago, o itapon ang lahat](
 2. Basahin ang tanong: sinasabi nito ang isusulat nito at ang **Folder ng mundo**. Tiyaking ang mundo mo ang folder,
    hindi ang kopya, saka i-click ang **I-save**.
 
-![Ang tanong na Pag-save sa mundo sa ibabaw ng itinaas na burol at mga bagong puno: ang isusulat, ang Folder ng mundo, tatlong babala, I-save at Kanselahin](../images/save-confirm.jpg)
+![Ang tanong na Pag-save sa mundo sa ibabaw ng itinaas na burol at mga bagong puno: ang isusulat, ang Folder ng mundo, tatlong babala, I-save at Kanselahin](../images/save-confirm.webp)
 *Ang tanong bago mag-save: tingnan ang linyang **Folder ng mundo**, saka i-click ang **I-save**.*
 
 **Ang dapat mong makita:** sinasabi ng status bar ang "Na-save ang lupa ng 1 zone, … bagong object sa save #…",

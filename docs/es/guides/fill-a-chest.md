@@ -22,7 +22,7 @@ antes, ver [Encontrar un objeto, un artículo de un cofre o un cartel](find-thin
 Cuántos se recorta a la pila más grande que el juego permite para ese artículo. El contenido cambiado sigue siendo
 del cofre: un cofre que nadie ha abierto no se llena encima con el botín del juego.
 
-![Un cofre de madera en el Inspector: tres huecos llenos y el cuarto recibiendo IronScrap, Cuántos 20](../images/guide-chest-slot.jpg)
+![Un cofre de madera en el Inspector: tres huecos llenos y el cuarto recibiendo IronScrap, Cuántos 20](../images/guide-chest-slot.webp)
 *Clic en el hueco 4, IronScrap elegido en **Buscar un artículo…** y **Cuántos** en 20; Wood, Coins y Resin llenan los
 tres primeros huecos. **Aplicar cambios** los mete en el cofre.*
 

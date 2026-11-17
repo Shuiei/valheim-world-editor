@@ -8,11 +8,11 @@ l'outil juste en dessous dans la barre d'outils.
 **Où :** barre d'outils, section **ÉDITION** · **Touche :** `T` · **Fonctionne dans :** mondes enregistrés, en direct
 (l'Atelier n'a que [Bâtir](build.md))
 
-![Le préréglage Bois des Prairies en mode Pinceau sur une prairie dégagée](images/plant-brush.jpg)
+![Le préréglage Bois des Prairies en mode Pinceau sur une prairie dégagée](images/plant-brush.webp)
 *Les arbres et buissons transparents dans le cercle du pinceau sont exactement ce que place un clic ; le panneau montre
 le préréglage Bois des Prairies et ses types.*
 
-![Le pinceau Bois des Prairies sur une prairie vide, avant et après un clic](images/place-brush-before-after.jpg)
+![Le pinceau Bois des Prairies sur une prairie vide, avant et après un clic](images/place-brush-before-after.webp)
 *À gauche : l'aperçu transparent dans le cercle du pinceau. À droite : le même endroit après un clic, les arbres et
 buissons debout là où l'aperçu les montrait.*
 
@@ -79,7 +79,7 @@ les types dont votre monde n'a encore aucun exemplaire et ceux de vos mods. Les 
 les cadavres n'y sont pas, ni les pièces du marteau et du plateau de service : celles-ci sont dans le panneau
 [Bâtir](build.md). Les pousses et cultures du cultivateur sont dans les deux. **Terminé** la ferme.
 
-![La carte Choisir les types en train de chercher « rock »](images/place-chooser.jpg)
+![La carte Choisir les types en train de chercher « rock »](images/place-chooser.webp)
 *La carte Choisir les types en train de chercher « rock », avec BigRock coché : la catégorie Rochers compte 1 type coché
 à côté de son total, et BigRock est en tête de la ligne Récents.*
 
@@ -114,7 +114,7 @@ quart de tour.
 
 ### Ligne
 
-![Placement en mode Ligne : des bouleaux le long d'une courbe lisse passant par cinq points à côté d'un chemin pavé, le panneau Placement sur Ligne et Points](images/place-line.jpg)
+![Placement en mode Ligne : des bouleaux le long d'une courbe lisse passant par cinq points à côté d'un chemin pavé, le panneau Placement sur Ligne et Points](images/place-line.webp)
 *Mode Ligne avec **Points** : des bouleaux tous les 4 m le long d'une courbe lisse passant par cinq points, à côté d'un
 chemin pavé, avant **Placer (Enter)**. Les arbres pâles sont l'aperçu.*
 
@@ -139,13 +139,13 @@ chemin pavé, avant **Placer (Enter)**. Les arbres pâles sont l'aperçu.*
 
 ### Grille
 
-![Carottes et navets sur une grille tournée, vus de dessus](images/plant-grid.jpg)
+![Carottes et navets sur une grille tournée, vus de dessus](images/plant-grid.webp)
 *Carottes et navets sur une grille tournée de 15°, vus de près et d'en haut pour que la culture de chaque case soit
 visible. La ligne orange du panneau avertit que les cultures ont besoin de terre cultivée.*
 
 ### Polygone
 
-![Un polygone dessiné point par point](images/plant-zone.jpg)
+![Un polygone dessiné point par point](images/plant-zone.webp)
 *Un polygone dessiné point par point, avec des buissons et de jeunes arbres en aperçu à des endroits aléatoires à
 l'intérieur.*
 
@@ -168,7 +168,7 @@ vous voulez. Les **Nids de créatures** (nids de greydwarfs, tas d'os…) contin
 autour d'eux jusqu'à leur destruction ; leur ligne indique combien et à quelle distance (« Greydwarf, Greydwarf_Elite ·
 jusqu'à 3 autour, dans un rayon de 5 m »). Voir [Points d'apparition](concepts/objects.md#points-dapparition).
 
-![Des points d'apparition près d'une cabane, l'un sélectionné et ouvert dans l'Inspecteur](images/spawn-points.jpg)
+![Des points d'apparition près d'une cabane, l'un sélectionné et ouvert dans l'Inspecteur](images/spawn-points.webp)
 *De près, deux points d'apparition de sanglier et un de draugr près d'une cabane. La ligne de l'Inspecteur du draugr
 sélectionné indique ce qu'il fait apparaître et s'il revient.*
 

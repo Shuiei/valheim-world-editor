@@ -70,7 +70,7 @@ después de cada actualización de Valheim, una tarjeta dice **Preparando el asp
 los archivos del juego durante unos segundos. Los mundos, los servidores y el Taller se abren en cuanto dice **El
 aspecto del juego está listo.**
 
-![El apartado Página de inicio de la página de inicio](../images/start-home.jpg)
+![El apartado Página de inicio de la página de inicio](../images/start-home.webp)
 *La página de inicio: el menú lateral a la izquierda, Página de inicio a la derecha. Una vez abierto un mundo, aparece
 en Recientes.*
 
@@ -79,7 +79,7 @@ en Recientes.*
 El editor busca por sí solo en todas las bibliotecas de Steam (también en Steam de Flatpak). Si no encuentra el juego,
 la tarjeta dice **Obtener el aspecto del juego** y «No se encontró Valheim en este equipo.»
 
-![Página de inicio sin Valheim encontrado: la tarjeta Obtener el aspecto del juego con sus cuatro pasos, el cuadro de carpeta, Examinar… y Usar](../images/start-valheim-missing.jpg)
+![Página de inicio sin Valheim encontrado: la tarjeta Obtener el aspecto del juego con sus cuatro pasos, el cuadro de carpeta, Examinar… y Usar](../images/start-valheim-missing.webp)
 *Los pasos de la tarjeta dicen dónde encontrar la carpeta; pégala en el cuadro (o **Examinar…**) y luego **Usar**.*
 
 1. En Steam, haz clic derecho en Valheim en tu Biblioteca y luego en **Administrar › Ver archivos locales**. La
@@ -124,13 +124,13 @@ Para tu propio juego:
    juego** muestra *en ejecución*. El editor encuentra por sí solo el plugin y su token, incluidos los perfiles de los
    gestores de mods. Haz clic en **Editar en vivo**.
 
-![Mi juego en la página de inicio, con el juego en marcha](../images/start-game.jpg)
+![Mi juego en la página de inicio, con el juego en marcha](../images/start-game.webp)
 ***Mi juego** con el juego en marcha: la tarjeta nombra el mundo, los jugadores conectados y dónde se encontró el
 plugin (aquí un perfil de r2modman), con **Editar en vivo**.*
 
 Hasta que el juego está en marcha, **Mi juego** dice lo que falta, paso a paso.
 
-![Mi juego antes de configurarlo: la tarjeta «Tu juego necesita BepInEx y el plugin WorldEditorBridge» con sus tres pasos](../images/start-game-setup.jpg)
+![Mi juego antes de configurarlo: la tarjeta «Tu juego necesita BepInEx y el plugin WorldEditorBridge» con sus tres pasos](../images/start-game-setup.webp)
 ***Mi juego** antes de instalar BepInEx: los tres pasos, que se hacen una sola vez. La página detecta el juego por sí
 sola en cuanto está en marcha.*
 

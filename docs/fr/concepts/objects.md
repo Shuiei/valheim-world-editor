@@ -175,7 +175,7 @@ le centre de masse de chaque pièce), et colore chaque pièce aux couleurs du mo
 | Grausten | 2 000 | 100 | 33 % | 10 % |
 | Ancien | 5 000 | 100 | 25 % | 7 % |
 
-![Murs de pierre avec un surplomb rouge à côté de murs de bois dont le surplomb passe au vert, jaune, orange](../images/concept-support-stone-wood.jpg)
+![Murs de pierre avec un surplomb rouge à côté de murs de bois dont le surplomb passe au vert, jaune, orange](../images/concept-support-stone-wood.webp)
 *À gauche, trois murs de pierre empilés : bleu clair sur le sol, vert au-dessus, et le mur qui avance de 2 m depuis le
 sommet en rouge, le « 1 tomberait » dans la barre du haut. À droite, des murs de bois en saillie sur 6 m depuis un
 poteau : vert, puis jaune, puis orange.*
@@ -265,7 +265,7 @@ Les **Nids de créatures** sont le type visible : nids de Greydwarfs, tas d'os 
 créatures autour d'eux jusqu'à leur destruction (« Greydwarf, Greydwarf_Elite · jusqu'à 3 autour, dans un rayon de
 5 m »).
 
-![Points d'apparition de sanglier et de draugr près d'une cabane, l'un sélectionné et ouvert dans l'Inspecteur](../images/spawn-points.jpg)
+![Points d'apparition de sanglier et de draugr près d'une cabane, l'un sélectionné et ouvert dans l'Inspecteur](../images/spawn-points.webp)
 *Des points d'apparition près d'une cabane : une simple boîte pour chacun, avec un marqueur orange au-dessus. Le point
 d'apparition de draugr sélectionné est ouvert dans l'Inspecteur, dont la ligne dit ce qu'il fait apparaître.*
 
@@ -289,7 +289,7 @@ Une copie (depuis l'outil Région ou un plan) contient :
 
 La copie de l'outil Sélection est placée de la même façon.
 
-![Une cabane de pierre collée dans le flanc d'un monticule avec Dégager le site activé, avant et après le clic](../images/paste-clear-site.jpg)
+![Une cabane de pierre collée dans le flanc d'un monticule avec Dégager le site activé, avant et après le clic](../images/paste-clear-site.webp)
 *Avant le clic (à gauche), le contour du collage entaille le monticule ; après (à droite), le sol qui gêne la cabane
 est creusé jusqu'à son plancher, dans la même étape d'annulation.*
 

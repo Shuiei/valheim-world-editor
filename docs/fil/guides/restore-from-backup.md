@@ -21,7 +21,7 @@ mundo (`<World>_backup_auto-<date>`), o isang backup ng server na kinopya sa com
 7. Pindutin ang **Ibalik sa backup (Enter)**.
 8. Tingnan ang resulta. Kung tama, **I-save sa mundo** (o **I-apply nang live**).
 
-![Isang kubong ginriefing na ibinalik mula sa backup ng laro, bago at pagkatapos](../images/area-backup.jpg)
+![Isang kubong ginriefing na ibinalik mula sa backup ng laro, bago at pagkatapos](../images/area-backup.webp)
 *Kaliwa: isang polygon sa paligid ng kubong nawalan ng bahagi ng malapit na pader nito, napili ang **Balik sa isang
 backup**, bukas ang listahang **Backup** sa backup ng laro at naka-on ang **Mga gusali mo**. Kanan: pagkatapos ng
 **Ibalik sa backup (Enter)**, buo na ulit ang pader; pinapangalanan ng linya sa itaas ng button ang save ng backup,

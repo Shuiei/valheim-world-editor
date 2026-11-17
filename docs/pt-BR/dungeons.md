@@ -7,7 +7,7 @@ e construa dentro delas.
 **Onde:** barra de ferramentas, seção **CRIAR** · **Tecla:** nenhuma · **Funciona em:** mundos salvos, ao vivo; o
 gerador também na Oficina (**Biblioteca** → **Gerar masmorra…**)
 
-![Uma masmorra Burial Chambers feita das salas do próprio jogo, cortada, com o painel Masmorra](images/dungeon-rooms.jpg)
+![Uma masmorra Burial Chambers feita das salas do próprio jogo, cortada, com o painel Masmorra](images/dungeon-rooms.webp)
 *Uma masmorra das salas do próprio jogo (Burial Chambers, 25 salas), 5000 m acima e cortada 2 m acima do piso.
 Quadrados laranja e azuis marcam onde as salas se encontram. **Excluir sala (Del)** fica acinzentado até uma sala ser
 selecionada.*
@@ -34,7 +34,7 @@ geram a mesma masmorra de peças de construção; uma feita [das salas do própr
 também depende de onde fica a entrada e para onde ela está voltada. Para o passo a passo completo, veja
 [Gerar uma masmorra e colocá-la no mundo](guides/make-a-dungeon.md).
 
-![As escolhas do gerador no painel Masmorra, e o plano dos dois níveis desenhado maior ao lado](images/dungeon-generate.jpg)
+![As escolhas do gerador no painel Masmorra, e o plano dos dois níveis desenhado maior ao lado](images/dungeon-generate.webp)
 ***Gerar uma masmorra** para uma masmorra da Floresta Negra, Média, 2 níveis, chefe atrás de um portão. Ao lado do
 painel, o plano desenhado maior, um nível em cada: a sala verde da chave no nível 1, a arena vermelha com o ponto
 magenta do portão e a sala do tesouro dourada no nível 2, e o resumo embaixo deles.*
@@ -99,7 +99,7 @@ left out`).
 | **Abrir na Oficina** | Grava a masmorra (de peças de construção) como projeto e a abre na [Oficina](workshop.md) para alterá-la: veja [Abrir na Oficina](#abrir-na-oficina). Não aparece com **As salas do próprio jogo**. |
 | **Ir para a masmorra** / **Ir para a entrada** | Aparecem depois que a masmorra é colocada (e até `Ctrl+Z` revertê-la): levam a visão para cima, até o primeiro nível com os tetos cortados, e de volta para baixo. |
 
-![A entrada de uma masmorra gerada, no chão](images/dungeon-entrance.jpg)
+![A entrada de uma masmorra gerada, no chão](images/dungeon-entrance.webp)
 *O monte de uma burial chamber colocado por **Colocar no mundo**, com a porta voltada para a câmera. Embaixo do resumo,
 **Ir para a masmorra** e **Ir para a entrada** agora aparecem.*
 
@@ -142,7 +142,7 @@ masmorra**, no [painel Visão](editor-basics.md), as mostra ou oculta.
 Uma masmorra perto da qual ninguém esteve ainda não tem salas: o painel diz *O jogo ainda não montou esta masmorra
 (ninguém esteve perto dela).* Visite-a no jogo e abra a área de novo.
 
-![Uma Frost Cave vista de cima depois de Ir para a masmorra, cortada 4 m acima do piso, com saídas abertas verdes e quadrados de porta laranja](images/dungeon-inside.jpg)
+![Uma Frost Cave vista de cima depois de Ir para a masmorra, cortada 4 m acima do piso, com saídas abertas verdes e quadrados de porta laranja](images/dungeon-inside.webp)
 *Uma Frost Cave depois de **Ir para a masmorra**, com os tetos cortados 4 m acima do piso: o painel a lista (`Frost Cave, 17 room(s), at
 -640, -350`). Molduras verdes marcam saídas abertas (uma sala foi excluída); quadrados laranja, onde as salas se
 encontram sem porta.*
@@ -160,7 +160,7 @@ Cada sala tem **aberturas**, as passagens onde ela encontra a sala seguinte. O j
 Uma sala que se sobreporia a outra, ou que passaria do espaço da masmorra (64 × 64 m em volta do centro da zona dela,
 para a maioria dos tipos), fica vermelha e a linha avisa. O jogo monta a lista mesmo assim: é só um aviso.
 
-![Um corredor de gelo mostrado transparente numa saída aberta verde, escolhido na lista SALAS](images/dungeon-add-room.jpg)
+![Um corredor de gelo mostrado transparente numa saída aberta verde, escolhido na lista SALAS](images/dungeon-add-room.webp)
 *`cave_new_icecorridor01` escolhido em **SALAS** (filtrado com "icecorridor") e apontado para uma saída aberta: ele
 aparece ali transparente, juntado do jeito do jogo. A linha na parte de baixo mostra `17 room(s), 4 open end(s).`*
 
@@ -206,7 +206,7 @@ Data ativos, o gerador, a lista de salas e as salas desenhadas seguem esses arqu
 
 ## Abrir na Oficina
 
-![Uma masmorra gerada de peças de construção no lote da Oficina, cortada, com o salão de entrada e o portal](images/workshop-dungeon.jpg)
+![Uma masmorra gerada de peças de construção no lote da Oficina, cortada, com o salão de entrada e o portal](images/workshop-dungeon.webp)
 *Uma masmorra gerada (um nível) aberta no lote da Oficina e cortada a 3 m, com o painel Construir de volta na aba
 **Peças**: no topo, o salão de entrada com o portal onde os jogadores chegam; abaixo dele, a arena do chefe.*
 

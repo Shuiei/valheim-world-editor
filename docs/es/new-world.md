@@ -6,7 +6,7 @@ Mira el mundo de una semilla antes de que exista, busca entre muchas semillas un
 **Dónde:** página de inicio, **Crear** → **Un mundo nuevo** → **Crear un mundo nuevo** · **Tecla:** ninguna ·
 **Funciona en:** la página de inicio (no hace falta tener ningún mundo abierto)
 
-![El mundo de una semilla en la página Un mundo nuevo: tierra coloreada por bioma, el inicio, altares de los jefes y lugares de los comerciantes marcados, los datos a la derecha](images/new-world.jpg)
+![El mundo de una semilla en la página Un mundo nuevo: tierra coloreada por bioma, el inicio, altares de los jefes y lugares de los comerciantes marcados, los datos a la derecha](images/new-world.webp)
 *El punto rojo es el inicio, los rombos morados son los altares de los jefes, y los puntos amarillos, verdes y rosas
 son los lugares de los comerciantes. La columna de la derecha enumera los datos de la semilla, aquí desplazada hasta
 los altares más cercanos de los jefes.*
@@ -66,7 +66,7 @@ los pondrá el juego: el editor reproduce las reglas de colocación del juego, l
 
 ## Mazmorras
 
-![La misma semilla con cuatro tipos de mazmorra como pequeños cuadrados de colores, y la lista Mazmorras (las más cercanas)](images/new-world-dungeons.jpg)
+![La misma semilla con cuatro tipos de mazmorra como pequeños cuadrados de colores, y la lista Mazmorras (las más cercanas)](images/new-world-dungeons.webp)
 *Cuatro tipos activados: cada pequeño cuadrado es una mazmorra, y su color, su tipo, como en los interruptores y en
 **Mazmorras (las más cercanas)** (distancia, bioma, cuántas hay en el mundo y a menos de 2 km).*
 
@@ -102,7 +102,7 @@ Una masa de tierra es tierra unida a tierra sin cruzar agua más profunda.
 
 ## Buscar una semilla
 
-![Buscar una semilla: la lista de deseos y luego las mejores semillas encontradas, cada una como un pequeño mapa con su semilla y su puntuación](images/new-world-find.jpg)
+![Buscar una semilla: la lista de deseos y luego las mejores semillas encontradas, cada una como un pequeño mapa con su semilla y su puntuación](images/new-world-find.webp)
 *Los deseos (aquí una gran masa de tierra con tierra alrededor, un Pantano a menos de 1500 m y una Montaña a menos de
 2000 m, 150 semillas); las mejores semillas encontradas en **Semillas encontradas**, las mejores primero. Se hizo clic
 en la primera: su borde se ilumina y su mundo llena el mapa grande.*

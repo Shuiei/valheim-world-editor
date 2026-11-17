@@ -45,7 +45,7 @@ Mapapalitan ang folder sa ibang pagkakataon sa **Mga setting** → **Folder ng l
 **Subukan ulit** o tingnan ang folder sa Mga setting; kung pumalya ulit, iulat ito kasama ang log
 ([sa ibaba](#ang-log-at-mga-ulat-ng-bug)).
 
-![Home na hindi nahanap ang Valheim: ang card na Kunin ang itsura ng laro kasama ang apat na hakbang nito, ang kahon ng folder, Mag-browse… at Gamitin](../images/start-valheim-missing.jpg)
+![Home na hindi nahanap ang Valheim: ang card na Kunin ang itsura ng laro kasama ang apat na hakbang nito, ang kahon ng folder, Mag-browse… at Gamitin](../images/start-valheim-missing.webp)
 *"Hindi nahanap ang Valheim sa computer na ito.": piliin ang folder na may `valheim_Data`, saka **Gamitin**.*
 
 ## Nagpapakita ng mga hakbang ang Ang laro ko
@@ -109,7 +109,7 @@ i-edit na lang ang mga file ng mundo nito, gaya sa
 Sa **Gumawa ako ng sariling tunnel**, ang "Nothing answers on 127.0.0.1:…" o "No answer from 127.0.0.1:… within … s"
 (walang sumasagot) ay nangangahulugang hindi bukas ang tunnel mo, o hindi tumatakbo ang server kasama ang plugin.
 
-![Ang form na Isang dedicated server na napunan para sa 127.0.0.1, SSH port 2222, pagkatapos ng Kumonekta: ang mensaheng "No answer from 127.0.0.1:2222" sa ilalim ng button](../images/start-server-error.jpg)
+![Ang form na Isang dedicated server na napunan para sa 127.0.0.1, SSH port 2222, pagkatapos ng Kumonekta: ang mensaheng "No answer from 127.0.0.1:2222" sa ilalim ng button](../images/start-server-error.webp)
 *Pinindot ang Kumonekta nang walang sumasagot sa address: "No answer from 127.0.0.1:2222. Check the address and that SSH
 is enabled on the server." Tingnan ang **Address ng server** at **SSH port**.*
 
@@ -169,7 +169,7 @@ ito**:
 3. Suriin ang resulta: nakabinbin na ngayon ang mga pagbabago mo sa save ng laro. Wala pang naisusulat.
 4. Isara ang Valheim (o ihinto ang server), saka pindutin ulit ang **I-save sa mundo**.
 
-![Ang tanong na Na-save ng laro ang mundong ito: ang nangyari, ang ginagawa ng Dalhin ang mga pagbabago ko, at ang mga button na Dalhin ang mga pagbabago ko at Hindi ngayon](../images/game-saved-replay.jpg)
+![Ang tanong na Na-save ng laro ang mundong ito: ang nangyari, ang ginagawa ng Dalhin ang mga pagbabago ko, at ang mga button na Dalhin ang mga pagbabago ko at Hindi ngayon](../images/game-saved-replay.webp)
 *Tinanggihan ang pag-save dahil nag-save ang laro ng mundo pagkatapos itong basahin ng editor: ginagawa ulit ng
 **Dalhin ang mga pagbabago ko** ang mga pagbabago mo sa save ng laro.*
 

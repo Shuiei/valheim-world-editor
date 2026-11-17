@@ -7,7 +7,7 @@ por vez como o martelo do jogo, ou ao longo de uma linha, em volta de um círcul
 **Onde:** barra de ferramentas, seção **EDITAR** · **Tecla:** `U` (na Oficina, `T` também) · **Funciona em:** mundos
 salvos, ao vivo, na [Oficina](workshop.md) e nas salas de uma masmorra com [Construir aqui](dungeons.md)
 
-![A ferramenta Construir num mundo: uma cabana em terreno nivelado, uma cerca sendo disposta ao longo de uma linha, o painel Construir embaixo e a barra de construção](images/build-world.jpg)
+![A ferramenta Construir num mundo: uma cabana em terreno nivelado, uma cerca sendo disposta ao longo de uma linha, o painel Construir embaixo e a barra de construção](images/build-world.webp)
 *Construir num mundo: uma cabana erguida em terreno nivelado e uma cerca de troncos sendo disposta ao longo de uma
 linha de três pontos (**Dispor** em **Linha**, mostrada antes de **Colocar (Enter)**). Embaixo: o painel Construir com
 as peças da aba **Construção** e a fileira **Dispor**. Em cima: a barra de construção, com **Encaixe**, **Grade**,
@@ -67,10 +67,10 @@ roda do mouse. Recolha o painel com **▾** para ter mais espaço.
 | **Colocar (Enter)** | Coloca o que a prévia transparente mostra, num só passo de desfazer. Um clique duplo no último ponto de uma linha faz o mesmo. |
 | **Apagar forma (Esc)** | Remove a linha, a figura ou o retângulo desenhado. Ela continua depois de colocar, com a prévia vazia, até você apagá-la. |
 
-![Uma cerca ao longo de uma linha que passa por pontos](images/plant-line.jpg)
+![Uma cerca ao longo de uma linha que passa por pontos](images/plant-line.webp)
 *Uma cerca disposta ponta a ponta ao longo de uma linha que passa por quatro pontos, transparente até `Enter` colocá-la.*
 
-![Um anel de paredes de estacas e um retângulo de paredes de pedra com duas camadas de altura](images/line-shapes.jpg)
+![Um anel de paredes de estacas e um retângulo de paredes de pedra com duas camadas de altura](images/line-shapes.webp)
 ***Círculo** (um anel de paredes de estacas) e **Retângulo** (paredes de pedra, **Camadas** 2), cada um colocado com
 `Enter`.*
 
@@ -103,7 +103,7 @@ Segure `Alt` enquanto constrói para posicionar uma peça de um quarto de metro 
 qual for a configuração de **Encaixe** (como segurar `Alt` no jogo, mas com um passo). Veja
 [Encaixe](concepts/objects.md#encaixe).
 
-![Encaixe manual: uma parede acompanhando o ponteiro ao lado da parede da cabana, com o segundo ponto de encaixe marcado](images/workshop-snap-manual.jpg)
+![Encaixe manual: uma parede acompanhando o ponteiro ao lado da parede da cabana, com o segundo ponto de encaixe marcado](images/workshop-snap-manual.webp)
 ***Encaixe** em **Manual**, `E` pressionado uma vez: a barra mostra `Ponto 2 de 4 · Q / E`, e a parede transparente
 que acompanha o ponteiro encontra a parede da cabana pelo canto de cima, marcado com uma cruz.*
 

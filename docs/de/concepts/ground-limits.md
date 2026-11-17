@@ -44,7 +44,7 @@ Kopie gehen immer über die Grenze, wenn sie es brauchen, und Skripte tun es, so
 Während du arbeitest, wird der Teil über ±8 m als eigene Anhebung über dem Boden gehalten; Rückgängig, Verlauf und
 **Urzustand** behandeln ihn wie jede andere Änderung. Die Statusleiste sagt bei jedem Umschalten, wie der Schalter steht.
 
-![Derselbe Strich Anheben zweimal auf flachem Boden: links bei 8 m gestoppt mit roter Spitze, rechts eine viel höhere Nadel](../images/no-limit.jpg)
+![Derselbe Strich Anheben zweimal auf flachem Boden: links bei 8 m gestoppt mit roter Spitze, rechts eine viel höhere Nadel](../images/no-limit.webp)
 *Derselbe Strich ohne und mit „Ohne Grenze“. Links endet der Boden 8 m höher und seine Spitze wird rot; rechts steigt er
 weiter. Der Schalter liegt auf der Karte Maske.*
 
@@ -67,7 +67,7 @@ daher beginnt er mit einer kleinen Stufe), dann immer weniger, bis zu nichts bei
 
 Das Spiel jedes Spielers baut aus den Scheiben denselben Boden, auch bei Konsolenspielern, ohne Mod.
 
-![Querschnitt eines um 30 m angehobenen Hügels: flache Scheibenoberseiten auf einem 6-m-Raster unter der Oberfläche, ein 8-m-Kreis und 13-m-Übergang, ±8 m Änderungen darauf](../images/concept-ground-discs.jpg)
+![Querschnitt eines um 30 m angehobenen Hügels: flache Scheibenoberseiten auf einem 6-m-Raster unter der Oberfläche, ein 8-m-Kreis und 13-m-Übergang, ±8 m Änderungen darauf](../images/concept-ground-discs.webp)
 *Ein um 30 m angehobener Hügel, so wie er gespeichert wird. Die flachen Oberseiten der Scheiben (orange) steigen auf
 einem 6-m-Raster den Hügel hinauf, unter deiner Oberfläche (weiß); eine Scheibe, in Rot, ebnet 8 m um ihre Mitte und
 lässt den Boden bis 13 m auslaufen. Die gewöhnlichen Änderungen (grün) erledigen den Rest, innerhalb von ±8 m vom
@@ -100,7 +100,7 @@ Der Editor zeigt den Boden mit dieser Ebnung schon erledigt, und deine Änderung
 Hinweis unten links in der 3D-Ansicht zählt die Orte im Bereich (und im Umkreis von 40 m darum), und **Ansicht →
 Abflachung um Orte** zeichnet, wo sie ebnen: einen Ring für den flachen Teil, einen blasseren, wo er ins Land übergeht.
 
-![Abflachung um Orte rund um den Altar von Eikthyr: ein fester Ring um den geebneten Boden, ein blasserer, wo er übergeht](../images/concept-location-flattening.jpg)
+![Abflachung um Orte rund um den Altar von Eikthyr: ein fester Ring um den geebneten Boden, ein blasserer, wo er übergeht](../images/concept-location-flattening.webp)
 *Ansicht → **Abflachung um Orte** an, rund um den Altar von Eikthyr: der feste Ring ist der flache Teil, den das Spiel
 ebnet, der blassere Ring, wo er wieder ins Land übergeht. Der Hinweis unten links zählt die Orte im Bereich.*
 

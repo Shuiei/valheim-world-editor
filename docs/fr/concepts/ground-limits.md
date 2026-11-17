@@ -46,7 +46,7 @@ Pendant que vous travaillez, la partie au-delà de ±8 m est gardée comme une r
 l'annulation, l'Historique et **Restaurer** la traitent comme n'importe quelle autre modification. La barre d'état
 indique la position de l'interrupteur chaque fois que vous le basculez.
 
-![Le même coup d'Élever deux fois sur un sol plat : à gauche arrêté à 8 m avec un sommet rouge, à droite une aiguille bien plus haute](../images/no-limit.jpg)
+![Le même coup d'Élever deux fois sur un sol plat : à gauche arrêté à 8 m avec un sommet rouge, à droite une aiguille bien plus haute](../images/no-limit.webp)
 *Le même coup de pinceau sans et avec Sans limite. À gauche, le sol s'arrête à 8 m de haut et son sommet devient rouge ;
 à droite, il continue de monter. L'interrupteur se trouve sur la fiche Masque.*
 
@@ -69,7 +69,7 @@ milieu du disque, elle commence donc par une petite marche), puis de moins en mo
 
 Le jeu de chaque joueur construit le même sol à partir des disques, joueurs sur console compris, sans aucun mod.
 
-![Coupe d'une colline élevée de 30 m : sommets plats des disques sur une grille de 6 m sous la surface, le cercle plat de 8 m d'un disque et sa transition de 13 m, ±8 m de modifications par-dessus](../images/concept-ground-discs.jpg)
+![Coupe d'une colline élevée de 30 m : sommets plats des disques sur une grille de 6 m sous la surface, le cercle plat de 8 m d'un disque et sa transition de 13 m, ±8 m de modifications par-dessus](../images/concept-ground-discs.webp)
 *Une colline élevée de 30 m, telle qu'elle est enregistrée. Les sommets plats des disques (orange) montent la colline
 par paliers sur une grille de 6 m, sous votre surface (blanc) ; un disque, en rouge, aplanit 8 m autour de son milieu
 et fond le sol jusqu'à 13 m. Les modifications ordinaires (vert) complètent le reste, à ±8 m du sol des disques. Là où
@@ -104,7 +104,7 @@ note en bas à gauche de la vue 3D compte les lieux du secteur (et ceux à moins
 lieux** dessine là où ils aplanissent : un anneau pour la partie plate, un plus pâle là où elle se fond dans le
 terrain.
 
-![Aplanissement des lieux autour de l'autel d'Eikthyr : un anneau plein autour du sol aplani, un plus pâle là où il se fond](../images/concept-location-flattening.jpg)
+![Aplanissement des lieux autour de l'autel d'Eikthyr : un anneau plein autour du sol aplani, un plus pâle là où il se fond](../images/concept-location-flattening.webp)
 *Vue → **Aplanissement des lieux** activé, autour de l'autel d'Eikthyr : l'anneau plein est la partie plate que le jeu
 aplanit, l'anneau plus pâle là où elle se fond à nouveau dans le terrain. La note en bas à gauche compte les lieux du
 secteur.*

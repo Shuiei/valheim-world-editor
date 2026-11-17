@@ -19,7 +19,7 @@ tenha entrada de masmorra (antes, um backup: veja [Fazer backup de um mundo](bac
 9. Clique em **Ir para a entrada** para voltar para baixo.
 10. Clique em **Salvar no mundo** (ou **Aplicar ao vivo**).
 
-![A entrada de uma masmorra gerada, no chão](../images/dungeon-entrance.jpg)
+![A entrada de uma masmorra gerada, no chão](../images/dungeon-entrance.webp)
 *A entrada depois de **Colocar no mundo**: o monte de uma câmara funerária, com a porta voltada para a câmera.*
 
 Para alterar a masmorra à mão antes de colocá-la (mover móveis, encher baús), salve (ou aplique) as suas alterações e

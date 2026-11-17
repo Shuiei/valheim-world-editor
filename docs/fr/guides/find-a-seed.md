@@ -26,7 +26,7 @@ marchands ou les boss que vous voulez, puis créez le monde.
 10. Lancez Valheim et chargez le monde une fois avant de le modifier dans l'éditeur : le jeu crée chaque endroit quand
     des joueurs s'en approchent.
 
-![Chercher une graine : la liste des souhaits, puis les meilleures graines trouvées, chacune en petite carte avec sa graine et son score](../images/new-world-find.jpg)
+![Chercher une graine : la liste des souhaits, puis les meilleures graines trouvées, chacune en petite carte avec sa graine et son score](../images/new-world-find.webp)
 *Les souhaits à gauche ; les meilleures graines sous **Graines trouvées**, la meilleure d'abord, chacune avec son
 score.*
 

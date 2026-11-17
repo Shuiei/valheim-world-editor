@@ -46,7 +46,7 @@ Enquanto você trabalha, a parte além de ±8 m é guardada como uma elevação 
 Histórico e **Restaurar** a tratam como qualquer outra alteração. A barra de status diz em que posição o interruptor
 está cada vez que você o aciona.
 
-![O mesmo traço de Elevar duas vezes em terreno plano: à esquerda parado em 8 m com o topo vermelho, à direita uma agulha muito mais alta](../images/no-limit.jpg)
+![O mesmo traço de Elevar duas vezes em terreno plano: à esquerda parado em 8 m com o topo vermelho, à direita uma agulha muito mais alta](../images/no-limit.webp)
 *O mesmo traço sem e com Sem limite. À esquerda, o terreno para 8 m acima e o topo fica vermelho; à direita, ele
 continua subindo. O interruptor fica no cartão Máscara.*
 
@@ -68,7 +68,7 @@ do disco, então ela começa com um pequeno degrau), depois cada vez menos, até
 
 O jogo de cada jogador constrói o mesmo terreno a partir dos discos, inclusive nos consoles, sem nenhum mod.
 
-![Corte de um morro elevado 30 m: topos planos de discos numa grade de 6 m sob a superfície, o círculo plano de 8 m e a fusão de 13 m de um disco, ±8 m de edições por cima](../images/concept-ground-discs.jpg)
+![Corte de um morro elevado 30 m: topos planos de discos numa grade de 6 m sob a superfície, o círculo plano de 8 m e a fusão de 13 m de um disco, ±8 m de edições por cima](../images/concept-ground-discs.webp)
 *Um morro elevado 30 m, como é salvo. Os topos planos dos discos (laranja) sobem o morro em degraus numa grade de 6 m,
 sob a sua superfície (branco); um disco, em vermelho, nivela 8 m ao redor do meio e funde o terreno até 13 m. As
 edições comuns (verde) completam o resto, dentro de ±8 m do terreno dos discos. Onde o morro tem menos de 5 m de
@@ -101,7 +101,7 @@ O editor mostra o terreno com esse nivelamento já feito, e as suas edições v�
 canto inferior esquerdo da visão 3D conta os locais na área (e a até 40 m dela), e **Visão → Aplanamento dos locais**
 desenha onde eles nivelam: um anel para a parte plana, um mais fraco onde ela se funde com a terra.
 
-![Aplanamento dos locais ao redor do altar de Eikthyr: um anel sólido ao redor do terreno nivelado, um mais fraco onde ele se funde](../images/concept-location-flattening.jpg)
+![Aplanamento dos locais ao redor do altar de Eikthyr: um anel sólido ao redor do terreno nivelado, um mais fraco onde ele se funde](../images/concept-location-flattening.webp)
 *Visão → **Aplanamento dos locais** ligado, ao redor do altar de Eikthyr: o anel sólido é a parte plana que o jogo
 nivela, o anel mais fraco é onde ela se funde de volta com a terra. A nota no canto inferior esquerdo conta os locais
 na área.*

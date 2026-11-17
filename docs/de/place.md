@@ -7,11 +7,11 @@ Spieler bauen (Wände, Böden, Zäune, Möbel), setzt du mit [Bauen](build.md), 
 **Wo:** Werkzeugleiste, Abschnitt **BEARBEITEN** · **Taste:** `T` · **Funktioniert in:** gespeicherten Welten, live
 (die Werkstatt hat nur [Bauen](build.md))
 
-![Die Vorgabe Wiesenwäldchen im Modus Pinsel über offenem Gras](images/plant-brush.jpg)
+![Die Vorgabe Wiesenwäldchen im Modus Pinsel über offenem Gras](images/plant-brush.webp)
 *Die durchscheinenden Bäume und Büsche im Pinselkreis sind genau das, was ein Klick setzt; das Panel zeigt die Vorgabe
 Wiesenwäldchen und ihre Arten.*
 
-![Der Pinsel Wiesenwäldchen auf einer leeren Wiese, vor und nach einem Klick](images/place-brush-before-after.jpg)
+![Der Pinsel Wiesenwäldchen auf einer leeren Wiese, vor und nach einem Klick](images/place-brush-before-after.webp)
 *Links: die durchscheinende Vorschau im Pinselkreis. Rechts: dieselbe Stelle nach einem Klick, die Bäume und Büsche
 stehen dort, wo die Vorschau sie gezeigt hat.*
 
@@ -78,7 +78,7 @@ von denen deine Welt noch keine hat, und den Arten deiner Mods. Kreaturen, falle
 sind nicht darin, ebenso wenig die Bauteile des Hammers und des Serviertabletts: die sind in der Leiste [Bauen](build.md).
 Die Setzlinge und Feldfrüchte des Kultivators sind in beiden. **Fertig** schließt sie.
 
-![Die Karte Arten wählen bei der Suche nach „rock“](images/place-chooser.jpg)
+![Die Karte Arten wählen bei der Suche nach „rock“](images/place-chooser.webp)
 *Die Karte Arten wählen bei der Suche nach „rock“, mit BigRock angehakt: die Kategorie Felsen zählt 1 angehakte Art
 neben ihrer Gesamtzahl, und BigRock steht vorne in der Reihe Zuletzt.*
 
@@ -113,7 +113,7 @@ Vierteldrehung.
 
 ### Linie
 
-![Platzieren im Modus Linie: Birken entlang einer glatten Kurve durch fünf Punkte neben einem gepflasterten Weg, das Panel Platzieren auf Linie und Punkte](images/place-line.jpg)
+![Platzieren im Modus Linie: Birken entlang einer glatten Kurve durch fünf Punkte neben einem gepflasterten Weg, das Panel Platzieren auf Linie und Punkte](images/place-line.webp)
 *Modus Linie mit **Punkte**: Birken alle 4 m entlang einer glatten Kurve durch fünf Punkte, neben einem gepflasterten
 Weg, vor **Platzieren (Enter)** gezeigt. Die blassen Bäume sind die Vorschau.*
 
@@ -137,13 +137,13 @@ Weg, vor **Platzieren (Enter)** gezeigt. Die blassen Bäume sind die Vorschau.*
 
 ### Raster
 
-![Karotten und Rüben auf einem gedrehten Raster, von oben gesehen](images/plant-grid.jpg)
+![Karotten und Rüben auf einem gedrehten Raster, von oben gesehen](images/plant-grid.webp)
 *Karotten und Rüben auf einem um 15° gedrehten Raster, von knapp oben gesehen, sodass die Feldfrucht jeder Zelle zu
 sehen ist. Die orange Zeile im Panel warnt, dass Feldfrüchte kultivierten Boden brauchen.*
 
 ### Polygon
 
-![Ein Punkt für Punkt gezeichnetes Polygon](images/plant-zone.jpg)
+![Ein Punkt für Punkt gezeichnetes Polygon](images/plant-zone.webp)
 *Ein Punkt für Punkt gezeichnetes Polygon, mit Büschen und jungen Bäumen als Vorschau an zufälligen Stellen darin.*
 
 Die Stellen werden einmal ausgelost und bleiben, solange das Polygon gleich bleibt; **Neue Anordnung (N)** lost neue
@@ -165,7 +165,7 @@ Kreatur, Sterne und Wiederkehrzeit sind pro Art fest: wähle die Art, die spawnt
 („Greydwarf, Greydwarf_Elite · bis zu 3 ringsum, im Umkreis von 5 m“). Siehe
 [Spawnpunkte](concepts/objects.md#spawnpunkte).
 
-![Spawnpunkte neben einer Hütte, einer ausgewählt und im Inspektor geöffnet](images/spawn-points.jpg)
+![Spawnpunkte neben einer Hütte, einer ausgewählt und im Inspektor geöffnet](images/spawn-points.webp)
 *Nah an zwei Eber-Spawnpunkten und einem Draugr-Spawnpunkt neben einer Hütte. Die Zeile im Inspektor des ausgewählten
 Draugr sagt, was er spawnt und ob er zurückkehrt.*
 

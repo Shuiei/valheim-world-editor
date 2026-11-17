@@ -7,7 +7,7 @@ isa-isa gaya ng hammer ng laro, o sa kahabaan ng linya, paikot sa bilog o pariha
 **Saan:** tool rail, seksiyong **PAG-EDIT** · **Key:** `U` (sa Gawaan, `T` din) · **Gumagana sa:** mga naka-save na
 mundo, live, ang [Gawaan](workshop.md), at mga silid ng dungeon gamit ang [Itayo rito](dungeons.md)
 
-![Ang tool na Pagtayo sa isang mundo: isang kubo sa pinatag na lupa, isang bakod na inilalatag sa linya sa tabi nito, ang dock ng Pagtayo sa ibaba at ang bar ng Pagtayo katabi ng rail](images/build-world.jpg)
+![Ang tool na Pagtayo sa isang mundo: isang kubo sa pinatag na lupa, isang bakod na inilalatag sa linya sa tabi nito, ang dock ng Pagtayo sa ibaba at ang bar ng Pagtayo katabi ng rail](images/build-world.webp)
 *Pagtayo sa isang mundo: isang kubong itinayo sa pinatag na lupa at isang bakod na roundpole na inilalatag sa linya ng
 tatlong punto (**Ilatag** sa **Linya**, ipinapakita bago ang **Ilagay (Enter)**). Ibaba: ang dock ng Pagtayo kasama
 ang mga piece ng tab na **Gusali** at ang hanay na **Ilatag**. Itaas: ang bar ng Pagtayo, kasama ang **Kapit**,
@@ -70,10 +70,10 @@ Pinipili ng **Ilatag**, sa paanan ng dock, kung paano ilalapag ang napiling piec
 | **Ilagay (Enter)** | Inilalapag ang ipinapakita ng naaaninag na preview, bilang isang hakbang ng undo. Ganoon din ang ginagawa ng pag-double-click sa huling punto ng linya. |
 | **Alisin ang hugis (Esc)** | Inaalis ang iginuhit na linya, hugis o kahon. Nananatili ito pagkatapos maglagay, walang laman ang preview nito, hanggang alisin mo ito. |
 
-![Isang bakod sa kahabaan ng linya sa mga punto](images/plant-line.jpg)
+![Isang bakod sa kahabaan ng linya sa mga punto](images/plant-line.webp)
 *Isang bakod na inilatag nang dulo sa dulo sa linya ng apat na punto, naaaninag hanggang ilapag ito ng `Enter`.*
 
-![Isang bilog ng mga stake wall at isang parihaba ng batong dingding na dalawang layer ang taas](images/line-shapes.jpg)
+![Isang bilog ng mga stake wall at isang parihaba ng batong dingding na dalawang layer ang taas](images/line-shapes.webp)
 ***Bilog** (isang bilog ng mga stake wall) at **Parihaba** (mga batong dingding, **Mga layer** 2), bawat isa ay
 inilapag gamit ang `Enter`.*
 
@@ -107,7 +107,7 @@ Pindutin nang matagal ang `Alt` habang nagtatayo para maglagay ng piece sa bawat
 anuman ang setting ng **Kapit** (gaya ng pagpindot nang matagal sa `Alt` sa laro, may hakbang). Tingnan ang
 [Pagkapit](concepts/objects.md#pagkapit).
 
-![Mano-manong pagkapit: isang dingding na sumusunod sa pointer katabi ng dingding ng kubo, minarkahan ang ikalawang punto ng kapit nito](images/workshop-snap-manual.jpg)
+![Mano-manong pagkapit: isang dingding na sumusunod sa pointer katabi ng dingding ng kubo, minarkahan ang ikalawang punto ng kapit nito](images/workshop-snap-manual.webp)
 ***Kapit** sa **Mano-mano**, pinindot nang isang beses ang `E`: nakasulat sa bar ang `Punto 2 ng 4 · Q / E`, at ang
 naaaninag na dingding na sumusunod sa pointer ay sumasalubong sa dingding ng kubo sa itaas na sulok nito, minarkahan ng
 ekis.*

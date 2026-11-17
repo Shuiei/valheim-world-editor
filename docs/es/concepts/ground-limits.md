@@ -46,7 +46,7 @@ Mientras trabajas, la parte que pasa de ±8 m se guarda como una elevación apar
 Historial y **Restaurar** la tratan como cualquier otro cambio. La barra de estado dice en qué posición queda el
 interruptor cada vez que lo cambias.
 
-![El mismo trazo de Elevar dos veces sobre suelo llano: a la izquierda detenido a 8 m con la cima roja, a la derecha una aguja mucho más alta](../images/no-limit.jpg)
+![El mismo trazo de Elevar dos veces sobre suelo llano: a la izquierda detenido a 8 m con la cima roja, a la derecha una aguja mucho más alta](../images/no-limit.webp)
 *El mismo trazo sin Sin límite y con él. A la izquierda, el suelo se detiene a 8 m de altura y su cima se vuelve roja; a
 la derecha, sigue subiendo. El interruptor está en la tarjeta Máscara.*
 
@@ -69,7 +69,7 @@ fusión desde el centro del disco, así que empieza con un pequeño escalón), l
 El juego de cada jugador construye el mismo suelo a partir de los discos, incluidos los jugadores de consola, sin
 ningún mod.
 
-![Corte transversal de una colina subida 30 m: cimas planas de discos en una cuadrícula de 6 m bajo la superficie, el círculo plano de 8 m y la fusión de 13 m de un disco, ±8 m de ediciones encima](../images/concept-ground-discs.jpg)
+![Corte transversal de una colina subida 30 m: cimas planas de discos en una cuadrícula de 6 m bajo la superficie, el círculo plano de 8 m y la fusión de 13 m de un disco, ±8 m de ediciones encima](../images/concept-ground-discs.webp)
 *Una colina subida 30 m, tal como se guarda. Las cimas planas de los discos (naranja) suben la colina por escalones en
 una cuadrícula de 6 m, bajo tu superficie (blanco); un disco, en rojo, nivela 8 m alrededor de su centro y funde el
 suelo hasta 13 m. Las ediciones normales (verde) completan el resto, dentro de ±8 m del suelo de los discos. Donde la
@@ -102,7 +102,7 @@ El editor muestra el suelo con ese nivelado ya hecho, y tus ediciones van encima
 izquierda de la vista 3D cuenta las ubicaciones del área (y a menos de 40 m de ella), y **Vista → Aplanado de
 ubicaciones** dibuja dónde nivelan: un anillo para la parte plana y otro más tenue donde se funde con el terreno.
 
-![Aplanado de ubicaciones alrededor del altar de Eikthyr: un anillo continuo alrededor del suelo nivelado, otro más tenue donde se funde](../images/concept-location-flattening.jpg)
+![Aplanado de ubicaciones alrededor del altar de Eikthyr: un anillo continuo alrededor del suelo nivelado, otro más tenue donde se funde](../images/concept-location-flattening.webp)
 *Vista → **Aplanado de ubicaciones** activado, alrededor del altar de Eikthyr: el anillo continuo es la parte plana que
 nivela el juego, el más tenue es donde se funde de nuevo con el terreno. La nota de abajo a la izquierda cuenta las
 ubicaciones del área.*

@@ -7,7 +7,7 @@ floresta só nas encostas suaves, terraços, uma praça pavimentada exatamente n
 **Onde:** barra de ferramentas, seção **CRIAR** · **Tecla:** nenhuma (`Ctrl+Enter` executa o script) · **Funciona em:**
 mundos salvos, ao vivo (não na Oficina)
 
-![A ferramenta Script: o exemplo Terraced hill executado numa área de 3 × 3, o código no painel e a linha de resultado embaixo](images/script.jpg)
+![A ferramenta Script: o exemplo Terraced hill executado numa área de 3 × 3, o código no painel e a linha de resultado embaixo](images/script.webp)
 *O exemplo Terraced hill executado numa área de 3 × 3: o código no painel e, embaixo, a linha de resultado dizendo o
 que o script alterou.*
 
@@ -315,7 +315,7 @@ A caixa de saída diz o que aconteceu; a barra de status diz em poucas palavras.
 - "**A área mudou enquanto o script rodava: nada foi alterado. Execute-o de novo.**" Você editou, desfez ou salvou
   enquanto ele rodava (ou outra área foi aberta). Execute-o de novo e espere.
 
-![A ferramenta Script depois de Executar: Groud escrito errado na linha 2, a saída listando o erro, a barra de status dizendo que nada mudou](images/script-error.jpg)
+![A ferramenta Script depois de Executar: Groud escrito errado na linha 2, a saída listando o erro, a barra de status dizendo que nada mudou](images/script-error.webp)
 *Um nome escrito errado: a saída indica a linha e o erro; a barra de status diz que nada mudou.*
 
 ### Interromper um script

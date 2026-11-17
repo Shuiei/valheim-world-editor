@@ -5,7 +5,7 @@ Hinahati ng Valheim ang mundo nito sa mga parisukat na **zone** na 64 m, at binu
 ito nang sabay, ang **area**. Ipinapaliwanag dito kung bakit hindi pa mase-save ang ilang lugar, kung bakit hindi
 kailanman gumagalaw ang gilid ng area, at kung bakit mabagal ang malaking area.
 
-![Isang 5 × 5 na area mula sa itaas kasama ang mga hangganan ng zone, may label: isang zone na 64 m, ang area na 320 m, ang naka-lock na gilid nito at ang linya ng Sundan na 12 m papasok](../images/concept-area-zones.jpg)
+![Isang 5 × 5 na area mula sa itaas kasama ang mga hangganan ng zone, may label: isang zone na 64 m, ang area na 320 m, ang naka-lock na gilid nito at ang linya ng Sundan na 12 m papasok](../images/concept-area-zones.webp)
 *Isang bloke ng mga zone ang area. Hindi kailanman nagbabago ang pinakalabas na hanay ng mga punto ng lupa nito
 (dilaw); kapag naka-on ang **Sundan**, nadadagdagan ng mga zone kapag lumampas ang puntong tinitingnan mo sa putol-putol
 na linya, 12 m papasok.*

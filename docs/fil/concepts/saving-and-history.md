@@ -121,7 +121,7 @@ Inililista ng **Kasaysayan** (`L`) ang bawat hakbang, pinakabago muna: ang panga
 bilang default, basta't kumukuha sila ng mas mababa sa 2 GB ng memory (lampas doon, nauunang mawala ang pinakaluma);
 ganoong dami lang ang pinapanatili kapag itinakda ang **Mga setting → Kasaysayan → Hakbang na pinapanatili**.
 
-![Ang panel na Kasaysayan pagkatapos ng limang edit, na-undo ang huli](../images/history.jpg)
+![Ang panel na Kasaysayan pagkatapos ng limang edit, na-undo ang huli](../images/history.webp)
 *Na-undo ang huling hakbang gamit ang **Bumalik dito**: kulay abo ito at iniaalok ang **I-redo hanggang dito**.*
 
 May dalawang paraan pabalik:

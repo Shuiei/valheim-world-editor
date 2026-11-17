@@ -7,7 +7,7 @@ sariling kalikasan ng laro.
 
 **Saan:** tool rail, seksiyong **PAG-EDIT** · **Key:** `B` · **Gumagana sa:** mga naka-save na mundo, live
 
-![Isang kahong dina-drag sa paligid ng makapal na kumpol ng puno, napili ang Mga object, binibilang ng mga chip ng uri ang nasa loob](images/area.jpg)
+![Isang kahong dina-drag sa paligid ng makapal na kumpol ng puno, napili ang Mga object, binibilang ng mga chip ng uri ang nasa loob](images/area.webp)
 *Isang kahong dina-drag sa paligid ng kumpol ng puno na napili ang **Mga object**: binibilang ng mga chip ng uri ang
 mga puno, bato, palumpong at mapipitas sa loob. Wala pang nagbabago: pinipili sila ng button sa ibaba.*
 
@@ -49,10 +49,10 @@ Ibinibigay ng linya sa ilalim ng mga button ang lawak at kung ilang nakikitang o
 napili · 84 nakikitang object sa loob"). Iginuguhit lang ang pinili sa tool na Rehiyon at habang nagpe-paste;
 pinapanatili ito kapag gumamit ka ng ibang tool.
 
-![Isang polygon na iginuhit sa paligid ng bahagi ng gubat](images/area-polygon.jpg)
+![Isang polygon na iginuhit sa paligid ng bahagi ng gubat](images/area-polygon.webp)
 *Isang saradong polygon sa paligid ng bahagi ng gubat, napili ang **Mga object**.*
 
-![Ang parehong gubat pagkatapos ng Piliin ang mga object at Burahin](images/area-polygon-done.jpg)
+![Ang parehong gubat pagkatapos ng Piliin ang mga object at Burahin](images/area-polygon-done.webp)
 *Pagkatapos ng **Piliin ang mga object (Enter)**, saka `Del` sa tool na Pagpili: wala na ang mga puno sa loob ng
 polygon, nakatayo ang mga nasa labas.*
 
@@ -84,7 +84,7 @@ Sa ilalim ng **Patagin**, **Itaas** at **Ibaba**:
 |---|---|
 | Linya ng hukay at tambak | Gaano karaming lupa ang ililipat ng aksiyon ("Patagin sa 35 m: maghukay ng 120 m³, magtambak ng 340 m³"), at para sa Patagin, ang hindi maabot ("(40 m³ hindi maabot: ±8 m na hangganan)"; kapag naka-on ang Walang limitasyon, ang lampas lang sa ±400 m nito). Ikinukumpara ng pangalawang linya, "Lupa sa loob: … ang itinaas, … ang hinukay mula nang mabuo", sa mundo gaya ng pagkabuo nito. Sinusundan ng dalawa ang bawat pagbabago, ang malambot na gilid at ang Mask. |
 
-![Patagin sa kahon sa ibabaw ng burol: ang linya ng hukay at tambak, may lupang hindi maabot dahil sa ±8 m na hangganan](images/area-cut-fill.jpg)
+![Patagin sa kahon sa ibabaw ng burol: ang linya ng hukay at tambak, may lupang hindi maabot dahil sa ±8 m na hangganan](images/area-cut-fill.webp)
 *Isang kahon sa ibabaw ng burol na may **Patagin** sa 46 m at naka-off ang **Walang limitasyon**: "Patagin sa 46 m:
 maghukay ng 0 m³, magtambak ng 1.5k m³ (2.2k m³ hindi maabot: ±8 m na hangganan)", at sa ilalim nito ang lupang
 naitaas na sa loob mula nang mabuo ang mundo.*
@@ -160,7 +160,7 @@ ang Walang limitasyon) at ang pintura nito. Pinahihina ng **Lambot** at ng Mask,
 
 ### Muling patubuin ang kalikasan
 
-![Isang hubad na kahon at ang parehong kahon pagkatapos ng Muling patubuin ang kalikasan, parehong camera](images/area-regrow.jpg)
+![Isang hubad na kahon at ang parehong kahon pagkatapos ng Muling patubuin ang kalikasan, parehong camera](images/area-regrow.webp)
 *Kaliwa: kahon sa hubad na lupa. Kanan: ang parehong kahon pagkatapos ng **Muling patubuin ang kalikasan**: ang sariling
 mga puno at bato ng laro para sa biome, at sinasabi ng status bar kung ano ang tumubo.*
 
@@ -199,7 +199,7 @@ napiling uri sa loob, kahit nakatago sa Tanaw, at bumabalik ang bawat object ng 
 ginagalaw ang mga Runestone. Kapag walang pagkakaiba, sinasabi ng status bar ang "Walang maibabalik: ang pinili ay gaya
 pa rin ng nasa backup."
 
-![Isang kubong sinira ng griefer na ibinalik mula sa backup ng laro, bago at pagkatapos](images/area-backup.jpg)
+![Isang kubong sinira ng griefer na ibinalik mula sa backup ng laro, bago at pagkatapos](images/area-backup.webp)
 *Kaliwa: polygon sa paligid ng kubong nawalan ng bahagi ng malapit na pader, napili ang **Balik sa isang backup**, bukas
 ang listahang **Backup** sa backup ng laro at naka-on ang **Mga gusali mo**. Kanan: pagkatapos ng **Ibalik sa backup
 (Enter)**, buo na ulit ang pader; pinapangalanan ng linya sa itaas ng button ang save ng backup, binibilang ng status bar
@@ -229,14 +229,14 @@ live (WorldEditorBridge 0.10.0 o mas bago).
 > creature at nalaglag na item sa mga zone; nananatili ang mga lapida ng mga player. Walang nagtayo ang mga paamong
 > hayop, kaya nawawala rin sila: ilabas muna sila.
 
-![Dalawang zone sa ilalim ng kahon na may markang i-reset, pula ang balangkas](images/area-reset.jpg)
+![Dalawang zone sa ilalim ng kahon na may markang i-reset, pula ang balangkas](images/area-reset.webp)
 *Isang kahon sa ibabaw ng dalawang zone, **I-reset ang mga zone** na naka-on ang **Panatilihin ang mga gusali ko** at
 **I-undo rin ang mga edit nila sa lupa**, pagkatapos ng **I-reset ang mga zone… (Enter)**: pula ang balangkas ng
 dalawang zone, binibilang sila ng status bar. Walang nire-reset hanggang mag-save ka.*
 
 ## Kopyahin at i-paste
 
-![Pag-paste ng kinopyang gubat: sumusunod sa cursor ang aninag na kopya, nakaikot, kasama ang panel ng I-paste](images/paste.jpg)
+![Pag-paste ng kinopyang gubat: sumusunod sa cursor ang aninag na kopya, nakaikot, kasama ang panel ng I-paste](images/paste.webp)
 *Isang kinopyang gubat na may ilang dosenang puno at bato na sumusunod sa cursor, aninag at nakaikot nang 30°;
 sinasabi ng linya sa itaas ng panel ng I-paste kung ano ang nasa clipboard. Inilalapag ito ng isang click.*
 
@@ -271,7 +271,7 @@ ng gusali nila nang walang pintura. Pareho ang paraan ng pag-paste nito.
 
 ### Pag-paste
 
-![Isang kubong na-paste nang tatlong beses pataas: tatlong palapag na patong sa tabi ng orihinal](images/paste-stack.jpg)
+![Isang kubong na-paste nang tatlong beses pataas: tatlong palapag na patong sa tabi ng orihinal](images/paste-stack.webp)
 *Isang click na may **Mga kopya** 3 at **Direksiyon** pataas, tanaw mula sa lupa: sa tabi ng orihinal na kubo, tatlong
 kopyang pinagpatong-patong bilang tatlong palapag (ang balangkas ay ang susunod na pag-paste, sumusunod sa cursor).*
 
@@ -310,7 +310,7 @@ humuhubog sa lupa. Sinasabi ng linya sa itaas ng panel kung ano ang nasa clipboa
 kopya, ikot, naka-mirror. Sinasabi ng status bar ang ginawa ng pag-paste: "Na-paste kasama ang lupa, 54 object, 7 puno,
 bato at iba pang tulad nito ang inalis sa puwesto."
 
-![Isang batong kubo na na-paste sa gilid ng bunton gamit ang Linisin ang puwesto, bago at pagkatapos ng click](images/paste-clear-site.jpg)
+![Isang batong kubo na na-paste sa gilid ng bunton gamit ang Linisin ang puwesto, bago at pagkatapos ng click](images/paste-clear-site.webp)
 *Naka-on ang **Linisin ang puwesto** (naka-off ang **Hugis at pintura ng lupa**, **Taas** -1.5 m): kaliwa, ang aninag na
 kopya na nakabaon sa gilid ng bunton; kanan, pagkatapos ng click, hinukay ang lupa sa paligid ng mga pader nito.*
 

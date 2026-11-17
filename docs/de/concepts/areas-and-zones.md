@@ -5,7 +5,7 @@ Valheim teilt seine Welt in quadratische **Zonen** von 64 m, und der Editor öff
 **Bereich**. Das erklärt, warum sich manche Orte noch nicht speichern lassen, warum sich der Rand des Bereichs nie
 bewegt und warum ein großer Bereich langsam ist.
 
-![Ein 5 × 5-Bereich von oben mit seinen Zonengrenzen, beschriftet: eine 64-m-Zone, der 320-m-Bereich, sein gesperrter Rand und die Folgen-Linie 12 m innen](../images/concept-area-zones.jpg)
+![Ein 5 × 5-Bereich von oben mit seinen Zonengrenzen, beschriftet: eine 64-m-Zone, der 320-m-Bereich, sein gesperrter Rand und die Folgen-Linie 12 m innen](../images/concept-area-zones.webp)
 *Der Bereich ist ein Block aus Zonen. Seine äußerste Reihe von Bodenpunkten (gelb) ändert sich nie; mit **Folgen** an
 kommen Zonen hinzu, wenn der Punkt, auf den du schaust, die gestrichelte Linie 12 m innen überschreitet.*
 

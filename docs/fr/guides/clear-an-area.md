@@ -22,7 +22,7 @@ Retirez les arbres, rochers et buissons d'un endroit et aplanissez-le en un terr
 11. Facultatif : dans **Action**, choisissez **Peinture**, puis **Terre** ou **Pavé**, et appuyez sur **Peindre (Enter)**.
 12. Cliquez sur **Enregistrer dans le monde** (ou **Appliquer en direct**).
 
-![Une partie d'un bois après la sélection et la suppression des objets d'un polygone : les arbres à l'intérieur ont disparu, le panneau Sélection ouvert](../images/area-polygon-done.jpg)
+![Une partie d'un bois après la sélection et la suppression des objets d'un polygone : les arbres à l'intérieur ont disparu, le panneau Sélection ouvert](../images/area-polygon-done.webp)
 *Après **Sélectionner les objets (Enter)** et `Del` : les arbres à l'intérieur du polygone ont disparu, ceux de l'extérieur sont toujours debout.*
 
 ## Vérifier le résultat

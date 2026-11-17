@@ -60,7 +60,7 @@ public static partial class HelpDocs
 
     /// <summary>
     /// The path under docs/ of a picture of a file: its path from the file's folder; for a translation's picture that is
-    /// not carried, the English picture of the same name ("fr/images/map.jpg" is "images/map.jpg"), so a translation can
+    /// not carried, the English picture of the same name ("fr/images/map.webp" is "images/map.webp", else "images/map.jpg"), so a translation can
     /// come before its pictures.
     /// </summary>
     /// <param name="file">The file the picture is on, under docs/ (a page, or its translation).</param>
@@ -68,7 +68,14 @@ public static partial class HelpDocs
     public static string Picture(string file, string url)
     {
         string path = Combine(file, url);
-        return Has(path) ? path : EnglishPath(path);
+        if (Has(path))
+        {
+            return path;
+        }
+        // The translations' pictures are WebP, the English ones JPEG: fr/images/map.webp falls back to images/map.jpg.
+        string english = EnglishPath(path);
+        string jpeg = english.EndsWith(".webp", StringComparison.Ordinal) ? english[..^5] + ".jpg" : english;
+        return english != path && !Has(english) && Has(jpeg) ? jpeg : english;
     }
 
     /// <summary>

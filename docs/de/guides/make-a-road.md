@@ -19,7 +19,7 @@ Zeichne eine ebene Straße mit einer gleichmäßigen Rampe den Hügel hinauf, in
    (Enter)** auf derselben Linie.
 10. Klicke auf **In Welt speichern** (oder **Live anwenden**).
 
-![Eine ebene Straße, durch zwei Hügel geschnitten und in der Mitte gepflastert](../images/path-road.jpg)
+![Eine ebene Straße, durch zwei Hügel geschnitten und in der Mitte gepflastert](../images/path-road.webp)
 *Eine Straße, mit Ebnen durch zwei Hügel angelegt, dann Pflaster malen (Breite 4 m, Weichrand 1 m) auf derselben
 Linie.*
 

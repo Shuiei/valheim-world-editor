@@ -31,7 +31,7 @@ est maintenant.
 3. Dans le panneau latéral, choisissez **3 × 3 zones (192 m)** dans la liste des tailles à côté de **Modifier en 3D**,
    puis cliquez sur **Modifier en 3D**.
 
-![La carte du monde, une zone choisie, avec Modifier en 3D et la liste des tailles](../images/map.jpg)
+![La carte du monde, une zone choisie, avec Modifier en 3D et la liste des tailles](../images/map.webp)
 *La carte : un clic a choisi une zone (le carré bleu) ; **Modifier en 3D** l'ouvre avec la taille choisie à côté.*
 
 **Ce que vous devriez voir :** la vue 3D de votre base et du terrain autour, la barre d'outils à gauche, et la barre du
@@ -45,7 +45,7 @@ droit glissé tourne la vue.
 3. Sur un sol dégagé à côté de votre base, maintenez le bouton gauche de la souris et décrivez de petits cercles
    pendant quelques secondes.
 
-![Le pinceau Élever au-dessus d'un petit monticule, son panneau ouvert](../images/sculpt.jpg)
+![Le pinceau Élever au-dessus d'un petit monticule, son panneau ouvert](../images/sculpt.webp)
 *Élever : le contour du pinceau sur le sol, un monticule élevé à côté, et le panneau avec **Taille** et **Force**.*
 
 **Ce que vous devriez voir :** le sol monte sous le pinceau, et la barre du haut indique « Non enregistré : 1 zone » en
@@ -59,7 +59,7 @@ ambre. Rien n'est encore écrit dans le monde : la modification est
    **Choisir un préréglage**.
 3. Faites glisser la souris le long du pied de votre colline.
 
-![Le pinceau de Placement qui plante des arbres, le préréglage Bois des Prairies choisi](../images/plant-brush.jpg)
+![Le pinceau de Placement qui plante des arbres, le préréglage Bois des Prairies choisi](../images/plant-brush.webp)
 *Placement avec **Pinceau** et le préréglage **Bois des Prairies** : le pinceau montre les prochains arbres en
 transparence ; ceux déjà plantés se dressent autour.*
 
@@ -84,7 +84,7 @@ Plus : [Annuler une étape, retirer une modification ou tout abandonner](../gui
 2. Lisez la question : elle dit ce qu'elle écrit et le **Dossier de monde**. Vérifiez que le dossier est bien votre
    monde, pas la copie, puis cliquez sur **Enregistrer**.
 
-![La question Écrire dans le monde au-dessus d'une colline surélevée et de nouveaux arbres : ce qui sera écrit, le Dossier de monde, trois avertissements, Enregistrer et Annuler](../images/save-confirm.jpg)
+![La question Écrire dans le monde au-dessus d'une colline surélevée et de nouveaux arbres : ce qui sera écrit, le Dossier de monde, trois avertissements, Enregistrer et Annuler](../images/save-confirm.webp)
 *La question avant l'enregistrement : vérifiez la ligne **Dossier de monde**, puis cliquez sur **Enregistrer**.*
 
 **Ce que vous devriez voir :** la barre d'état indique « 1 zone(s), … nouvel(s) objet(s) enregistré(s) dans la

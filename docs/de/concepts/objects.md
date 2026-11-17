@@ -173,7 +173,7 @@ Schwerpunkt jedes Bauteils), und färbt jedes Bauteil in den Farben des Baumodus
 | Grausten | 2000 | 100 | 33 % | 10 % |
 | Uralt | 5000 | 100 | 25 % | 7 % |
 
-![Steinwände mit rotem Überhang neben Holzwänden, deren Überhang grün, gelb, orange wird](../images/concept-support-stone-wood.jpg)
+![Steinwände mit rotem Überhang neben Holzwänden, deren Überhang grün, gelb, orange wird](../images/concept-support-stone-wood.webp)
 *Links drei gestapelte Steinwände: hellblau am Boden, grün darüber, und die eine Wand, die oben 2 m hinausragt, rot, mit
 „1 würden einstürzen“ in der oberen Leiste. Rechts Holzwände, die 6 m von einem Pfosten hinausragen: grün, dann gelb,
 dann orange.*
@@ -261,7 +261,7 @@ Sterne und ob sie zurückkommt, legt die Art des Spawnpunkts fest; für eine and
 **Kreaturennester** sind die sichtbare Art: Grauzwergnester, Knochenhaufen und dergleichen. Sie spawnen Kreaturen um
 sich herum, bis sie zerstört werden („Greydwarf, Greydwarf_Elite · bis zu 3 ringsum, im Umkreis von 5 m“).
 
-![Spawnpunkte für Eber und Draugr bei einer Hütte, einer ausgewählt und im Inspektor geöffnet](../images/spawn-points.jpg)
+![Spawnpunkte für Eber und Draugr bei einer Hütte, einer ausgewählt und im Inspektor geöffnet](../images/spawn-points.webp)
 *Spawnpunkte bei einer Hütte: ein einfacher Rahmen für jeden, mit einer orangefarbenen Markierung darüber. Der
 ausgewählte Draugr-Spawnpunkt ist im Inspektor geöffnet, dessen Zeile sagt, was er spawnt.*
 
@@ -284,7 +284,7 @@ Eine Kopie (aus dem Werkzeug Region oder einem Bauplan) enthält:
 
 Die Kopie des Werkzeugs Auswahl wird genauso gesetzt.
 
-![Eine Steinhütte, mit Platz räumen an in die Seite eines Hügels eingefügt, vor und nach dem Klick](../images/paste-clear-site.jpg)
+![Eine Steinhütte, mit Platz räumen an in die Seite eines Hügels eingefügt, vor und nach dem Klick](../images/paste-clear-site.webp)
 *Vor dem Klick (links) schneidet der Umriss des Einfügens in den Hügel; danach (rechts) ist der Boden, der der Hütte im
 Weg war, bis auf ihren Boden abgetragen, im selben Rückgängig-Schritt.*
 

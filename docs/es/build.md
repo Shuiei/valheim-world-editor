@@ -8,7 +8,7 @@ en cuadrícula.
 **Dónde:** barra de herramientas, sección **EDITAR** · **Tecla:** `U` (en el Taller, también `T`) · **Funciona en:**
 mundos guardados, en vivo, el [Taller](workshop.md) y las salas de una mazmorra con [Construir aquí](dungeons.md)
 
-![La herramienta Construir en un mundo: una cabaña en suelo nivelado, una valla que se extiende a lo largo de una línea a su lado, el panel Construir abajo y la barra de construcción junto a la barra de herramientas](images/build-world.jpg)
+![La herramienta Construir en un mundo: una cabaña en suelo nivelado, una valla que se extiende a lo largo de una línea a su lado, el panel Construir abajo y la barra de construcción junto a la barra de herramientas](images/build-world.webp)
 *Construir en un mundo: una cabaña levantada en suelo nivelado y una valla de troncos que se extiende a lo largo de una
 línea de tres puntos (**Extender** en **Línea**, mostrada antes de **Colocar (Enter)**). Abajo: el panel Construir con
 las piezas de la pestaña **Construcción** y la fila **Extender**. Arriba: la barra de construcción, con **Encaje**,
@@ -70,11 +70,11 @@ con la rueda. Pliega el panel con **▾** para tener más espacio.
 | **Colocar (Enter)** | Coloca lo que muestra la vista previa transparente, como un solo paso de deshacer. Un doble clic en el último punto de una línea hace lo mismo. |
 | **Borrar forma (Esc)** | Quita la línea, la figura o el rectángulo dibujado. Se queda después de colocar, con la vista previa vacía, hasta que la borras. |
 
-![Una valla a lo largo de una línea que pasa por varios puntos](images/plant-line.jpg)
+![Una valla a lo largo de una línea que pasa por varios puntos](images/plant-line.webp)
 *Una valla extendida pieza tras pieza a lo largo de una línea que pasa por cuatro puntos, transparente hasta que
 `Enter` la coloca.*
 
-![Un anillo de empalizadas y un rectángulo de muros de piedra de dos capas de alto](images/line-shapes.jpg)
+![Un anillo de empalizadas y un rectángulo de muros de piedra de dos capas de alto](images/line-shapes.webp)
 *Un **Círculo** (un anillo de empalizadas) y un **Rectángulo** (muros de piedra, **Capas** 2), cada uno colocado con
 `Enter`.*
 
@@ -106,7 +106,7 @@ parte de su paso (0.1 m con 0.5 m). `R` gira un cuarto de vuelta en las tres, se
 Mantén `Alt` mientras construyes para colocar una pieza de cuarto en cuarto de metro, sin encaje, sea cual sea el
 ajuste de **Encaje** (como al mantener `Alt` en el juego, con un paso). Consulta [Encaje](concepts/objects.md#encaje).
 
-![Encaje manual: una pared que sigue al puntero junto a la pared de la cabaña, con su segundo punto de encaje marcado](images/workshop-snap-manual.jpg)
+![Encaje manual: una pared que sigue al puntero junto a la pared de la cabaña, con su segundo punto de encaje marcado](images/workshop-snap-manual.webp)
 ***Encaje** en **Manual**, `E` pulsada una vez: la barra indica `Punto 2 de 4 · Q / E`, y la pared transparente que
 sigue al puntero se une a la pared de la cabaña por su esquina superior, marcada con una cruz.*
 

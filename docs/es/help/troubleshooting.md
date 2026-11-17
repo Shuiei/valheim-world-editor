@@ -42,7 +42,7 @@ La carpeta se puede cambiar más adelante en **Configuración** → **Carpeta de
 buscar en las bibliotecas de Steam). Si la tarjeta dice **No se pudo leer el aspecto del juego**, pulsa **Reintentar**
 o revisa la carpeta en Configuración; si vuelve a fallar, infórmalo con el registro ([abajo](#el-registro-y-los-informes-de-errores)).
 
-![Página de inicio sin Valheim: la tarjeta Obtener el aspecto del juego con sus cuatro pasos, la casilla de la carpeta, Examinar… y Usar](../images/start-valheim-missing.jpg)
+![Página de inicio sin Valheim: la tarjeta Obtener el aspecto del juego con sus cuatro pasos, la casilla de la carpeta, Examinar… y Usar](../images/start-valheim-missing.webp)
 *«No se encontró Valheim en este equipo.»: elige la carpeta que contiene `valheim_Data` y luego **Usar**.*
 
 ## Mi juego muestra pasos por hacer
@@ -105,7 +105,7 @@ Con **Tengo mi propio túnel**, «Nothing answers on 127.0.0.1:…» (nada respo
 «No answer from 127.0.0.1:… within … s» (sin respuesta a tiempo) significa que tu túnel no está abierto, o que el
 servidor no se está ejecutando con el plugin.
 
-![El formulario Un servidor dedicado rellenado para 127.0.0.1, puerto SSH 2222, después de Conectar: el mensaje «No answer from 127.0.0.1:2222» bajo el botón](../images/start-server-error.jpg)
+![El formulario Un servidor dedicado rellenado para 127.0.0.1, puerto SSH 2222, después de Conectar: el mensaje «No answer from 127.0.0.1:2222» bajo el botón](../images/start-server-error.webp)
 *Se pulsó Conectar sin que nada respondiera en la dirección: «No answer from 127.0.0.1:2222. Check the address and that SSH
 is enabled on the server.» Revisa **Dirección del servidor** y **Puerto SSH**.*
 
@@ -161,7 +161,7 @@ mundo, **Guardar en el mundo** no guarda nada y pregunta **El juego guardó este
 3. Revisa el resultado: tus cambios están ahora pendientes sobre el guardado del juego. Aún no se ha escrito nada.
 4. Cierra Valheim (o detén el servidor) y vuelve a pulsar **Guardar en el mundo**.
 
-![La pregunta El juego guardó este mundo: qué pasó, qué hace Trasladar mis cambios, y los botones Trasladar mis cambios y Ahora no](../images/game-saved-replay.jpg)
+![La pregunta El juego guardó este mundo: qué pasó, qué hace Trasladar mis cambios, y los botones Trasladar mis cambios y Ahora no](../images/game-saved-replay.webp)
 *Guardado rechazado porque el juego guardó el mundo después de que el editor lo leyera: **Trasladar mis cambios**
 vuelve a hacer tus cambios sobre el guardado del juego.*
 

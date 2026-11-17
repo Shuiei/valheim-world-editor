@@ -7,7 +7,7 @@ et créez le monde.
 **Où :** page d'accueil, **Création** → **Un nouveau monde** → **Créer un nouveau monde** · **Touche :** aucune ·
 **Fonctionne dans :** la page d'accueil (aucun monde n'a besoin d'être ouvert)
 
-![Le monde d'une graine sur la page Nouveau monde : terres colorées par biome, le départ, les autels des boss et les emplacements des marchands marqués, les données de la graine à droite](images/new-world.jpg)
+![Le monde d'une graine sur la page Nouveau monde : terres colorées par biome, le départ, les autels des boss et les emplacements des marchands marqués, les données de la graine à droite](images/new-world.webp)
 *Le point rouge est le départ, les losanges violets sont les autels des boss, les points jaune, vert et rose sont les
 emplacements des marchands. La colonne de droite liste les données de la graine, ici défilée jusqu'aux autels les
 plus proches des boss.*
@@ -66,7 +66,7 @@ secondes, la première fois).
 
 ## Donjons
 
-![La même graine avec quatre types de donjon affichés en petits carrés colorés, et la liste Donjons (le plus proche)](images/new-world-dungeons.jpg)
+![La même graine avec quatre types de donjon affichés en petits carrés colorés, et la liste Donjons (le plus proche)](images/new-world-dungeons.webp)
 *Quatre types activés : chaque petit carré est un donjon, sa couleur son type, comme dans les interrupteurs et dans
 **Donjons (le plus proche)** (distance, biome, nombre dans le monde et à moins de 2 km).*
 
@@ -102,7 +102,7 @@ l'eau, ou 3 m dans les Marécages. Une terre est un ensemble de terres reliées 
 
 ## Chercher une graine
 
-![Chercher une graine : la liste des souhaits, puis les meilleures graines trouvées, chacune en petite carte avec sa graine et son score](images/new-world-find.jpg)
+![Chercher une graine : la liste des souhaits, puis les meilleures graines trouvées, chacune en petite carte avec sa graine et son score](images/new-world-find.webp)
 *Les souhaits (ici une grande terre avec des terres tout autour, des Marécages à moins de 1 500 m et des Montagnes à
 moins de 2 000 m, 150 graines) ; les meilleures graines trouvées sous **Graines trouvées**, la meilleure d'abord. La
 première a été cliquée : son cadre s'allume et son monde remplit la grande carte.*

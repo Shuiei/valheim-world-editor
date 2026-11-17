@@ -73,7 +73,7 @@ jedem Valheim-Update zeigt eine Karte **Spieloptik wird vorbereitet**, während 
 Dateien des Spiels liest. Welten, Server und die Werkstatt öffnen sich, sobald sie **Die Spieloptik ist bereit.**
 zeigt.
 
-![Die Startseite mit dem Bereich „Startseite“](../images/start-home.jpg)
+![Die Startseite mit dem Bereich „Startseite“](../images/start-home.webp)
 *Die Startseite: das Seitenmenü links, „Startseite“ rechts. Sobald eine Welt geöffnet wurde, erscheint sie unter
 „Zuletzt“.*
 
@@ -82,7 +82,7 @@ zeigt.
 Der Editor sucht selbst in jeder Steam-Bibliothek (auch in Flatpak-Steam). Wenn er das Spiel nicht findet, zeigt die
 Karte **Spieloptik holen** und „Valheim wurde auf diesem Computer nicht gefunden.“
 
-![Startseite, Valheim nicht gefunden: die Karte „Spieloptik holen“ mit ihren vier Schritten, dem Ordnerfeld, Durchsuchen… und Verwenden](../images/start-valheim-missing.jpg)
+![Startseite, Valheim nicht gefunden: die Karte „Spieloptik holen“ mit ihren vier Schritten, dem Ordnerfeld, Durchsuchen… und Verwenden](../images/start-valheim-missing.webp)
 *Die Schritte der Karte sagen, wo der Ordner zu finden ist; füge ihn in das Feld ein (oder **Durchsuchen…**), dann
 **Verwenden**.*
 
@@ -129,13 +129,13 @@ Für dein eigenes Spiel:
    zeigt *läuft*. Der Editor findet das Plugin und sein Token selbst, auch in Mod-Manager-Profilen. Klicke auf **Live
    bearbeiten**.
 
-![Mein Spiel auf der Startseite, das Spiel läuft](../images/start-game.jpg)
+![Mein Spiel auf der Startseite, das Spiel läuft](../images/start-game.webp)
 ***Mein Spiel** bei laufendem Spiel: Die Karte nennt die Welt, die verbundenen Spieler und wo das Plugin gefunden wurde
 (hier ein r2modman-Profil), mit **Live bearbeiten**.*
 
 Solange das Spiel nicht läuft, sagt **Mein Spiel** Schritt für Schritt, was fehlt.
 
-![Mein Spiel vor der Einrichtung: die Karte „Dein Spiel braucht BepInEx und das Plugin WorldEditorBridge“ mit ihren drei Schritten](../images/start-game-setup.jpg)
+![Mein Spiel vor der Einrichtung: die Karte „Dein Spiel braucht BepInEx und das Plugin WorldEditorBridge“ mit ihren drei Schritten](../images/start-game-setup.webp)
 ***Mein Spiel** bevor BepInEx installiert ist: die drei Schritte, einmalig zu erledigen. Die Seite bemerkt das Spiel
 von selbst, sobald es läuft.*
 

@@ -7,7 +7,7 @@ mga dungeon sa mundo o Gawaan na bukas sa iyo, mula sa isang prompt, habang pina
 **Saan:** panimulang pahina, **Mga setting** → **Claude** · **Key:** wala · **Gumagana sa:** mga naka-save na mundo,
 live (kapag naka-off ang **Auto**), ang Gawaan
 
-![Mga setting, naka-on ang Claude: dalawang switch, Port 5731, Bagong token, command ng Claude Code, mga linya ng Claude Desktop, Listening on; kanan, I-save sa dulo](images/settings-claude.jpg)
+![Mga setting, naka-on ang Claude: dalawang switch, Port 5731, Bagong token, command ng Claude Code, mga linya ng Claude Desktop, Listening on; kanan, I-save sa dulo](images/settings-claude.webp)
 *Kaliwa: naka-on at nakikinig ang seksiyong **Claude**; kopyahin ang command sa terminal (Claude Code) o ang mga linya sa
 configuration ng Claude Desktop. Kanan: ang dulo ng Mga setting, kasama ang **I-save**. Nasa command mo ang sarili mong
 token kung saan sinasabi ng larawang ito ang `<token>`, at nasa mga linya ang path ng sarili mong program.*
@@ -129,7 +129,7 @@ Pinakamadaling hilingin ang gawain sa lupa, mga gubat at mga dungeon. Ang mga de
 piece-piece ay maaaring umabot ng ilang ikot ("lumalampas ang bubong sa silangang gilid, ayusin mo"), o magsimula sa
 isa sa mga blueprint mo.
 
-![Kasaysayan pagkatapos magpatag, magsemento at magtanim si Claude, may sarili mong Itaas sa pagitan: mga row na may tag na Claude at Bawiin ang mga pagbabago ni Claude](images/claude-history.jpg)
+![Kasaysayan pagkatapos magpatag, magsemento at magtanim si Claude, may sarili mong Itaas sa pagitan: mga row na may tag na Claude at Bawiin ang mga pagbabago ni Claude](images/claude-history.webp)
 *Pinapangalanang "Claude: …" ang mga hakbang ni Claude at may tag na **Claude**; nasa pagitan nila ang sarili mong **Itaas**. Tinatanggal ng **Bawiin ang mga pagbabago ni Claude** sa itaas ang mga hakbang ni Claude at pinapanatili ang sa iyo.*
 
 ## Pagbawi sa mga pagbabago ni Claude

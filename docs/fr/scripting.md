@@ -7,7 +7,7 @@ montagnes, une forêt seulement sur les pentes douces, des terrasses, une place 
 **Où :** barre d'outils, section **CRÉATION** · **Touche :** aucune (`Ctrl+Enter` exécute le script) · **Fonctionne
 dans :** mondes enregistrés, en direct (pas l'Atelier)
 
-![L'outil Script : l'exemple Terraced hill exécuté sur un secteur de 3 × 3, son code dans le panneau et la ligne de résultat dessous](images/script.jpg)
+![L'outil Script : l'exemple Terraced hill exécuté sur un secteur de 3 × 3, son code dans le panneau et la ligne de résultat dessous](images/script.webp)
 *L'exemple Terraced hill exécuté sur un secteur de 3 × 3 : le code dans le panneau, et en dessous la ligne de résultat
 qui dit ce que le script a modifié.*
 
@@ -325,7 +325,7 @@ changé.
   modifié, annulé ou enregistré pendant son exécution (ou un autre secteur s'est ouvert). Relancez-le et attendez qu'il
   se termine.
 
-![L'outil Script après Exécuter : Groud mal orthographié ligne 2, la sortie listant l'erreur, la barre d'état disant que rien n'a changé](images/script-error.jpg)
+![L'outil Script après Exécuter : Groud mal orthographié ligne 2, la sortie listant l'erreur, la barre d'état disant que rien n'a changé](images/script-error.webp)
 *Un nom mal orthographié : la sortie nomme la ligne et l'erreur ; la barre d'état indique que rien n'a changé.*
 
 ### Arrêter un script

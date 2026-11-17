@@ -19,7 +19,7 @@ Maghanap sa buong mundo ng isang object, isang item sa kahit anong chest, o teks
    [Baguhin ang laman ng chest o ang nakasulat sa karatula](fill-a-chest.md)), pagkatapos ay **I-save sa mundo** (o
    **I-apply nang live**).
 
-![Maghanap sa mundo ng Beech1: bawat beech ay naka-pin nang kahel, isa ang napili na may gintong singsing](../images/map-search.jpg)
+![Maghanap sa mundo ng Beech1: bawat beech ay naka-pin nang kahel, isa ang napili na may gintong singsing](../images/map-search.webp)
 *Bawat pin ay isang object na nahanap; mas malaki ang napili sa listahan, na may gintong singsing.*
 
 ## Tingnan kung gumana

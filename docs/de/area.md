@@ -7,7 +7,7 @@ Sicherung, die eigene Natur des Spiels.
 
 **Wo:** Werkzeugleiste, Abschnitt **BEARBEITEN** · **Taste:** `B` · **Funktioniert in:** gespeicherten Welten, live
 
-![Ein Rahmen um eine dichte Baumgruppe gezogen, Objekte gewählt, die Art-Chips zählen, was darin ist](images/area.jpg)
+![Ein Rahmen um eine dichte Baumgruppe gezogen, Objekte gewählt, die Art-Chips zählen, was darin ist](images/area.webp)
 *Ein Rahmen um eine Baumgruppe mit gewähltem **Objekte**: Die Art-Chips zählen die Bäume, Felsen, Büsche und das
 Sammelbare darin. Noch hat sich nichts geändert: Die Schaltfläche unten wählt sie aus.*
 
@@ -49,10 +49,10 @@ Die Zeile unter den Schaltflächen nennt die Fläche und wie viele angezeigte Ob
 84 angezeigte(s) Objekt(e) darin“). Die Auswahl wird nur im Werkzeug Region und beim Einfügen gezeichnet; sie bleibt
 erhalten, wenn du ein anderes Werkzeug benutzt.
 
-![Ein Polygon um einen Teil eines Walds gezeichnet](images/area-polygon.jpg)
+![Ein Polygon um einen Teil eines Walds gezeichnet](images/area-polygon.webp)
 *Ein geschlossenes Polygon um einen Teil eines Walds, mit gewähltem **Objekte**.*
 
-![Derselbe Wald nach Objekte auswählen und Löschen](images/area-polygon-done.jpg)
+![Derselbe Wald nach Objekte auswählen und Löschen](images/area-polygon-done.webp)
 *Nach **Objekte auswählen (Enter)**, dann `Del` im Werkzeug Auswahl: Die Bäume im Polygon sind weg, die außerhalb
 stehen noch.*
 
@@ -85,7 +85,7 @@ Unter **Ebnen**, **Anheben** und **Absenken**:
 |---|---|
 | Zeile für Abtrag und Auftrag | Wie viel Boden die Aktion bewegen würde („Auf 35 m ebnen: 120 m³ abtragen, 340 m³ auffüllen“) und bei Ebnen, was außer Reichweite ist („(40 m³ außer Reichweite: ±8-m-Grenze)“; mit Ohne Grenze nur, was jenseits seiner ±400 m liegt). Die zweite Zeile, „Boden darin: … angehoben, … abgetragen seit der Erzeugung“, vergleicht mit der Welt, wie sie erzeugt wurde. Beide folgen jeder Änderung, dem weichen Rand und der Maske. |
 
-![Ebnen auf einem Rahmen über einem Hügel: die Zeile für Abtrag und Auftrag, mit Boden außer Reichweite der ±8-m-Grenze](images/area-cut-fill.jpg)
+![Ebnen auf einem Rahmen über einem Hügel: die Zeile für Abtrag und Auftrag, mit Boden außer Reichweite der ±8-m-Grenze](images/area-cut-fill.webp)
 *Ein Rahmen über einem Hügel mit **Ebnen** auf 46 m und **Ohne Grenze** aus: „Auf 46 m ebnen: 0 m³ abtragen, 1.5 Tsd.
 m³ auffüllen (2.2 Tsd. m³ außer Reichweite: ±8-m-Grenze)“, und darunter der Boden, der darin seit der Erzeugung der
 Welt schon angehoben wurde.*
@@ -160,7 +160,7 @@ die [Bodenaktionen](#bodenaktionen). Es tut für einen Rahmen oder ein Polygon, 
 
 ### Natur nachwachsen lassen
 
-![Ein kahler Rahmen und derselbe Rahmen nach Natur nachwachsen lassen, gleiche Kamera](images/area-regrow.jpg)
+![Ein kahler Rahmen und derselbe Rahmen nach Natur nachwachsen lassen, gleiche Kamera](images/area-regrow.webp)
 *Links: ein Rahmen auf kahlem Boden. Rechts: derselbe Rahmen nach **Natur nachwachsen lassen**: die eigenen Bäume und
 Felsen des Spiels für das Biom, und die Statusleiste sagt, was gewachsen ist.*
 
@@ -199,7 +199,7 @@ gewählten Arten darin wird entfernt, selbst wenn es in Ansicht ausgeblendet ist
 Gegenstück kommt zurück. Runensteine werden nie angetastet. Wenn sich nichts unterscheidet, meldet die Statusleiste
 „Nichts wiederherzustellen: die Auswahl ist so, wie sie in der Sicherung war.“
 
-![Eine durch Griefing beschädigte Hütte aus der Sicherung des Spiels wiederhergestellt, vorher und nachher](images/area-backup.jpg)
+![Eine durch Griefing beschädigte Hütte aus der Sicherung des Spiels wiederhergestellt, vorher und nachher](images/area-backup.webp)
 *Links: ein Polygon um eine Hütte, deren vordere Wand teilweise fehlt, **Zurück zu einer Sicherung** gewählt, die
 Liste **Sicherung** auf der Sicherung des Spiels geöffnet und **Deine Gebäude** an. Rechts: nach **Zurück zur
 Sicherung (Enter)** ist die Wand wieder ganz; die Zeile über der Schaltfläche nennt den Speicherstand der Sicherung,
@@ -230,14 +230,14 @@ Zone, außerhalb derer die Auswahl bleibt, wird nicht zurückgesetzt. Das Zurüc
 > Grabsteine der Spieler bleiben. Gezähmte Tiere haben keinen Erbauer, also verschwinden auch sie: Bring sie zuerst
 > weg.
 
-![Zwei Zonen unter einem Rahmen zum Zurücksetzen markiert, rot umrandet](images/area-reset.jpg)
+![Zwei Zonen unter einem Rahmen zum Zurücksetzen markiert, rot umrandet](images/area-reset.webp)
 *Ein Rahmen über zwei Zonen, **Zonen zurücksetzen** mit **Meine Gebäude behalten** und **Auch ihre Bodenänderungen
 rückgängig machen** an, nach **Zonen zurücksetzen… (Enter)**: beide Zonen rot umrandet, die Statusleiste zählt sie.
 Nichts wird zurückgesetzt, bis du speicherst.*
 
 ## Kopieren und Einfügen
 
-![Einfügen eines kopierten Walds: die durchsichtige Kopie folgt dem Cursor, gedreht, mit dem Panel Einfügen](images/paste.jpg)
+![Einfügen eines kopierten Walds: die durchsichtige Kopie folgt dem Cursor, gedreht, mit dem Panel Einfügen](images/paste.webp)
 *Ein kopierter Wald aus ein paar Dutzend Bäumen und Felsen folgt dem Cursor, durchsichtig und um 30° gedreht; die
 Zeile oben im Panel Einfügen sagt, was in der Zwischenablage ist. Ein Klick setzt ihn ab.*
 
@@ -270,7 +270,7 @@ ihren Bauteilen ohne seine Farbe. Sie wird auf dieselbe Weise eingefügt.
 
 ### Einfügen
 
-![Eine Hütte dreimal nach oben eingefügt: ein dreistöckiger Stapel neben dem Original](images/paste-stack.jpg)
+![Eine Hütte dreimal nach oben eingefügt: ein dreistöckiger Stapel neben dem Original](images/paste-stack.webp)
 *Ein Klick mit **Kopien** 3 und **Entlang** nach oben, vom Boden aus gesehen: neben der ursprünglichen Hütte drei zu
 drei Stockwerken gestapelte Kopien (der Umriss ist das nächste Einfügen, das dem Cursor folgt).*
 
@@ -310,7 +310,7 @@ erste den Boden. Die Zeile oben im Panel sagt, was in der Zwischenablage ist: Na
 gespiegelt. Die Statusleiste sagt, was das Einfügen getan hat: „Eingefügt mit dem Boden, 54 Objekt(e), Bäume, Felsen
 u. Ä. vom Platz geräumt: 7.“
 
-![Eine Steinhütte mit Platz räumen in die Flanke eines Erdhügels eingefügt, vor und nach dem Klick](images/paste-clear-site.jpg)
+![Eine Steinhütte mit Platz räumen in die Flanke eines Erdhügels eingefügt, vor und nach dem Klick](images/paste-clear-site.webp)
 *Mit **Platz räumen** an (**Bodenform und -farbe** aus, **Höhe** -1.5 m): links die durchsichtige Kopie, in die Flanke
 eines Erdhügels versenkt; rechts, nach dem Klick, der Boden um ihre Wände weggegraben.*
 

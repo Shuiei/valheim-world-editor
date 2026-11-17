@@ -12,7 +12,7 @@ copie de sauvegarde à côté, comme dans [Votre première modification](first-e
 
 1. Sur la page d'accueil, cliquez sur **L'Atelier**, puis sur **Ouvrir l'Atelier**.
 
-![L'Atelier sur la page d'accueil](../images/start-workshop.jpg)
+![L'Atelier sur la page d'accueil](../images/start-workshop.webp)
 *Sur la page d'accueil, **L'Atelier** : **Ouvrir l'Atelier**, si Homestead est installé, et vos plans (trois ici ; la
 liste est vide la première fois).*
 
@@ -42,7 +42,7 @@ le coût de la cabane.
 4. Cherchez `wood door`, cliquez sur sa vignette, et posez la porte dans l'espace.
 5. Posez une deuxième rangée de murs sur la première.
 
-![Une maison dans l'Atelier, colorée par le contrôle de stabilité](../images/workshop.jpg)
+![Une maison dans l'Atelier, colorée par le contrôle de stabilité](../images/workshop.webp)
 *Le contrôle de stabilité sur une haute maison : la base en pierre en bleu clair, les murs au-dessus en vert, puis en
 jaune et en orange à mesure que leur stabilité s'épuise, et un surplomb en rouge : il tomberait.*
 
@@ -77,7 +77,7 @@ dans l'onglet du marteau de Homestead, prêt à construire en jeu.
    quart de tour.
 6. Cliquez pour la poser, puis appuyez sur `Esc` pour arrêter de coller.
 
-![Le panneau Plans dans un monde, avec une cabane enregistrée](../images/blueprints.jpg)
+![Le panneau Plans dans un monde, avec une cabane enregistrée](../images/blueprints.webp)
 *Le panneau **Plans** à côté de la barre d'outils : une cabane enregistrée avec son image, son coût et son bouton
 **Coller**.*
 

@@ -18,7 +18,26 @@ public sealed partial class Editor
         : 85;
 
     /// <summary>
-    /// The whole window, saved as a JPEG for the docs at <see cref="Quality"/> (the status bar's message cleared unless
+    /// The pictures are WebP files instead of JPEGs ($DOCS_FORMAT=webp): each scene's x.jpg is written as x.webp. The
+    /// translations' pictures are, being carried in the app for every language (about a third smaller).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">$DOCS_FORMAT is neither jpg nor webp.</exception>
+    public static bool WebP { get; } = Environment.GetEnvironmentVariable("DOCS_FORMAT") switch
+    {
+        null or "" or "jpg" => false,
+        "webp" => true,
+        var f => throw new InvalidOperationException($"DOCS_FORMAT={f}: jpg or webp"),
+    };
+
+    /// <summary>A picture encoded for the docs: WebP for a .webp file, else JPEG, at <see cref="Quality"/>.</summary>
+    /// <param name="picture">The picture.</param>
+    /// <param name="path">The file it goes to.</param>
+    public static SKData Encode(SKBitmap picture, string path) =>
+        picture.Encode(path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) ? SKEncodedImageFormat.Webp : SKEncodedImageFormat.Jpeg, Quality)
+        ?? throw new InvalidOperationException($"{path}: the picture could not be encoded");
+
+    /// <summary>
+    /// The whole window, saved for the docs (JPEG, or WebP for a .webp file) at <see cref="Quality"/> (the status bar's message cleared unless
     /// kept: it would tell how the scene was set up).
     /// </summary>
     /// <param name="path">The JPEG file to write.</param>
@@ -44,7 +63,7 @@ public sealed partial class Editor
         }
         try
         {
-            using var jpeg = img.Encode(SKEncodedImageFormat.Jpeg, Quality);
+            using var jpeg = Encode(img, path);
             using var file = File.Create(path);
             jpeg.SaveTo(file);
         }

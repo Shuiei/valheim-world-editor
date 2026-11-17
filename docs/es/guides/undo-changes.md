@@ -23,7 +23,7 @@ está guardado.
 7. Para retirar un cambio que ya guardaste, deshazlo (o usa **Quitar**) y vuelve a usar **Guardar en el mundo**. En
    vivo, deshazlo y vuelve a usar **Aplicar en vivo** (o deja que **Auto** lo envíe).
 
-![El panel Historial después de cinco ediciones, con la última deshecha](../images/history.jpg)
+![El panel Historial después de cinco ediciones, con la última deshecha](../images/history.webp)
 *Historial: el último cambio deshecho con **Volver hasta aquí**, en gris y con **Rehacer hasta aquí**.*
 
 > [!WARNING]

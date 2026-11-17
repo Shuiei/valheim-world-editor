@@ -22,7 +22,7 @@ ito, tingnan ang [Hanapin ang isang object, item sa chest o karatula](find-thing
 Pinuputol ang Ilan sa pinakamalaking stack na pinapayagan ng laro para sa item na iyon. Nananatiling sa chest ang
 binagong laman: hindi pinupuno ng loot ng laro ang chest na hindi pa nabubuksan ng sinuman sa ibabaw nito.
 
-![Isang wood chest sa Inspector: tatlong slot ang may laman, ang ikaapat ay kumukuha ng IronScrap, Ilan 20](../images/guide-chest-slot.jpg)
+![Isang wood chest sa Inspector: tatlong slot ang may laman, ang ikaapat ay kumukuha ng IronScrap, Ilan 20](../images/guide-chest-slot.webp)
 *Na-click ang slot 4, napili ang IronScrap sa **Maghanap ng item…** at itinakda sa 20 ang **Ilan**; laman ng unang
 tatlong slot ang Wood, Coins at Resin. Inilalagay ng **I-apply ang mga pagbabago** ang mga ito sa chest.*
 

@@ -27,7 +27,7 @@ reste, ou tout ce qui n'est pas encore enregistré.
    **Enregistrer dans le monde** à nouveau. En direct, annulez-la et **Appliquer en direct** à nouveau (ou laissez
    **Auto** l'envoyer).
 
-![Le panneau Historique après cinq modifications, la dernière annulée](../images/history.jpg)
+![Le panneau Historique après cinq modifications, la dernière annulée](../images/history.webp)
 *Historique : la dernière modification annulée avec **Revenir ici**, grisée avec **Rétablir jusqu'ici**.*
 
 > [!WARNING]

@@ -6,7 +6,7 @@ supera con creces los 8 m del juego, o una imagen tuya estampada.
 
 **Dónde:** barra de herramientas, sección **CREAR** · **Tecla:** `G` · **Funciona en:** mundos guardados, en vivo
 
-![El panel Relieve con el tipo Fórmula, y seis de sus preajustes uno al lado de otro, cada uno con su nombre, con colores de pendiente](images/shape.jpg)
+![El panel Relieve con el tipo Fórmula, y seis de sus preajustes uno al lado de otro, cada uno con su nombre, con colores de pendiente](images/shape.webp)
 *El tipo **Fórmula**. Fila delantera, de izquierda a derecha: Montículo, Cono, Meseta. Fila trasera, de izquierda a
 derecha: Cráter, Foso (zanja en anillo), Colina con crestas, cada uno con el radio predeterminado de 16 m y la altura de
 5 m, con **Colores de pendiente** activado en Vista para que se lean sus pendientes. El panel muestra el Montículo y su
@@ -71,7 +71,7 @@ pasa a **Fórmula…**, la tuya, que se recuerda para la próxima vez.
 | **Altura** | 5 m por defecto. Es `h` en la fórmula. |
 | **Fórmula** | Cuántos metros añadir al suelo en cada punto dentro del radio; un número negativo excava. Un error se muestra debajo de la casilla, y no se puede colocar nada hasta corregirlo. |
 
-![El panel Relieve con una fórmula sin terminar y la línea de error bajo la casilla de la fórmula](images/shape-formula-error.jpg)
+![El panel Relieve con una fórmula sin terminar y la línea de error bajo la casilla de la fórmula](images/shape-formula-error.webp)
 *Una fórmula sin terminar: la lista pasó a **Fórmula…**, y la línea bajo la casilla dice qué falla («la fórmula termina
 demasiado pronto»).*
 
@@ -111,7 +111,7 @@ Una montaña entera creada a partir de una semilla y sumada al suelo que hay, as
 terreno y se funde con él en su borde. Su contorno nunca es un círculo perfecto, y **Rugosidad** añade abultamientos,
 crestas y barrancos en proporción a su tamaño.
 
-![El tipo Montaña del panel Relieve y la vista previa naranja de un pico aislado con su anillo; en el recuadro, el anillo en rojo cerca del borde del área](images/mountain-preview.jpg)
+![El tipo Montaña del panel Relieve y la vista previa naranja de un pico aislado con su anillo; en el recuadro, el anillo en rojo cerca del borde del área](images/mountain-preview.webp)
 *Pico aislado, de 80 m de altura y 120 m de radio, antes del clic: las líneas naranjas lo muestran tan alto como va a
 quedar y el anillo blanco hasta dónde llega. En el recuadro, arriba a la derecha: con el puntero cerca del borde del
 área, el anillo se vuelve rojo y no aparece vista previa, porque no cabría.*
@@ -127,9 +127,9 @@ quedar y el anillo blanco hasta dónde llega. En el recuadro, arriba a la derech
 
 | Pico aislado | Cresta |
 |---|---|
-| ![Un pico aislado con los árboles del bioma en sus laderas, visto desde abajo](images/mountain-peak.jpg) | ![Una cresta larga y desnuda que cruza la imagen](images/mountain-ridge.jpg) |
+| ![Un pico aislado con los árboles del bioma en sus laderas, visto desde abajo](images/mountain-peak.webp) | ![Una cresta larga y desnuda que cruza la imagen](images/mountain-ridge.webp) |
 | **Volcán** | **Colinas onduladas** |
-| ![Un volcán desnudo con su cráter en la cima](images/mountain-volcano.jpg) | ![Tres colinas onduladas desnudas una al lado de otra](images/mountain-hills.jpg) |
+| ![Un volcán desnudo con su cráter en la cima](images/mountain-volcano.webp) | ![Tres colinas onduladas desnudas una al lado de otra](images/mountain-hills.webp) |
 
 *Cuatro preajustes en el centro de un área de 5 × 5 despejada y nivelada antes, para que cada uno destaque. El pico
 aislado tiene encima los árboles del bioma; los demás se dejan desnudos para que se vea su forma.*
@@ -155,11 +155,11 @@ Una imagen en escala de grises estampada en el suelo: sus partes blancas alcanza
 parte, y las negras quedan como están. La imagen cubre un cuadrado el doble de ancho que el **Radio**; el contorno lo
 muestra.
 
-![Las tres imágenes integradas, cada una estampada una vez en suelo nivelado](images/landform-pictures.jpg)
+![Las tres imágenes integradas, cada una estampada una vez en suelo nivelado](images/landform-pictures.webp)
 *Las imágenes integradas, de 6 m de altura con un radio de 8 m. De izquierda a derecha: Colina abrupta, Dunas, Suelo
 rocoso.*
 
-![El tipo Imagen antes y después de un clic: el contorno cuadrado de la imagen y la vista previa naranja, y luego la colina](images/landform-picture.jpg)
+![El tipo Imagen antes y después de un clic: el contorno cuadrado de la imagen y la vista previa naranja, y luego la colina](images/landform-picture.webp)
 *La **Colina abrupta**, con **Radio** de 9 m y **Altura** de 8 m. Izquierda: su contorno cuadrado y su vista previa
 naranja sobre suelo plano antes del clic. Derecha: la colina entera, estampada con un clic.*
 

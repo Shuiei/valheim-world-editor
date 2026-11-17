@@ -7,7 +7,7 @@ bundok, gubat sa banayad na dahilig lang, mga terasa, sementadong plaza sa eksak
 **Saan:** tool rail, seksiyong **LIKHA** · **Key:** wala (pinapatakbo ng `Ctrl+Enter` ang script) · **Gumagana sa:**
 mga naka-save na mundo, live (hindi sa Gawaan)
 
-![Ang tool na Script: ang halimbawang Terraced hill na pinatakbo sa 3 × 3 na area, ang code nito sa panel at ang linya ng resulta sa ilalim](images/script.jpg)
+![Ang tool na Script: ang halimbawang Terraced hill na pinatakbo sa 3 × 3 na area, ang code nito sa panel at ang linya ng resulta sa ilalim](images/script.webp)
 *Ang halimbawang Terraced hill na pinatakbo sa 3 × 3 na area: ang code sa panel, at sa ilalim nito ang linya ng
 resulta na nagsasabi kung ano ang binago ng script.*
 
@@ -325,7 +325,7 @@ nagbago.
 - "**Nagbago ang area habang tumatakbo ang script: walang nagbago. Patakbuhin ulit ito.**" Nag-edit, nag-undo o
   nag-save ka habang tumatakbo ito (o may ibang area na bumukas). Patakbuhin ulit ito at hintayin.
 
-![Ang tool na Script pagkatapos ng Patakbuhin: maling baybay na Groud sa linya 2, inililista ng output ang mali, sinasabi ng status bar na walang nagbago](images/script-error.jpg)
+![Ang tool na Script pagkatapos ng Patakbuhin: maling baybay na Groud sa linya 2, inililista ng output ang mali, sinasabi ng status bar na walang nagbago](images/script-error.webp)
 *Maling baybay na pangalan: pinapangalanan ng output ang linya at ang mali; sinasabi ng status bar na walang nagbago.*
 
 ### Paghinto sa script

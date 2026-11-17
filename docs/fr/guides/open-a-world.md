@@ -19,7 +19,7 @@ qui l'utilise en cours d'exécution.
    dossier** sous **Dossiers de mondes**, choisissez le dossier du monde (ou un dossier de mondes) avec **Parcourir…**,
    puis **Enregistrer**.
 
-![Un monde enregistré : les mondes trouvés, puis Un autre dossier de mondes](../images/start-offline.jpg)
+![Un monde enregistré : les mondes trouvés, puis Un autre dossier de mondes](../images/start-offline.webp)
 *Les mondes que l'éditeur a trouvés de lui-même, puis **Un autre dossier de mondes** avec **Parcourir…** et **Ouvrir**.*
 
 ## Vérifier le résultat

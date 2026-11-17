@@ -126,7 +126,7 @@ nouveau.
 défaut, tant qu'elles occupent moins de 2 Go de mémoire (au-delà, les plus anciennes partent en premier) ;
 **Paramètres → Historique → Étapes conservées** n'en garde que ce nombre à la place.
 
-![Le panneau Historique après cinq modifications, la dernière annulée](../images/history.jpg)
+![Le panneau Historique après cinq modifications, la dernière annulée](../images/history.webp)
 *La dernière étape a été annulée avec **Revenir ici** : elle est grisée et propose **Rétablir jusqu'ici**.*
 
 Il y a deux façons de revenir en arrière :

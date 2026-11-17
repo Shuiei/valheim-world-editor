@@ -6,7 +6,7 @@ caminos, rampas, terraplenes, zanjas y ríos.
 
 **Dónde:** barra de herramientas, sección **EDITAR** · **Tecla:** `P` · **Funciona en:** mundos guardados, en vivo
 
-![Los cinco puntos de la herramienta Camino sobre dos montículos, con Aplanar elegido, antes de Aplicar](images/path.jpg)
+![Los cinco puntos de la herramienta Camino sobre dos montículos, con Aplanar elegido, antes de Aplicar](images/path.webp)
 *Una línea de cinco puntos dibujada sobre dos montículos, con **Aplanar** elegido, su **Altura** tomada del suelo
 llano con `Alt`+clic y **Aspecto natural** activado. Todavía no ha cambiado nada: la franja muestra el ancho del camino
 y sus bordes suaves hasta que pulsas **Aplicar (Enter)**; los círculos del último punto son los del puntero.*
@@ -26,7 +26,7 @@ y sus bordes suaves hasta que pulsas **Aplicar (Enter)**; los círculos del últ
 
 El panel muestra cuántos puntos tiene la línea y cuánto mide.
 
-![La misma línea aplicada: un camino llano que atraviesa ambos montículos, pavimentado por el centro, con la línea aún dibujada](images/path-road.jpg)
+![La misma línea aplicada: un camino llano que atraviesa ambos montículos, pavimentado por el centro, con la línea aún dibujada](images/path-road.webp)
 *La línea de la primera imagen, con la misma cámara: **Aplanar** abrió un camino llano a través de ambos montículos, y
 luego **Pintar pavimento** con **Ancho** 4 m y **Borde suave** 1 m pavimentó su centro. La línea se queda para la
 siguiente acción.*
@@ -47,7 +47,7 @@ siguiente acción.*
 | **Amplitud**, **Anchura**, **Nuevo patrón** | **Natural** y **Aspecto natural**: qué altura y qué anchura tienen los desniveles, y otro patrón aleatorio para ellos. Son los del pincel [Natural](terrain.md#natural): se ajusten aquí, allí o en la herramienta [Región](area.md), son los mismos valores. |
 | **Ángulo de reposo** | **Erosionar**: la pendiente más empinada que se mantiene, de 10° a 60° (33° por defecto). El del pincel [Erosionar](terrain.md#erosionar), el mismo valor. |
 
-![Dos zanjas excavadas con Bajar 3 m una junto a otra: la izquierda con paredes empinadas, la derecha con taludes anchos e inclinados](images/path-soft-edge.jpg)
+![Dos zanjas excavadas con Bajar 3 m una junto a otra: la izquierda con paredes empinadas, la derecha con taludes anchos e inclinados](images/path-soft-edge.webp)
 *Dos líneas rectas sobre suelo llano, cada una con **Bajar** de 3 m y **Ancho** 6 m, vistas a lo largo. Izquierda:
 **Borde suave** 0, una zanja de paredes rectas y empinadas. Derecha: **Borde suave** 8 m, los taludes descienden
 suavemente hasta el suelo.*
@@ -75,7 +75,7 @@ herramienta Región con una selección, la herramienta Camino con una línea, y 
 
 ### Rampa
 
-![Una rampa vista de lado, que sube de forma uniforme desde el suelo hasta una plataforma elevada, con el panel Camino mostrando Inicio y Fin](images/path-ramp.jpg)
+![Una rampa vista de lado, que sube de forma uniforme desde el suelo hasta una plataforma elevada, con el panel Camino mostrando Inicio y Fin](images/path-ramp.webp)
 *Una rampa de dos puntos vista de lado, desde el suelo a su pie (**Inicio** 35.2 m) hasta lo alto de una plataforma
 elevada 8 m (**Fin** 43 m). Sube de forma uniforme todo el trayecto.*
 
@@ -86,7 +86,7 @@ recorrido.
 
 ### Río o canal
 
-![Un río excavado a través de la zona con Río / canal, con el agua visible](images/path-river.jpg)
+![Un río excavado a través de la zona con Río / canal, con el agua visible](images/path-river.webp)
 *Un río excavado a través de la zona con **Río / canal (agua)**: el mar lo llena.*
 
 Valheim no tiene agua que fluya: el agua de los ríos es el mar, al mismo nivel (30 m) en todas partes. Así que un río

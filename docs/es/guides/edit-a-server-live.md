@@ -10,7 +10,7 @@ panel web y FTP, sin SSH), o
 uno que un panel de juegos como Pterodactyl ejecuta en un contenedor: ver
 [Editar un servidor alquilado o alojado con panel](edit-a-rented-server.md).
 
-![El formulario de servidor dedicado: nombre, dirección del servidor y puerto SSH, usuario y contraseña, archivo de clave SSH, token del plugin, la carpeta de Valheim del servidor, Guardar contraseña y Conectar](../images/start-server.jpg)
+![El formulario de servidor dedicado: nombre, dirección del servidor y puerto SSH, usuario y contraseña, archivo de clave SSH, token del plugin, la carpeta de Valheim del servidor, Guardar contraseña y Conectar](../images/start-server.webp)
 *El formulario bajo **Un servidor dedicado**. Tras la primera conexión, el servidor se guarda encima de él, para
 acceder con un clic.*
 

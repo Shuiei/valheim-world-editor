@@ -8,11 +8,11 @@ barra.
 **Onde:** barra de ferramentas, seção **EDITAR** · **Tecla:** `T` · **Funciona em:** mundos salvos, ao vivo (a Oficina
 tem só [Construir](build.md))
 
-![A predefinição Bosque dos Prados no modo Pincel sobre um campo aberto](images/plant-brush.jpg)
+![A predefinição Bosque dos Prados no modo Pincel sobre um campo aberto](images/plant-brush.webp)
 *As árvores e arbustos transparentes no círculo do pincel são exatamente o que um clique coloca; o painel mostra a
 predefinição Bosque dos Prados e os tipos dela.*
 
-![O pincel Bosque dos Prados num prado vazio, antes e depois de um clique](images/place-brush-before-after.jpg)
+![O pincel Bosque dos Prados num prado vazio, antes e depois de um clique](images/place-brush-before-after.webp)
 *À esquerda: a prévia transparente no círculo do pincel. À direita: o mesmo ponto depois de um clique, as árvores e
 arbustos de pé onde a prévia os mostrava.*
 
@@ -78,7 +78,7 @@ quais o seu mundo ainda não tem nenhum e os tipos dos seus mods. Criaturas, ite
 as peças do martelo e da bandeja de servir: essas ficam no painel [Construir](build.md). As mudas e plantações do
 cultivador estão nos dois. **Concluído** o fecha.
 
-![O cartão Escolher tipos buscando "rock"](images/place-chooser.jpg)
+![O cartão Escolher tipos buscando "rock"](images/place-chooser.webp)
 *O cartão Escolher tipos buscando "rock", com BigRock marcado: a categoria Rochas conta 1 tipo marcado ao lado do total,
 e BigRock encabeça a linha Recentes.*
 
@@ -112,7 +112,7 @@ ponto para removê-lo. Um clique duplo no último ponto coloca a forma, como `En
 
 ### Linha
 
-![Colocar no modo Linha: bétulas ao longo de uma curva suave por cinco pontos ao lado de um caminho pavimentado, o painel Colocar em Linha e Pontos](images/place-line.jpg)
+![Colocar no modo Linha: bétulas ao longo de uma curva suave por cinco pontos ao lado de um caminho pavimentado, o painel Colocar em Linha e Pontos](images/place-line.webp)
 *Modo Linha com **Pontos**: bétulas a cada 4 m ao longo de uma curva suave por cinco pontos, ao lado de um caminho
 pavimentado, mostradas antes de **Colocar (Enter)**. As árvores pálidas são a prévia.*
 
@@ -136,13 +136,13 @@ pavimentado, mostradas antes de **Colocar (Enter)**. As árvores pálidas são a
 
 ### Grade
 
-![Cenouras e nabos numa grade girada, vistos de cima](images/plant-grid.jpg)
+![Cenouras e nabos numa grade girada, vistos de cima](images/plant-grid.webp)
 *Cenouras e nabos numa grade girada 15°, vistos de perto e de cima para que a planta de cada célula apareça. A linha
 laranja no painel avisa que as plantações precisam de solo cultivado.*
 
 ### Polígono
 
-![Um polígono desenhado ponto a ponto](images/plant-zone.jpg)
+![Um polígono desenhado ponto a ponto](images/plant-zone.webp)
 *Um polígono desenhado ponto a ponto, com arbustos e árvores jovens na prévia em pontos aleatórios dentro dele.*
 
 Os pontos são sorteados uma vez e mantidos enquanto o polígono não muda; **Novo arranjo (N)** sorteia outros.
@@ -163,7 +163,7 @@ A criatura, as estrelas e o tempo de retorno são fixos para cada tipo: escolha 
 serem destruídos; a linha deles diz quantas e a que distância ("Greydwarf, Greydwarf_Elite · até 3 ao redor, num raio
 de 5 m"). Veja [Pontos de surgimento](concepts/objects.md#pontos-de-surgimento).
 
-![Pontos de surgimento perto de uma cabana, um selecionado e aberto no Inspetor](images/spawn-points.jpg)
+![Pontos de surgimento perto de uma cabana, um selecionado e aberto no Inspetor](images/spawn-points.webp)
 *De perto, dois pontos de surgimento de javali e um de draugr perto de uma cabana. A linha do Inspetor para o draugr
 selecionado diz o que ele faz surgir e se a criatura volta.*
 

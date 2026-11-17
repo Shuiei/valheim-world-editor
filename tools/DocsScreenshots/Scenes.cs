@@ -156,7 +156,7 @@ public sealed partial class Scenes
     private string World { get; }
 
     /// <summary>A picture's path in the output folder.</summary>
-    private string Out(string file) => System.IO.Path.Combine(_out, file);
+    private string Out(string file) => System.IO.Path.Combine(_out, Editor.WebP && file.EndsWith(".jpg", StringComparison.Ordinal) ? file[..^4] + ".webp" : file);
 
     /// <summary>A command with its trailing modifiers (none: no trailing space).</summary>
     private static string Cmd(string command) => command.Trim();

@@ -43,7 +43,7 @@ nouveau les bibliothèques Steam). Si la carte indique **Le rendu du jeu n'a pas
 ou vérifiez le dossier dans Paramètres ; si cela échoue encore, signalez-le avec le journal
 ([ci-dessous](#le-journal-et-les-rapports-de-bug)).
 
-![Accueil avec Valheim introuvable : la carte Obtenir le rendu du jeu avec ses quatre étapes, la case du dossier, Parcourir… et Utiliser](../images/start-valheim-missing.jpg)
+![Accueil avec Valheim introuvable : la carte Obtenir le rendu du jeu avec ses quatre étapes, la case du dossier, Parcourir… et Utiliser](../images/start-valheim-missing.webp)
 *« Valheim est introuvable sur cet ordinateur. » : choisissez le dossier qui contient `valheim_Data`, puis
 **Utiliser**.*
 
@@ -104,7 +104,7 @@ joint en direct : modifiez plutôt les fichiers de son monde, comme dans
 Avec **J'ai créé mon propre tunnel**, « Nothing answers on 127.0.0.1:… » ou « No answer from 127.0.0.1:… within … s »
 signifie que votre tunnel n'est pas ouvert, ou que le serveur ne tourne pas avec le plugin.
 
-![Le formulaire Un serveur dédié rempli pour 127.0.0.1, port SSH 2222, après Se connecter : le message « No answer from 127.0.0.1:2222 » sous le bouton](../images/start-server-error.jpg)
+![Le formulaire Un serveur dédié rempli pour 127.0.0.1, port SSH 2222, après Se connecter : le message « No answer from 127.0.0.1:2222 » sous le bouton](../images/start-server-error.webp)
 *Se connecter pressé alors que rien ne répond à l'adresse : « No answer from 127.0.0.1:2222. Check the address and that
 SSH is enabled on the server. » Vérifiez **Adresse du serveur** et **Port SSH**.*
 
@@ -161,7 +161,7 @@ Un jeu en cours garde le monde en mémoire et écrase les fichiers. S'il a sauve
    écrit.
 4. Fermez Valheim (ou arrêtez le serveur), puis appuyez à nouveau sur **Enregistrer dans le monde**.
 
-![La question Le jeu a sauvegardé ce monde : ce qui s'est passé, ce que fait Reporter mes modifications, et les boutons Reporter mes modifications et Pas maintenant](../images/game-saved-replay.jpg)
+![La question Le jeu a sauvegardé ce monde : ce qui s'est passé, ce que fait Reporter mes modifications, et les boutons Reporter mes modifications et Pas maintenant](../images/game-saved-replay.webp)
 *Enregistrement refusé parce que le jeu a sauvegardé le monde après que l'éditeur l'a lu : **Reporter mes modifications** refait vos modifications sur la sauvegarde du jeu.*
 
 **Pas maintenant** laisse tout tel quel. Reporter vos modifications peut abandonner certaines étapes de l'Historique

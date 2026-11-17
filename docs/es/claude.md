@@ -7,7 +7,7 @@ mazmorras en el mundo o el Taller que tienes abierto, a partir de una instrucci�
 **Dónde:** página de inicio, **Configuración** → **Claude** · **Tecla:** ninguna · **Funciona en:** mundos guardados,
 en vivo (con **Auto** desactivado), el Taller
 
-![Configuración, Claude activado: ambos interruptores, Puerto 5731, Nuevo token, el comando de Claude Code, las líneas de Claude Desktop, Listening on; a la derecha, Guardar al final](images/settings-claude.jpg)
+![Configuración, Claude activado: ambos interruptores, Puerto 5731, Nuevo token, el comando de Claude Code, las líneas de Claude Desktop, Listening on; a la derecha, Guardar al final](images/settings-claude.webp)
 *Izquierda: la sección **Claude** activada y a la escucha; copia el comando en una terminal (Claude Code) o las líneas
 en la configuración de Claude Desktop. Derecha: el final de Configuración, con **Guardar**. Tu comando lleva tu propio
 token donde esta imagen dice `<token>`, y las líneas la ruta de tu propio programa.*
@@ -126,7 +126,7 @@ El trabajo del suelo, los bosques y las mazmorras son lo más fácil de pedir. L
 pieza a pieza pueden llevar unas cuantas rondas («el tejado sobresale por el lado este, arréglalo»), o empezar a
 partir de uno de tus planos.
 
-![El Historial después de que Claude aplanara, pavimentara y plantara, con un Elevar tuyo en medio: filas con la etiqueta Claude y Retirar los cambios de Claude](images/claude-history.jpg)
+![El Historial después de que Claude aplanara, pavimentara y plantara, con un Elevar tuyo en medio: filas con la etiqueta Claude y Retirar los cambios de Claude](images/claude-history.webp)
 *Los pasos de Claude se llaman «Claude: …» y llevan la etiqueta **Claude**; tu propio **Elevar** queda entre ellos. **Retirar los cambios de Claude**, arriba, quita los pasos de Claude y conserva los tuyos.*
 
 ## Retirar los cambios de Claude

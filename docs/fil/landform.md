@@ -6,7 +6,7 @@ lampas sa 8 m ng laro, o sarili mong larawang idiniin.
 
 **Saan:** tool rail, seksiyong **LIKHA** · **Key:** `G` · **Gumagana sa:** mga naka-save na mundo, live
 
-![Ang panel ng Lupain na may uring Pormula, at anim sa mga preset nito na magkakatabi, bawat isa may pangalan, naka-on ang kulay ng dahilig](images/shape.jpg)
+![Ang panel ng Lupain na may uring Pormula, at anim sa mga preset nito na magkakatabi, bawat isa may pangalan, naka-on ang kulay ng dahilig](images/shape.webp)
 *Ang uring **Pormula**. Hanay sa harap mula kaliwa: Punso, Kono, Talampas. Hanay sa likod mula kaliwa: Bunganga, Moat
 (pabilog na kanal), Burol na may mga tagaytay, bawat isa sa default na radius na 16 m at taas na 5 m, naka-on ang
 **Kulay ng dahilig** sa Tanaw para mabasa ang mga dahilig nila. Ipinapakita ng panel ang Punso at ang pormula nito; sa
@@ -72,7 +72,7 @@ lilipat ang listahan sa **Pormula…**, ang sarili mo, na tinatandaan para sa su
 | **Taas** | Default 5 m. Ito ang `h` sa pormula. |
 | **Pormula** | Ilang metro ang idadagdag sa lupa sa bawat punto sa loob ng radius; humuhukay ang negatibong numero. Lumalabas ang mali sa ilalim ng kahon, at walang mailalagay hangga't hindi ito naaayos. |
 
-![Ang panel ng Lupain na may hindi tapos na pormula at ang linya ng error sa ilalim ng kahon ng pormula](images/shape-formula-error.jpg)
+![Ang panel ng Lupain na may hindi tapos na pormula at ang linya ng error sa ilalim ng kahon ng pormula](images/shape-formula-error.webp)
 *Isang hindi tapos na pormula: lumipat ang listahan sa **Pormula…**, at sinasabi ng linya sa ilalim ng kahon kung ano
 ang mali ("masyadong maagang natatapos ang pormula").*
 
@@ -113,7 +113,7 @@ Isang buong bundok na ginawa mula sa seed, idinagdag sa lupang naroon, kaya pina
 kalupaan at unti-unting humahalo pabalik dito sa gilid nito. Hindi kailanman perpektong bilog ang balangkas nito, at
 nagdadagdag ang **Gaspang** ng mga umbok, tagaytay at bangin ayon sa laki nito.
 
-![Ang uring Mountain sa panel ng Lupain at ang orange na preview ng nag-iisang tuktok kasama ang singsing nito; sa inset, pula ang singsing malapit sa gilid ng area](images/mountain-preview.jpg)
+![Ang uring Mountain sa panel ng Lupain at ang orange na preview ng nag-iisang tuktok kasama ang singsing nito; sa inset, pula ang singsing malapit sa gilid ng area](images/mountain-preview.webp)
 *Nag-iisang tuktok, 80 m ang taas, radius na 120 m, bago ang click: ipinapakita ito ng mga orange na linya sa pinakamataas
 na aabutin nito at ng puting singsing kung hanggang saan ito aabot. Sa inset, kanang itaas: kapag malapit ang pointer
 sa gilid ng area, nagiging pula ang singsing at walang preview, dahil hindi ito kakasya.*
@@ -129,9 +129,9 @@ sa gilid ng area, nagiging pula ang singsing at walang preview, dahil hindi ito 
 
 | Nag-iisang tuktok | Tagaytay |
 |---|---|
-| ![Isang nag-iisang tuktok na may mga puno ng biome na tumubo sa mga dahilig nito, tinitingnan mula sa ibaba](images/mountain-peak.jpg) | ![Isang mahaba at hubad na tagaytay na tumatawid sa larawan](images/mountain-ridge.jpg) |
+| ![Isang nag-iisang tuktok na may mga puno ng biome na tumubo sa mga dahilig nito, tinitingnan mula sa ibaba](images/mountain-peak.webp) | ![Isang mahaba at hubad na tagaytay na tumatawid sa larawan](images/mountain-ridge.webp) |
 | **Bulkan** | **Mga alun-along burol** |
-| ![Isang hubad na bulkan na may bunganga sa tuktok](images/mountain-volcano.jpg) | ![Tatlong hubad na alun-along burol na magkakatabi](images/mountain-hills.jpg) |
+| ![Isang hubad na bulkan na may bunganga sa tuktok](images/mountain-volcano.webp) | ![Tatlong hubad na alun-along burol na magkakatabi](images/mountain-hills.webp) |
 
 *Apat na preset sa gitna ng 5 × 5 na area na nilinis at pinatag muna, para tumampok ang bawat isa. May mga puno ng
 biome na tumubo sa nag-iisang tuktok; iniwang hubad ang iba para makita ang hugis nila.*
@@ -157,11 +157,11 @@ Isang greyscale na larawang idiniin sa lupa: umaabot sa buong **Taas** ang mga p
 mga abong bahagi, at nananatili ang mga itim na bahagi. Sumasaklaw ang larawan sa parisukat na dalawang beses ang lapad
 ng **Radius**; ipinapakita ito ng balangkas.
 
-![Ang tatlong built-in na larawan, bawat isa inilagay nang isang beses sa pinatag na lupa](images/landform-pictures.jpg)
+![Ang tatlong built-in na larawan, bawat isa inilagay nang isang beses sa pinatag na lupa](images/landform-pictures.webp)
 *Ang mga built-in na larawan, 6 m ang taas sa radius na 8 m. Mula kaliwa: Magaspang na burol, Mga buhanginan, Mabatong
 lupa.*
 
-![Ang uring Larawan bago at pagkatapos ng isang click: ang parisukat na balangkas at orange na preview ng larawan, saka ang burol](images/landform-picture.jpg)
+![Ang uring Larawan bago at pagkatapos ng isang click: ang parisukat na balangkas at orange na preview ng larawan, saka ang burol](images/landform-picture.webp)
 *Ang **Magaspang na burol**, **Radius** 9 m at **Taas** 8 m. Kaliwa: ang parisukat na balangkas at orange na preview
 nito sa patag na lupa bago ang click. Kanan: ang buong burol, inilagay ng isang click.*
 

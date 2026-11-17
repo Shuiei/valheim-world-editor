@@ -19,7 +19,7 @@ laufen.
    **Ordner hinzufügen**, wähle mit **Durchsuchen…** den Ordner der Welt (oder einen Ordner mit Welten) und dann
    **Speichern**.
 
-![Eine gespeicherte Welt: die gefundenen Welten, darunter Anderer Weltordner](../images/start-offline.jpg)
+![Eine gespeicherte Welt: die gefundenen Welten, darunter Anderer Weltordner](../images/start-offline.webp)
 *Die Welten, die der Editor von selbst gefunden hat, darunter **Anderer Weltordner** mit **Durchsuchen…** und
 **Öffnen**.*
 

@@ -8,7 +8,7 @@ bewahre es als Bauplan auf, um es im Spiel zu bauen oder in jede Welt einzufüge
 **ERSTELLEN**) → **Neuer Bauplan** · **Taste:** keine · **Funktioniert in:** der eigenen Parzelle der Werkstatt (das
 Panel **Baupläne** funktioniert in gespeicherten Welten und live)
 
-![Ein hohes Haus aus Stein und Holz auf der Parzelle, von Hellblau am Sockel bis Orange oben gefärbt, sein Überhang rot](images/workshop.jpg)
+![Ein hohes Haus aus Stein und Holz auf der Parzelle, von Hellblau am Sockel bis Orange oben gefärbt, sein Überhang rot](images/workshop.webp)
 *Ein hohes Haus mit **Stabilitätsprüfung** an: der Steinsockel hellblau, die Holzwände darüber grün, dann gelb, dann
 orange nahe der Spitze, und der Überhang, der aus der obersten Reihe hinausragt, orange, dann rot. Die obere Leiste
 zeigt `111 Bauteil(e) · 1 würden einstürzen · gespeichert`.*
@@ -36,7 +36,7 @@ Um einen gespeicherten Bauplan zu ändern, klicke ihn unter **Deine Baupläne** 
 **Startseite**), oder klicke daneben in der Bibliothek auf **Öffnen** (dem Panel Baupläne einer Welt oder dem Reiter
 **Bibliothek** der Werkstatt).
 
-![Die Werkstatt auf der Startseite](images/start-workshop.jpg)
+![Die Werkstatt auf der Startseite](images/start-workshop.webp)
 ***Die Werkstatt** auf der Startseite: **Werkstatt öffnen**, **Homestead holen** (es ist hier nicht installiert) und drei
 Baupläne unter **Deine Baupläne**, jeder mit seinem Bild, die neuesten zuerst.*
 
@@ -62,7 +62,7 @@ ist der **Anker** des Bauplans, der Punkt, von dem aus Homestead jedes Bauteil m
 Es gibt kein **Verwerfen**: mach rückgängig oder öffne den Bauplan erneut. Verlassen mit einem Gebäude, das nicht als
 Bauplan gespeichert ist (**Start**, einen anderen öffnen, beenden), fragt vorher.
 
-![Die Werkstatt mit einer kleinen Holzhütte auf der Parzelle und der Leiste Bauen auf ihren Holzbauteilen](images/workshop-overview.jpg)
+![Die Werkstatt mit einer kleinen Holzhütte auf der Parzelle und der Leiste Bauen auf ihren Holzbauteilen](images/workshop-overview.webp)
 *Die Werkstatt mit einer kleinen Hütte auf der Parzelle: die Werkzeugleiste nur mit **Bauen**, **Auswahl** und
 **Ansicht**, die Bauleiste daneben; die obere Leiste mit **Start**, **Stabilitätsprüfung**, der Zahl der Bauteile,
 **Bauplan speichern** und **Materialien**; das Panel **Materialien** rechts; die Leiste Bauen am unteren Rand auf dem
@@ -126,7 +126,7 @@ das Bauteil stattdessen entlang einer Linie, rund um einen Kreis oder ein Rechte
 | `Shift` + Rechtsklick | Entfernt das Bauteil unter dem Zeiger (`Ctrl+Z` holt es zurück). Rechts ziehen dreht weiterhin die Ansicht, und `Shift` + rechts ziehen verschiebt sie weiterhin. |
 | Mittelklick | Baut mit der Art des Bauteils unter dem Zeiger, wie eine Pipette: es wird in der Leiste gewählt und steht unter **Zuletzt** an erster Stelle. Mitte ziehen verschiebt weiterhin die Ansicht. |
 
-![Eine Reihe Wände, die neben der Hütte aufgezogen wird](images/workshop-row.jpg)
+![Eine Reihe Wände, die neben der Hütte aufgezogen wird](images/workshop-row.webp)
 *Ein Ziehen von links: eine Reihe Holzwände Ende an Ende verlegt, durchsichtig, bis die Taste losgelassen wird.*
 
 ### Die Bauleiste
@@ -137,7 +137,7 @@ Einfügen teilen und die dort auch **Erbaut von** hat: siehe [Die Bauleiste](bui
 
 ### Reiter Bibliothek
 
-![Der Reiter Bibliothek mit zwei Bauplänen und einer Suche](images/workshop-library.jpg)
+![Der Reiter Bibliothek mit zwei Bauplänen und einer Suche](images/workshop-library.webp)
 *Der Reiter **Bibliothek** bei der Suche nach „hut“: die Suche, **Datei importieren…**, **Neuer Bauplan** und **Dungeon
 erzeugen…** in der obersten Reihe der Leiste, dann die beiden Hütten nebeneinander (das hohe Haus ist ausgefiltert), jede
 mit ihrem Bild, ihren Bauteilen, Kosten, ihrer Beschreibung, ihren Tags und ihren Schaltflächen **Hinzufügen**,
@@ -203,7 +203,7 @@ hinausragen; Holz ragt weiter hinaus, aber nicht so hoch. Siehe
 
 ### Schnitt
 
-![Dasselbe Haus mit Schnitt, von oben gesehen](images/workshop-cut.jpg)
+![Dasselbe Haus mit Schnitt, von oben gesehen](images/workshop-cut.webp)
 *Dasselbe Haus mit **Schnitt bei 3 m**, von oben gesehen: alles über 3 m ist ausgeblendet, sodass du in sein Erdgeschoss
 siehst, mit der Feuerstelle, dem Bett, dem Tisch und der Truhe.*
 
@@ -230,7 +230,7 @@ verwendet. Es wird mit den Modellen des Spiels gezeichnet, wenn der Editor sie l
 Bauteils in der Farbe seines Materials. Ein anderswo erstellter Bauplan ohne Bild bekommt in der Bibliothek eines
 gezeichnet, nur im Speicher.
 
-![Der Dialog Bauplan speichern über einer kleinen Hütte: Name, Beschreibung, Tags, der Dungeon-Schalter und die Kosten](images/workshop-save-dialog.jpg)
+![Der Dialog Bauplan speichern über einer kleinen Hütte: Name, Beschreibung, Tags, der Dungeon-Schalter und die Kosten](images/workshop-save-dialog.webp)
 *Speichern der Hütte: **Name** „Small hut“, **Beschreibung** „A hut with a fire pit“, **Tags** „house, wood“, **Ein
 Dungeon** aus, und die Zeile **Kosten im Spiel** über **Speichern**.*
 
@@ -250,7 +250,7 @@ Was behalten wird:
 
 ## Panel Baupläne
 
-![Das Panel Baupläne mit einer gespeicherten Hütte](images/blueprints.jpg)
+![Das Panel Baupläne mit einer gespeicherten Hütte](images/blueprints.webp)
 *Das Panel **Baupläne** in einer Welt: das Homestead-Banner, **Baupläne durchsuchen** und **Datei importieren…**,
 **Neuer Bauplan**, die **Ablage** mit **Einfügen** und **Als Bauplan speichern…**, dann eine gespeicherte Hütte
 mit ihrem Bild, ihren Bauteilen, Kosten und ihren Schaltflächen **Einfügen**, **Öffnen**, **Details**, **.vbuild** und

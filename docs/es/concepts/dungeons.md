@@ -33,7 +33,7 @@ el área. Las aldeas fuling y las granjas de las Praderas se disponen igual, sob
 
 ### Salas, aberturas y remates
 
-![Unas Cámaras Funerarias hechas con las salas propias del juego, abiertas por arriba, con cuadrados naranjas y azules donde se unen las salas](../images/dungeon-rooms.jpg)
+![Unas Cámaras Funerarias hechas con las salas propias del juego, abiertas por arriba, con cuadrados naranjas y azules donde se unen las salas](../images/dungeon-rooms.webp)
 *Una mazmorra del juego a 5000 m de altura, sin techos: cada sala es una entrada de la lista. Los cuadrados marcan
 dónde se unen dos salas: azules con puerta, naranjas sin ella.*
 

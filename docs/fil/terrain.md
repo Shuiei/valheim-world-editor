@@ -7,7 +7,7 @@ pickaxe at cultivator ng laro, pero mas mabilis at mas malaki.
 **Saan:** tool rail, seksiyong **LILOK** · **Mga key:** `1` hanggang `9`, `0`, `O` · **Gumagana sa:** mga naka-save na
 mundo, live
 
-![Isang buntong itinaas gamit ang Itaas, ang singsing ng brush sa ibabaw nito at ang panel ng Itaas](images/sculpt.jpg)
+![Isang buntong itinaas gamit ang Itaas, ang singsing ng brush sa ibabaw nito at ang panel ng Itaas](images/sculpt.webp)
 *Isang buntong ginawa gamit ang tatlong stroke ng Itaas. Ang puting singsing sa ibabaw nito ay ang brush; nasa panel sa
 kaliwa ang mga setting nito.*
 
@@ -56,7 +56,7 @@ panel: ang [Mask](masks.md) mismo, at ang **Walang limitasyon: lampas sa ±8 m n
 | **Singsing** | Isang banda lang: wala sa loob ng 40% ng laki, buong lakas sa 70%, wala sa gilid. Para sa gilid ng bunganga, moat at pader na lupa. |
 | **Magaspang (noise)** | Bilog na brush na ang gilid ay pumapasok at lumalabas nang hanggang sangkatlo ng laki. Nakapirmi sa mundo ang pattern, kaya pareho ang gilid ng dalawang stroke sa parehong lugar. |
 
-![Limang pahid ng sementadong pintura, isa bawat hugis ng brush, bawat isa may label, bukas ang listahang Hugis](images/brush-shapes.jpg)
+![Limang pahid ng sementadong pintura, isa bawat hugis ng brush, bawat isa may label, bukas ang listahang Hugis](images/brush-shapes.webp)
 *Isang pahid ng Sementado bawat hugis, bawat isa may label: Bilog, Parisukat, Singsing, Magaspang (noise) at ang stamp
 na Gilid ng bunganga. Bukas sa panel ang listahang Hugis.*
 
@@ -71,7 +71,7 @@ na Gilid ng bunganga. Bukas sa panel ang listahang Hugis.*
 | **Tuktok** | Malakas lang malapit sa gitna. | Mga tore ng bato at hukay. |
 | **Matalim na gilid (pickaxe)** | Buong lakas hanggang sa gilid, wala sa labas nito. | Matarik na pader at tuwid na hiwa. |
 
-![Anim na buntong itinaas ng parehong stroke, isa bawat paghina, bawat isa may label, tanaw mula sa itaas nang pahilig](images/brush-falloffs.jpg)
+![Anim na buntong itinaas ng parehong stroke, isa bawat paghina, bawat isa may label, tanaw mula sa itaas nang pahilig](images/brush-falloffs.webp)
 *Ang parehong stroke ng Itaas sa bawat paghina, may label: Malambot, Linear, Simboryo, Patag na tuktok, Tuktok,
 Matalim na gilid (pickaxe). Naka-on ang kulay ng dahilig: habang mas matarik ang gilid, mas pula.*
 
@@ -87,7 +87,7 @@ Matalim na gilid (pickaxe). Naka-on ang kulay ng dahilig: habang mas matarik ang
 | **Agnasin** | `O` | Pinapadaan sa panahon ang lupa: dumudulas pababa ang matatarik na dahilig, o umuukit ng mga bangin ang ulan. |
 | **Ibalik** | `5` | Ibinabalik ang lupa sa kung paano ito binuo ng mundo, at tinatanggal ang pintura. |
 
-![Isang hukay na ginawa gamit ang Ibaba, magaspang na buntong kalahating pinakinis, at buntong kalahating ibinalik gamit ang Ibalik; ang panel ng Ibalik](images/lower-smooth-restore.jpg)
+![Isang hukay na ginawa gamit ang Ibaba, magaspang na buntong kalahating pinakinis, at buntong kalahating ibinalik gamit ang Ibalik; ang panel ng Ibalik](images/lower-smooth-restore.webp)
 *May label mula sa kaliwa: hukay na ginawa gamit ang Ibaba; magaspang na bunton na pinantay ng Pakinisin ang kanang
 kalahati; itinaas na bunton na ibinalik ng Ibalik ang kanang kalahati sa binuong lupa, nasa ibabaw nito ang singsing ng
 brush.*
@@ -103,7 +103,7 @@ ng pagpindot sa brush na Pakinisin sa isang puwesto nang isa o dalawang segundo 
 
 ### Patagin
 
-![Ang ibabaw ng malaking buntong pinatag ng isang stroke ng Patagin na sinimulan doon](images/flatten.jpg)
+![Ang ibabaw ng malaking buntong pinatag ng isang stroke ng Patagin na sinimulan doon](images/flatten.webp)
 *Pinatag ng isang stroke ng Patagin na sinimulan sa ibabaw ng bunton ang tuktok nito. Naka-on ang **Ipantay sa taas
 kung saan nagsisimula ang stroke**, kaya naka-grey ang **Taas (m)** at ipinapakita ang taas na kinuha nito: 43.4 m.*
 
@@ -129,7 +129,7 @@ nagdudugtong nang walang tahi ang magkakatabing stroke. Ginagamit ng **Natural**
 [Daan](path.md) at ng **Natural** ng tool na [Rehiyon](area.md) ang parehong mga setting at pattern, at ipinapakita ang
 mga ito sa sarili nilang panel: ang value na itinakda sa isa ay itinatakda sa tatlo.
 
-![Pinatag na lupa na naka-on ang kulay ng dahilig, ang kaliwang kalahati ay ginawang natural na mga umbok, patag ang kanang kalahati](images/naturalize.jpg)
+![Pinatag na lupa na naka-on ang kulay ng dahilig, ang kaliwang kalahati ay ginawang natural na mga umbok, patag ang kanang kalahati](images/naturalize.webp)
 *Pinatag na lupa na naka-on ang kulay ng dahilig. Ginawang natural ang kaliwang kalahati (Mga umbok 3 m, Lawak
 12 m): lumalabas ang mga umbok nito bilang dilaw na patse. Nananatiling patag at payak na berde ang kanang kalahati.*
 
@@ -145,7 +145,7 @@ Maaaring bumagsak sa labas lang ng brush ang materyales na dumudulas o naaanod p
 mga tool na [Rehiyon](area.md) at [Daan](path.md) ang dalawang uri nang sabay, sa buong pinili o sa kahabaan ng linya,
 gamit ang **Anggulo ng tambak** na ito (ipinapakita rin ito ng mga panel nila).
 
-![Ang parehong bunton bago at pagkatapos ng Agnasin (Tubig), ang panel ng Agnasin sa kaliwa](images/erode.jpg)
+![Ang parehong bunton bago at pagkatapos ng Agnasin (Tubig), ang panel ng Agnasin sa kaliwa](images/erode.webp)
 *Ang parehong bunton mula sa parehong camera. Kaliwa: kung paano ito itinaas. Kanan: pagkatapos ng dalawang segundo ng
 Agnasin (Tubig): kinain ng ulan ang tuktok nito at ginuhitan ang mga gilid nito ng maliliit na bangin.*
 
@@ -180,7 +180,7 @@ malambot na gilid ng brush; pindutin nang mas matagal para sa buong kulay.
 kaya tinatakpan din nito ang hubad na lupang binuo ng mundo roon. Tinatanggal ng **Ibalik** ang pintura mo, kaya
 ipinapakita ulit ng lupa ang binuo ng mundo.
 
-![Mga guhit ng sementado, binungkal at hubad na lupa, bago at pagkatapos ng isang banda ng Alisin pintura sa ibabaw nila](images/paint.jpg)
+![Mga guhit ng sementado, binungkal at hubad na lupa, bago at pagkatapos ng isang banda ng Alisin pintura sa ibabaw nila](images/paint.webp)
 *Kaliwa: mga guhit ng sementado, binungkal at hubad na lupa. Kanan: ang parehong mga guhit pagkatapos ng isang stroke ng
 Alisin pintura sa ibabaw ng tatlo (ang panel ng Pintura sa kaliwa).*
 
@@ -214,7 +214,7 @@ kinukulayan ng pula ang punto, at sinasabi ng status bar ang "Naabot ang hanggan
 orihinal nitong taas maaaring gumalaw ang lupa (mga pulang punto)."
 Tingnan ang [Ang 8 m na hangganan ng laro](concepts/ground-limits.md#ang-8-m-na-hangganan-ng-laro).
 
-![Isang stroke ng Itaas na huminto sa 8 m na hangganan ng laro, pula ang tuktok nito, at ang mensahe ng status bar](images/limit-red.jpg)
+![Isang stroke ng Itaas na huminto sa 8 m na hangganan ng laro, pula ang tuktok nito, at ang mensahe ng status bar](images/limit-red.webp)
 *Pinindot ang Itaas hanggang huminto ang lupa nang 8 m pataas. Kapag naka-on ang **Marka ng hangganan**, pula ang tuktok
 nito; ipinapakita ng status bar ang mensahe at nagtatapos ang readout ng cursor sa "nasa hangganang ±8 m".*
 
@@ -230,7 +230,7 @@ tool hanggang i-off mo ito, at naka-off ito tuwing nagsisimula ang editor. Lagin
 > Binabasa ulit ng pag-save ng lupang Walang limitasyon ang area mula sa mundo at **binubura ang Kasaysayan nito**: hindi
 > ka makakapag-undo lampas sa save na iyon. Suriin ang hugis bago ka mag-save.
 
-![Ang parehong stroke ng Itaas nang dalawang beses: huminto sa 8 m sa kaliwa, mataas na tore ng bato na naka-on ang Walang limitasyon sa kanan](images/no-limit.jpg)
+![Ang parehong stroke ng Itaas nang dalawang beses: huminto sa 8 m sa kaliwa, mataas na tore ng bato na naka-on ang Walang limitasyon sa kanan](images/no-limit.webp)
 *Ang parehong stroke ng Itaas na naka-off ang Walang limitasyon (kaliwa: huminto sa 8 m, pula ang tuktok) at naka-on
 (kanan: mas mataas nang malayo). Nasa card na Mask ang switch, naka-check gaya ng para sa kanan.*
 

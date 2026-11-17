@@ -9,7 +9,7 @@ BepInEx et le plugin WorldEditorBridge et de redémarrer le serveur. Pour un ser
 panneau web et du FTP, pas de SSH), ou un serveur qu'un panneau de jeu comme Pterodactyl fait tourner dans un
 conteneur : voir [Modifier un serveur loué ou hébergé par un panneau](edit-a-rented-server.md).
 
-![Le formulaire de serveur dédié : nom, adresse du serveur et port SSH, utilisateur et mot de passe, fichier de clé SSH, jeton du plugin, dossier Valheim du serveur, Enregistrer le mot de passe et Se connecter](../images/start-server.jpg)
+![Le formulaire de serveur dédié : nom, adresse du serveur et port SSH, utilisateur et mot de passe, fichier de clé SSH, jeton du plugin, dossier Valheim du serveur, Enregistrer le mot de passe et Se connecter](../images/start-server.webp)
 *Le formulaire sous **Un serveur dédié**. Après la première connexion, le serveur est enregistré au-dessus, pour un
 accès en un clic.*
 

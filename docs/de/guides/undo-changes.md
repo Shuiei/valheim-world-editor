@@ -21,7 +21,7 @@ alles, was noch nicht gespeichert ist.
 7. Um eine schon gespeicherte Änderung zurückzunehmen, mache sie rückgängig (oder nimm sie mit **Entfernen** heraus), dann wieder **In Welt speichern**. Live mache sie
    rückgängig und wieder **Live anwenden** (oder lass **Auto** es senden).
 
-![Das Panel Verlauf nach fünf Bearbeitungen, die letzte rückgängig gemacht](../images/history.jpg)
+![Das Panel Verlauf nach fünf Bearbeitungen, die letzte rückgängig gemacht](../images/history.webp)
 *Verlauf: die letzte Änderung mit **Zurück bis hier** rückgängig gemacht, ausgegraut mit **Bis hier wiederholen**.*
 
 > [!WARNING]

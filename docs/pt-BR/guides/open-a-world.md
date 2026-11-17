@@ -16,7 +16,7 @@ execução com ele.
 6. Opcional: para ter o mundo na lista sempre, abra **Configurações**, clique em **Adicionar uma pasta** em **Pastas de
    mundos**, escolha a pasta do mundo (ou uma pasta de mundos) com **Procurar…** e depois **Salvar**.
 
-![Um mundo salvo: os mundos encontrados, depois Outra pasta de mundo](../images/start-offline.jpg)
+![Um mundo salvo: os mundos encontrados, depois Outra pasta de mundo](../images/start-offline.webp)
 *Os mundos que o editor encontrou sozinho, depois **Outra pasta de mundo** com **Procurar…** e **Abrir**.*
 
 ## Verificar se funcionou

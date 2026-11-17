@@ -13,7 +13,7 @@ mundos guardados, en vivo
 > archivos del mundo cuando guarda, y tus cambios, incluidos los restablecimientos de zona, se pierden. Para cambiar
 > un mundo mientras está en marcha, usa el [modo en vivo](live-mode.md).
 
-![El mapa del mundo con una zona elegida: el área que se abrirá resaltada en azul claro, Editar en 3D y la lista de tamaño en el panel lateral](images/map.jpg)
+![El mapa del mundo con una zona elegida: el área que se abrirá resaltada en azul claro, Editar en 3D y la lista de tamaño en el panel lateral](images/map.webp)
 *Hay una zona elegida: el cuadrado azul claro es el área que abrirá **Editar en 3D**, con el tamaño elegido junto al
 botón.*
 
@@ -61,7 +61,7 @@ al mapa, abre otra y guárdalo todo de una vez.
 
 ## Buscar en el mundo
 
-![Buscar en el mundo Beech1: cada haya marcada en naranja, una elegida con un anillo dorado, los recuentos y la lista de resultados](images/map-search.jpg)
+![Buscar en el mundo Beech1: cada haya marcada en naranja, una elegida con un anillo dorado, los recuentos y la lista de resultados](images/map-search.webp)
 *Cada marca naranja es un objeto encontrado. El resultado elegido en la lista es más grande, con un anillo dorado, y
 el mapa está centrado en él.*
 
@@ -90,7 +90,7 @@ como `_ZoneCtrl`) solo se encuentran cuando tu texto también empieza por `_`.
 
 ## Restablecer zonas en todo el mundo
 
-![Restablecer zonas en todo el mundo: zonas de Praderas marcadas para restablecer en rojo, zonas de Selva Negra coincidentes en azul, la línea de recuento bajo los botones](images/map-reset.jpg)
+![Restablecer zonas en todo el mundo: zonas de Praderas marcadas para restablecer en rojo, zonas de Selva Negra coincidentes en azul, la línea de recuento bajo los botones](images/map-reset.webp)
 *Las zonas de Praderas se marcaron para restablecer (rojo), luego se eligió **Selva Negra** y se pulsó **Mostrar
 coincidencias** (azul). La línea bajo los botones cuenta ambas.*
 
@@ -141,7 +141,7 @@ puntos de altura (`a`) y de pintura (`p`) se cambiaron, el rango de los cambios 
 guardar)» cuando hay cambios pendientes («(sin aplicar)» en un mundo en vivo). Haz clic en una fila para acercarte a
 esa zona y elegirla, lista para **Editar en 3D**.
 
-![El mapa de cerca: cuatro zonas editadas resaltadas en amarillo fino y dos en naranja más grueso, la lista Zonas editadas (6) con recuentos a y p, y dos filas marcadas (sin guardar)](images/map-edited-zones.jpg)
+![El mapa de cerca: cuatro zonas editadas resaltadas en amarillo fino y dos en naranja más grueso, la lista Zonas editadas (6) con recuentos a y p, y dos filas marcadas (sin guardar)](images/map-edited-zones.webp)
 *Cuatro zonas guardadas (amarillo fino) y dos editadas desde entonces (naranja más grueso): la lista marca las
 pendientes como «(sin guardar)».*
 

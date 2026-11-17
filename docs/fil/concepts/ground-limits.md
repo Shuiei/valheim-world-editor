@@ -48,7 +48,7 @@ Habang nagtatrabaho ka, iniingatan ang bahaging lampas sa ±8 m bilang hiwalay n
 ito ng undo, Kasaysayan at **Ibalik** gaya ng anumang ibang pagbabago. Sinasabi ng status bar kung naka-on o naka-off
 ang switch tuwing ginagalaw mo ito.
 
-![Ang parehong stroke ng Itaas nang dalawang beses sa patag na lupa: sa kaliwa, huminto sa 8 m na pula ang tuktok; sa kanan, isang tore na mas mataas](../images/no-limit.jpg)
+![Ang parehong stroke ng Itaas nang dalawang beses sa patag na lupa: sa kaliwa, huminto sa 8 m na pula ang tuktok; sa kanan, isang tore na mas mataas](../images/no-limit.webp)
 *Ang parehong stroke nang wala at may Walang limitasyon. Kaliwa, humihinto ang lupa sa 8 m pataas at nagiging pula ang
 tuktok nito; kanan, patuloy itong tumataas. Nasa card na Mask ang switch.*
 
@@ -72,7 +72,7 @@ nagsisimula ito sa maliit na baitang), saka pakaunti nang pakaunti, hanggang wal
 
 Bumubuo ang laro ng bawat player ng parehong lupa mula sa mga disc, kasama ang mga console player, nang walang mod.
 
-![Cross-section ng burol na itinaas nang 30 m: mga patag na tuktok ng disc sa 6 m na grid sa ilalim ng ibabaw, ang 8 m na patag na bilog at 13 m na paghahalo ng isang disc, ±8 m na edit sa ibabaw](../images/concept-ground-discs.jpg)
+![Cross-section ng burol na itinaas nang 30 m: mga patag na tuktok ng disc sa 6 m na grid sa ilalim ng ibabaw, ang 8 m na patag na bilog at 13 m na paghahalo ng isang disc, ±8 m na edit sa ibabaw](../images/concept-ground-discs.webp)
 *Isang burol na itinaas nang 30 m, gaya ng pagka-save nito. Paakyat sa burol ang mga patag na tuktok ng mga disc
 (kahel) sa 6 m na grid, sa ilalim ng ibabaw mo (puti); pinapatag ng isang disc, nakapula, ang 8 m sa paligid ng gitna
 nito at hinahalo ang lupa hanggang 13 m. Ang mga karaniwang edit (berde) ang bumubuo sa natitira, sa loob ng ±8 m ng
@@ -107,7 +107,7 @@ sa laro. Binibilang ng isang tala sa ibabang kaliwa ng 3D view ang mga lokasyon 
 iginuguhit ng **Tanaw → Pagpapatag ng lokasyon** kung saan sila nagpapatag: isang bilog para sa patag na bahagi, isang
 mas malabo kung saan ito humahalo sa kalupaan.
 
-![Pagpapatag ng lokasyon sa paligid ng altar ng Eikthyr: isang buong bilog sa paligid ng pinatag na lupa, isang mas malabo kung saan ito humahalo](../images/concept-location-flattening.jpg)
+![Pagpapatag ng lokasyon sa paligid ng altar ng Eikthyr: isang buong bilog sa paligid ng pinatag na lupa, isang mas malabo kung saan ito humahalo](../images/concept-location-flattening.webp)
 *Naka-on ang Tanaw → **Pagpapatag ng lokasyon**, sa paligid ng altar ng Eikthyr: ang buong bilog ang patag na bahaging
 pinapatag ng laro, ang mas malabong bilog kung saan ito humahalo pabalik sa kalupaan. Binibilang ng tala sa ibabang
 kaliwa ang mga lokasyon sa area.*

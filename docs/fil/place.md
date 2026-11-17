@@ -8,11 +8,11 @@ nito sa rail.
 **Saan:** tool rail, seksiyong **PAG-EDIT** · **Key:** `T` · **Gumagana sa:** mga naka-save na mundo, live ([Pagtayo](build.md)
 lang ang nasa Gawaan)
 
-![Ang preset na Kakahuyan ng Meadows sa mode na Brush sa ibabaw ng bukas na damuhan](images/plant-brush.jpg)
+![Ang preset na Kakahuyan ng Meadows sa mode na Brush sa ibabaw ng bukas na damuhan](images/plant-brush.webp)
 *Ang mga naaaninag na puno at palumpong na nakatayo sa bilog ng brush ay eksaktong ang ilalagay ng isang click;
 ipinapakita ng panel ang preset na Kakahuyan ng Meadows at ang mga uri nito.*
 
-![Ang brush na Kakahuyan ng Meadows sa walang lamang parang, bago at pagkatapos ng isang click](images/place-brush-before-after.jpg)
+![Ang brush na Kakahuyan ng Meadows sa walang lamang parang, bago at pagkatapos ng isang click](images/place-brush-before-after.webp)
 *Kaliwa: ang naaaninag na preview sa bilog ng brush. Kanan: ang parehong puwesto pagkatapos ng isang click, nakatayo ang
 mga puno at palumpong kung saan sila ipinakita ng preview.*
 
@@ -79,7 +79,7 @@ kasama ang mga uring wala pa sa mundo mo at ang mga uri ng mga mod mo. Wala rito
 ragdoll, pati ang mga piece ng hammer at ng serving tray: nasa dock ng [Pagtayo](build.md) ang mga iyon. Nasa dalawa ang
 mga sapling at pananim ng cultivator. Isinasara ito ng **Tapos na**.
 
-![Ang card na Pumili ng uri na naghahanap ng "rock"](images/place-chooser.jpg)
+![Ang card na Pumili ng uri na naghahanap ng "rock"](images/place-chooser.webp)
 *Ang card na Pumili ng uri na naghahanap ng "rock", may tsek ang BigRock: binibilang ng kategoryang Mga bato ang 1
 may-tsek na uri sa tabi ng kabuuan nito, at nangunguna ang BigRock sa row na Kamakailan.*
 
@@ -114,7 +114,7 @@ Grid at Polygon, iniikot ng `,` `.` at `Alt` + wheel ang buong kahon o polygon, 
 
 ### Linya
 
-![Paglagay sa mode na Linya: mga birch sa kahabaan ng makinis na kurba sa limang punto sa tabi ng sementadong landas, ang panel na Paglagay sa Linya at Mga punto](images/place-line.jpg)
+![Paglagay sa mode na Linya: mga birch sa kahabaan ng makinis na kurba sa limang punto sa tabi ng sementadong landas, ang panel na Paglagay sa Linya at Mga punto](images/place-line.webp)
 *Mode na Linya na may **Mga punto**: mga birch bawat 4 m sa kahabaan ng makinis na kurba sa limang punto, sa tabi ng
 sementadong landas, ipinapakita bago ang **Ilagay (Enter)**. Ang preview ang maputlang mga puno.*
 
@@ -139,13 +139,13 @@ sementadong landas, ipinapakita bago ang **Ilagay (Enter)**. Ang preview ang map
 
 ### Grid
 
-![Mga carrot at turnip sa nakaikot na grid, tinitingnan mula sa itaas](images/plant-grid.jpg)
+![Mga carrot at turnip sa nakaikot na grid, tinitingnan mula sa itaas](images/plant-grid.webp)
 *Mga carrot at turnip sa grid na nakaikot nang 15°, tinitingnan mula sa malapit sa itaas para makita ang pananim ng
 bawat cell. Nagbababala ang kahel na linya sa panel na kailangan ng mga pananim ng binungkal na lupa.*
 
 ### Polygon
 
-![Isang polygon na iginuhit nang punto por punto](images/plant-zone.jpg)
+![Isang polygon na iginuhit nang punto por punto](images/plant-zone.webp)
 *Isang polygon na iginuhit nang punto por punto, may mga palumpong at batang puno na naka-preview sa mga random na
 puwesto sa loob.*
 
@@ -168,7 +168,7 @@ naglilitaw sa paligid nila ang **Mga pugad ng creature** (mga pugad ng greydwarf
 sinasabi ng linya nila kung ilan at gaano kalayo ("Greydwarf, Greydwarf_Elite · hanggang 3 sa paligid, sa loob ng
 5 m"). Tingnan ang [Mga spawn point](concepts/objects.md#mga-spawn-point).
 
-![Mga spawn point sa tabi ng kubo, isa ang napili at bukas sa Inspector](images/spawn-points.jpg)
+![Mga spawn point sa tabi ng kubo, isa ang napili at bukas sa Inspector](images/spawn-points.webp)
 *Malapitang kuha ng dalawang spawn point ng boar at isa ng draugr sa tabi ng kubo. Sinasabi ng linya sa Inspector ng
 napiling draugr kung ano ang nililitaw nito at kung bumabalik ito.*
 

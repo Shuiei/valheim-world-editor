@@ -40,6 +40,7 @@ fi
 bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look|plugin|export-game-files)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
 if [ -n "$bad" ]; then echo "FORBIDDEN in the package:"; echo "$bad" | head -20; fail=1; fi
 size=$(du -m "$pkg" | cut -f1)
-if [ "$size" -gt 150 ]; then echo "TOO BIG  ${size} MB"; fail=1; fi
+# 200 MB: the app (about 85 MB) and every translation's pictures (WebP, about 10 MB a language), with room to spare.
+if [ "$size" -gt 200 ]; then echo "TOO BIG  ${size} MB"; fail=1; fi
 [ $fail = 0 ] && echo "ok  $(basename "$pkg") (${size} MB, $(wc -l <<<"$list") entries)"
 exit $fail

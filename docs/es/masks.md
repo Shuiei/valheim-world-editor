@@ -7,7 +7,7 @@ partes llanas de una colina, nivela el fondo de un valle sin tocar sus laderas, 
 **Dónde:** la tarjeta **Máscara** junto al panel de la herramienta · **Tecla:** ninguna (`Alt`+`Shift`+clic fija un
 rango de altura) · **Funciona en:** mundos guardados, en vivo
 
-![El mismo trazo ancho de Pavimento sobre un montículo, con la Máscara desactivada y activada, y la tarjeta Máscara](images/mask.jpg)
+![El mismo trazo ancho de Pavimento sobre un montículo, con la Máscara desactivada y activada, y la tarjeta Máscara](images/mask.webp)
 *El mismo trazo ancho de pintura Pavimento sobre un montículo. Izquierda, Máscara desactivada: todo queda pavimentado.
 Derecha, Máscara activada con pendientes de menos de 15°: el suelo llano queda pavimentado y las laderas empinadas del
 montículo no. La tarjeta Máscara está junto al panel de la herramienta.*
@@ -37,7 +37,7 @@ va donde señalas.
 Un aviso naranja aparece debajo de los ajustes cuando no dejan pasar nada: una pendiente máxima de 0°, o un mínimo por
 encima del máximo.
 
-![La tarjeta Máscara con Pendiente mín. 30 y máx. 10, y su aviso naranja de que nada coincide](images/mask-warning.jpg)
+![La tarjeta Máscara con Pendiente mín. 30 y máx. 10, y su aviso naranja de que nada coincide](images/mask-warning.webp)
 *La pendiente mín. de 30° es mayor que la máx. de 10°, así que la tarjeta avisa en naranja: «La pendiente mín. es mayor
 que la máx.: no coincide nada.»*
 

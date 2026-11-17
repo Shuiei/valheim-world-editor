@@ -7,7 +7,7 @@ cultivador do jogo, só que mais rápido e maior.
 **Onde:** barra de ferramentas, seção **ESCULPIR** · **Teclas:** `1` a `9`, `0`, `O` · **Funciona em:** mundos salvos,
 ao vivo
 
-![Um monte erguido com Elevar, o anel do pincel no topo e o painel Elevar](images/sculpt.jpg)
+![Um monte erguido com Elevar, o anel do pincel no topo e o painel Elevar](images/sculpt.webp)
 *Um monte feito com três traços de Elevar. O anel branco no topo dele é o pincel; o painel à esquerda tem as
 configurações dele.*
 
@@ -56,7 +56,7 @@ Duas configurações valem para todas as ferramentas de terreno, não só para o
 | **Anel** | Só uma faixa: nada dentro de 40% do tamanho, intensidade total a 70%, nada na borda. Para bordas de cratera, fossos e muros de terra. |
 | **Irregular (ruído)** | Um pincel redondo cuja borda avança e recua até um terço do tamanho. O padrão é fixo no mundo, então dois traços sobre o mesmo lugar têm a mesma borda. |
 
-![Cinco pinceladas de pintura pavimentada, uma por forma de pincel, cada uma identificada, com a lista Forma aberta](images/brush-shapes.jpg)
+![Cinco pinceladas de pintura pavimentada, uma por forma de pincel, cada uma identificada, com a lista Forma aberta](images/brush-shapes.webp)
 *Uma pincelada de pintura Pavimentado por forma, cada uma identificada: Círculo, Quadrado, Anel, Irregular (ruído) e o
 carimbo Borda de cratera. A lista Forma está aberta no painel.*
 
@@ -71,7 +71,7 @@ carimbo Borda de cratera. A lista Forma está aberta no painel.*
 | **Pico** | Forte só perto do meio. | Agulhas e fossos. |
 | **Borda abrupta (picareta)** | Intensidade total até a borda, nada além dela. | Paredes íngremes e cortes retos. |
 
-![Seis montes erguidos pelo mesmo traço, um por atenuação, cada um identificado, vistos de cima em ângulo](images/brush-falloffs.jpg)
+![Seis montes erguidos pelo mesmo traço, um por atenuação, cada um identificado, vistos de cima em ângulo](images/brush-falloffs.webp)
 *O mesmo traço de Elevar com cada atenuação, identificadas: Suave, Linear, Cúpula, Topo plano, Pico, Borda abrupta
 (picareta). As cores de declive estão ligadas: quanto mais íngreme a encosta, mais vermelha.*
 
@@ -87,7 +87,7 @@ carimbo Borda de cratera. A lista Forma está aberta no painel.*
 | **Erodir** | `O` | Desgasta o terreno: as encostas íngremes deslizam para baixo, ou a chuva cava ravinas. |
 | **Restaurar** | `5` | Devolve o terreno ao que o mundo gerou, e remove a pintura. |
 
-![Um buraco cavado com Rebaixar, um monte irregular meio suavizado e um monte meio desfeito com Restaurar; o painel Restaurar](images/lower-smooth-restore.jpg)
+![Um buraco cavado com Rebaixar, um monte irregular meio suavizado e um monte meio desfeito com Restaurar; o painel Restaurar](images/lower-smooth-restore.webp)
 *Identificados da esquerda: um buraco cavado com Rebaixar; um monte irregular cuja metade direita Suavizar deixou lisa;
 um monte erguido cuja metade direita Restaurar devolveu ao terreno gerado, com o anel do pincel sobre ele.*
 
@@ -102,7 +102,7 @@ dois segundos faz na intensidade padrão.
 
 ### Aplanar
 
-![O topo de um grande monte nivelado por um único traço de Aplanar começado sobre ele](images/flatten.jpg)
+![O topo de um grande monte nivelado por um único traço de Aplanar começado sobre ele](images/flatten.webp)
 *Um único traço de Aplanar começado no topo do monte o nivelou. **Nivelar na altura onde o traço começa** está ligado,
 então **Altura (m)** fica acinzentado e mostra a altura que tomou: 43.4 m.*
 
@@ -128,7 +128,7 @@ unem sem emendas. **Ondular** e **Aspecto natural** da ferramenta [Caminho](path
 [Região](area.md) usam as mesmas configurações e o mesmo padrão, e os mostram nos próprios painéis: um valor definido
 num deles fica definido nos três.
 
-![Terreno nivelado com as cores de declive ligadas, a metade esquerda ondulada em saliências, a metade direita plana](images/naturalize.jpg)
+![Terreno nivelado com as cores de declive ligadas, a metade esquerda ondulada em saliências, a metade direita plana](images/naturalize.webp)
 *Terreno nivelado com as cores de declive ligadas. A metade esquerda foi ondulada (Saliências 3 m, Tamanho das
 saliências 12 m): as saliências aparecem como manchas amarelas. A metade direita continua plana e verde uniforme.*
 
@@ -144,7 +144,7 @@ O material que desliza ou é levado para fora do pincel pode cair logo fora dele
 [Região](area.md) e [Caminho](path.md) faz os dois tipos de uma vez, sobre uma seleção inteira ou ao longo de uma
 linha, com este **Ângulo de repouso** (os painéis delas também o mostram).
 
-![O mesmo monte antes e depois de Erodir (Água), o painel Erodir à esquerda](images/erode.jpg)
+![O mesmo monte antes e depois de Erodir (Água), o painel Erodir à esquerda](images/erode.webp)
 *O mesmo monte da mesma câmera. À esquerda: como foi erguido. À direita: depois de dois segundos de Erodir (Água): a
 chuva desgastou o topo e riscou os flancos com pequenas ravinas.*
 
@@ -179,7 +179,7 @@ tempo para a cor total.
 a terra que o mundo gerou ali. **Restaurar** remove a sua pintura, para que o terreno mostre de novo o que o mundo
 gerou.
 
-![Faixas de terreno pavimentado, cultivado e de terra, antes e depois de uma faixa de Limpar pintura atravessando-as](images/paint.jpg)
+![Faixas de terreno pavimentado, cultivado e de terra, antes e depois de uma faixa de Limpar pintura atravessando-as](images/paint.webp)
 *À esquerda: faixas pavimentada, cultivada e de terra. À direita: as mesmas faixas depois de um traço de Limpar pintura
 atravessando as três (o painel Pintar à esquerda).*
 
@@ -213,7 +213,7 @@ O jogo mantém toda alteração de terreno a menos de 8 m do terreno que ele ger
 vermelho, e a barra de status diz "Limite do jogo atingido: o terreno só pode se afastar 8 m da altura original (pontos
 vermelhos)." Veja [O limite de 8 m do jogo](concepts/ground-limits.md#o-limite-de-8-m-do-jogo).
 
-![Um traço de Elevar parado no limite de 8 m do jogo, o topo tingido de vermelho, e a mensagem da barra de status](images/limit-red.jpg)
+![Um traço de Elevar parado no limite de 8 m do jogo, o topo tingido de vermelho, e a mensagem da barra de status](images/limit-red.webp)
 *Elevar segurado até o terreno parar 8 m acima. Com **Marcas de limite** ligado, o topo fica tingido de vermelho; a
 barra de status mostra a mensagem e a leitura do cursor termina em "no limite de ±8 m".*
 
@@ -229,7 +229,7 @@ do limite.
 > Salvar terreno de Sem limite lê a área de novo a partir do mundo e **limpa o Histórico dela**: você não pode desfazer
 > nada de antes desse salvamento. Confira a forma antes de salvar.
 
-![O mesmo traço de Elevar duas vezes: parado em 8 m à esquerda, uma agulha alta com Sem limite à direita](images/no-limit.jpg)
+![O mesmo traço de Elevar duas vezes: parado em 8 m à esquerda, uma agulha alta com Sem limite à direita](images/no-limit.webp)
 *O mesmo traço de Elevar com Sem limite desligado (à esquerda: parado em 8 m, o topo vermelho) e ligado (à direita:
 muito mais alto). O interruptor fica no cartão Máscara, marcado como para o da direita.*
 

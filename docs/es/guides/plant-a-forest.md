@@ -20,7 +20,7 @@ una línea.
 7. Pulsa `Enter` para plantarlo.
 8. Haz clic en **Guardar en el mundo** (o **Aplicar en vivo**).
 
-![Bosque de las Praderas en vista previa en un polígono con Agrupar 50 % y Manchas 30 m: arboledas y claros](../images/guide-forest-zone.jpg)
+![Bosque de las Praderas en vista previa en un polígono con Agrupar 50 % y Manchas 30 m: arboledas y claros](../images/guide-forest-zone.webp)
 *Un polígono de unos 58 × 40 m con **Agrupar** 50 % y **Manchas** 30 m (y **Densidad** 1.5): los
 árboles transparentes se reúnen en arboledas con claros entre ellas. Las filas de **RELLENO DE POLÍGONO** están en la
 parte inferior del panel.*

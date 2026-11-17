@@ -7,7 +7,7 @@ sala y construye dentro de ellas.
 **Dónde:** barra de herramientas, sección **CREAR** · **Tecla:** ninguna · **Funciona en:** mundos guardados, en vivo;
 el generador también en el Taller (**Biblioteca** → **Generar mazmorra…**)
 
-![Una mazmorra de Cámaras Funerarias hecha con las salas propias del juego, abierta por un corte, con el panel Mazmorra](images/dungeon-rooms.jpg)
+![Una mazmorra de Cámaras Funerarias hecha con las salas propias del juego, abierta por un corte, con el panel Mazmorra](images/dungeon-rooms.webp)
 *Una mazmorra hecha con las salas propias del juego (Cámaras Funerarias, 25 salas), 5000 m más arriba y cortada 2 m
 por encima del suelo. Los cuadrados naranjas y azules marcan dónde se unen las salas. **Eliminar sala (Del)** está en
 gris hasta que se selecciona una sala.*
@@ -34,7 +34,7 @@ siempre crean la misma mazmorra de piezas de construcción; una hecha con [las s
 también depende de dónde está su entrada y hacia dónde mira. Para el recorrido completo, consulta
 [Generar una mazmorra y ponerla en el mundo](guides/make-a-dungeon.md).
 
-![Las opciones del generador en el panel Mazmorra y su plano de los dos niveles dibujado más grande al lado](images/dungeon-generate.jpg)
+![Las opciones del generador en el panel Mazmorra y su plano de los dos niveles dibujado más grande al lado](images/dungeon-generate.webp)
 ***Generar una mazmorra** para una mazmorra de la Selva Negra, Mediana, 2 niveles, jefe tras una reja. Junto al panel,
 su plano dibujado más grande, un nivel cada uno: la sala verde de la llave en el nivel 1, la arena roja con el punto
 magenta de su reja y la sala del tesoro dorada en el nivel 2, y el resumen debajo.*
@@ -100,7 +100,7 @@ left out`).
 | **Abrir en el Taller** | Escribe la mazmorra (de piezas de construcción) como plano y la abre en el [Taller](workshop.md) para cambiarla: consulta [Abrirla en el Taller](#abrirla-en-el-taller). No aparece con **Las salas propias del juego**. |
 | **Ir a la mazmorra** / **Ir a la entrada** | Aparecen una vez colocada la mazmorra (y hasta que `Ctrl+Z` la retira): llevan la vista arriba, al primer nivel con los techos cortados, y de vuelta abajo. |
 
-![La entrada de una mazmorra generada, en el suelo](images/dungeon-entrance.jpg)
+![La entrada de una mazmorra generada, en el suelo](images/dungeon-entrance.webp)
 *El túmulo de una cámara funeraria colocado con **Colocar en el mundo**, con la puerta mirando a la cámara. Bajo el
 resumen ahora aparecen **Ir a la mazmorra** e **Ir a la entrada**.*
 
@@ -143,7 +143,7 @@ Allí arriba la cámara ya no sigue el suelo: gira, desplázate y vuela alrededo
 Una mazmorra a la que nadie se ha acercado aún no tiene salas: el panel dice *El juego aún no ha trazado esta mazmorra
 (nadie se ha acercado a ella).* Visítala en el juego y vuelve a abrir el área.
 
-![Una Cueva de Escarcha vista desde arriba tras Ir a la mazmorra, cortada 4 m sobre el suelo, con extremos abiertos verdes y cuadrados naranjas de puerta](images/dungeon-inside.jpg)
+![Una Cueva de Escarcha vista desde arriba tras Ir a la mazmorra, cortada 4 m sobre el suelo, con extremos abiertos verdes y cuadrados naranjas de puerta](images/dungeon-inside.webp)
 *Una Cueva de Escarcha tras **Ir a la mazmorra**, con los techos cortados 4 m por encima del suelo: el panel la lista (`Frost Cave, 17 room(s), at
 -640, -350`). Los marcos verdes marcan extremos abiertos (se eliminó una sala), y los
 cuadrados naranjas, dónde se unen salas sin puerta.*
@@ -163,7 +163,7 @@ Una sala que se superpondría a otra, o que saldría del espacio de la mazmorra 
 zona en la mayoría de los tipos), se vuelve roja y la línea avisa. El juego construye la lista igualmente: es solo un
 aviso.
 
-![Un pasillo de hielo mostrado transparente en un extremo abierto verde, elegido en la lista SALAS](images/dungeon-add-room.jpg)
+![Un pasillo de hielo mostrado transparente en un extremo abierto verde, elegido en la lista SALAS](images/dungeon-add-room.webp)
 *`cave_new_icecorridor01` elegido en **SALAS** (filtrado con «icecorridor») y apuntado a un extremo abierto: aparece
 allí transparente, unido al modo del juego. La línea de abajo dice `17 room(s), 4 open end(s).`*
 
@@ -210,7 +210,7 @@ activados, el generador, la lista de salas y las salas dibujadas los siguen: con
 
 ## Abrirla en el Taller
 
-![Una mazmorra generada de piezas de construcción en la parcela del Taller, abierta por un corte, con su vestíbulo de entrada y el portal](images/workshop-dungeon.jpg)
+![Una mazmorra generada de piezas de construcción en la parcela del Taller, abierta por un corte, con su vestíbulo de entrada y el portal](images/workshop-dungeon.webp)
 *Una mazmorra generada (un nivel) abierta en la parcela del Taller y cortada a 3 m, con el panel Construir de nuevo
 en su pestaña **Piezas**: arriba, el vestíbulo de entrada con el portal por donde llegan los jugadores; debajo, la
 arena del jefe.*

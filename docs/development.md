@@ -106,9 +106,10 @@ to drive instead of the Debug build (the pictures of a release are taken with th
 neutral folder such as `/tmp/ValheimWorldEditor`, since Settings shows its path). The red on ground
 at the ±8 m limit is switched off in every scene (it would hide the edits).
 
-A translation's pictures are the same scenes in its language, into its folder, a little more compressed (every
-language's pictures are carried in the app): `LANGUAGE=fr DOCS_OUT=docs/fr/images DOCS_QUALITY=70 dotnet run --project
-tools/DocsScreenshots -- <dir>`. `$DOCS_QUALITY` is the JPEG quality, 85 when unset. The scenes name the controls in
+A translation's pictures are the same scenes in its language, into its folder, as WebP and a little more compressed
+(every language's pictures are carried in the app, and the release packages must stay under 200 MB):
+`LANGUAGE=fr DOCS_OUT=docs/fr/images DOCS_FORMAT=webp DOCS_QUALITY=70 dotnet run --project tools/DocsScreenshots --
+<dir>`. `$DOCS_FORMAT=webp` writes each scene's `x.jpg` as `x.webp`; `$DOCS_QUALITY` is the quality, 85 when unset. The scenes name the controls in
 English, which the driver finds in any language. The captions the tool draws itself (a pair's Before and After, the
 names on a shot, the drawn diagrams' words) are written in English too and drawn in the app's language: from
 `tools/DocsScreenshots/Captions/<code>.json` (English to translation), else from the app's catalogue when the caption

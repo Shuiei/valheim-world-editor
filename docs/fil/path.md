@@ -6,7 +6,7 @@ mga kalsada, rampa, tambak na daanan, kanal at ilog.
 
 **Saan:** tool rail, seksiyong **PAG-EDIT** · **Key:** `P` · **Gumagana sa:** mga naka-save na mundo, live
 
-![Ang limang punto ng tool na Daan sa ibabaw ng dalawang punso, napili ang Patagin, bago ang I-apply](images/path.jpg)
+![Ang limang punto ng tool na Daan sa ibabaw ng dalawang punso, napili ang Patagin, bago ang I-apply](images/path.webp)
 *Linya ng limang punto na iginuhit sa ibabaw ng dalawang punso, napili ang **Patagin**, kinuha ang **Taas** nito mula sa
 patag na lupa gamit ang `Alt`+click, at naka-on ang **Natural na itsura**. Wala pang nagbabago: ipinapakita ng banda ang
 lapad at malambot na gilid ng daan hanggang pindutin mo ang **I-apply (Enter)**; sa pointer ang mga bilog sa huling
@@ -27,7 +27,7 @@ punto.*
 
 Ipinapakita ng panel kung ilang punto ang linya at kung gaano ito kahaba.
 
-![Ang parehong linya na na-apply: isang patag na kalsadang tumagos sa dalawang punso, sementado sa gitna, nakaguhit pa ang linya](images/path-road.jpg)
+![Ang parehong linya na na-apply: isang patag na kalsadang tumagos sa dalawang punso, sementado sa gitna, nakaguhit pa ang linya](images/path-road.webp)
 *Ang linya mula sa unang larawan, parehong camera: tumagos ang **Patagin** ng patag na kalsada sa dalawang punso, saka
 sinementuhan ng **Pintahan ng sementado** na may **Lapad** na 4 m at **Lambot** na 1 m ang gitna nito.
 Nananatili ang linya para sa susunod na aksiyon.*
@@ -48,7 +48,7 @@ Nananatili ang linya para sa susunod na aksiyon.*
 | **Mga umbok**, **Lawak**, **Bagong pattern** | **Natural** at **Natural na itsura**: gaano kataas at kalapad ang mga umbok, at ibang random na pattern para sa kanila. Sa brush na [Natural](terrain.md#natural) sila: itakda man dito, doon o sa tool na [Rehiyon](area.md), pareho ang mga halaga. |
 | **Anggulo ng tambak** | **Agnasin**: ang pinakamatarik na dahilig na hindi gumuguho, 10° hanggang 60° (default 33°). Sa brush na [Agnasin](terrain.md#agnasin), parehong halaga. |
 
-![Dalawang trinserang hinukay gamit ang Ibaba nang 3 m nang magkatabi: sa kaliwa matarik ang mga pader, sa kanan malapad at padahilig ang mga pampang](images/path-soft-edge.jpg)
+![Dalawang trinserang hinukay gamit ang Ibaba nang 3 m nang magkatabi: sa kaliwa matarik ang mga pader, sa kanan malapad at padahilig ang mga pampang](images/path-soft-edge.webp)
 *Dalawang tuwid na linya sa patag na lupa, bawat isa **Ibaba** nang 3 m na may **Lapad** na 6 m, tinitingnan sa
 kahabaan nila. Kaliwa: **Lambot** 0, trinserang may matarik at tuwid na pader. Kanan: **Lambot**
 8 m, unti-unting bumababa sa lupa ang mga pampang.*
@@ -77,7 +77,7 @@ pareho ang pagbabago ng lupa.
 
 ### Rampa
 
-![Isang rampa mula sa gilid, pantay na tumataas mula sa lupa papunta sa nakataas na plataporma, ang panel na Daan kasama ang Simula at Dulo](images/path-ramp.jpg)
+![Isang rampa mula sa gilid, pantay na tumataas mula sa lupa papunta sa nakataas na plataporma, ang panel na Daan kasama ang Simula at Dulo](images/path-ramp.webp)
 *Isang rampa ng dalawang punto mula sa gilid, mula sa lupa sa paanan nito (**Simula** 35.2 m) hanggang sa ibabaw ng
 platapormang itinaas nang 8 m (**Dulo** 43 m). Pantay itong tumataas hanggang dulo.*
 
@@ -88,7 +88,7 @@ paliku-likong rampa sa buong haba nito.
 
 ### Ilog o kanal
 
-![Isang ilog na hinukay sa kabila ng zone gamit ang Ilog / kanal, ipinapakita ang tubig](images/path-river.jpg)
+![Isang ilog na hinukay sa kabila ng zone gamit ang Ilog / kanal, ipinapakita ang tubig](images/path-river.webp)
 *Isang ilog na hinukay sa kabila ng zone gamit ang **Ilog / kanal (tubig)**: pinupuno ito ng dagat.*
 
 Walang umaagos na tubig sa Valheim: ang tubig sa mga ilog ay ang dagat, sa parehong antas (30 m) saanman. Kaya may

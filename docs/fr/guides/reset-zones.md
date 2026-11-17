@@ -23,7 +23,7 @@ une [sauvegarde du monde](back-up-a-world.md) : une réinitialisation enregistr
    constructions sont gardées : lisez-la, puis acceptez. Les zones deviennent rouges.
 9. Cliquez sur **Enregistrer dans le monde** (ou **Appliquer en direct**).
 
-![Réinitialiser des zones dans tout le monde : zones correspondantes en bleu, zones marquées en rouge](../images/map-reset.jpg)
+![Réinitialiser des zones dans tout le monde : zones correspondantes en bleu, zones marquées en rouge](../images/map-reset.webp)
 *Les zones bleues correspondent au filtre ; les zones rouges sont marquées pour réinitialisation.*
 
 Pour ne réinitialiser que les zones sous un endroit précis, utilisez plutôt l'outil [Région](../area.md#réinitialiser-les-zones) :

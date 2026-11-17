@@ -65,7 +65,7 @@ contents); the English folders (`guides/`, `help/`, `concepts/`, `start/`) have 
   not translated (`../worldeditor.schema.json`). Links to a page the folder does not have yet still work in the editor
   (it shows the English page), but not on GitHub until the page is translated.
 - **Pictures.** A picture with words in it is retaken in your language in `docs/fr/images/`, under the same name, and
-  written `images/x.jpg`. One with nothing to translate can stay the English one: `../images/x.jpg`. Until a picture
+  written `images/x.webp` (WebP: every language's pictures are carried in the app). One with nothing to translate can stay the English one: `../images/x.jpg`. Until a picture
   of `images/` is added to your folder, the Help window shows the English one of the same name.
 - **Headings.** Translate them; their ids change with them (GitHub makes them from the words: `#search-the-world`
   becomes `#rechercher-dans-le-monde`), and the translation's own links use the translated ids, as GitHub needs. Keep

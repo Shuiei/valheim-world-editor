@@ -22,7 +22,7 @@ foi salvo.
 7. Para reverter uma alteração que você já salvou, desfaça-a (ou use **Remover**) e use **Salvar no mundo** de novo.
    Ao vivo, desfaça-a e use **Aplicar ao vivo** de novo (ou deixe o **Auto** enviá-la).
 
-![O painel Histórico depois de cinco edições, a última desfeita](../images/history.jpg)
+![O painel Histórico depois de cinco edições, a última desfeita](../images/history.webp)
 *Histórico: a última alteração desfeita com **Voltar até aqui**, acinzentada, com **Refazer até aqui**.*
 
 > [!WARNING]

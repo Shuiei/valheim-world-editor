@@ -115,7 +115,7 @@ feito pelo **Claude**, ou que vem de uma **sessão anterior**. Por padrão ele g
 menos de 2 GB de memória (além disso, os mais antigos saem primeiro); **Configurações → Histórico → Passos mantidos**
 faz com que ele guarde só esse número de passos.
 
-![O painel Histórico depois de cinco edições, a última desfeita](../images/history.jpg)
+![O painel Histórico depois de cinco edições, a última desfeita](../images/history.webp)
 *O último passo foi desfeito com **Voltar até aqui**: ele fica acinzentado e oferece **Refazer até aqui**.*
 
 Há duas formas de voltar:

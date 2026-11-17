@@ -19,7 +19,7 @@ Desenhe uma estrada nivelada com uma rampa uniforme subindo a colina, pavimentad
    **Aplicar (Enter)** de novo na mesma linha.
 10. Clique em **Salvar no mundo** (ou **Aplicar ao vivo**).
 
-![Uma estrada nivelada cortando dois montes e pavimentada no meio](../images/path-road.jpg)
+![Uma estrada nivelada cortando dois montes e pavimentada no meio](../images/path-road.webp)
 *Uma estrada feita com Aplanar através de dois montes, depois Pintar pavimento (Largura 4 m, Borda suave 1 m) na mesma
 linha.*
 

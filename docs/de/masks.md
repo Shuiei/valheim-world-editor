@@ -7,7 +7,7 @@ ebne einen Talboden, ohne seine Hänge anzutasten, pflanze nur auf unbemaltem Bo
 **Wo:** die Karte **Maske** neben dem Werkzeugpanel · **Taste:** keine (`Alt`+`Shift`+Klick setzt einen Höhenbereich) ·
 **Funktioniert in:** gespeicherten Welten, live
 
-![Derselbe breite Pinselstrich Gepflastert über einen Hügel, mit Maske aus und an, und die Karte Maske](images/mask.jpg)
+![Derselbe breite Pinselstrich Gepflastert über einen Hügel, mit Maske aus und an, und die Karte Maske](images/mask.webp)
 *Derselbe breite Pinselstrich mit der Farbe Gepflastert über einen Hügel. Links, Maske aus: Alles ist gepflastert. Rechts, Maske an mit Neigungen
 unter 15°: Der flache Boden ist gepflastert, die steilen Hänge des Hügels nicht. Die Karte Maske ist neben dem Werkzeugpanel.*
 
@@ -36,7 +36,7 @@ nicht zurück: Ein Bauteil kommt dorthin, wohin du zeigst.
 Eine orangefarbene Warnung erscheint unter den Einstellungen, wenn sie nichts durchlassen: eine maximale Neigung von 0° oder ein Minimum über
 dem Maximum.
 
-![Die Karte Maske mit Neigung min 30 und max 10 und ihrer orangefarbenen Warnung, dass nichts passt](images/mask-warning.jpg)
+![Die Karte Maske mit Neigung min 30 und max 10 und ihrer orangefarbenen Warnung, dass nichts passt](images/mask-warning.webp)
 *Neigung min 30° liegt über max 10°, daher warnt die Karte in Orange: „Minimale Neigung liegt über der maximalen: nichts passt.“*
 
 ### Ohne Grenze, auf derselben Karte

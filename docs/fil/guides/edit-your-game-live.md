@@ -7,7 +7,7 @@ bawat pagbabago.
 **Kailangan mo:** ang Valheim sa computer na ito, ang editor, at mga 5 minuto para i-install nang isang beses ang
 BepInEx at ang plugin na WorldEditorBridge.
 
-![Ang laro ko bago ang setup: ang card na "Kailangan ng laro mo ang BepInEx at ang plugin na WorldEditorBridge" kasama ang tatlong hakbang nito](../images/start-game-setup.jpg)
+![Ang laro ko bago ang setup: ang card na "Kailangan ng laro mo ang BepInEx at ang plugin na WorldEditorBridge" kasama ang tatlong hakbang nito](../images/start-game-setup.webp)
 *Ang sinasabi ng **Ang laro ko** bago ma-install ang BepInEx at ang plugin: ang mga hakbang sa ibaba, sa madaling salita.*
 
 1. I-install ang **BepInEx** sa Valheim mo, nang isang beses: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
@@ -30,7 +30,7 @@ BepInEx at ang plugin na WorldEditorBridge.
 7. Gumawa ng pagbabago, halimbawa magtaas ng maliit na burol gamit ang brush na **Itaas**.
 8. Pindutin ang **I-apply nang live** (o `Ctrl+S`).
 
-![Ang laro ko sa panimulang pahina: tumatakbo ang Valheim gamit ang mundo, ang bilang ng mga player, at ang button na I-edit nang live](../images/start-game.jpg)
+![Ang laro ko sa panimulang pahina: tumatakbo ang Valheim gamit ang mundo, ang bilang ng mga player, at ang button na I-edit nang live](../images/start-game.webp)
 *Kusang napansin ng panimulang pahina ang tumatakbong laro: binubuksan ng **I-edit nang live** ang mundo nito.*
 
 ## Tingnan kung gumana

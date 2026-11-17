@@ -13,7 +13,7 @@ mundos salvos, ao vivo
 > do mundo quando salva, e as suas alterações, inclusive as redefinições de zonas, se perdem. Para alterar um mundo
 > enquanto ele roda, use o [modo ao vivo](live-mode.md).
 
-![O mapa do mundo com uma zona escolhida: a área a abrir contornada em azul-claro, Editar em 3D e a lista de tamanhos no painel lateral](images/map.jpg)
+![O mapa do mundo com uma zona escolhida: a área a abrir contornada em azul-claro, Editar em 3D e a lista de tamanhos no painel lateral](images/map.webp)
 *Uma zona está escolhida: o quadrado azul-claro é a área que **Editar em 3D** vai abrir, no tamanho escolhido ao lado
 do botão.*
 
@@ -60,7 +60,7 @@ volte ao mapa, abra outra e salve tudo de uma vez.
 
 ## Buscar no mundo
 
-![Buscar Beech1 no mundo: cada faia marcada em laranja, uma escolhida com um anel dourado, as contagens e a lista de resultados](images/map-search.jpg)
+![Buscar Beech1 no mundo: cada faia marcada em laranja, uma escolhida com um anel dourado, as contagens e a lista de resultados](images/map-search.webp)
 *Cada marcador laranja é um objeto encontrado. O resultado escolhido na lista fica maior, com um anel dourado, e o mapa
 fica centralizado nele.*
 
@@ -89,7 +89,7 @@ excluiu mas não salvou, não. Os objetos de controle interno do próprio jogo (
 
 ## Redefinir zonas pelo mundo
 
-![Redefinir zonas pelo mundo: zonas dos Prados marcadas para redefinir em vermelho, zonas da Floresta Negra correspondentes em azul, a linha de contagem sob os botões](images/map-reset.jpg)
+![Redefinir zonas pelo mundo: zonas dos Prados marcadas para redefinir em vermelho, zonas da Floresta Negra correspondentes em azul, a linha de contagem sob os botões](images/map-reset.webp)
 *As zonas dos Prados foram marcadas para redefinir (vermelho), depois **Floresta Negra** foi escolhida e **Mostrar
 correspondentes** pressionado (azul). A linha sob os botões conta as duas.*
 
@@ -138,7 +138,7 @@ zona, quantos pontos de altura (`a`) e de pintura (`p`) foram alterados, a faixa
 (`-2.4 … 6.0 m`) e "(não salvo)" quando há alterações pendentes ("(não aplicado)" num mundo ao vivo). Clique numa linha
 para dar zoom nessa zona e escolhê-la, pronta para **Editar em 3D**.
 
-![O mapa de perto: quatro zonas editadas com contorno amarelo fino e duas com laranja mais grosso, a lista Zonas editadas (6) com as contagens a e p, duas linhas marcadas (não salvo)](images/map-edited-zones.jpg)
+![O mapa de perto: quatro zonas editadas com contorno amarelo fino e duas com laranja mais grosso, a lista Zonas editadas (6) com as contagens a e p, duas linhas marcadas (não salvo)](images/map-edited-zones.webp)
 *Quatro zonas salvas (amarelo fino) e duas editadas desde então (laranja mais grosso): a lista marca as pendentes com
 "(não salvo)".*
 

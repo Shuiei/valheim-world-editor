@@ -8,7 +8,7 @@ paneles, la cámara, el guardado, el Historial y el panel Vista.
 **Tecla:** `?` o `F3` para la tarjeta de ayuda, `F1` para esta ayuda en la herramienta en uso · **Funciona en:** mundos
 guardados, en vivo, el Taller
 
-![El editor 3D con Elevar elegido: barra de herramientas, panel de Elevar, barra superior, panel Vista y barra de estado](images/overview.jpg)
+![El editor 3D con Elevar elegido: barra de herramientas, panel de Elevar, barra superior, panel Vista y barra de estado](images/overview.webp)
 *Una pequeña base en un área de 3 × 3, con el pincel Elevar elegido (su anillo sobre la hierba). A la izquierda: la
 barra de herramientas y el panel de la herramienta. Arriba: la barra superior. A la derecha: el panel Vista. Abajo: la
 barra de estado, que lee el suelo bajo el puntero.*
@@ -28,7 +28,7 @@ Cada cambio queda [pendiente](concepts/saving-and-history.md#cambios-pendientes)
 
 ## La página de inicio
 
-![La sección Página de inicio de la página de inicio](images/start-home.jpg)
+![La sección Página de inicio de la página de inicio](images/start-home.webp)
 *Página de inicio: la tarjeta del juego en marcha con **Editar en vivo** y, debajo, los últimos mundos y planos
 abiertos.*
 
@@ -106,7 +106,7 @@ y, cuando ni eso basta, **Mapa**, **Recargar**, **Historial** y **Vista** muestr
 En la vista, cada objeto nuevo aún sin guardar ni aplicar lleva un **punto verde**, salvo mientras está seleccionado
 (entonces lo marca su contorno). **Vista → Marcas sin guardar** oculta los puntos; los objetos se quedan.
 
-![Diez hayas jóvenes recién plantadas en suelo nivelado, cada una con un punto verde al pie, una ampliada en la esquina](images/unsaved.jpg)
+![Diez hayas jóvenes recién plantadas en suelo nivelado, cada una con un punto verde al pie, una ampliada en la esquina](images/unsaved.webp)
 *Árboles jóvenes recién plantados: cada uno lleva un pequeño punto verde al pie hasta que se guarda (uno ampliado en la
 esquina), y la línea de pendientes los cuenta: «Sin guardar: 1 zona, 10 añadidos».*
 
@@ -135,7 +135,7 @@ está abierto). En el Taller solo conserva **Construir** (`U` o `T`), **Selecci�
 
 ### Caminar y Volar
 
-![La base vista a la altura de los ojos en el modo Caminar](images/walk.jpg)
+![La base vista a la altura de los ojos en el modo Caminar](images/walk.webp)
 *Modo Caminar (`F`): la base como la ve un jugador de pie junto al campo, con los ojos a 1.8 m del suelo.*
 
 `F` alterna entre tres vistas:
@@ -178,7 +178,7 @@ Los controles del área no están en el Taller.
 escribir y la carpeta del mundo. Cierra Valheim (el juego o el servidor) antes de guardar: un juego en marcha
 sobrescribe tus cambios la próxima vez que guarda.
 
-![La pregunta Guardar en los archivos del mundo sobre una colina elevada y árboles nuevos: qué se escribirá, la carpeta del mundo, tres avisos, Guardar y Cancelar](images/save-confirm.jpg)
+![La pregunta Guardar en los archivos del mundo sobre una colina elevada y árboles nuevos: qué se escribirá, la carpeta del mundo, tres avisos, Guardar y Cancelar](images/save-confirm.webp)
 *No se escribe nada hasta que haces clic en **Guardar**: la pregunta cuenta lo que entra, nombra la **carpeta del
 mundo** y te avisa de que cierres Valheim antes.*
 
@@ -232,7 +232,7 @@ modos** / **Quedarse**, y **Salir igualmente** / **Seguir editando**.
 
 ## Historial
 
-![El panel Historial después de cinco ediciones, con la última deshecha](images/history.jpg)
+![El panel Historial después de cinco ediciones, con la última deshecha](images/history.webp)
 *El último cambio se deshizo con **Volver hasta aquí**: aparece en gris y ofrece **Rehacer hasta aquí**.*
 
 **Historial** (`L`) lista todos los cambios de la sesión, del más reciente al más antiguo. Cada fila muestra el nombre
@@ -331,7 +331,7 @@ el editor.
 
 ## La tarjeta de ayuda
 
-![La tarjeta de ayuda Controles desplazada hasta el final: las últimas teclas y luego Este equipo con los fotogramas por segundo y la tarjeta gráfica](images/help.jpg)
+![La tarjeta de ayuda Controles desplazada hasta el final: las últimas teclas y luego Este equipo con los fotogramas por segundo y la tarjeta gráfica](images/help.webp)
 *La tarjeta **Controles** (`F3`), desplazada hasta el final: las últimas teclas y luego **Este equipo** con los
 fotogramas por segundo, la tarjeta gráfica y **Registrar fotogramas por segundo**.*
 
@@ -376,7 +376,7 @@ editor encuentra solo los sitios habituales: Valheim en todas las bibliotecas de
 bibliotecas adicionales), BepInEx en la carpeta de Valheim y en los perfiles predeterminados de r2modman y Thunderstore
 Mod Manager, y los mundos en las propias carpetas de mundos de Valheim (también las de Proton).
 
-![Configuración en dos mitades: Idioma, las carpetas y Claude (desactivado) a la izquierda; Extensiones de mods, Complementos, Historial y Guardar a la derecha](images/settings.jpg)
+![Configuración en dos mitades: Idioma, las carpetas y Claude (desactivado) a la izquierda; Extensiones de mods, Complementos, Historial y Guardar a la derecha](images/settings.webp)
 *Configuración se desplaza: su parte superior a la izquierda y su final a la derecha, hasta **Historial** y
 **Guardar**. **Dibujo** solo aparece en Windows.*
 

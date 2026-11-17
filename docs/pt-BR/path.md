@@ -6,7 +6,7 @@ estradas, rampas, aterros, valas e rios.
 
 **Onde:** barra de ferramentas, seção **EDITAR** · **Tecla:** `P` · **Funciona em:** mundos salvos, ao vivo
 
-![Os cinco pontos da ferramenta Caminho sobre dois montes, Aplanar escolhido, antes de Aplicar](images/path.jpg)
+![Os cinco pontos da ferramenta Caminho sobre dois montes, Aplanar escolhido, antes de Aplicar](images/path.webp)
 *Uma linha de cinco pontos desenhada sobre dois montes, com **Aplanar** escolhido, a **Altura** tirada do terreno plano
 com `Alt`+clique e **Aspecto natural** ligado. Nada mudou ainda: a faixa mostra a largura e as bordas suaves do caminho
 até você pressionar **Aplicar (Enter)**; os círculos no último ponto são os do ponteiro.*
@@ -26,7 +26,7 @@ até você pressionar **Aplicar (Enter)**; os círculos no último ponto são os
 
 O painel mostra quantos pontos a linha tem e qual o comprimento dela.
 
-![A mesma linha aplicada: uma estrada nivelada cortando os dois montes, pavimentada no meio, a linha ainda desenhada](images/path-road.jpg)
+![A mesma linha aplicada: uma estrada nivelada cortando os dois montes, pavimentada no meio, a linha ainda desenhada](images/path-road.webp)
 *A linha da primeira imagem, mesma câmera: **Aplanar** abriu uma estrada nivelada através dos dois montes, depois
 **Pintar pavimento** com **Largura** de 4 m e **Borda suave** de 1 m pavimentou o meio dela. A linha fica para a
 próxima ação.*
@@ -47,7 +47,7 @@ próxima ação.*
 | **Saliências**, **Extensão**, **Novo padrão** | **Ondular** e **Aspecto natural**: a altura e a largura das saliências, e outro padrão aleatório para elas. São as do pincel [Ondular](terrain.md#ondular): definidas aqui, lá ou na ferramenta [Região](area.md), são os mesmos valores. |
 | **Ângulo de repouso** | **Erodir**: o declive mais íngreme que fica no lugar, de 10° a 60° (padrão 33°). O do pincel [Erodir](terrain.md#erodir), o mesmo valor. |
 
-![Duas trincheiras cavadas com Rebaixar 3 m lado a lado: à esquerda com paredes íngremes, à direita com margens largas e inclinadas](images/path-soft-edge.jpg)
+![Duas trincheiras cavadas com Rebaixar 3 m lado a lado: à esquerda com paredes íngremes, à direita com margens largas e inclinadas](images/path-soft-edge.webp)
 *Duas linhas retas em terreno plano, cada uma com **Rebaixar** de 3 m e **Largura** de 6 m, vistas no sentido delas.
 À esquerda: **Borda suave** 0, uma trincheira de paredes íngremes e retas. À direita: **Borda suave** de 8 m, as margens
 descem suavemente para o terreno.*
@@ -75,7 +75,7 @@ seleção, a ferramenta Caminho por uma linha, e o terreno muda da mesma forma.
 
 ### Rampa
 
-![Uma rampa vista de lado, subindo por igual do terreno até uma plataforma elevada, o painel Caminho com Início e Fim](images/path-ramp.jpg)
+![Uma rampa vista de lado, subindo por igual do terreno até uma plataforma elevada, o painel Caminho com Início e Fim](images/path-ramp.webp)
 *Uma rampa de dois pontos vista de lado, do terreno ao pé dela (**Início** 35.2 m) até o alto de uma plataforma
 elevada 8 m (**Fim** 43 m). Ela sobe por igual o tempo todo.*
 
@@ -86,7 +86,7 @@ fim.
 
 ### Rio ou canal
 
-![Um rio cavado atravessando a zona com Rio / canal, a água à mostra](images/path-river.jpg)
+![Um rio cavado atravessando a zona com Rio / canal, a água à mostra](images/path-river.webp)
 *Um rio cavado atravessando a zona com **Rio / canal (água)**: o mar o enche.*
 
 O Valheim não tem água corrente: a água dos rios é o mar, no mesmo nível (30 m) em todo lugar. Por isso um rio só tem

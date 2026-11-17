@@ -20,7 +20,7 @@ ouvrez-le en 3D.
    [Changer le contenu d'un coffre ou le texte d'un panneau](fill-a-chest.md)), puis **Enregistrer dans le monde** (ou
    **Appliquer en direct**).
 
-![Chercher dans le monde Beech1 : chaque hêtre épinglé en orange, l'un choisi avec un anneau doré](../images/map-search.jpg)
+![Chercher dans le monde Beech1 : chaque hêtre épinglé en orange, l'un choisi avec un anneau doré](../images/map-search.webp)
 *Chaque épingle est un objet trouvé ; celui choisi dans la liste est plus grand, avec un anneau doré.*
 
 ## Vérifier le résultat

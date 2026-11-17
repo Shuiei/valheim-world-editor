@@ -117,6 +117,10 @@ public sealed class HelpLanguagesTests
         Assert.Equal("images/map.jpg", HelpDocs.Picture(Zz + "/guides/back-up-a-world.md", "../images/map.jpg"));
         Assert.Equal("images/nowhere.jpg", HelpDocs.Picture(Zz + "/map.md", "images/nowhere.jpg"));
         Assert.Equal("images/map.jpg", HelpDocs.Picture("map.md", "images/map.jpg"));
+        // A translation's WebP picture not carried yet: the English JPEG of the same name.
+        Assert.Equal("images/map.jpg", HelpDocs.Picture(Zz + "/map.md", "images/map.webp"));
+        Assert.Equal("images/nowhere.webp", HelpDocs.Picture(Zz + "/map.md", "images/nowhere.webp"));
+        Assert.Equal("images/map.webp", HelpDocs.Picture("map.md", "images/map.webp"));
         // Drawn: the English picture, enlarged by a click.
         Assert.Equal(["enlarge images/map.jpg"], ClickPicture());
         using var s = HelpDocs.Open("images/map.jpg")!;
@@ -126,6 +130,8 @@ public sealed class HelpLanguagesTests
         Assert.Equal(Zz + "/images/map.jpg", HelpDocs.Picture(Zz + "/map.md", "images/map.jpg"));
         Assert.Equal("images/map.jpg", HelpDocs.Picture(Zz + "/map.md", "../images/map.jpg"));
         Assert.Equal(["enlarge " + Zz + "/images/map.jpg"], ClickPicture());
+        fake.Add(Zz + "/images/map.webp", bytes.ToArray());
+        Assert.Equal(Zz + "/images/map.webp", HelpDocs.Picture(Zz + "/map.md", "images/map.webp"));
     }
 
     /// <summary>Draws the made-up translation of the map's page and clicks its picture: what was enlarged.</summary>

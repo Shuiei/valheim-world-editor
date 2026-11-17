@@ -7,7 +7,7 @@ nur an sanften Hängen, Terrassen, ein gepflasterter Platz genau auf der mittler
 **Wo:** Werkzeugleiste, Abschnitt **ERSTELLEN** · **Taste:** keine (`Ctrl+Enter` führt das Skript aus) ·
 **Funktioniert in:** gespeicherten Welten, live (nicht in der Werkstatt)
 
-![Das Werkzeug Skript: das Beispiel Terraced hill auf einem 3 × 3-Bereich ausgeführt, sein Code im Panel und die Ergebniszeile darunter](images/script.jpg)
+![Das Werkzeug Skript: das Beispiel Terraced hill auf einem 3 × 3-Bereich ausgeführt, sein Code im Panel und die Ergebniszeile darunter](images/script.webp)
 *Das Beispiel Terraced hill auf einem 3 × 3-Bereich ausgeführt: der Code im Panel und darunter die Ergebniszeile, die
 sagt, was das Skript geändert hat.*
 
@@ -325,7 +325,7 @@ geändert.
   bearbeitet, rückgängig gemacht oder gespeichert, während es lief (oder ein anderer Bereich wurde geöffnet). Führe es
   erneut aus und warte darauf.
 
-![Das Werkzeug Skript nach Ausführen: Groud in Zeile 2 falsch geschrieben, die Ausgabe listet den Fehler, die Statusleiste meldet, dass nichts geändert wurde](images/script-error.jpg)
+![Das Werkzeug Skript nach Ausführen: Groud in Zeile 2 falsch geschrieben, die Ausgabe listet den Fehler, die Statusleiste meldet, dass nichts geändert wurde](images/script-error.webp)
 *Ein falsch geschriebener Name: Die Ausgabe nennt die Zeile und den Fehler; die Statusleiste meldet, dass sich nichts
 geändert hat.*
 

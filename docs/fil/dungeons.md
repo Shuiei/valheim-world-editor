@@ -7,7 +7,7 @@ nang silid kada silid, at magtayo sa loob nila.
 **Saan:** tool rail, seksiyong **LIKHA** · **Key:** wala · **Gumagana sa:** mga naka-save na mundo, live; ang
 generator, pati sa Gawaan (**Aklatan** → **Bumuo ng dungeon…**)
 
-![Isang dungeon na Burial Chambers na gawa sa sariling mga silid ng laro, nakahiwang bukas, kasama ang panel na Dungeon](images/dungeon-rooms.jpg)
+![Isang dungeon na Burial Chambers na gawa sa sariling mga silid ng laro, nakahiwang bukas, kasama ang panel na Dungeon](images/dungeon-rooms.webp)
 *Isang dungeon na gawa sa sariling mga silid ng laro (Burial Chambers, 25 silid), 5000 m pataas at nakahiwa nang 2 m
 sa itaas ng sahig. Minamarkahan ng mga orange at asul na parisukat kung saan nagtatagpo ang mga silid. Kulay abo ang
 **Burahin ang silid (Del)** hangga't walang napiling silid.*
@@ -36,7 +36,7 @@ gusali ang nagagawa ng parehong mga pinili at seed; ang dungeon na gawa sa
 direksiyong hinaharap nito. Para sa buong gabay, tingnan ang
 [Bumuo ng dungeon at ilagay ito sa mundo](guides/make-a-dungeon.md).
 
-![Ang mga pinili ng generator sa panel na Dungeon, at ang plano nito ng dalawang palapag na iginuhit nang mas malaki sa tabi nito](images/dungeon-generate.jpg)
+![Ang mga pinili ng generator sa panel na Dungeon, at ang plano nito ng dalawang palapag na iginuhit nang mas malaki sa tabi nito](images/dungeon-generate.webp)
 ***Bumuo ng dungeon** para sa dungeon ng Black Forest, Katamtaman, 2 palapag, boss sa likod ng tarangkahan. Sa tabi ng
 panel, ang plano nito na iginuhit nang mas malaki, isang palapag bawat isa: ang berdeng silid ng susi sa palapag 1, ang
 pulang arena kasama ang magenta na tuldok ng tarangkahan nito at ang gintong taguan ng kayamanan sa palapag 2, at ang
@@ -102,7 +102,7 @@ kung ano ang hindi (`no room for stairs down from level 3; the levels below are 
 | **Buksan sa Gawaan** | Isinusulat ang dungeon (mga piece ng gusali) bilang blueprint at binubuksan ito sa [Gawaan](workshop.md) para baguhin: tingnan ang [Buksan ito sa Gawaan](#buksan-ito-sa-gawaan). Hindi ipinapakita sa **Sariling mga silid ng laro**. |
 | **Pumunta sa dungeon** / **Pumunta sa pasukan** | Ipinapakita kapag nailagay na ang dungeon (at hanggang bawiin ito ng `Ctrl+Z`): dinadala ang tanaw pataas sa unang palapag na tinanggalan ng bubong, at pabalik pababa. |
 
-![Ang pasukan ng isang nabuong dungeon sa lupa](images/dungeon-entrance.jpg)
+![Ang pasukan ng isang nabuong dungeon sa lupa](images/dungeon-entrance.webp)
 *Punso ng isang burial chamber na inilagay ng **Ilagay sa mundo**, nakaharap sa camera ang pinto nito. Sa ilalim ng
 buod, ipinapakita na ngayon ang **Pumunta sa dungeon** at **Pumunta sa pasukan**.*
 
@@ -147,7 +147,7 @@ dati. Ipinapakita o itinatago sila ng **Mga silid ng dungeon** sa [panel na Tana
 Walang silid pa ang dungeon na wala pang nakalapit: sinasabi ng panel na *Hindi pa nailalatag ng laro ang dungeon na
 ito (wala pang nakalapit dito).* Puntahan ito sa laro, saka buksan ulit ang area.
 
-![Isang Frost Cave na tinitingnan mula sa itaas matapos ang Pumunta sa dungeon, nakahiwa nang 4 m sa itaas ng sahig, may berdeng bukas na dulo at orange na parisukat ng pinto](images/dungeon-inside.jpg)
+![Isang Frost Cave na tinitingnan mula sa itaas matapos ang Pumunta sa dungeon, nakahiwa nang 4 m sa itaas ng sahig, may berdeng bukas na dulo at orange na parisukat ng pinto](images/dungeon-inside.webp)
 *Isang Frost Cave matapos ang **Pumunta sa dungeon**, nakahiwa ang mga bubong nito nang 4 m sa itaas ng sahig:
 inililista ito ng panel (`Frost Cave, 17 room(s), at -640, -350`). Minamarkahan ng mga berdeng frame ang mga bukas na
 dulo (may binurang silid), ng mga orange na parisukat kung saan nagtatagpo ang mga silid nang walang pinto.*
@@ -168,7 +168,7 @@ kaparehong uri lang ang pinagdudugtong ng laro.
 Nagiging pula ang silid na magpapatong sa iba, o lalampas sa espasyo ng dungeon (64 × 64 m sa paligid ng gitna ng zone
 nito para sa karamihan ng uri), at nagbababala ang linya. Itinatayo pa rin ito ng laro: babala lang ito.
 
-![Isang ice corridor na ipinapakitang aninag sa isang berdeng bukas na dulo, pinili sa listahang MGA SILID](images/dungeon-add-room.jpg)
+![Isang ice corridor na ipinapakitang aninag sa isang berdeng bukas na dulo, pinili sa listahang MGA SILID](images/dungeon-add-room.webp)
 *Pinili ang `cave_new_icecorridor01` sa ilalim ng **MGA SILID** (pinaliit gamit ang "icecorridor") at itinuro sa
 isang bukas na dulo: lumalabas ito roon nang aninag, nakadugtong sa paraan ng laro. Nakasulat sa linya sa ibaba ang
 `17 room(s), 4 open end(s).`*
@@ -219,7 +219,7 @@ generator, ng listahan ng silid at ng mga silid na iginuguhit: tingnan ang
 
 ## Buksan ito sa Gawaan
 
-![Isang nabuong dungeon na gawa sa mga piece ng gusali sa plot ng Gawaan, nakahiwang bukas, ang bulwagan ng pasukan nito kasama ang portal](images/workshop-dungeon.jpg)
+![Isang nabuong dungeon na gawa sa mga piece ng gusali sa plot ng Gawaan, nakahiwang bukas, ang bulwagan ng pasukan nito kasama ang portal](images/workshop-dungeon.webp)
 *Isang nabuong dungeon (isang palapag) na binuksan sa plot ng Gawaan at nakahiwa sa 3 m, nakabalik sa tab na **Mga
 piece** ang dock ng Pagtayo: sa itaas, ang bulwagan ng pasukan kasama ang portal nito kung saan dumarating ang mga
 player; sa ibaba nito, ang arena ng boss.*

@@ -71,7 +71,7 @@ bawat update ng Valheim, sinasabi ng isang card ang **Inihahanda ang itsura ng l
 file ng laro nang ilang segundo. Bumubukas ang mga mundo, server at ang Gawaan kapag sinabi na nito ang **Handa na ang
 itsura ng laro.**
 
-![Ang Home ng panimulang pahina](../images/start-home.jpg)
+![Ang Home ng panimulang pahina](../images/start-home.webp)
 *Ang panimulang pahina: ang side menu sa kaliwa, ang Home sa kanan. Kapag may binuksang mundo, lumalabas ito sa ilalim
 ng Kamakailan.*
 
@@ -80,7 +80,7 @@ ng Kamakailan.*
 Kusang naghahanap ang editor sa bawat Steam library (pati sa Flatpak Steam). Kung hindi nito mahanap ang laro, sinasabi
 ng card ang **Kunin ang itsura ng laro** at "Hindi nahanap ang Valheim sa computer na ito."
 
-![Home na hindi nahanap ang Valheim: ang card na Kunin ang itsura ng laro na may apat na hakbang, kahon ng folder, Mag-browse… at Gamitin](../images/start-valheim-missing.jpg)
+![Home na hindi nahanap ang Valheim: ang card na Kunin ang itsura ng laro na may apat na hakbang, kahon ng folder, Mag-browse… at Gamitin](../images/start-valheim-missing.webp)
 *Sinasabi ng mga hakbang ng card kung saan mahahanap ang folder; i-paste ito sa kahon (o **Mag-browse…**), saka
 **Gamitin**.*
 
@@ -126,13 +126,13 @@ Para sa sarili mong laro:
    ipinapakita ng **Ang laro ko** ang *tumatakbo*. Kusang hinahanap ng editor ang plugin at ang token nito, kasama ang
    mga profile ng mod manager. I-click ang **I-edit nang live**.
 
-![Ang laro ko sa panimulang pahina, tumatakbo ang laro](../images/start-game.jpg)
+![Ang laro ko sa panimulang pahina, tumatakbo ang laro](../images/start-game.webp)
 ***Ang laro ko** habang tumatakbo ang laro: pinapangalanan ng card ang mundo, ang mga nakakonektang player at kung saan
 nahanap ang plugin (dito, isang r2modman profile), kasama ang **I-edit nang live**.*
 
 Hangga't hindi tumatakbo ang laro, sinasabi ng **Ang laro ko** kung ano ang kulang, hakbang-hakbang.
 
-![Ang laro ko bago i-setup: ang card na "Kailangan ng laro mo ang BepInEx at ang plugin na WorldEditorBridge" na may tatlong hakbang](../images/start-game-setup.jpg)
+![Ang laro ko bago i-setup: ang card na "Kailangan ng laro mo ang BepInEx at ang plugin na WorldEditorBridge" na may tatlong hakbang](../images/start-game-setup.webp)
 ***Ang laro ko** bago ma-install ang BepInEx: ang tatlong hakbang, ginagawa nang isang beses. Kusang napapansin ng
 pahina ang laro kapag tumatakbo na ito.*
 

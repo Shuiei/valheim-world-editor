@@ -8,7 +8,7 @@ resultado como projeto para construir no jogo ou colar em qualquer mundo.
 **CRIAR**) → **Novo projeto** · **Tecla:** nenhuma · **Funciona em:** o próprio lote da Oficina (o painel **Projetos**
 funciona em mundos salvos e ao vivo)
 
-![Uma casa alta de pedra e madeira no lote, tingida de azul-claro na base a laranja no topo, com a saliência em vermelho](images/workshop.jpg)
+![Uma casa alta de pedra e madeira no lote, tingida de azul-claro na base a laranja no topo, com a saliência em vermelho](images/workshop.webp)
 *Uma casa alta com **Verificar suporte** ligado: a base de pedra em azul-claro, as paredes de madeira acima em verde,
 depois amarelo, depois laranja perto do topo, e a saliência que avança a partir da fileira de cima em laranja, depois
 vermelho. A barra superior mostra `111 peça(s) · 1 cairiam · salvo`.*
@@ -35,7 +35,7 @@ Para construir uma cabana e guardá-la:
 Para alterar um projeto salvo, clique nele em **Seus projetos** na página inicial (ou em **Página inicial**), ou clique
 em **Abrir** ao lado dele na biblioteca (o painel Projetos de um mundo, ou a aba **Biblioteca** da Oficina).
 
-![A Oficina na página inicial](images/start-workshop.jpg)
+![A Oficina na página inicial](images/start-workshop.webp)
 *Na página inicial, **A Oficina**: **Abrir a Oficina**, **Obter o Homestead** (ele não está instalado aqui) e três
 projetos em **Seus projetos**, cada um com a sua imagem, do mais novo para o mais antigo.*
 
@@ -61,7 +61,7 @@ do chão, é a **âncora** do projeto, o ponto a partir do qual o Homestead mede
 Não há **Descartar**: desfaça, ou abra o projeto de novo. Sair com uma construção não salva como projeto (**Início**,
 abrir outro, fechar o editor) pergunta antes.
 
-![A Oficina com uma pequena cabana de madeira no lote e o painel Construir nas peças de madeira](images/workshop-overview.jpg)
+![A Oficina com uma pequena cabana de madeira no lote e o painel Construir nas peças de madeira](images/workshop-overview.webp)
 *A Oficina com uma pequena cabana no lote: a barra de ferramentas com só **Construir**, **Selecionar** e **Visão**, a
 barra de construção ao lado; a barra superior com **Início**, **Verificar suporte**, a contagem de peças, **Salvar
 projeto** e **Materiais**; o painel **Materiais** à direita; o painel Construir ao longo da parte de baixo na aba
@@ -124,7 +124,7 @@ do painel, põe a peça ao longo de uma linha, em volta de um círculo ou de um 
 | `Shift` + clique direito | Retira a peça sob o ponteiro (`Ctrl+Z` a traz de volta). Um arraste com o botão direito continua girando a visão, e `Shift` + arraste com o botão direito continua deslizando-a. |
 | Clique do meio | Constrói com o tipo da peça sob o ponteiro, como um conta-gotas: ela é escolhida no painel e fica em primeiro em **Recentes**. Um arraste com o botão do meio continua deslizando a visão. |
 
-![Uma fileira de paredes sendo arrastada ao lado da cabana](images/workshop-row.jpg)
+![Uma fileira de paredes sendo arrastada ao lado da cabana](images/workshop-row.webp)
 *Um arraste a partir da esquerda: uma fileira de paredes de madeira disposta ponta a ponta, transparente até o botão
 ser solto.*
 
@@ -136,7 +136,7 @@ A barra ao lado da barra de ferramentas define como a peça é colocada: **Encai
 
 ### Aba Biblioteca
 
-![A aba Biblioteca com dois projetos e uma busca](images/workshop-library.jpg)
+![A aba Biblioteca com dois projetos e uma busca](images/workshop-library.webp)
 *A aba **Biblioteca** buscando "hut": a busca, **Importar arquivo…**, **Novo projeto** e **Gerar masmorra…** na fileira
 de cima do painel, e depois as duas cabanas lado a lado (a casa alta fica de fora), cada uma com a imagem, as peças, o
 custo, a descrição, as tags e os botões **Adicionar**, **Abrir**, **Detalhes**, **.vbuild** e **Excluir**.*
@@ -199,7 +199,7 @@ avança mais, mas não sobe tão alto. Veja [A verificação de suporte](concept
 
 ### Corte
 
-![A mesma casa com Corte, vista de cima](images/workshop-cut.jpg)
+![A mesma casa com Corte, vista de cima](images/workshop-cut.webp)
 *A mesma casa com **Corte em 3 m**, vista de cima: tudo acima de 3 m fica oculto, então você vê dentro do térreo, com a
 fogueira, a cama, a mesa e o baú.*
 
@@ -225,7 +225,7 @@ vista de cima em ângulo, sobre fundo transparente), que o Homestead usa como í
 jogo quando o editor consegue lê-los; senão, com a forma de cada peça na cor do material dela. Um projeto feito em
 outro lugar sem imagem ganha uma desenhada na biblioteca, só na memória.
 
-![A caixa de diálogo Salvar projeto sobre uma pequena cabana: nome, descrição, tags, o interruptor de masmorra e o custo](images/workshop-save-dialog.jpg)
+![A caixa de diálogo Salvar projeto sobre uma pequena cabana: nome, descrição, tags, o interruptor de masmorra e o custo](images/workshop-save-dialog.webp)
 *Salvando a cabana: **Nome** "Small hut", **Descrição** "A hut with a fire pit", **Tags** "house, wood", **Uma
 masmorra** desligado, e a linha **Custo no jogo** acima de **Salvar**.*
 
@@ -243,7 +243,7 @@ O que é guardado:
 
 ## Painel Projetos
 
-![O painel Projetos com uma cabana salva](images/blueprints.jpg)
+![O painel Projetos com uma cabana salva](images/blueprints.webp)
 *O painel **Projetos** num mundo: a faixa do Homestead, **Buscar projetos** e **Importar arquivo…**, **Novo projeto**, a
 **Cópia** com **Colar** e **Salvar como projeto…**, e depois uma cabana salva com a imagem, as peças, o
 custo e os botões **Colar**, **Abrir**, **Detalhes**, **.vbuild** e **Excluir**.*

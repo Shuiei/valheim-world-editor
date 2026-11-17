@@ -20,7 +20,7 @@ d'une ligne.
 7. Appuyez sur `Enter` pour planter.
 8. Cliquez sur **Enregistrer dans le monde** (ou **Appliquer en direct**).
 
-![Bois des Prairies en aperçu dans un polygone avec Groupement 50 % et Massifs 30 m : bosquets et clairières](../images/guide-forest-zone.jpg)
+![Bois des Prairies en aperçu dans un polygone avec Groupement 50 % et Massifs 30 m : bosquets et clairières](../images/guide-forest-zone.webp)
 *Un polygone d'environ 58 × 40 m avec **Groupement** à 50 % et **Massifs** à 30 m (et **Densité** à 1.5) :
 les arbres transparents se rassemblent en bosquets séparés par des clairières. Les lignes de
 **Remplissage de polygone** sont en bas du panneau.*

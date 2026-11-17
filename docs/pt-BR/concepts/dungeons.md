@@ -32,7 +32,7 @@ vilas fuling e as fazendas dos Prados são montadas da mesma forma, no chão.
 
 ### Salas, aberturas e fechamentos
 
-![Uma masmorra Burial Chambers com as salas do próprio jogo, aberta em corte, quadrados laranja e azuis onde as salas se encontram](../images/dungeon-rooms.jpg)
+![Uma masmorra Burial Chambers com as salas do próprio jogo, aberta em corte, quadrados laranja e azuis onde as salas se encontram](../images/dungeon-rooms.webp)
 *Uma masmorra do jogo 5000 m acima, sem os tetos: cada sala é uma entrada da lista. Os quadrados marcam onde duas salas
 se encontram: azul com porta, laranja sem.*
 

@@ -25,7 +25,7 @@ ang lahat ng hindi pa naka-save.
 7. Para bawiin ang pagbabagong na-save mo na, i-undo ito (o **Tanggalin** ito), saka **I-save sa mundo** ulit. Kapag
    live, i-undo ito at **I-apply nang live** ulit (o hayaang ipadala ito ng **Auto**).
 
-![Ang panel na Kasaysayan pagkatapos ng limang edit, na-undo ang huli](../images/history.jpg)
+![Ang panel na Kasaysayan pagkatapos ng limang edit, na-undo ang huli](../images/history.webp)
 *Kasaysayan: na-undo ang huling pagbabago gamit ang **Bumalik dito**, kulay abo na may **I-redo hanggang dito**.*
 
 > [!WARNING]

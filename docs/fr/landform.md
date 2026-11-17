@@ -6,7 +6,7 @@ au-delà des 8 m du jeu, ou une image à vous imprimée dans le sol.
 
 **Où :** barre d'outils, section **CRÉATION** · **Touche :** `G` · **Fonctionne dans :** mondes enregistrés, en direct
 
-![Le panneau Relief avec le type Formule, et six de ses préréglages côte à côte, chacun nommé, couleurs de pente activées](images/shape.jpg)
+![Le panneau Relief avec le type Formule, et six de ses préréglages côte à côte, chacun nommé, couleurs de pente activées](images/shape.webp)
 *Le type **Formule**. Rangée de devant, de gauche à droite : Monticule, Cône, Plateau. Rangée du fond, de gauche à
 droite : Cratère, Douves (fossé circulaire), Colline à crêtes, chacun au rayon par défaut de 16 m et à la hauteur de
 5 m, avec **Couleurs de pente** activé dans Vue pour que leurs pentes se lisent. Le panneau montre le Monticule et sa
@@ -72,7 +72,7 @@ passe à **Formule…**, la vôtre, qui est retenue pour la prochaine fois.
 | **Hauteur** | 5 m par défaut. C'est `h` dans la formule. |
 | **Formule** | Combien de mètres ajouter au sol en chaque point à l'intérieur du rayon ; un nombre négatif creuse. Une erreur s'affiche sous la case, et rien ne peut être placé tant qu'elle n'est pas corrigée. |
 
-![Le panneau Relief avec une formule inachevée et la ligne d'erreur sous la case de la formule](images/shape-formula-error.jpg)
+![Le panneau Relief avec une formule inachevée et la ligne d'erreur sous la case de la formule](images/shape-formula-error.webp)
 *Une formule inachevée : la liste est passée à **Formule…**, et la ligne sous la case dit ce qui ne va pas (« la
 formule se termine trop tôt »).*
 
@@ -113,7 +113,7 @@ Toute une montagne créée à partir d'une graine, ajoutée au sol qui est là, 
 terrain et s'y fonde à son bord. Son contour n'est jamais un cercle parfait, et **Accidentée** ajoute des bosses, des
 crêtes et des ravines en proportion de sa taille.
 
-![Le type Montagne du panneau Relief et l'aperçu orange d'un pic isolé avec son anneau ; en médaillon, l'anneau rouge près du bord du secteur](images/mountain-preview.jpg)
+![Le type Montagne du panneau Relief et l'aperçu orange d'un pic isolé avec son anneau ; en médaillon, l'anneau rouge près du bord du secteur](images/mountain-preview.webp)
 *Pic isolé, 80 m de haut, rayon 120 m, avant le clic : les lignes orange le montrent aussi haut qu'il montera et
 l'anneau blanc jusqu'où il s'étend. En médaillon, en haut à droite : avec le pointeur près du bord du secteur, l'anneau
 devient rouge et aucun aperçu ne s'affiche, parce qu'il ne tiendrait pas.*
@@ -129,9 +129,9 @@ devient rouge et aucun aperçu ne s'affiche, parce qu'il ne tiendrait pas.*
 
 | Pic isolé | Crête |
 |---|---|
-| ![Un pic isolé avec les arbres du biome poussant sur ses pentes, vu d'en bas](images/mountain-peak.jpg) | ![Une longue crête nue qui traverse l'image](images/mountain-ridge.jpg) |
+| ![Un pic isolé avec les arbres du biome poussant sur ses pentes, vu d'en bas](images/mountain-peak.webp) | ![Une longue crête nue qui traverse l'image](images/mountain-ridge.webp) |
 | **Volcan** | **Collines ondulées** |
-| ![Un volcan nu avec son cratère au sommet](images/mountain-volcano.jpg) | ![Trois collines ondulées nues côte à côte](images/mountain-hills.jpg) |
+| ![Un volcan nu avec son cratère au sommet](images/mountain-volcano.webp) | ![Trois collines ondulées nues côte à côte](images/mountain-hills.webp) |
 
 *Quatre préréglages au milieu d'un secteur de 5 × 5 d'abord dégagé et aplani, pour que chacun ressorte. Le pic isolé a
 les arbres du biome qui y poussent ; les autres sont laissés nus pour que leur forme se voie.*
@@ -157,11 +157,11 @@ Une image en niveaux de gris imprimée dans le sol : ses parties blanches monte
 grises d'une partie, les parties noires restent telles quelles. L'image couvre un carré deux fois plus large que
 **Rayon** ; le contour le montre.
 
-![Les trois images intégrées, chacune placée une fois sur un sol aplani](images/landform-pictures.jpg)
+![Les trois images intégrées, chacune placée une fois sur un sol aplani](images/landform-pictures.webp)
 *Les images intégrées, 6 m de haut pour un rayon de 8 m. De gauche à droite : Colline accidentée, Dunes, Sol
 rocailleux.*
 
-![Le type Image avant et après un clic : le contour carré de l'image et l'aperçu orange, puis la colline](images/landform-picture.jpg)
+![Le type Image avant et après un clic : le contour carré de l'image et l'aperçu orange, puis la colline](images/landform-picture.webp)
 *La **Colline accidentée**, **Rayon** 9 m et **Hauteur** 8 m. À gauche : son contour carré et son aperçu orange sur un
 sol plat avant le clic. À droite : toute la colline, placée en un clic.*
 

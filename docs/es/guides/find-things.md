@@ -18,7 +18,7 @@ Busca en todo el mundo un objeto, un artículo en cualquier cofre o un texto en 
    [Cambiar lo que contiene un cofre o lo que dice un cartel](fill-a-chest.md)) y luego **Guardar en el mundo** (o
    **Aplicar en vivo**).
 
-![Búsqueda de Beech1 en el mundo: cada haya marcada en naranja, una elegida con un anillo dorado](../images/map-search.jpg)
+![Búsqueda de Beech1 en el mundo: cada haya marcada en naranja, una elegida con un anillo dorado](../images/map-search.webp)
 *Cada marca es un objeto encontrado; el que eliges en la lista es más grande, con un anillo dorado.*
 
 ## Comprueba que ha funcionado

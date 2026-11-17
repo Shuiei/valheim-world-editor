@@ -8,7 +8,7 @@ panneaux, la caméra, l'enregistrement, l'Historique et le panneau Vue.
 **Touche :** `?` ou `F3` pour la fiche d'aide, `F1` pour cette aide à l'outil en cours · **Fonctionne dans :** mondes
 enregistrés, en direct, l'Atelier
 
-![L'éditeur 3D avec Élever choisi : barre d'outils, panneau d'Élever, barre du haut, panneau Vue et barre d'état](images/overview.jpg)
+![L'éditeur 3D avec Élever choisi : barre d'outils, panneau d'Élever, barre du haut, panneau Vue et barre d'état](images/overview.webp)
 *Une petite base dans un secteur de 3 × 3, le pinceau Élever choisi (son anneau sur l'herbe). À gauche : la barre
 d'outils et le panneau de l'outil. En haut : la barre du haut. À droite : le panneau Vue. En bas : la barre d'état, qui
 lit le sol sous le pointeur.*
@@ -29,7 +29,7 @@ ou l'appliquiez.
 
 ## La page d'accueil
 
-![L'Accueil de la page d'accueil](images/start-home.jpg)
+![L'Accueil de la page d'accueil](images/start-home.webp)
 *Accueil : la carte du jeu en cours avec **Modifier en direct**, puis les derniers mondes et plans ouverts.*
 
 Le menu latéral contient **Accueil**, puis deux sections, **Modifier un monde** et **Création**. Vous revenez ici depuis
@@ -106,7 +106,7 @@ quand même cela ne suffit pas, **Carte**, **Recharger**, **Historique** et **Vu
 Dans la vue, chaque nouvel objet pas encore enregistré ou appliqué porte un **point vert**, sauf quand il est
 sélectionné (son contour le signale alors). **Vue → Marques non enregistrées** masque les points ; les objets restent.
 
-![Dix jeunes hêtres tout juste plantés sur un sol aplani, chacun avec un point vert au pied, l'un agrandi dans le coin](images/unsaved.jpg)
+![Dix jeunes hêtres tout juste plantés sur un sol aplani, chacun avec un point vert au pied, l'un agrandi dans le coin](images/unsaved.webp)
 *De jeunes arbres tout juste plantés : chacun porte un petit point vert au pied jusqu'à ce qu'il soit enregistré (l'un
 agrandi dans le coin), et la ligne des modifications en attente les compte : « Non enregistré : 1 zone, 10 ajouté(s) ».*
 
@@ -135,7 +135,7 @@ ouvert). Dans l'Atelier, elle ne garde que **Bâtir** (`U` ou `T`), **Sélection
 
 ### Marche et Vol
 
-![La base vue à hauteur des yeux en mode Marche](images/walk.jpg)
+![La base vue à hauteur des yeux en mode Marche](images/walk.webp)
 *Mode Marche (`F`) : la base telle que la voit un joueur debout près du champ, les yeux à 1,8 m au-dessus du sol.*
 
 `F` passe d'une vue à l'autre parmi trois :
@@ -180,7 +180,7 @@ ne sont pas dans l'Atelier.
 et le dossier du monde. Fermez Valheim (le jeu ou le serveur) avant d'enregistrer : un jeu en cours écrit par-dessus
 vos modifications la prochaine fois qu'il sauvegarde.
 
-![La question Écrire dans le monde au-dessus d'une colline surélevée et de nouveaux arbres : ce qui sera écrit, le Dossier de monde, trois avertissements, Enregistrer et Annuler](images/save-confirm.jpg)
+![La question Écrire dans le monde au-dessus d'une colline surélevée et de nouveaux arbres : ce qui sera écrit, le Dossier de monde, trois avertissements, Enregistrer et Annuler](images/save-confirm.webp)
 *Rien n'est écrit tant que vous ne cliquez pas sur **Enregistrer** : la question compte ce qui entre, nomme le
 **Dossier de monde** et vous avertit de fermer Valheim d'abord.*
 
@@ -235,7 +235,7 @@ d'abord : **Partir quand même** / **Rester**, et **Quitter quand même** / **C
 
 ## Historique
 
-![Le panneau Historique après cinq modifications, la dernière annulée](images/history.jpg)
+![Le panneau Historique après cinq modifications, la dernière annulée](images/history.webp)
 *La dernière modification a été annulée avec **Revenir ici** : elle est grisée et propose **Rétablir jusqu'ici**.*
 
 **Historique** (`L`) liste toutes les modifications de la session, de la plus récente à la plus ancienne. Chaque ligne
@@ -337,7 +337,7 @@ démarrage de l'éditeur.
 
 ## La fiche d'aide
 
-![La fiche d'aide Commandes défilée jusqu'à la fin : les dernières touches, puis Cet ordinateur avec la fréquence d'images et la carte graphique](images/help.jpg)
+![La fiche d'aide Commandes défilée jusqu'à la fin : les dernières touches, puis Cet ordinateur avec la fréquence d'images et la carte graphique](images/help.webp)
 *La fiche **Commandes** (`F3`), défilée jusqu'à la fin : les dernières touches, puis **Cet ordinateur** avec la
 fréquence d'images, la carte graphique et **Enregistrer la fréquence d'images**.*
 
@@ -383,7 +383,7 @@ L'éditeur trouve seul les emplacements habituels : Valheim dans chaque bibliot
 bibliothèques supplémentaires compris), BepInEx dans le dossier de Valheim et dans les profils par défaut de r2modman
 et de Thunderstore Mod Manager, et les mondes dans les dossiers de mondes de Valheim (ceux de Proton aussi).
 
-![Les Paramètres en deux moitiés : Langue, les dossiers et Claude (désactivé) à gauche ; Extensions de mods, Modules complémentaires, Historique et Enregistrer à droite](images/settings.jpg)
+![Les Paramètres en deux moitiés : Langue, les dossiers et Claude (désactivé) à gauche ; Extensions de mods, Modules complémentaires, Historique et Enregistrer à droite](images/settings.webp)
 *Les Paramètres défilent : leur haut à gauche, leur fin à droite, jusqu'à **Historique** et **Enregistrer**.
 **Affichage** n'apparaît que sous Windows.*
 

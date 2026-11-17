@@ -21,7 +21,7 @@ juego cerrado, o el [modo en vivo](edit-a-server-live.md).
 7. Pulsa **Volver a la copia de seguridad (Enter)**.
 8. Mira el resultado. Si está bien, usa **Guardar en el mundo** (o **Aplicar en vivo**).
 
-![Una cabaña vandalizada restaurada desde la copia de seguridad del juego, antes y después](../images/area-backup.jpg)
+![Una cabaña vandalizada restaurada desde la copia de seguridad del juego, antes y después](../images/area-backup.webp)
 *Izquierda: un polígono alrededor de una cabaña a la que le falta parte del muro más cercano, con **Volver a una copia
 de seguridad** elegido, la lista **Respaldo** abierta en la copia del juego y **Tus construcciones**
 activado. Derecha: después de **Volver a la copia de seguridad (Enter)**, el muro vuelve a estar entero; la línea

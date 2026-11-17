@@ -71,7 +71,7 @@ L'éditeur s'ouvre dans sa propre fenêtre, sur **Accueil** de la page d'accueil
 à jour de Valheim, une carte indique **Préparation du rendu du jeu** pendant que l'éditeur lit les fichiers du jeu
 quelques secondes. Les mondes, les serveurs et l'Atelier s'ouvrent dès qu'elle indique **Le rendu du jeu est prêt.**
 
-![L'Accueil de la page d'accueil](../images/start-home.jpg)
+![L'Accueil de la page d'accueil](../images/start-home.webp)
 *La page d'accueil : le menu latéral à gauche, Accueil à droite. Une fois un monde ouvert, il apparaît sous Récents.*
 
 ## Quand Valheim est introuvable
@@ -79,7 +79,7 @@ quelques secondes. Les mondes, les serveurs et l'Atelier s'ouvrent dès qu'elle 
 L'éditeur cherche de lui-même dans chaque bibliothèque Steam (Steam en Flatpak aussi). S'il ne trouve pas le jeu, la
 carte indique **Obtenir le rendu du jeu** et « Valheim est introuvable sur cet ordinateur. »
 
-![Accueil avec Valheim introuvable : la carte Obtenir le rendu du jeu avec ses quatre étapes, la case du dossier, Parcourir… et Utiliser](../images/start-valheim-missing.jpg)
+![Accueil avec Valheim introuvable : la carte Obtenir le rendu du jeu avec ses quatre étapes, la case du dossier, Parcourir… et Utiliser](../images/start-valheim-missing.webp)
 *Les étapes de la carte disent où trouver le dossier ; collez-le dans la case (ou **Parcourir…**), puis **Utiliser**.*
 
 1. Dans Steam, faites un clic droit sur Valheim dans votre Bibliothèque, puis **Gérer › Parcourir les fichiers
@@ -125,13 +125,13 @@ Pour votre propre partie :
    affiche *en cours*. L'éditeur trouve le plugin et son jeton de lui-même, profils de gestionnaire de mods compris.
    Cliquez sur **Modifier en direct**.
 
-![Mon jeu sur la page d'accueil, le jeu en cours](../images/start-game.jpg)
+![Mon jeu sur la page d'accueil, le jeu en cours](../images/start-game.webp)
 ***Mon jeu** avec le jeu en cours : la carte nomme le monde, les joueurs connectés et l'endroit où le plugin a été
 trouvé (ici un profil r2modman), avec **Modifier en direct**.*
 
 Tant que le jeu ne tourne pas, **Mon jeu** dit ce qui manque, étape par étape.
 
-![Mon jeu avant l'installation : la carte « Votre jeu a besoin de BepInEx et du plugin WorldEditorBridge » avec ses trois étapes](../images/start-game-setup.jpg)
+![Mon jeu avant l'installation : la carte « Votre jeu a besoin de BepInEx et du plugin WorldEditorBridge » avec ses trois étapes](../images/start-game-setup.webp)
 ***Mon jeu** avant l'installation de BepInEx : les trois étapes, à faire une seule fois. La page détecte le jeu
 d'elle-même dès qu'il tourne.*
 

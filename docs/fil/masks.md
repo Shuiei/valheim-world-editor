@@ -8,7 +8,7 @@ lupang walang pintura.
 **Saan:** ang card na **Mask** sa tabi ng panel ng tool · **Key:** wala (nagtatakda ng saklaw ng taas ang
 `Alt`+`Shift`+click) · **Gumagana sa:** mga naka-save na mundo, live
 
-![Ang parehong malapad na stroke ng Sementado sa isang punso, naka-off at naka-on ang Mask, at ang card ng Mask](images/mask.jpg)
+![Ang parehong malapad na stroke ng Sementado sa isang punso, naka-off at naka-on ang Mask, at ang card ng Mask](images/mask.webp)
 *Ang parehong malapad na stroke ng pinturang Sementado sa isang punso. Kaliwa, naka-off ang Mask: sementado ang lahat.
 Kanan, naka-on ang Mask na may dahilig na mas mababa sa 15°: sementado ang patag na lupa, hindi ang matatarik na gilid
 ng punso. Nasa tabi ng panel ng tool ang card ng Mask.*
@@ -40,7 +40,7 @@ aksiyon ng tool na [Rehiyon](area.md), sa pag-paste at sa [Paglagay](place.md). 
 Lumalabas ang orange na babala sa ilalim ng mga setting kapag wala silang pinapadaan: maximum na dahilig na 0°, o
 minimum na mas mataas sa maximum.
 
-![Ang card ng Mask na may Dahilig min 30 at max 10, at ang orange na babala nito na walang tumutugma](images/mask-warning.jpg)
+![Ang card ng Mask na may Dahilig min 30 at max 10, at ang orange na babala nito na walang tumutugma](images/mask-warning.webp)
 *Mas mataas ang Dahilig min na 30° kaysa sa max na 10°, kaya nagbababala ang card nang kulay orange: "Mas mataas ang
 min ng dahilig kaysa sa max: walang tumutugma."*
 

@@ -6,7 +6,7 @@ Straßen, Rampen, Dämme, Gräben und Flüsse.
 
 **Wo:** Werkzeugleiste, Abschnitt **BEARBEITEN** · **Taste:** `P` · **Funktioniert in:** gespeicherten Welten, live
 
-![Die fünf Punkte des Werkzeugs Pfad über zwei Erdhügel, Ebnen gewählt, vor dem Anwenden](images/path.jpg)
+![Die fünf Punkte des Werkzeugs Pfad über zwei Erdhügel, Ebnen gewählt, vor dem Anwenden](images/path.webp)
 *Eine Linie aus fünf Punkten, über zwei Erdhügel gezeichnet, mit **Ebnen** gewählt, die **Höhe** per `Alt`+Klick vom
 flachen Boden übernommen und **Natürlich (raue Ränder, Unebenheiten)** an. Noch hat sich nichts geändert: das Band zeigt
 die Breite und die weichen Ränder des Pfads, bis du **Anwenden (Enter)** drückst; die Kreise am letzten Punkt gehören
@@ -27,7 +27,7 @@ zum Mauszeiger.*
 
 Das Panel zeigt, wie viele Punkte die Linie hat und wie lang sie ist.
 
-![Dieselbe Linie angewendet: eine ebene Straße durch beide Erdhügel, in der Mitte gepflastert, die Linie noch gezeichnet](images/path-road.jpg)
+![Dieselbe Linie angewendet: eine ebene Straße durch beide Erdhügel, in der Mitte gepflastert, die Linie noch gezeichnet](images/path-road.webp)
 *Die Linie aus dem ersten Bild, gleiche Kamera: **Ebnen** hat eine ebene Straße durch beide Erdhügel geschnitten, dann
 hat **Pflaster malen** mit **Breite** 4 m und **Weichrand** 1 m ihre Mitte gepflastert. Die Linie bleibt für die
 nächste Aktion.*
@@ -48,7 +48,7 @@ nächste Aktion.*
 | **Buckel**, **Buckelgröße**, **Neues Muster** | **Naturnah** und **Natürlich**: wie hoch und wie breit die Buckel sind, und ein anderes Zufallsmuster für sie. Es sind die des Pinsels [Naturnah](terrain.md#naturnah): ob hier, dort oder im Werkzeug [Region](area.md) eingestellt, es sind dieselben Werte. |
 | **Schüttwinkel** | **Erodieren**: die steilste Neigung, die stehen bleibt, 10° bis 60° (Standard 33°). Der des Pinsels [Erodieren](terrain.md#erodieren), derselbe Wert. |
 
-![Zwei mit Absenken 3 m gegrabene Gräben nebeneinander: links mit steilen Wänden, rechts mit breiten, abfallenden Böschungen](images/path-soft-edge.jpg)
+![Zwei mit Absenken 3 m gegrabene Gräben nebeneinander: links mit steilen Wänden, rechts mit breiten, abfallenden Böschungen](images/path-soft-edge.webp)
 *Zwei gerade Linien auf flachem Boden, jede mit **Absenken** um 3 m bei **Breite** 6 m, entlang gesehen. Links:
 **Weichrand** 0, ein Graben mit steilen, geraden Wänden. Rechts: **Weichrand** 8 m, die Böschungen gehen sanft in
 den Boden über.*
@@ -77,7 +77,7 @@ Weise.
 
 ### Rampe
 
-![Eine Rampe von der Seite, die gleichmäßig vom Boden auf eine erhöhte Fläche steigt, das Panel Pfad mit Start und Ende](images/path-ramp.jpg)
+![Eine Rampe von der Seite, die gleichmäßig vom Boden auf eine erhöhte Fläche steigt, das Panel Pfad mit Start und Ende](images/path-ramp.webp)
 *Eine Rampe aus zwei Punkten von der Seite gesehen, vom Boden an ihrem Fuß (**Start** 35.2 m) bis oben auf eine um 8 m
 angehobene Fläche (**Ende** 43 m). Sie steigt auf dem ganzen Weg gleichmäßig.*
 
@@ -88,7 +88,7 @@ sodass das Verschieben der Enden sie aktualisiert. `Alt`+Klick auf den Boden üb
 
 ### Fluss oder Kanal
 
-![Ein mit Fluss / Kanal quer durch die Zone gegrabener Fluss, mit Wasser](images/path-river.jpg)
+![Ein mit Fluss / Kanal quer durch die Zone gegrabener Fluss, mit Wasser](images/path-river.webp)
 *Ein Fluss, mit **Fluss / Kanal (Wasser)** quer durch die Zone gegraben: das Meer füllt ihn.*
 
 Valheim hat kein fließendes Wasser: das Wasser in Flüssen ist das Meer, überall auf derselben Höhe (30 m). Ein Fluss

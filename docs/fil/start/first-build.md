@@ -12,7 +12,7 @@ backup na kopya sa tabi nito, gaya sa [Ang una mong edit](first-edit.md).
 
 1. Sa panimulang pahina, i-click ang **Ang Gawaan**, saka **Buksan ang Gawaan**.
 
-![Ang Gawaan sa panimulang pahina](../images/start-workshop.jpg)
+![Ang Gawaan sa panimulang pahina](../images/start-workshop.webp)
 *Ang **Ang Gawaan** ng panimulang pahina: **Buksan ang Gawaan**, kung naka-install ang Homestead, at ang mga blueprint
 mo (tatlo rito; walang laman ang sa iyo sa unang pagkakataon).*
 
@@ -42,7 +42,7 @@ ang gastos ng kubo.
 4. Hanapin ang `wood door`, i-click ang tile nito, at ilagay ang pinto sa puwang.
 5. Maglagay ng ikalawang hanay ng mga dingding sa ibabaw ng una.
 
-![Isang bahay sa Gawaan, kinulayan ng suri ng suporta](../images/workshop.jpg)
+![Isang bahay sa Gawaan, kinulayan ng suri ng suporta](../images/workshop.webp)
 *Ang suri ng suporta sa isang matangkad na bahay: mapusyaw na asul ang batong pundasyon, berde ang mga dingding sa
 itaas, saka dilaw at kahel habang nauubos ang suporta nila, at pula ang isang nakausli: babagsak ito.*
 
@@ -78,7 +78,7 @@ Homestead, handang itayo sa laro.
    sangkapat.
 6. Mag-click para ilapag ito, saka pindutin ang `Esc` para tumigil sa pag-paste.
 
-![Ang panel na Blueprints sa isang mundo, may naka-save na kubo](../images/blueprints.jpg)
+![Ang panel na Blueprints sa isang mundo, may naka-save na kubo](../images/blueprints.webp)
 *Ang panel na **Blueprints** katabi ng rail: isang naka-save na kubo kasama ang larawan, gastos at button nitong
 **I-paste**.*
 

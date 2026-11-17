@@ -8,7 +8,7 @@ vous utilisez n'importe quel outil.
 **Où :** barre d'outils, section **OUTILS** ; les superpositions dans le panneau Vue · **Touche :** `M` ·
 **Fonctionne dans :** mondes enregistrés, en direct
 
-![Une mesure à travers une butte avec les couleurs de pente activées, et les valeurs du panneau Mesure](images/measure.jpg)
+![Une mesure à travers une butte avec les couleurs de pente activées, et les valeurs du panneau Mesure](images/measure.webp)
 *Une mesure depuis le pied d'une butte par-dessus son sommet, avec les couleurs de pente activées. La ligne suit le
 sol ; le panneau affiche la distance, les hauteurs et la pente.*
 
@@ -50,11 +50,11 @@ Les deux demandent **Rendu du jeu** (l'aspect du sol dans le panneau Vue), reste
 d'autres outils, et sont retenues. Les courbes de niveau tombent sur des multiples du pas : le niveau de la mer (30 m)
 en a donc toujours une, et le trait de côte est facile à suivre.
 
-![Des courbes de niveau tous les 2 m sur deux buttes et un creux, le panneau Vue défilé jusqu'à sa section SOL](images/height-lines.jpg)
+![Des courbes de niveau tous les 2 m sur deux buttes et un creux, le panneau Vue défilé jusqu'à sa section SOL](images/height-lines.webp)
 *Des courbes de niveau tous les 2 m sur deux buttes et un creux, limites de zones désactivées. Le panneau Vue affiche
 **Courbes de niveau tous les** 2 m sous **SOL (rendu du jeu)** ; une courbe sur cinq est plus foncée.*
 
-![Une butte au flanc doux et à la falaise taillée, colorée selon la pente ; le panneau Vue à sa section SOL](images/slope-colours.jpg)
+![Une butte au flanc doux et à la falaise taillée, colorée selon la pente ; le panneau Vue à sa section SOL](images/slope-colours.webp)
 *Les couleurs de pente sur une butte : vert sur le sol plat, puis vert-jaune, jaune et orange en remontant son flanc
 doux, et rouge sur la falaise taillée dedans. Le panneau Vue montre **Couleurs de pente** coché sous **SOL (rendu du
 jeu)**.*

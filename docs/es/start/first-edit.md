@@ -30,7 +30,7 @@ La copia es tu camino de vuelta: hagas lo que hagas después, puedes devolver el
 3. En el panel lateral, elige **3 × 3 zonas (192 m)** en la lista de tamaños junto a **Editar en 3D** y luego haz clic
    en **Editar en 3D**.
 
-![El mapa del mundo, con una zona elegida, Editar en 3D y la lista de tamaños](../images/map.jpg)
+![El mapa del mundo, con una zona elegida, Editar en 3D y la lista de tamaños](../images/map.webp)
 *El mapa: un clic eligió una zona (el cuadrado azul); **Editar en 3D** la abre con el tamaño elegido al lado.*
 
 **Lo que deberías ver:** la vista 3D de tu base y el terreno de alrededor, la barra de herramientas a la izquierda y la
@@ -44,7 +44,7 @@ derecho gira la vista.
 3. En terreno despejado junto a tu base, mantén pulsado el botón izquierdo del ratón y mueve el ratón en pequeños
    círculos durante unos segundos.
 
-![El pincel Elevar sobre un pequeño montículo, con su panel abierto](../images/sculpt.jpg)
+![El pincel Elevar sobre un pequeño montículo, con su panel abierto](../images/sculpt.webp)
 *Elevar: el contorno del pincel en el suelo, un montículo elevado a su lado y el panel con **Tamaño** e
 **Intensidad**.*
 
@@ -57,7 +57,7 @@ Todavía no se ha escrito nada en el mundo: el cambio está [pendiente](../conce
 2. En el panel **Colocar**, haz clic en **Pincel** y luego elige **Bosque de las Praderas** en **Elegir un preajuste**.
 3. Arrastra el ratón a lo largo del pie de tu colina.
 
-![El pincel de Colocar plantando árboles, con el preajuste Bosque de las Praderas elegido](../images/plant-brush.jpg)
+![El pincel de Colocar plantando árboles, con el preajuste Bosque de las Praderas elegido](../images/plant-brush.webp)
 *Colocar con **Pincel** y el preajuste **Bosque de las Praderas**: el pincel muestra los próximos árboles
 transparentes; los ya plantados están a su alrededor.*
 
@@ -81,7 +81,7 @@ Más: [Deshacer un paso, retirar un cambio o descartarlo todo](../guides/undo-ch
 2. Lee la pregunta: dice lo que escribe y la **carpeta del mundo**. Comprueba que la carpeta es la de tu mundo, no la de
    la copia, y luego haz clic en **Guardar**.
 
-![La pregunta Guardar en los archivos del mundo sobre una colina elevada y árboles nuevos: qué se escribirá, la carpeta del mundo, tres avisos, Guardar y Cancelar](../images/save-confirm.jpg)
+![La pregunta Guardar en los archivos del mundo sobre una colina elevada y árboles nuevos: qué se escribirá, la carpeta del mundo, tres avisos, Guardar y Cancelar](../images/save-confirm.webp)
 *La pregunta antes de guardar: comprueba la línea de la **carpeta del mundo** y luego haz clic en **Guardar**.*
 
 **Lo que deberías ver:** la barra de estado dice «1 zona(s), … objeto(s) nuevo(s) guardado en el guardado n.º …», la

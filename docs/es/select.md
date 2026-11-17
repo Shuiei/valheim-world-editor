@@ -7,7 +7,7 @@ para ver y cambiar lo que contiene.
 **Dónde:** barra de herramientas, sección **UTILIDADES** · **Tecla:** `E` · **Funciona en:** mundos guardados, en
 vivo, el Taller
 
-![Una roca seleccionada, con sus flechas y su anillo](images/select-arrows.jpg)
+![Una roca seleccionada, con sus flechas y su anillo](images/select-arrows.webp)
 *De cerca, una roca seleccionada: su contorno naranja, las flechas X roja, Y verde y Z azul que la mueven a lo largo de
 un eje, y el anillo naranja que la gira. El panel Selección está a la izquierda.*
 
@@ -65,7 +65,7 @@ El panel Selección, de arriba abajo.
 | Doble clic en una parte de un barco | Selecciona el barco entero: consulta [Barcos y otros objetos enlazados](#barcos-y-otros-objetos-enlazados). |
 | Clic en suelo vacío, o `Alt+A` | Quita la selección. |
 
-![Tres piezas de muro de una cabaña seleccionadas con Ctrl + clic](images/select-ctrl-click.jpg)
+![Tres piezas de muro de una cabaña seleccionadas con Ctrl + clic](images/select-ctrl-click.webp)
 *Un clic en una pieza de muro y luego `Ctrl` + clic en dos más: la última en la que se hizo clic tiene el contorno en
 amarillo más claro, las demás en naranja, y la barra de estado cuenta las tres.*
 
@@ -82,18 +82,18 @@ los muros de un edificio; desde un lado, un muro.
 | `Ctrl` + arrastrar | Añade lo que toma el recuadro. |
 | `Shift` + arrastrar | Lo quita. |
 
-![Alt + arrastrar sobre la mitad derecha de una cabaña](images/select-box-drawing.jpg)
+![Alt + arrastrar sobre la mitad derecha de una cabaña](images/select-box-drawing.webp)
 *`Alt` + arrastrar desde el centro de una cabaña sobre su mitad derecha: el recuadro se dibuja en la pantalla.*
 
-![La mitad derecha de la cabaña seleccionada](images/select-box.jpg)
+![La mitad derecha de la cabaña seleccionada](images/select-box.webp)
 *Después de soltar: 27 piezas con contorno, los muros, el suelo que se ve entre ellos y la fogata; el suelo y el cofre
 ocultos tras el muro más cercano quedan fuera. La barra de estado cuenta los objetos.*
 
-![El mismo recuadro con Seleccionar a través](images/select-through.jpg)
+![El mismo recuadro con Seleccionar a través](images/select-through.webp)
 *El mismo recuadro con **Seleccionar a través** activado: 34 piezas, también el suelo y el cofre tras el muro más
 cercano.*
 
-![Un recuadro sobre una cabaña con Solo piezas construidas](images/select-pick.jpg)
+![Un recuadro sobre una cabaña con Solo piezas construidas](images/select-pick.webp)
 ***Selecciona: Solo piezas construidas** y un recuadro sobre toda la cabaña entre rocas y arbustos: solo las 58 piezas
 de la cabaña.*
 
@@ -106,16 +106,16 @@ Para seleccionar por tipo dentro de un recuadro o polígono exacto (todos los á
 **Seleccionar los objetos (Enter)** los selecciona y cambia a Selección, donde **Eliminar** y **Reemplazar la
 selección** actúan sobre ellos.
 
-![Alt + arrastrar alrededor de rocas y arbustos](images/select-zone-drawing.jpg)
+![Alt + arrastrar alrededor de rocas y arbustos](images/select-zone-drawing.webp)
 *`Alt` + arrastrar alrededor de rocas y arbustos: el contorno se dibuja aunque el arrastre empezó sobre un arbusto.*
 
-![La selección que hizo el contorno](images/select-zone.jpg)
+![La selección que hizo el contorno](images/select-zone.webp)
 *Todo lo que se muestra dentro queda seleccionado, y **POSICIÓN EXACTA** indica dónde está la selección.*
 
-![Un muro con clic y luego Edificio entero](images/select-building.jpg)
+![Un muro con clic y luego Edificio entero](images/select-building.webp)
 *Un clic en un muro y luego **Edificio entero**: queda seleccionada cada pieza conectada de la cabaña.*
 
-![Media cabaña oculta, que deja ver el cofre del interior](images/select-hide.jpg)
+![Media cabaña oculta, que deja ver el cofre del interior](images/select-hide.webp)
 *De cerca, la cabaña después de que `Ctrl+H` ocultara su mitad derecha recuadrada: el cofre del suelo de dentro queda a
 la vista. `Alt+H` devuelve los muros.*
 
@@ -137,7 +137,7 @@ La barra de estado sigue el movimiento: «Moviendo 12 objeto(s): 4.5 m, girado 1
 objeto movido conserva sus datos: un cofre su contenido, un cartel su texto, una pieza su constructor. Consulta
 [Encaje](concepts/objects.md#encaje) para ver cómo se posa un movimiento.
 
-![Una cabaña seleccionada entera, mientras se arrastra su flecha X roja](images/select-moving.jpg)
+![Una cabaña seleccionada entera, mientras se arrastra su flecha X roja](images/select-moving.webp)
 *Arrastrando la flecha X roja de una cabaña seleccionada entera: la barra de estado sigue el movimiento, «Moviendo 40
 objeto(s): 4.5 m».*
 
@@ -157,7 +157,7 @@ Para guardar una copia como plano, abre **Planos** en la barra y haz clic en **G
 El Inspector muestra todo lo que contiene un objeto en el guardado y te permite cambiarlo. Ábrelo con **Inspeccionar
 datos (I)**, o haz doble clic en un cofre (o en cualquier objeto que no sea una pieza de construcción).
 
-![Un cofre con cuatro artículos abierto en el Inspector](images/inspector.jpg)
+![Un cofre con cuatro artículos abierto en el Inspector](images/inspector.webp)
 *De cerca, un cofre con cuatro artículos, abierto en el Inspector: sus huecos como en el juego, cada uno con el nombre
 del artículo y cuántos hay, y luego todos los valores en DATOS.*
 

@@ -19,7 +19,7 @@ tumatakbo gamit ito.
    ilalim ng **Mga folder ng mundo**, piliin ang folder ng mundo (o isang folder ng mga mundo) gamit ang
    **Mag-browse…**, saka **I-save**.
 
-![Isang naka-save na mundo: ang mga nahanap na mundo, saka ang Ibang folder ng mundo](../images/start-offline.jpg)
+![Isang naka-save na mundo: ang mga nahanap na mundo, saka ang Ibang folder ng mundo](../images/start-offline.webp)
 *Ang mga mundong kusang nahanap ng editor, saka ang **Ibang folder ng mundo** kasama ang **Mag-browse…** at **Buksan**.*
 
 ## Tingnan kung gumana

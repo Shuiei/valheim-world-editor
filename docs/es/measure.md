@@ -8,7 +8,7 @@ mientras usas cualquier herramienta.
 **Dónde:** barra de herramientas, sección **UTILIDADES**; las superposiciones en el panel Vista · **Tecla:** `M` ·
 **Funciona en:** mundos guardados, en vivo
 
-![Una medición sobre un montículo con los colores de pendiente activados, y las lecturas del panel Medir](images/measure.jpg)
+![Una medición sobre un montículo con los colores de pendiente activados, y las lecturas del panel Medir](images/measure.webp)
 *Una medición desde el pie de un montículo hasta pasada su cima, con los colores de pendiente activados. La línea
 sigue el suelo; el panel muestra la distancia, las alturas y la pendiente.*
 
@@ -48,11 +48,11 @@ Ambas necesitan **Aspecto del juego** (el aspecto del suelo del panel Vista), si
 herramientas y se recuerdan. Las curvas de nivel caen en múltiplos del intervalo, así que el nivel del mar (30 m)
 siempre tiene una y la línea de costa es fácil de seguir.
 
-![Curvas de nivel cada 2 m sobre dos montículos y una hondonada, con el panel Vista desplazado hasta su sección SUELO](images/height-lines.jpg)
+![Curvas de nivel cada 2 m sobre dos montículos y una hondonada, con el panel Vista desplazado hasta su sección SUELO](images/height-lines.webp)
 *Curvas de nivel cada 2 m sobre dos montículos y una hondonada, con los bordes de zona desactivados. El panel Vista
 muestra **Curvas de nivel cada** 2 m bajo **SUELO (aspecto del juego)**; una de cada cinco curvas es más oscura.*
 
-![Un montículo con una ladera suave y un corte en acantilado, coloreado según la pendiente; el panel Vista en su sección SUELO](images/slope-colours.jpg)
+![Un montículo con una ladera suave y un corte en acantilado, coloreado según la pendiente; el panel Vista en su sección SUELO](images/slope-colours.webp)
 *Colores de pendiente en un montículo: verde en el suelo llano, luego verde amarillento, amarillo y naranja subiendo
 por su ladera suave, y rojo en el acantilado cortado en él. El panel Vista muestra **Colores de pendiente** marcado
 bajo **SUELO (aspecto del juego)**.*

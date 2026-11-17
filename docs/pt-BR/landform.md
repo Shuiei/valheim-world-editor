@@ -6,7 +6,7 @@ além dos 8 m do jogo, ou uma imagem sua impressa no chão.
 
 **Onde:** barra de ferramentas, seção **CRIAR** · **Tecla:** `G` · **Funciona em:** mundos salvos, ao vivo
 
-![O painel Relevo com o tipo Fórmula, e seis das predefinições lado a lado, cada uma com o nome, cores de declive ligadas](images/shape.jpg)
+![O painel Relevo com o tipo Fórmula, e seis das predefinições lado a lado, cada uma com o nome, cores de declive ligadas](images/shape.webp)
 *O tipo **Fórmula**. Fileira da frente, da esquerda: Monte, Cone, Planalto. Fileira de trás, da esquerda: Cratera,
 Fosso (vala em anel), Colina com cristas, cada um com o raio padrão de 16 m e a altura de 5 m, com **Cores de declive**
 ligado em Visão para que as encostas fiquem legíveis. O painel mostra o Monte e a fórmula dele; sobre o monte, o
@@ -71,7 +71,7 @@ Uma forma calculada ponto a ponto. Cada predefinição é uma fórmula mostrada 
 | **Altura** | Padrão 5 m. É o `h` da fórmula. |
 | **Fórmula** | Quantos metros somar ao terreno em cada ponto dentro do raio; um número negativo cava. Um erro aparece embaixo da caixa, e nada pode ser colocado até ele ser corrigido. |
 
-![O painel Relevo com uma fórmula incompleta e a linha de erro embaixo da caixa da fórmula](images/shape-formula-error.jpg)
+![O painel Relevo com uma fórmula incompleta e a linha de erro embaixo da caixa da fórmula](images/shape-formula-error.webp)
 *Uma fórmula incompleta: a lista passou para **Fórmula…**, e a linha embaixo da caixa diz o que está errado ("a
 fórmula termina cedo demais").*
 
@@ -111,7 +111,7 @@ Uma montanha inteira gerada a partir de uma semente, somada ao terreno que já e
 próprio do lugar e se mistura de volta a ele na borda. O contorno dela nunca é um círculo perfeito, e **Aspereza**
 acrescenta ondulações, cristas e ravinas proporcionais ao tamanho dela.
 
-![O tipo Montanha do painel Relevo e a prévia laranja de um pico isolado com o anel; no detalhe, o anel vermelho perto da borda da área](images/mountain-preview.jpg)
+![O tipo Montanha do painel Relevo e a prévia laranja de um pico isolado com o anel; no detalhe, o anel vermelho perto da borda da área](images/mountain-preview.webp)
 *Pico isolado, 80 m de altura, raio de 120 m, antes do clique: as linhas laranja o mostram tão alto quanto vai subir e
 o anel branco, até onde vai. No detalhe, em cima à direita: com o ponteiro perto da borda da área, o anel fica
 vermelho e nenhuma prévia aparece, porque ela não caberia.*
@@ -127,9 +127,9 @@ vermelho e nenhuma prévia aparece, porque ela não caberia.*
 
 | Pico isolado | Crista |
 |---|---|
-| ![Um pico isolado com as árvores do bioma crescidas nas encostas, visto de baixo](images/mountain-peak.jpg) | ![Uma crista longa e nua atravessando a imagem](images/mountain-ridge.jpg) |
+| ![Um pico isolado com as árvores do bioma crescidas nas encostas, visto de baixo](images/mountain-peak.webp) | ![Uma crista longa e nua atravessando a imagem](images/mountain-ridge.webp) |
 | **Vulcão** | **Colinas onduladas** |
-| ![Um vulcão nu com a cratera no topo](images/mountain-volcano.jpg) | ![Três colinas onduladas nuas lado a lado](images/mountain-hills.jpg) |
+| ![Um vulcão nu com a cratera no topo](images/mountain-volcano.webp) | ![Três colinas onduladas nuas lado a lado](images/mountain-hills.webp) |
 
 *Quatro predefinições no meio de uma área de 5 × 5 limpa e nivelada antes, para que cada uma se destaque. O pico
 isolado tem as árvores do bioma crescidas nele; os outros ficam nus para que a forma apareça.*
@@ -154,10 +154,10 @@ põe nada.
 Uma imagem em tons de cinza impressa no terreno: as partes brancas sobem toda a **Altura**, as cinzas parte dela, as
 pretas ficam como estão. A imagem cobre um quadrado com o dobro da largura do **Raio**; o contorno o mostra.
 
-![As três imagens embutidas, cada uma aplicada uma vez em terreno nivelado](images/landform-pictures.jpg)
+![As três imagens embutidas, cada uma aplicada uma vez em terreno nivelado](images/landform-pictures.webp)
 *As imagens embutidas, com 6 m de altura e raio de 8 m. Da esquerda: Colina acidentada, Dunas, Terreno rochoso.*
 
-![O tipo Imagem antes e depois de um clique: o contorno quadrado da imagem e a prévia laranja, depois a colina](images/landform-picture.jpg)
+![O tipo Imagem antes e depois de um clique: o contorno quadrado da imagem e a prévia laranja, depois a colina](images/landform-picture.webp)
 *A **Colina acidentada**, **Raio** de 9 m e **Altura** de 8 m. À esquerda: o contorno quadrado e a prévia laranja em
 terreno plano, antes do clique. À direita: a colina inteira, aplicada com um clique.*
 

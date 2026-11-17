@@ -7,7 +7,7 @@ du jeu, et construisez à l'intérieur.
 **Où :** barre d'outils, section **CRÉATION** · **Touche :** aucune · **Fonctionne dans :** mondes enregistrés, en
 direct ; le générateur aussi dans l'Atelier (**Bibliothèque** → **Générer un donjon…**)
 
-![Un donjon Chambre funéraire fait des salles du jeu, ouvert par la coupe, avec le panneau Donjon](images/dungeon-rooms.jpg)
+![Un donjon Chambre funéraire fait des salles du jeu, ouvert par la coupe, avec le panneau Donjon](images/dungeon-rooms.webp)
 *Un donjon fait des salles du jeu (Chambre funéraire, 25 salles), à 5 000 m d'altitude et coupé 2 m au-dessus du
 plancher. Des carrés orange et bleus marquent les jonctions entre salles. **Supprimer la salle (Del)** reste grisé
 tant qu'aucune salle n'est sélectionnée.*
@@ -34,7 +34,7 @@ font toujours le même donjon de pièces de construction ; un donjon fait des [
 dépend aussi de l'endroit où se trouve son entrée et de son orientation. Pour le pas-à-pas complet, voir
 [Générer un donjon et le placer dans le monde](guides/make-a-dungeon.md).
 
-![Les choix du générateur dans le panneau Donjon, et son plan des deux niveaux dessiné en plus grand à côté](images/dungeon-generate.jpg)
+![Les choix du générateur dans le panneau Donjon, et son plan des deux niveaux dessiné en plus grand à côté](images/dungeon-generate.webp)
 ***Générer un donjon** pour un donjon de la Forêt noire, Moyen, 2 niveaux, boss derrière une grille. À côté du
 panneau, son plan dessiné en plus grand, un niveau chacun : la salle de la clé en vert au niveau 1, l'arène rouge avec
 son point magenta de grille et la salle du trésor dorée au niveau 2, et le résumé en dessous.*
@@ -99,7 +99,7 @@ et ce qui n'a pas pu l'être (`no room for stairs down from level 3; the levels 
 | **Ouvrir dans l'Atelier** | Écrit le donjon (pièces de construction) comme plan et l'ouvre dans l'[Atelier](workshop.md) pour le modifier : voir [L'ouvrir dans l'Atelier](#louvrir-dans-latelier). Non affiché avec **Les salles du jeu**. |
 | **Aller au donjon** / **Aller à l'entrée** | Affichés une fois le donjon placé (et jusqu'à ce que `Ctrl+Z` le retire) : emmènent la vue en haut dans le premier niveau avec les toits coupés, et la ramènent en bas. |
 
-![L'entrée d'un donjon généré, au sol](images/dungeon-entrance.jpg)
+![L'entrée d'un donjon généré, au sol](images/dungeon-entrance.webp)
 *Le tumulus d'une chambre funéraire placé par **Placer dans le monde**, sa porte face à la caméra. Sous le résumé,
 **Aller au donjon** et **Aller à l'entrée** sont maintenant affichés.*
 
@@ -141,7 +141,7 @@ Là-haut, la caméra ne suit plus le sol : tournez, déplacez et volez autour d
 Un donjon dont personne ne s'est approché n'a pas encore de salles : le panneau indique *Le jeu n'a pas encore agencé
 ce donjon (personne ne s'en est approché).* Visitez-le en jeu, puis rouvrez le secteur.
 
-![Une Frost Cave vue d'en haut après Aller au donjon, coupée 4 m au-dessus du plancher, avec des extrémités ouvertes vertes et des carrés de porte orange](images/dungeon-inside.jpg)
+![Une Frost Cave vue d'en haut après Aller au donjon, coupée 4 m au-dessus du plancher, avec des extrémités ouvertes vertes et des carrés de porte orange](images/dungeon-inside.webp)
 *Une Frost Cave après **Aller au donjon**, ses toits coupés 4 m au-dessus du plancher : le panneau la liste
 (`Frost Cave, 17 room(s), at -640, -350`). Des cadres verts marquent les extrémités ouvertes (une salle a été
 supprimée), des carrés orange les jonctions de salles sans porte.*
@@ -162,7 +162,7 @@ Une salle qui en chevaucherait une autre, ou dépasserait l'espace du donjon (64
 pour la plupart des types), devient rouge et la ligne avertit. Le jeu construit la liste quand même : ce n'est qu'un
 avertissement.
 
-![Un couloir de glace affiché en transparence à une extrémité ouverte verte, choisi dans la liste SALLES](images/dungeon-add-room.jpg)
+![Un couloir de glace affiché en transparence à une extrémité ouverte verte, choisi dans la liste SALLES](images/dungeon-add-room.webp)
 *`cave_new_icecorridor01` choisi sous **SALLES** (filtré avec « icecorridor ») et pointé sur une extrémité ouverte :
 il s'y affiche en transparence, raccordé à la façon du jeu. La ligne du bas indique `17 room(s), 4 open end(s).`*
 
@@ -210,7 +210,7 @@ Data activés, le générateur, la liste des salles et les salles dessinées les
 
 ## L'ouvrir dans l'Atelier
 
-![Un donjon généré en pièces de construction sur la parcelle de l'Atelier, ouvert par la coupe, son hall d'entrée avec le portail](images/workshop-dungeon.jpg)
+![Un donjon généré en pièces de construction sur la parcelle de l'Atelier, ouvert par la coupe, son hall d'entrée avec le portail](images/workshop-dungeon.webp)
 *Un donjon généré (un niveau) ouvert sur la parcelle de l'Atelier et coupé à 3 m, le panneau Bâtir revenu sur son
 onglet **Pièces** : en haut, le hall d'entrée avec son portail où arrivent les joueurs ; en dessous, l'arène du boss.*
 

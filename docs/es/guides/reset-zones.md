@@ -23,7 +23,7 @@ nuevos, por ejemplo para tener el contenido nuevo de una actualización de Valhe
    construcciones: léela y acepta. Las zonas se vuelven rojas.
 9. Haz clic en **Guardar en el mundo** (o **Aplicar en vivo**).
 
-![Restablecer zonas en todo el mundo: zonas que coinciden en azul, zonas marcadas en rojo](../images/map-reset.jpg)
+![Restablecer zonas en todo el mundo: zonas que coinciden en azul, zonas marcadas en rojo](../images/map-reset.webp)
 *Las zonas azules coinciden con el filtro; las rojas están marcadas para restablecer.*
 
 Para restablecer solo las zonas que hay bajo un lugar, usa en su lugar la herramienta [Región](../area.md#restablecer-zonas):

@@ -25,7 +25,7 @@ quieres; luego crea el mundo.
 10. Arranca Valheim y carga el mundo una vez antes de editarlo en el editor: el juego crea cada lugar cuando los
     jugadores se acercan.
 
-![Buscar una semilla: la lista de preferencias y luego las mejores semillas encontradas, cada una como un pequeño mapa con su semilla y su puntuación](../images/new-world-find.jpg)
+![Buscar una semilla: la lista de preferencias y luego las mejores semillas encontradas, cada una como un pequeño mapa con su semilla y su puntuación](../images/new-world-find.webp)
 *Las preferencias a la izquierda; las mejores semillas en **Semillas encontradas**, primero la mejor, cada una con su
 puntuación.*
 

@@ -7,7 +7,7 @@ und Dungeons erzeugen, in der Welt oder Werkstatt, die du geöffnet hast, währe
 **Wo:** Startseite, **Einstellungen** → **Claude** · **Taste:** keine · **Funktioniert in:** gespeicherten Welten,
 live (mit **Auto** aus), der Werkstatt
 
-![Einstellungen, Claude an: beide Schalter, Port 5731, Neues Token, der Befehl für Claude Code, die Zeilen für Claude Desktop, Listening on; rechts Speichern am Ende](images/settings-claude.jpg)
+![Einstellungen, Claude an: beide Schalter, Port 5731, Neues Token, der Befehl für Claude Code, die Zeilen für Claude Desktop, Listening on; rechts Speichern am Ende](images/settings-claude.webp)
 *Links: der Abschnitt **Claude** eingeschaltet und empfangsbereit; kopiere den Befehl in ein Terminal (Claude Code)
 oder die Zeilen in die Konfiguration von Claude Desktop. Rechts: das Ende der Einstellungen, mit **Speichern**. Dein
 Befehl enthält dein eigenes Token, wo dieses Bild `<token>` zeigt, und die Zeilen den Pfad deines eigenen Programms.*
@@ -131,7 +131,7 @@ Bodenarbeiten, Wälder und Dungeons sind am leichtesten zu erbitten. Detailliert
 Gebäude brauchen vielleicht ein paar Runden („das Dach steht auf der Ostseite über, korrigiere das“), oder beginne mit
 einem deiner Baupläne.
 
-![Der Verlauf, nachdem Claude geebnet, gepflastert und gepflanzt hat, mit einem eigenen Anheben dazwischen: Zeilen mit der Markierung Claude und Claudes Änderungen zurücknehmen](images/claude-history.jpg)
+![Der Verlauf, nachdem Claude geebnet, gepflastert und gepflanzt hat, mit einem eigenen Anheben dazwischen: Zeilen mit der Markierung Claude und Claudes Änderungen zurücknehmen](images/claude-history.webp)
 *Die Schritte von Claude heißen „Claude: …“ und tragen die Markierung **Claude**; dein eigenes **Anheben** liegt
 dazwischen. **Claudes Änderungen zurücknehmen** oben entfernt die Schritte von Claude und behält deine.*
 
