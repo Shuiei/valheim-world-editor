@@ -53,6 +53,15 @@ In `BepInEx/config/Tie.WorldEditorBridge.cfg` of the game or server, on the `Tok
 the first time the game starts with it. For your own game the editor reads it by itself; for a server you copy it
 from the server. See [Plugin settings](../live-mode.md#plugin-settings).
 
+## My world is in the old format (`.db` and `.fwl`). Can I open it?
+
+Not directly: load it once in an up-to-date Valheim (game or dedicated server) and the game turns it into a world
+folder the editor opens (see [Open a world that is not in the list](../guides/open-a-world.md#tips)). The game keeps
+the old pair untouched next to it, renamed `<World>_backup_<timestamp>`: that copy is the only way back if the
+conversion goes wrong, so keep it until the new world has loaded fine. Expect the save to grow by about 40 % while
+both are kept. A raw reading of the files before and after, measured on 1.0 servers:
+[Valheim 1.0's save format](https://tickserv.com/guides/valheim-1-0-world-format).
+
 ## Does it work with mods?
 
 Yes. In a live modded game the editor learns the mods' objects and draws their models (see
