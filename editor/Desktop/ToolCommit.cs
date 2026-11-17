@@ -41,9 +41,10 @@ internal static class ToolCommit
             var z = new ZdoData { Prefab = StableHash.Of(prefab) };
             var copy = new DataCopy(prefab, position, rotation, z);
             data?.Invoke(copy);
-            // From its prefab as made, once the tool's values are set (and its turn, should the tool turn it).
+            // From its prefab as made, once the tool's values are set (and its turn, should the tool turn it); a size
+            // the tool set is kept as it set it, on each axis.
             z.BaseFlags = SavedFlags(z.Prefab);
-            AddNew(plan, new NewObject(0, z.Prefab, position, copy.Rotation, 1, Fresh: false, Raw: z.Serialize()));
+            AddNew(plan, new NewObject(0, z.Prefab, position, copy.Rotation, ScaleOf(z) == null ? 1 : 0, Fresh: false, Raw: z.Serialize()));
         }
         foreach (var (obj, change) in edit.Changed)
         {
@@ -53,8 +54,10 @@ internal static class ToolCommit
             }
             var z = ZdoData.Parse(view.Data.Serialize());
             var copy = new DataCopy(view.Prefab, view.Position, view.Rotation, z, view.Scale);
+            var size = ScaleOf(z);
             change(copy);
-            AddNew(plan, new NewObject(0, z.Prefab, view.Position, copy.Rotation, view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize()));
+            // A size the tool set, or one that differs by axis, is kept as the data has it; else the object's own.
+            AddNew(plan, new NewObject(0, z.Prefab, view.Position, copy.Rotation, ScaleOf(z) is { } set && (set != size || set.X != set.Y || set.Y != set.Z) ? 0 : view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize()));
         }
         foreach (var obj in edit.Removed)
         {
@@ -73,6 +76,17 @@ internal static class ToolCommit
     /// <param name="id">The changed object's id.</param>
     internal static int SourceOf(EditSession s, int id) =>
         id >= 0 || s.Scene.Owner?.LiveSync.IsLive(id) == true || s.Edits.FindAdded(id)?.SourceId is not int source ? id : source;
+
+    /// <summary>
+    /// The size an object's data gives it on each axis (the game's "scale" vector), which a tool may set (a mod's data
+    /// entry flattening a piece): null for none. An object made with one is written with it (a NewObject of scale 0
+    /// keeps its data's), not with the one size on every axis the editor gives.
+    /// </summary>
+    private static System.Numerics.Vector3? ScaleOf(ZdoData z)
+    {
+        int i = z.Vec3List.FindIndex(v => v.Key == ZdoData.ScaleKey);
+        return i < 0 ? null : z.Vec3List[i].Value;
+    }
 
     /// <summary>The persistent flag of an object's save (the game keeps such objects, and saves them).</summary>
     private const ushort Persistent = 0x100;

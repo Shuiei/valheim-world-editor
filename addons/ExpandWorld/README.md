@@ -16,7 +16,7 @@ keeps).
 
 ## Install
 
-1. The Valheim World Editor 1.106.0 or later.
+1. The Valheim World Editor 1.126.0 or later.
 2. From the editor's [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page,
    `ValheimWorldEditor-addon-ExpandWorld-<version>.zip`: unpack it into the `addons` folder next to the editor (on
    macOS, next to `ValheimWorldEditor.app`), so that you have `addons/ExpandWorld/worldeditor.json`.
@@ -143,6 +143,62 @@ Followed: Expand World Size 1.45, Expand World Rivers 1.11, Expand World Data 1.
 adds a setting or a field is read with its defaults until the editor follows it. Data 1.80 adds persistent events
 (`expand_persistent_events.yaml`, with its "Persistent event data" switch), which the game runs while it is played and
 which change no ground, location or vegetation: the add-on does not read them.
+
+## The Custom object tool
+
+The Expand World mods have no prefabs of their own: a "custom object" is an object of the game with a **data entry**,
+a named set of values (a name, a health, a size, a value of the rule's own) that Expand World Data gives to a
+location's objects and Expand World Prefabs' rules set, spawn with, or look for. An object the editor places is not
+"created" in the game, so no rule gives it its data: the tool does.
+
+```yaml
+# expand_prefabs.yaml: a player saying "check" near such a block gets an effect.
+- prefab: Player
+  type: say, check
+  objects:
+  - prefab: blackmarble_1x1
+    filter: int, sandichchuyen, 1
+    maxDistance: 10
+  spawn:
+  - prefab: vfx_spawn
+# The block: renamed, unbreakable, flattened.
+- name: dichchuyen
+  ints:
+  - sandichchuyen, 1
+  strings:
+  - Piece.m_name, Dịch Chuyển
+  floats:
+  - WearNTear.m_health, -1
+  - health, -1
+  vecs:
+  - scale, 0.01,1,1
+```
+
+1. Open an area in the 3D editor and choose **Custom object** on the rail, under **Mods**.
+2. Choose the **Data** entry. The card says how many values it sets and which objects the rules use it on.
+3. With **A click** on "places a new object", choose the **New object** and click the ground: here a
+   `blackmarble_1x1` with `dichchuyen`. The list holds the objects the rules use an entry on: the rule's own objects
+   with the "data" it sets or the "filter" it asks, those it spawns or swaps in with data, and the nearby "objects"
+   it looks for (as above, by a value the entry sets).
+4. For any other object, place it with Place or Build first, then, with **A click** on "changes the object clicked",
+   click it. An object that already has data keeps its other values.
+
+How it works, and what it leaves out:
+
+- **The entries are read** from `BepInEx/config/data/*.yaml`, `expand_world/expand_data*.yaml` and the entries
+  written among the rules of `expand_world/expand_prefabs*.yaml`, in the first BepInEx folder with Expand World Data
+  or Expand World Prefabs installed; a later entry of a name wins.
+- **Values are written as the game reads them**: "ints", "floats", "strings", "longs", "bools", "hashes", "vecs"
+  (x, z, y), "quats" (y, x, z) and "bytes". A component's field ("Piece.m_name", "WearNTear.m_health") also marks the
+  object as having fields, and fields of that component, as the game asks. A "scale" is the object's size on each
+  axis; the editor draws the object unscaled when the axes differ.
+- **Left out**, and named on the card: a value with a parameter or a function (`<level>`), a list or a range the mod
+  draws from, a key that is a number or an animation's, and what is no plain value ("items", "containerSize",
+  "position", "rotation"…).
+- **The rules themselves do not run in the editor**: a "create" rule with a chance, a swap or a spawn is the game's.
+  The tool gives the data; what the rules then do with the object happens in the game.
+- **The files are read when the tool is chosen**, but the card's lists are made once: after adding entries or rules,
+  restart the editor.
 
 ## With Riverheim
 

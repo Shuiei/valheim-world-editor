@@ -5,6 +5,23 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.126.0 — unreleased
+
+### Added
+- **Custom objects of the Expand World mods can be placed and edited.** With the Expand World add-on, the new
+  **Custom object** tool (under **Mods** on the 3D editor's rail) lists the mods' data entries and gives the one
+  chosen to an object: a new object placed where you click, or the object you click. The game and Expand World
+  Prefabs' rules then find it as if the mod had made it: a renamed, unbreakable, flattened block a rule looks for, a
+  boss with more health.
+
+### Fixed
+- **A mod tool's size by axis is kept.** An object a mod's tool gives a size that differs by axis (a flattened
+  piece) was saved with one size on every axis.
+
+### Mods
+- **Expand World add-on 0.3.0**: the data entries of Expand World Data, Expand World Prefabs and World Edit Commands,
+  through the Custom object tool.
+
 ## v1.124.1 — 2026-11-17
 
 ### Fixed
