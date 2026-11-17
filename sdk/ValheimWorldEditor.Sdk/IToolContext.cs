@@ -89,4 +89,36 @@ public sealed class ToolEdit
         _removed.Add(obj);
         return this;
     }
+
+    private readonly List<(int Source, Vector3 Position, float Radius, double Duration)> _started = [];
+    private readonly List<int> _stopped = [];
+
+    /// <summary>The persistent events started.</summary>
+    public IReadOnlyList<(int Source, Vector3 Position, float Radius, double Duration)> StartedEvents => _started;
+
+    /// <summary>The persistent events stopped, by id.</summary>
+    public IReadOnlyList<int> StoppedEvents => _stopped;
+
+    /// <summary>
+    /// Starts a persistent event (see <see cref="IWorldEvents"/>): the world's save holds it as active from then on.
+    /// The game does not make its objects for an event it did not start itself: add them with <see cref="Add"/>.
+    /// Left out where events cannot be edited (live mode).
+    /// </summary>
+    /// <param name="source">Which event: its place in the game's list of events.</param>
+    /// <param name="position">Its middle, in world metres.</param>
+    /// <param name="radius">Its radius, in metres.</param>
+    /// <param name="duration">How long it lasts, in seconds; 0 or less: until it is stopped.</param>
+    public ToolEdit StartEvent(int source, Vector3 position, float radius, double duration = 0)
+    {
+        _started.Add((source, position, radius, duration));
+        return this;
+    }
+
+    /// <summary>Stops an active persistent event (its objects stay).</summary>
+    /// <param name="id">Its id, as <see cref="IWorldEvents.Active"/> gave it.</param>
+    public ToolEdit StopEvent(int id)
+    {
+        _stopped.Add(id);
+        return this;
+    }
 }

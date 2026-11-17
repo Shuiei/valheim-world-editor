@@ -42,6 +42,8 @@ public static partial class WorldWriter
         public Dictionary<ChunkFile, (uint Version, int Count)> Updated { get; } = [];
         /// <summary>The save number written.</summary>
         public int NewNumber { get; set; }
+        /// <summary>How many persistent events the save stopped and started.</summary>
+        public int EventsChanged { get; set; }
     }
 
     /// <summary>Works out which objects the save takes out: the deleted ones, then those cleared by zone resets.</summary>

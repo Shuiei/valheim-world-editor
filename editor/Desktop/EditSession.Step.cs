@@ -50,6 +50,7 @@ public sealed partial class EditSession
             SetGone(c.Things.Select(t => (t.Index, after ? t.After : t.Before)));
             SetHiddenGone(c.Hidden.Select(t => (t.Id, after ? t.After : t.Before)));
             SetResets(c.Resets, after);
+            SetEvents(c.Events, after);
             c.RevertOf?.Removed = after;
         }
         if (c.Things.Length > 0)

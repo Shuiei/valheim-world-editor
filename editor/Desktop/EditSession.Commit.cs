@@ -21,12 +21,14 @@ public sealed partial class EditSession
     /// <param name="removeHidden">Hidden objects to take away, by object id (gone or unknown ones are skipped; read
     /// after the ground step).</param>
     /// <param name="addHidden">New hidden objects (their ids are given here; read after the ground step).</param>
+    /// <param name="events">Persistent events started or stopped, with their state before and after.</param>
     /// <returns>The indices of the things added.</returns>
     public List<int> Commit(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)>? ground,
         IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add, (ZoneReset Reset, bool Before, bool After)[]? resets = null,
-        IReadOnlyCollection<int>? removeHidden = null, IReadOnlyList<NewObject>? addHidden = null)
+        IReadOnlyCollection<int>? removeHidden = null, IReadOnlyList<NewObject>? addHidden = null, (EventEdit Edit, bool Before, bool After)[]? events = null)
     {
         resets ??= [];
+        events ??= [];
         var (points, before, after, zones) = ChangeGround(ground);
         // After the ground step, which may fill the list (a paste's objects stand on the ground it leaves).
         add = Placed(remove, add);
@@ -39,11 +41,12 @@ public sealed partial class EditSession
         SetGone(changes.Where(c => c.Item3).Select(c => (c.Item1, true)));
         SetHiddenGone(hidden.Where(h => h.After).Select(h => (h.Id, true)));
         SetResets(resets, after: true);
-        if (points.Length == 0 && changes.Count == 0 && hidden.Count == 0 && resets.Length == 0)
+        SetEvents(events, after: true);
+        if (points.Length == 0 && changes.Count == 0 && hidden.Count == 0 && resets.Length == 0 && events.Length == 0)
         {
             return indices;
         }
-        AddChange(new Change(label, points, before, after, zones) { Things = [.. changes], Resets = resets, Hidden = [.. hidden] });
+        AddChange(new Change(label, points, before, after, zones) { Things = [.. changes], Resets = resets, Hidden = [.. hidden], Events = events });
         if (changes.Count > 0)
         {
             Notify(changes.Select(c => c.Item1));

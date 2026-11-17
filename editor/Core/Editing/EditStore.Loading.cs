@@ -20,6 +20,7 @@ public sealed partial class EditStore
             _added.Clear();
             _addedTrash.Clear();
             _resets.Clear();
+            _events.Clear();
             _gameChanged.Clear();
             _planned.Clear();
             Load(world);

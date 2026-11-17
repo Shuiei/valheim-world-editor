@@ -128,7 +128,8 @@ public sealed partial class WorldSession
 
     /// <summary>
     /// What is waiting to be saved (live: to be applied to the game): changed zones, deletions, added objects,
-    /// zone resets. Once saved offline, the objects count what differs from that save.
+    /// zone resets. Once saved offline, the objects count what differs from that save. A persistent event started
+    /// counts as an object added, one stopped as an object deleted.
     /// </summary>
     public (int Zones, int Deleted, int Added, int Resets) Pending
     {
@@ -141,7 +142,8 @@ public sealed partial class WorldSession
             }
             if (_lastSave == null)
             {
-                return (Edits.ChangedZoneCount, Edits.DeletedCount, Edits.AddedCount, Edits.ResetCount);
+                var (stops, starts) = EventsPending();
+                return (Edits.ChangedZoneCount, Edits.DeletedCount + stops, Edits.AddedCount + starts, Edits.ResetCount);
             }
             // Saved already: what differs from that save (an undo after it is pending too), counted by what the next
             // save does to the world: an object placed and saved, then undone, is taken out (deleted); one deleted
@@ -153,7 +155,24 @@ public sealed partial class WorldSession
                 int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Values.Count(_savedAdded.Contains);
                 return (deleted.Count - keptDel + _savedAdded.Count - keptAdd, added.Count - keptAdd + _savedDeleted.Count - keptDel);
             });
-            return (Edits.ChangedZoneCount, del, add, Edits.ResetCount);
+            var (evStops, evStarts) = EventsPending();
+            return (Edits.ChangedZoneCount, del + evStops, add + evStarts, Edits.ResetCount);
         }
+    }
+
+    /// <summary>
+    /// The persistent events the next save stops and starts, against the last save's: an event started and saved, then
+    /// undone, is stopped by the next save, and one stopped and saved, then undone, is started again.
+    /// </summary>
+    private (int Stops, int Starts) EventsPending()
+    {
+        var now = Edits.Events;
+        if (now.Count == 0 && _savedEvents.Count == 0)
+        {
+            return (0, 0);
+        }
+        var fresh = now.Where(e => !_savedEvents.Contains(e)).ToList();
+        var undone = _savedEvents.Where(e => !now.Contains(e)).ToList();
+        return (fresh.Count(e => e.Stop) + undone.Count(e => !e.Stop), fresh.Count(e => !e.Stop) + undone.Count(e => e.Stop));
     }
 }

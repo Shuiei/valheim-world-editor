@@ -24,6 +24,7 @@ public sealed partial class EditReplay
         r.PlanZones(edits, saved);
         r.PlanObjects(edits.Deleted, edits.Added, edits.Gone, saved);
         r._resets.AddRange(edits.Resets);
+        r._events.AddRange(edits.Events);
         return r;
     }
 

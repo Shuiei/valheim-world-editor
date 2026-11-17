@@ -40,7 +40,7 @@ public sealed partial class WorldSession
             // when nothing differs from the save opened, which the last one then no longer matches.
             var (_, del, add, _) = Pending;
             bool rewrite = _lastSave != null && del + add > 0;
-            result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known, Rewrite: rewrite));
+            result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known, Rewrite: rewrite), Edits.Events);
         }
         catch
         {
@@ -94,6 +94,7 @@ public sealed partial class WorldSession
             Edits.MarkApplied(changed.Select(e => (e.ZoneX, e.ZoneZ)));
             _savedDeleted = [.. Edits.Deleted];
             _savedAdded = [.. Edits.Added];
+            _savedEvents = [.. Edits.Events];
             MarkHistoryApplied();
             KeepHistory();
         }

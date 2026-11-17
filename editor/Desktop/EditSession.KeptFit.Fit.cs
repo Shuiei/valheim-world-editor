@@ -59,6 +59,7 @@ public sealed partial class EditSession
                 Things = things,
                 Hidden = c.Hidden,
                 Resets = c.Resets,
+                Events = c.Events,
                 Time = c.Time,
                 Removed = c.Removed,
                 Applied = c.Applied,
