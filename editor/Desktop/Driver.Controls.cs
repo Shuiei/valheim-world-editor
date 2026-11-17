@@ -27,7 +27,7 @@ public static partial class Driver
         MainWindow w = call.W;
         string[] a = call.A;
         var c = Find<Avalonia.Controls.Button>(w, b => Says(b, a[1]))
-            ?? Find<Avalonia.Controls.Button>(w, b => TextOf(b).StartsWith(a[1] + " ", StringComparison.OrdinalIgnoreCase) || EnglishTextOf(b).StartsWith(a[1] + " ", StringComparison.OrdinalIgnoreCase))
+            ?? Find<Avalonia.Controls.Button>(w, b => TextOf(b).StartsWith(a[1] + " ", StringComparison.OrdinalIgnoreCase) || EnglishTextOf(b).StartsWith(a[1] + " ", StringComparison.OrdinalIgnoreCase) || BeginsAs(TextOf(b), a[1]))
             // A piece's tile in the Build dock, by its prefab name (its words are its English name).
             ?? Find<Avalonia.Controls.Button>(w, b => b.Tag is string tag && string.Equals(tag, a[1], StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException($"no button \"{a[1]}\"");
