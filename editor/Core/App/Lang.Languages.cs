@@ -31,7 +31,8 @@ public static partial class Lang
     }
     /// <summary>
     /// The first of the computer's languages there is a catalogue of: the exact one ("pt-BR"), else its main language
-    /// ("pt"), else a catalogue of the same main language ("pt-PT"); null when none fits.
+    /// ("pt"), else a catalogue of the same main language ("pt-PT"); null when none fits. A language some systems name
+    /// by another code counts as that one (Tagalog "tl-PH" is Filipino, "fil").
     /// </summary>
     internal static string? Pick(IEnumerable<string> wanted, IEnumerable<string> available)
     {
@@ -39,6 +40,7 @@ public static partial class Lang
         foreach (string w in wanted)
         {
             string main = w.Split('-')[0];
+            main = SameLanguage.GetValueOrDefault(main.ToLowerInvariant(), main);
             string? found = have.Find(c => c.Equals(w, StringComparison.OrdinalIgnoreCase))
                 ?? have.Find(c => c.Equals(main, StringComparison.OrdinalIgnoreCase))
                 ?? have.Find(c => c.Split('-')[0].Equals(main, StringComparison.OrdinalIgnoreCase));
@@ -49,4 +51,10 @@ public static partial class Lang
         }
         return null;
     }
+
+    /// <summary>
+    /// Main languages a system may name by an older or other code, by the code their catalogue has: Linux has both
+    /// tl_PH (Tagalog) and fil_PH, Windows and macOS say fil.
+    /// </summary>
+    private static readonly Dictionary<string, string> SameLanguage = new() { ["tl"] = "fil" };
 }

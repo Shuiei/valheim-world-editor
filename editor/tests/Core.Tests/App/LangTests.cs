@@ -145,6 +145,9 @@ public sealed class LangTests : LangTestBase
         Assert.Equal("pt-PT", Lang.Pick(["pt-BR"], have));
         Assert.Equal("fr", Lang.Pick(["ja", "fr"], have));
         Assert.Null(Lang.Pick(["ja"], have));
+        // Tagalog's code finds the Filipino catalogue.
+        Assert.Equal("fil", Lang.Pick(["tl-PH"], ["en", "fil"]));
+        Assert.Equal("fil", Lang.Pick(["fil-PH"], ["en", "fil"]));
     }
 
     // A carried language with the user's corrections over it: their texts where they have one, the carried

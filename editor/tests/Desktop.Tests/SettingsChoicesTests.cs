@@ -176,7 +176,7 @@ public class SettingsChoicesTests
             // The computer's, English, then the carried catalogues and the one dropped in, by their own names.
             var names = Language(d).Items.Cast<string>().ToList();
             Assert.Equal(["The computer's language", "English"], names[..2]);
-            Assert.Equal(["Deutsch", "Español", "Français", "Português (Brasil)", "Testish", "ไทย"], names[2..].Order(StringComparer.Ordinal));
+            Assert.Equal(["Deutsch", "Español", "Filipino", "Français", "Português (Brasil)", "Testish", "ไทย"], names[2..].Order(StringComparer.Ordinal));
             Assert.Equal(0, Language(d).SelectedIndex);
             int testish = names.IndexOf("Testish");
             Language(d).SelectedIndex = testish;

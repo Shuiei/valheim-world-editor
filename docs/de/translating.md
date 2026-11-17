@@ -1,4 +1,4 @@
-<!-- source: f5ff35e9 -->
+<!-- source: f7df77d8 -->
 # Den Editor übersetzen
 
 Die Texte des Editors stehen in Katalogen, einer pro Sprache: eine JSON-Datei mit Texten nach Schlüssel. Englisch,
@@ -6,7 +6,7 @@ Die Texte des Editors stehen in Katalogen, einer pro Sprache: eine JSON-Datei mi
 wird.
 
 Der Editor bringt Englisch, Französisch (`fr`), Deutsch (`de`), Spanisch (`es`), brasilianisches Portugiesisch (`pt-BR`,
-auch auf einem auf portugiesisches Portugiesisch eingestellten Computer gezeigt) und Thai (`th`) mit. Die Dokumentation ist in jede davon übersetzt (`docs/de/`…, ihre Bilder in dieser Sprache aufgenommen). Er zeigt die unter
+auch auf einem auf portugiesisches Portugiesisch eingestellten Computer gezeigt), Thai (`th`) und Filipino (`fil`, auch auf einem auf Tagalog eingestellten Computer gezeigt) mit. Die Dokumentation ist in jede davon übersetzt (`docs/de/`…, ihre Bilder in dieser Sprache aufgenommen). Er zeigt die unter
 **Einstellungen → Sprache** gewählte Sprache, standardmäßig die des Computers, wenn es einen Katalog dafür gibt. Ein
 Text, den ein Katalog noch nicht hat, erscheint auf Englisch. Eine neue Sprache gilt ab dem nächsten Start des Editors.
 
