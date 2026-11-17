@@ -205,6 +205,9 @@ public sealed partial class WorldSession : IDisposable
     /// <summary>The added objects as of the last save.</summary>
     private HashSet<NewObject> _savedAdded = [];
 
+    /// <summary>The persistent events the last save started and stopped.</summary>
+    private HashSet<EventEdit> _savedEvents = [];
+
     /// <summary>Forgets the session's saves (the world was read again, or left).</summary>
     private void ForgetSaves()
     {
@@ -213,6 +216,7 @@ public sealed partial class WorldSession : IDisposable
         _savedZones = [];
         _savedDeleted = [];
         _savedAdded = [];
+        _savedEvents = [];
     }
 
     /// <summary>What a save or Apply live did.</summary>

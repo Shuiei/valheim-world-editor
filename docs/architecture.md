@@ -37,7 +37,7 @@ game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`,
 
 A world is a folder in Valheim's chunked save format (world version 40 and up, the Deep North save):
 `_main.<n>.chunks` (the index of chunk files), `XX_YY__<size>_<version>.chunk` (the objects, ZDOs),
-`_main.<n>.db2` (generated zones, locations), `_main.<n>.fwl2` (name, seed) and `_main.<n>.ok`, the
+`_main.<n>.db2` (generated zones, locations, and at its end the random events' state and the active persistent events, `PersistentEvents`: a length and brotli-compressed JSON, rewritten only when an edit starts or stops one, `EventEdit`), `_main.<n>.fwl2` (name, seed) and `_main.<n>.ok`, the
 marker the game writes last. Each file names its save format at its head: 41 up to Valheim 1.0.17, 42 since 1.0.20, laid
 out the same (only the number differs). The game writes the index, `.db2`, `.fwl2` and `.ok` in its own format at
 every save but only the chunk files whose objects changed, so a world it migrated holds a 42 index with 41 chunk

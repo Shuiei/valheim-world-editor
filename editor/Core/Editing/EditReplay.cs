@@ -138,6 +138,9 @@ public sealed partial class EditReplay
     /// <summary>The zone resets.</summary>
     private readonly List<ZoneReset> _resets = [];
 
+    /// <summary>The persistent events to start and to stop, as they were asked for.</summary>
+    private readonly List<EventEdit> _events = [];
+
     /// <summary>Every clash: the zones', then the objects'.</summary>
     private readonly List<Clash> _clashes = [];
 

@@ -33,6 +33,10 @@ public sealed partial class EditSession
         /// </summary>
         public (ZoneReset Reset, bool Before, bool After)[] Resets { get; init; } = [];
         /// <summary>
+        /// Persistent events started or stopped (on) or not.
+        /// </summary>
+        public (EventEdit Edit, bool Before, bool After)[] Events { get; init; } = [];
+        /// <summary>
         /// When it was made (local time).
         /// </summary>
         public DateTime Time { get; init; } = DateTime.Now;
@@ -57,7 +61,7 @@ public sealed partial class EditSession
         /// About how much memory it holds: 64 bytes a ground point (its index, and six values before and after), a
         /// few for each thing, zone and reset (<see cref="KeepBytes"/>).
         /// </summary>
-        public long Bytes => 64L * Points.Length + 8L * (Things.Length + Hidden.Length) + 8L * Zones.Count + 16L * Resets.Length;
+        public long Bytes => 64L * Points.Length + 8L * (Things.Length + Hidden.Length) + 8L * Zones.Count + 16L * Resets.Length + 48L * Events.Length;
 
         /// <summary>
         /// Whether it is this very change: a change is itself, not its values, since Removed and Applied are set after
@@ -79,8 +83,9 @@ public sealed partial class EditSession
                 parts.Add(Zones.Count > 1 ? Lang.T("save.zones.many", Zones.Count) : Lang.T("save.zones.one", Zones.Count));
             }
 
-            int added = Things.Count(t => t.Before && !t.After) + Hidden.Count(t => t.Before && !t.After);
-            int removed = Things.Count(t => !t.Before && t.After) + Hidden.Count(t => !t.Before && t.After);
+            // A persistent event started counts as a new object, one stopped as one removed (as when saving).
+            int added = Things.Count(t => t.Before && !t.After) + Hidden.Count(t => t.Before && !t.After) + Events.Count(e => e.After != e.Before && e.After != e.Edit.Stop);
+            int removed = Things.Count(t => !t.Before && t.After) + Hidden.Count(t => !t.Before && t.After) + Events.Count(e => e.After != e.Before && e.After == e.Edit.Stop);
             if (added > 0)
             {
                 parts.Add(Lang.T("history.change.new", added));

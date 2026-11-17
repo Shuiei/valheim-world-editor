@@ -54,5 +54,9 @@ internal sealed class ModToolContext(GlView view, ModToolPanel panel, Action<Sai
         {
             status(Said.Of("mods.tool.skipped", plan.Skipped.Count));
         }
+        if (plan.EventsSkipped > 0)
+        {
+            status(Said.Of("mods.tool.eventsSkipped", plan.EventsSkipped));
+        }
     }
 }

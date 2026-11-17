@@ -71,6 +71,34 @@ public static partial class CheckedReads
     public static string ReadCheckedString(this BinaryReader r) => Encoding.UTF8.GetString(r.ReadExactBytes(r.Read7BitEncodedInt()));
 
     /// <summary>
+    /// The content of brotli data, refused past <paramref name="limit"/> bytes or when the compressed data is damaged.
+    /// </summary>
+    public static byte[] Unbrotli(byte[] packed, int limit)
+    {
+        using BrotliStream br = new(new MemoryStream(packed), CompressionMode.Decompress);
+        using MemoryStream raw = new();
+        byte[] buffer = new byte[81920];
+        int n;
+        try
+        {
+            while ((n = br.Read(buffer)) > 0)
+            {
+                if (raw.Length + n > limit)
+                {
+                    throw new InvalidDataException($"the data unpacks to more than {limit} bytes");
+                }
+                raw.Write(buffer, 0, n);
+            }
+        }
+        catch (Exception e) when (e is IOException or InvalidOperationException)
+        {
+            // Damaged compressed data: read from memory, nothing else can fail.
+            throw new InvalidDataException("the compressed data is damaged", e);
+        }
+        return raw.ToArray();
+    }
+
+    /// <summary>
     /// The content of gzip data, refused past <paramref name="limit"/> bytes (a few kilobytes can unpack to
     /// gigabytes) or when the compressed data is damaged.
     /// </summary>

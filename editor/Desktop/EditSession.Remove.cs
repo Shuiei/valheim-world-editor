@@ -42,7 +42,8 @@ public sealed partial class EditSession
             var things = c.Things.Select(t => (t.Index, Scene.Things[t.Index].Gone, t.Before)).Where(t => t.Gone != t.Before).ToArray();
             var hidden = c.Hidden.Select(t => (t.Id, Edits.IsGone(t.Id), t.Before)).Where(t => t.Item2 != t.Before).ToArray();
             var resets = ResetsToRevert(c);
-            removal = new Change(Lang.T("history.undo.removed", c.Label), pts, Pick(start, pts), Pick(Ground.Snapshot(), pts), c.Zones) { Things = things, Hidden = hidden, Resets = resets, RevertOf = c };
+            var events = EventsToRevert(c);
+            removal = new Change(Lang.T("history.undo.removed", c.Label), pts, Pick(start, pts), Pick(Ground.Snapshot(), pts), c.Zones) { Things = things, Hidden = hidden, Resets = resets, Events = events, RevertOf = c };
             if (pts.Length > 0)
             {
                 Touch(BoxOf(pts));
@@ -51,6 +52,7 @@ public sealed partial class EditSession
             SetGone(things.Select(t => (t.Index, t.Before)));
             SetHiddenGone(hidden.Select(t => (t.Id, t.Before)));
             SetResets(resets, after: true);
+            SetEvents(events, after: true);
             c.Removed = true;
         }
         AddChange(removal);

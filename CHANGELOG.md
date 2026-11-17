@@ -5,6 +5,22 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.125.0 — unreleased
+
+### Added
+- **Persistent events can be started and stopped in a saved world.** With the Expand World add-on, the new
+  **Persistent event** tool (under **Mods** on the 3D editor's rail) starts one of Expand World Data's persistent
+  events where you click, and places the objects the event makes round it; a click inside an active event can stop
+  it instead. The active events are ringed while the tool is chosen. Undo, redo and the history take them like any
+  other edit, and they are written with the world when you save. Not in live mode: the running game keeps its own
+  list.
+- **For mod authors:** a tool's edit can start and stop the game's persistent events (`ToolEdit.StartEvent`,
+  `StopEvent`), and the area a tool is handed lists the active ones (`IWorldEvents`).
+
+### Mods
+- **Expand World add-on 0.2.0**: Expand World Data's persistent events (`expand_persistent_events.yaml`), through
+  the Persistent event tool.
+
 ## v1.124.1 — 2026-11-17
 
 ### Fixed
