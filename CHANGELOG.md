@@ -21,6 +21,13 @@ the plugin is unchanged in versions without that part. Mods newly supported, or 
 ### Mods
 - **Expand World add-on 0.3.0**: the data entries of Expand World Data, Expand World Prefabs and World Edit Commands,
   through the Custom object tool.
+  
+## v1.125.1 — unreleased
+
+### Fixed
+- **Releases reach Nexus Mods again.** The editor's downloads, now over 100 MiB, stopped part way through their
+  upload to Nexus Mods, so v1.124.1 has only the plugin there.
+
 ## v1.125.0 — unreleased
 
 ### Added
