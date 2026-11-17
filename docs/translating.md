@@ -4,7 +4,8 @@ The editor's words are in catalogues, one per language: a JSON file of texts by 
 [`editor/Core/Lang/en.json`](../editor/Core/Lang/en.json), is the source every other catalogue is translated from.
 
 The editor carries English, French (`fr`), German (`de`), Spanish (`es`), Brazilian Portuguese (`pt-BR`, also shown
-on a computer set to Portugal's Portuguese) and Thai (`th`), with the documentation translated in each (`docs/fr/`…,
+on a computer set to Portugal's Portuguese), Thai (`th`) and Filipino (`fil`, also shown on a computer set to
+Tagalog), with the documentation translated in each (`docs/fr/`…,
 its pictures taken in that language). It shows the language chosen under
 **Settings → Language**, by default the computer's when there is a catalogue of it. A text a catalogue does not have yet shows in English. A new language is taken when the editor starts
 again.

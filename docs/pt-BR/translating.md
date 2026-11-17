@@ -1,4 +1,4 @@
-<!-- source: f5ff35e9 -->
+<!-- source: f7df77d8 -->
 # Traduzir o editor
 
 As palavras do editor ficam em catálogos, um por idioma: um arquivo JSON de textos por chave. O inglês,
@@ -6,7 +6,7 @@ As palavras do editor ficam em catálogos, um por idioma: um arquivo JSON de tex
 traduzidos.
 
 O editor traz inglês, francês (`fr`), alemão (`de`), espanhol (`es`), português do Brasil (`pt-BR`, também exibido
-num computador configurado em português de Portugal) e tailandês (`th`). A documentação está traduzida em cada um (`docs/pt-BR/`…, com as imagens feitas nesse idioma). Ele mostra o idioma escolhido em
+num computador configurado em português de Portugal), tailandês (`th`) e filipino (`fil`, também mostrado num computador configurado em tagalo). A documentação está traduzida em cada um (`docs/pt-BR/`…, com as imagens feitas nesse idioma). Ele mostra o idioma escolhido em
 **Configurações → Idioma**, por padrão o do computador quando existe um catálogo dele. Um texto que um catálogo ainda não tem aparece em inglês. Um novo idioma vale quando o editor é iniciado
 de novo.
 

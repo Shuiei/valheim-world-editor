@@ -1,4 +1,4 @@
-<!-- source: f5ff35e9 -->
+<!-- source: f7df77d8 -->
 # Traduire l'éditeur
 
 Les mots de l'éditeur sont dans des catalogues, un par langue : un fichier JSON de textes classés par clé. L'anglais,
@@ -6,7 +6,7 @@ Les mots de l'éditeur sont dans des catalogues, un par langue : un fichier JSO
 est traduit.
 
 L'éditeur est livré en anglais, français (`fr`), allemand (`de`), espagnol (`es`), portugais du Brésil (`pt-BR`,
-également affiché sur un ordinateur réglé en portugais du Portugal) et thaï (`th`). La documentation est traduite dans chacune (`docs/fr/`…, ses images prises dans cette langue). Il affiche la langue choisie sous
+également affiché sur un ordinateur réglé en portugais du Portugal), thaï (`th`) et filipino (`fil`, également affiché sur un ordinateur réglé en tagalog). La documentation est traduite dans chacune (`docs/fr/`…, ses images prises dans cette langue). Il affiche la langue choisie sous
 **Paramètres → Langue**, par défaut celle de l'ordinateur quand il en a un catalogue. Un texte qu'un catalogue n'a pas
 encore s'affiche en anglais. Une nouvelle langue est prise en compte au redémarrage de l'éditeur.
 

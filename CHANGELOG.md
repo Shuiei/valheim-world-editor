@@ -5,6 +5,12 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.124.0 — unreleased
+
+### Added
+- **The editor and its documentation in Filipino.** Choose it under **Settings → Language**; a computer set to
+  Filipino or Tagalog shows it from the start. The help pages are translated too, with their pictures taken in Filipino.
+
 ## v1.123.0 — unreleased
 
 ### Added
