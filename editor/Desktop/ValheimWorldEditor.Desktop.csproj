@@ -46,9 +46,9 @@
     <ProjectReference Include="../Core/ValheimWorldEditor.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.6" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+    <PackageReference Include="Avalonia" Version="12.2.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.2.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.2.0" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
     <!-- The Help window reads the documentation's Markdown (HelpDocs, HelpView). -->
     <PackageReference Include="Markdig" Version="1.6.0" />
