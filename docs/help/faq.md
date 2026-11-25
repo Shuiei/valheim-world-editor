@@ -59,8 +59,7 @@ Not directly: load it once in an up-to-date Valheim (game or dedicated server) a
 folder the editor opens (see [Open a world that is not in the list](../guides/open-a-world.md#tips)). The game keeps
 the old pair untouched next to it, renamed `<World>_backup_<timestamp>`: that copy is the only way back if the
 conversion goes wrong, so keep it until the new world has loaded fine. Expect the save to grow by about 40 % while
-both are kept. A raw reading of the files before and after, measured on 1.0 servers:
-[Valheim 1.0's save format](https://tickserv.com/guides/valheim-1-0-world-format).
+both are kept.
 
 ## Does it work with mods?
 
