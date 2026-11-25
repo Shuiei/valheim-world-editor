@@ -1,3 +1,4 @@
+using System.Globalization;
 using ValheimGen;
 
 namespace ExpandWorld.WorldEditor;
@@ -63,7 +64,7 @@ public static partial class ExpandWorldMod
                 continue;
             }
             var rule = LocationOf(f, prefab, baseName, interior, exterior, blueprint, biomes, radius, ref virtualGroups, notes);
-            rule.ClearArea = ClearAreaOf(f, own, blueprint);
+            (rule.ClearArea, rule.ClearRadius) = ClearAreaOf(f, own, blueprint, notes);
             rule.Contents = rule.Custom == true || blueprint ? ContentsOf(f, data ?? DataTable.Empty, blueprint, rule.ExteriorRadius, blueprints) : null;
             rules.Add(rule);
         }
@@ -71,11 +72,28 @@ public static partial class ExpandWorldMod
     }
 
     /// <summary>
-    /// Whether a kind clears its area: the file's "clearArea" only with a radius of the file's own (or for a blueprint),
-    /// else the game's prefab's, as the mod applies it.
+    /// Whether a kind clears its area, and the radius it clears when not its exterior radius: the file's "clearArea"
+    /// only with a radius of the file's own (or for a blueprint), else the game's prefab's, as the mod applies it. Since
+    /// Expand World Data 1.82 "clearArea" may be a radius, metres (0: none); one below 0 or endless the mod refuses.
     /// </summary>
-    private static int ClearAreaOf(Fields f, LocationRule? own, bool blueprint) =>
-        f.F("exteriorRadius", 0f) != 0f || blueprint ? Flag(f, "clearArea") : own?.ClearArea ?? 0;
+    private static (int Clear, float Radius) ClearAreaOf(Fields f, LocationRule? own, bool blueprint, List<string> notes)
+    {
+        if (f.F("exteriorRadius", 0f) == 0f && !blueprint)
+        {
+            return (own?.ClearArea ?? 0, 0f);
+        }
+        string text = f.Str("clearArea");
+        if (!float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float radius))
+        {
+            return (Flag(f, "clearArea"), 0f);
+        }
+        if (radius < 0f || !float.IsFinite(radius))
+        {
+            notes.Add($"expand_locations: clearArea \"{text}\" is no radius (taken as false)");
+            return (0, 0f);
+        }
+        return (radius > 0f ? 1 : 0, radius);
+    }
 
     /// <summary>One kind from its entry.</summary>
     private static LocationRule LocationOf(Fields f, string prefab, string baseName, float interior, float exterior, bool blueprint, BiomeTable biomes, float radius, ref int virtualGroups, List<string> notes)

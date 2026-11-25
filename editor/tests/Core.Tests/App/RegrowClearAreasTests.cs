@@ -67,6 +67,17 @@ public class RegrowClearAreasTests
     }
 
     [Fact]
+    public void AClearRadiusOfItsOwnReplacesTheExteriorAndClearsFromNeighboursHoweverSmall()
+    {
+        var small = Kind("Small", 40f);
+        small.ClearRadius = 10f;
+        var gen = SeedPreview.Generator("5DCcdIcuYJ", Rules([small], data: true));
+        var areas = new Regrow.ClearAreas(gen, [(StableHash.Of("Small"), 70f, 0f)]);
+        Assert.Equal([new Regrow.ClearArea(70f, 0f, 10f, Own: true)], areas.For(1, 0));
+        Assert.Equal([new Regrow.ClearArea(70f, 0f, 10f, Own: true)], areas.For(0, 0));
+    }
+
+    [Fact]
     public void WithTheModAWideNeighbourClearsToo()
     {
         var gen = SeedPreview.Generator("5DCcdIcuYJ", Rules([Kind("Wide", 40f), Kind("Small", 20f)], data: true));

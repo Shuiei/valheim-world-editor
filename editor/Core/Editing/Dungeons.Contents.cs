@@ -117,9 +117,11 @@ public static partial class Dungeons
     /// <summary>One blueprint's parts at a place and turn (see <see cref="BlueprintMade"/>).</summary>
     private static void AddParts(List<Made?> made, PartsOf of, string name, Vector3 at, Quaternion turn)
     {
-        foreach (var part in of.Blueprint.Blueprints[name])
+        var parts = of.Blueprint.Blueprints[name];
+        var picked = ValheimGen.BlueprintGroups.Pick(parts);
+        foreach (var part in parts)
         {
-            if (part.Chance < 1f && Rnd.Value > part.Chance)
+            if (!ValheimGen.BlueprintGroups.Made(part, picked))
             {
                 continue;
             }
