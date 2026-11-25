@@ -11,12 +11,16 @@ public static partial class Regrow
     /// <param name="X">The centre's x, metres.</param>
     /// <param name="Z">The centre's z, metres.</param>
     /// <param name="Radius">The radius, metres.</param>
-    public readonly record struct ClearArea(float X, float Z, float Radius);
+    /// <param name="Own">
+    /// Its radius is the file's own (Expand World Data's numeric clearArea): it clears from neighbouring zones however small.
+    /// </param>
+    public readonly record struct ClearArea(float X, float Z, float Radius, bool Own = false);
 
     /// <summary>
     /// The clear areas of a world's locations, by zone (ZoneSystem.PlaceLocations: the zone's own location when its
     /// kind clears its area, within its exterior radius). With Expand World Data installed, a location in a
-    /// neighbouring zone that is wider than half a zone clears its area too (the mod's ClearAreasFromAdjacentZones).
+    /// neighbouring zone that is wider than half a zone clears its area too (the mod's ClearAreasFromAdjacentZones), as
+    /// does one with a clear radius of its own (its numeric clearArea, which replaces the exterior radius).
     /// The zone's own location counts as when the zone was first made (the game skips it once placed).
     /// </summary>
     public sealed class ClearAreas
@@ -44,7 +48,8 @@ public static partial class Regrow
             {
                 if (kinds.TryGetValue(hash, out var rule) && rule.ClearArea != 0)
                 {
-                    _byZone[ChunkMath.SectorOf(x, z)] = new ClearArea(x, z, rule.ExteriorRadius);
+                    bool own = rule.ClearRadius > 0f;
+                    _byZone[ChunkMath.SectorOf(x, z)] = new ClearArea(x, z, own ? rule.ClearRadius : rule.ExteriorRadius, own);
                 }
             }
         }
@@ -73,7 +78,7 @@ public static partial class Regrow
             {
                 for (int j = zz - 1; j <= zz + 1; j++)
                 {
-                    if ((i != zx || j != zz) && _byZone.TryGetValue((i, j), out var area) && area.Radius >= 32f)
+                    if ((i != zx || j != zz) && _byZone.TryGetValue((i, j), out var area) && (area.Radius >= 32f || area.Own))
                     {
                         yield return area;
                     }

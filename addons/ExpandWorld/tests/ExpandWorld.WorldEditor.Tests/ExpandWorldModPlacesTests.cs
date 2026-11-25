@@ -82,6 +82,21 @@ public class ExpandWorldModPlacesTests : AppSettingsTestBase
     }
 
     [Fact]
+    public void AClearAreaMayBeARadiusOfItsOwn()
+    {
+        List<string> notes = [];
+        var rules = ExpandWorldMod.LocationsOf(
+        [
+            E(("prefab", "StartTemple:Wide"), ("exteriorRadius", "40"), ("clearArea", "25.5")),
+            E(("prefab", "StartTemple:None"), ("exteriorRadius", "40"), ("clearArea", "0")),
+            E(("prefab", "StartTemple:Bad"), ("exteriorRadius", "40"), ("clearArea", "-3")),
+            E(("prefab", "StartTemple:Kept"), ("exteriorRadius", "40"), ("clearArea", "true")),
+        ], Game(), BiomeTable.Vanilla, 10000f, null, notes);
+        Assert.Equal([(1, 25.5f), (0, 0f), (0, 0f), (1, 0f)], rules.Select(r => (r.ClearArea, r.ClearRadius)));
+        Assert.Contains(notes, n => n.Contains("\"-3\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void DistanceRulesMakeAMadeUpGroupAsTheModDoes()
     {
         List<string> notes = [];

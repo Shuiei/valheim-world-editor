@@ -191,7 +191,7 @@ public static partial class ExpandWorldMod
             {
                 string[] s = row.Replace(',', '.').Split(';');
                 Parts.Add(Part(s[0], new NVector3(Num(s, 2), Num(s, 3), Num(s, 4)), new Quaternion(Num(s, 5), Num(s, 6), Num(s, 7), Num(s, 8)),
-                    new NVector3(Num(s, 10, 1f), Num(s, 11, 1f), Num(s, 12, 1f)), s.Length > 13 ? s[13] : "", Num(s, 14, 1f), data, why));
+                    new NVector3(Num(s, 10, 1f), Num(s, 11, 1f), Num(s, 12, 1f)), s.Length > 13 ? s[13] : "", ChanceOf(s, 14), data, why));
             }
             else
             {
@@ -236,17 +236,17 @@ public static partial class ExpandWorldMod
     /// <summary>A BuildShare file's objects (Blueprints.GetBuildShare): one a row, "name rx ry rz rw x y z data chance".</summary>
     private static List<BlueprintPart> BuildShareParts(string[] rows, DataTable data, List<string> why) =>
         [.. rows.Select(row => row.Replace(',', '.').Split(' ')).Select(s => Part(s[0], new NVector3(Num(s, 5), Num(s, 6), Num(s, 7)),
-            new Quaternion(Num(s, 1), Num(s, 2), Num(s, 3), Num(s, 4)), NVector3.One, s.Length > 8 ? s[8] : "", s.Length > 9 ? Num(s, 9, 1f) : 1f, data, why))];
+            new Quaternion(Num(s, 1), Num(s, 2), Num(s, 3), Num(s, 4)), NVector3.One, s.Length > 8 ? s[8] : "", ChanceOf(s, 9), data, why))];
 
     /// <summary>One part, its turn made of length 1 and its data read (data that cannot be written: why).</summary>
-    private static BlueprintPart Part(string prefab, NVector3 position, Quaternion rotation, NVector3 scale, string dataName, float chance, DataTable data, List<string> why)
+    private static BlueprintPart Part(string prefab, NVector3 position, Quaternion rotation, NVector3 scale, string dataName, (float Chance, string? Group) chance, DataTable data, List<string> why)
     {
         var values = data.Resolve(dataName);
         if (values.Why != null)
         {
             why.Add(values.Why);
         }
-        return new BlueprintPart(prefab, position, Normalized(rotation), scale, values.OrNull, chance);
+        return new BlueprintPart(prefab, position, Normalized(rotation), scale, values.OrNull, chance.Chance, chance.Group);
     }
 
     /// <summary>A rotation made of length 1 as Unity does (none for one too short to tell).</summary>
@@ -257,6 +257,17 @@ public static partial class ExpandWorldMod
     }
 
     /// <summary>A number of a row as the mod reads it (InvariantFloat): the default when missing or empty; anything else not a number fails the file.</summary>
+    /// <summary>
+    /// A part's chance column (BlueprintParser.ParseChance): a chance, or since Expand World Data 1.81 "chance_group"
+    /// (split at the first "_"; no chance before it is 1), the part then one of that group.
+    /// </summary>
+    private static (float Chance, string? Group) ChanceOf(string[] s, int index)
+    {
+        string value = index < s.Length ? s[index] : "";
+        int separator = value.IndexOf('_', StringComparison.Ordinal);
+        return separator < 0 ? (Num(s, index, 1f), null) : (Num([value[..separator]], 0, 1f), value[(separator + 1)..]);
+    }
+
     private static float Num(string[] s, int index, float fallback = 0f) =>
         index >= s.Length || string.IsNullOrEmpty(s[index]) ? fallback : float.Parse(s[index], NumberStyles.Any, NumberFormatInfo.InvariantInfo);
 

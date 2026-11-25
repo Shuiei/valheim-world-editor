@@ -5,6 +5,13 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.126.2 — unreleased
+
+### Fixed
+- **Blueprint groups and clear radii for add-ons.** A blueprint's parts can belong to a group, of which one is made,
+  and a location kind can clear a radius of its own: what the Expand World add-on needs to follow Expand World Data
+  1.82.
+
 ## v1.126.1 — unreleased
 
 ### Fixed
