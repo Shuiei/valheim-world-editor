@@ -1,7 +1,6 @@
 using System.Numerics;
 using ValheimGen;
 using NVector3 = System.Numerics.Vector3;
-using Rnd = ValheimGen.UnityEngine.Random;
 using Rule = ValheimGen.VegetationRule;
 
 namespace TerrainEditor.App;
@@ -32,9 +31,10 @@ public static partial class Regrow
     /// <summary>The parts of one blueprint at a place, turn and scale (Create.Blueprint, Create.SharedBPO).</summary>
     private static void PlaceParts(Rule veg, IReadOnlyList<BlueprintPart> parts, Placed blueprint, List<Spot> spots)
     {
+        var picked = BlueprintGroups.Pick(parts);
         foreach (var part in parts)
         {
-            if (part.Chance < 1f && Rnd.Value > part.Chance)
+            if (!BlueprintGroups.Made(part, picked))
             {
                 continue;
             }

@@ -3,6 +3,14 @@
 Changes to the Expand World add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.3.1 — unreleased
+
+### Fixed
+- **Follows Expand World Data 1.82.** A location's `clearArea` given as a radius (`clearArea: 25`) keeps that circle
+  clear of vegetation instead of its exterior radius, from the zones around it too, as the mod does; it was read as
+  false. A blueprint's chance that names a group (`0.5_a`, Data 1.81) makes one object of the group, the chances
+  their weights; such a file was not read. Needs the editor 1.126.2.
+
 ## v0.3.0 — 2026-11-17
 
 ### Added

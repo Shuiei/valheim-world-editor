@@ -107,9 +107,10 @@ public static partial class WorldCreator
     /// <param name="at">The blueprint's place, turn and scale (its name as the prefab).</param>
     private static void AddParts(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Waker waker, IReadOnlyList<BlueprintPart> parts, Made at)
     {
+        var picked = BlueprintGroups.Pick(parts);
         foreach (var part in parts)
         {
-            if (part.Chance < 1f && Rnd.Value > part.Chance)
+            if (!BlueprintGroups.Made(part, picked))
             {
                 continue;
             }

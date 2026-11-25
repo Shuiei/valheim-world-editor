@@ -8,7 +8,7 @@ namespace TerrainEditor.Save;
 public sealed partial class InventoryData
 {
     /// <summary>The item format version Write and WriteItem produce.</summary>
-    public const int Version = 109;
+    public const int Version = 110;
 
     /// <summary>One item stack in an inventory or an item stand slot.</summary>
     public sealed class Item
@@ -54,7 +54,7 @@ public sealed partial class InventoryData
         /// <summary>Free-form key/value data mods and the game attach to the item.</summary>
         public Dictionary<string, string> CustomData { get; set; } = [];
 
-        /// <summary>The item's cheated flag (bit 0 of a trailing byte, saved by item format 107 and 109+).</summary>
+        /// <summary>The item's cheated flag (bit 0 of a trailing byte, saved by item format 107 and 109+; from 110 the game keeps it on load, for older formats it clears it).</summary>
         public bool Cheated { get; set; }
     }
 

@@ -128,8 +128,19 @@ public sealed partial class WorldEditorBridgePlugin
         public void PutOn(ZDO zdo)
         {
             ZDOExtraData.GetData(zdo.m_uid, out var floats, out var vec3s, out var quats, out var ints, out var longs, out var strings, out var bytes, out _);
-            static IEnumerable<int> Stale<T>(List<KeyValuePair<int, T>> had, List<KeyValuePair<int, T>> now) =>
-                had == null ? [] : had.Select(kv => kv.Key).Except(now.Select(kv => kv.Key)).ToList();
+            static List<int> Stale<T>(FastIterableKeyValues<int, T> had, List<KeyValuePair<int, T>> now)
+            {
+                HashSet<int> kept = [.. now.Select(kv => kv.Key)];
+                List<int> stale = [];
+                for (int i = 0; i < had.Count; i++)
+                {
+                    if (!kept.Contains(had[i].Key))
+                    {
+                        stale.Add(had[i].Key);
+                    }
+                }
+                return stale;
+            }
             foreach (int key in Stale(floats, Floats))
             {
                 zdo.RemoveFloat(key);

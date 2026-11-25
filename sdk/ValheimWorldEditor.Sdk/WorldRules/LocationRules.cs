@@ -92,6 +92,12 @@ public sealed class LocationRule
     [JsonPropertyName("clearArea")]
     public int ClearArea { get; set; }
     /// <summary>
+    /// The radius it clears instead of its exterior radius, metres (Expand World Data 1.82's numeric clearArea, which
+    /// clears from neighbouring zones too however small); 0 for its exterior radius.
+    /// </summary>
+    [JsonPropertyName("clearRadius")]
+    public float ClearRadius { get; set; }
+    /// <summary>
     /// The least rise across its size, metres.
     /// </summary>
     [JsonPropertyName("minTerrainDelta")]

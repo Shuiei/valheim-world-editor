@@ -16,7 +16,7 @@ keeps).
 
 ## Install
 
-1. The Valheim World Editor 1.126.0 or later.
+1. The Valheim World Editor 1.126.2 or later.
 2. From the editor's [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page,
    `ValheimWorldEditor-addon-ExpandWorld-<version>.zip`: unpack it into the `addons` folder next to the editor (on
    macOS, next to `ValheimWorldEditor.app`), so that you have `addons/ExpandWorld/worldeditor.json`.
@@ -139,8 +139,10 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - **The mods' quirks** are mirrored as they are (a few are listed in the architecture notes), so that
   what the editor predicts is what the mod does.
 
-Followed: Expand World Size 1.45, Expand World Rivers 1.11, Expand World Data 1.80. A later version that
-adds a setting or a field is read with its defaults until the editor follows it. Data 1.80 adds persistent events
+Followed: Expand World Size 1.45, Expand World Rivers 1.11, Expand World Data 1.82. A later version that
+adds a setting or a field is read with its defaults until the editor follows it. Data 1.81 lets a blueprint's
+chance name a group (`0.5_a`: one of the group is made, by their chances as weights), and 1.82 lets a location's
+`clearArea` be a radius in metres instead of its exterior radius; both are followed. Data 1.80 adds persistent events
 (`expand_persistent_events.yaml`, with its "Persistent event data" switch), which the game runs while it is played and
 which change no ground, location or vegetation: the world's rules do not read them, the
 [Persistent event tool](#the-persistent-event-tool) does.

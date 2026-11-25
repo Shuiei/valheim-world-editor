@@ -72,6 +72,19 @@ public class ExpandWorldModBlueprintsTests : AppSettingsTestBase
     }
 
     [Fact]
+    public void AChanceMayNameAGroup()
+    {
+        string folder = Write("Pick.vbuild", "Bush01 0 0 0 1 0 0 0 marked 0.5_a\nBush01 0 0 0 1 1 0 1 marked _a\nBush01 0 0 0 1 2 0 2 marked 0.25\n");
+        Write("Hut.blueprint", "#Pieces\nBush01;Misc;0;0;0;0;0;0;1;;1;1;1;;2_b_c\n");
+        List<string> why = [], notes = [];
+        var parts = ExpandWorldMod.BlueprintsOf(folder, "Pick", Entries, why, notes)!["Pick"];
+        Assert.Equal([(0.5f, "a"), (1f, "a"), (0.25f, null)], parts.Select(p => (p.Chance, p.Group)));
+        // Split at the first underscore.
+        var hut = ExpandWorldMod.BlueprintsOf(folder, "Hut", Entries, why, notes)!["Hut"];
+        Assert.Equal((2f, "b_c"), (hut[0].Chance, hut[0].Group));
+    }
+
+    [Fact]
     public void AFileWithABadNumberIsNotRead()
     {
         string folder = Write("Broken.vbuild", "Bush01 0 0 0 one 1 1 1\n");
