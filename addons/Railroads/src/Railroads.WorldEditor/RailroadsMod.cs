@@ -297,16 +297,22 @@ public static class RailroadsMod
         public const string Light1 = "bf_light1";
 
         /// <summary>
-        /// A locomotive's upgrade tier for one part (int, 0.5.2, bought at the train workshop): 0 none (also when the key
-        /// is missing) to <see cref="UpgradeTiers"/>. The key is this prefix and the part's name (<see cref="UpgradeParts"/>).
+        /// A locomotive's engine upgrade tier (int, 0.5.2, bought at the train workshop): top speed and how fast it speeds
+        /// up. Each upgrade key holds 0 none (also when missing) to 3.
         /// </summary>
-        public const string UpgradePrefix = "bf_up_";
+        public const string UpgradeEngine = "bf_up_engine";
 
-        /// <summary>The parts a locomotive is upgraded in (0.5.2): top speed and pull, coal use, coal box, brakes, wagons.</summary>
-        public static readonly string[] UpgradeParts = ["engine", "coal", "box", "brake", "wagons"];
+        /// <summary>A locomotive's coal use upgrade tier (int, as <see cref="UpgradeEngine"/>): how little coal it burns.</summary>
+        public const string UpgradeCoal = "bf_up_coal";
 
-        /// <summary>The highest upgrade tier (0.5.2).</summary>
-        public const int UpgradeTiers = 3;
+        /// <summary>A locomotive's coal box upgrade tier (int, as <see cref="UpgradeEngine"/>): how much coal it holds.</summary>
+        public const string UpgradeBox = "bf_up_box";
+
+        /// <summary>A locomotive's brakes upgrade tier (int, as <see cref="UpgradeEngine"/>): how hard it brakes.</summary>
+        public const string UpgradeBrake = "bf_up_brake";
+
+        /// <summary>A locomotive's wagons upgrade tier (int, as <see cref="UpgradeEngine"/>): how many wagons it pulls.</summary>
+        public const string UpgradeWagons = "bf_up_wagons";
 
         /// <summary>
         /// The players besides its builder who may use a locomotive when the server's TrainOwners setting is on (string,
