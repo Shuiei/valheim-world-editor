@@ -6,7 +6,7 @@ namespace Railroads.WorldEditor;
 /// Railroads, the mod of stone track, trains and stations (by VladasZ), as the editor knows it: its plugin file, its
 /// pieces and the models it builds them from, and the data keys it keeps on them.
 /// </summary>
-/// <remarks>Followed: Railroads 0.5.0.</remarks>
+/// <remarks>Followed: Railroads 0.5.2.</remarks>
 public static class RailroadsMod
 {
     /// <summary>The mod's plugin file, under a BepInEx plugins folder; its models are in <see cref="MeshFolder"/> beside it.</summary>
@@ -81,6 +81,8 @@ public static class RailroadsMod
         Track("bf_track_curve_r16_22", "track_curve_r16_22"),
         Track("bf_track_curve_r16_45", "track_curve_r16_45"),
         Track("bf_track_curve_r32_22", "track_curve_r32_22"),
+        Track("bf_track_s_left", "track_s_left"),
+        Track("bf_track_s_right", "track_s_right"),
         Track("bf_track_slope_gentle", "track_slope_gentle"),
         Track("bf_track_slope_steep", "track_slope_steep"),
         Track("bf_track_slope_bottom_gentle", "track_slope_bottom_gentle"),
@@ -286,12 +288,46 @@ public static class RailroadsMod
 
         /// <summary>
         /// What stands at a vehicle's first lamp (int, 0.5.0, changed at the train workshop): 0 a wood torch (also when
-        /// the key is missing), 1 none, 2 a wisp torch, which burns no fuel.
+        /// the key is missing), 1 none, 2 a wisp torch, which burns no fuel; since 0.5.2 also 3 an iron torch (resin),
+        /// 4 a green iron torch (guck), 5 a blue iron torch (greydwarf eyes), 6 a Dvergr lantern (no fuel).
         /// </summary>
         public const string Light0 = "bf_light0";
 
         /// <summary>What stands at a vehicle's second lamp (int, as <see cref="Light0"/>).</summary>
         public const string Light1 = "bf_light1";
+
+        /// <summary>
+        /// A locomotive's engine upgrade tier (int, 0.5.2, bought at the train workshop): top speed and how fast it speeds
+        /// up. Each upgrade key holds 0 none (also when missing) to 3.
+        /// </summary>
+        public const string UpgradeEngine = "bf_up_engine";
+
+        /// <summary>A locomotive's coal use upgrade tier (int, as <see cref="UpgradeEngine"/>): how little coal it burns.</summary>
+        public const string UpgradeCoal = "bf_up_coal";
+
+        /// <summary>A locomotive's coal box upgrade tier (int, as <see cref="UpgradeEngine"/>): how much coal it holds.</summary>
+        public const string UpgradeBox = "bf_up_box";
+
+        /// <summary>A locomotive's brakes upgrade tier (int, as <see cref="UpgradeEngine"/>): how hard it brakes.</summary>
+        public const string UpgradeBrake = "bf_up_brake";
+
+        /// <summary>A locomotive's wagons upgrade tier (int, as <see cref="UpgradeEngine"/>): how many wagons it pulls.</summary>
+        public const string UpgradeWagons = "bf_up_wagons";
+
+        /// <summary>
+        /// The players besides its builder who may use a locomotive when the server's TrainOwners setting is on (string,
+        /// 0.5.2): one a line, the player's id then a space and their name.
+        /// </summary>
+        public const string Allowed = "bf_allowed";
+
+        /// <summary>The name of a locomotive's builder, as its train console and workshop show it (string, 0.5.2).</summary>
+        public const string OwnerName = "bf_owner_name";
+
+        /// <summary>
+        /// A station sign's own id (long, 0.5.1), random, which the players' favourite stations name. The mod gives one to a
+        /// sign without it.
+        /// </summary>
+        public const string StationId = "bf_sid";
 
         /// <summary>A wagon's sign (string).</summary>
         public const string Sign = "bf_sign";

@@ -11,6 +11,8 @@ namespace Railroads.WorldEditor;
 /// <item>a vehicle loses its driver, levers and trip (and who sent it), and the hand cart who held its handles;</item>
 /// <item>a train keeps its name but loses its number: the server gives it one of its own, as to a train just built (the
 /// number is what an unnamed train goes by, and the server never numbers a train again);</item>
+/// <item>a station sign loses its own id: the mod gives it one of its own, so the players' favourite of the original is
+/// not this one too;</item>
 /// <item>a piece no longer on a deck (its flatbed was not copied) loses its place on that deck too;</item>
 /// <item>the text the mod's first versions kept the lines and wagons in (it still reads it in older saves) goes: it names
 /// the originals' track and wagons.</item>
@@ -25,7 +27,7 @@ public sealed class PastedCopies : ICopyRewriter
         RailroadsMod.Keys.After, RailroadsMod.Keys.Legs, RailroadsMod.Keys.Moving, RailroadsMod.Keys.Speed, RailroadsMod.Keys.Driver,
         RailroadsMod.Keys.Destination, RailroadsMod.Keys.Switch, RailroadsMod.Keys.Gear, RailroadsMod.Keys.Way, RailroadsMod.Keys.Stop,
         RailroadsMod.Keys.Front, RailroadsMod.Keys.Back, RailroadsMod.Keys.DeckPos, RailroadsMod.Keys.DeckRot, RailroadsMod.Keys.TrainNumber,
-        RailroadsMod.Keys.SentBy, RailroadsMod.Keys.TripCoal,
+        RailroadsMod.Keys.SentBy, RailroadsMod.Keys.TripCoal, RailroadsMod.Keys.StationId,
     ];
 
     /// <summary>The lines a vehicle keeps (bytes now; text in the mod's first versions): set again where it lands.</summary>
@@ -57,7 +59,7 @@ public sealed class PastedCopies : ICopyRewriter
         {
             copy.SetInt(key, null);
         }
-        foreach (string key in new[] { RailroadsMod.Keys.Driver, RailroadsMod.Keys.Front, RailroadsMod.Keys.Back, RailroadsMod.Keys.SentBy })
+        foreach (string key in new[] { RailroadsMod.Keys.Driver, RailroadsMod.Keys.Front, RailroadsMod.Keys.Back, RailroadsMod.Keys.SentBy, RailroadsMod.Keys.StationId })
         {
             copy.SetLong(key, null);
         }

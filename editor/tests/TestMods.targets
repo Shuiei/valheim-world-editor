@@ -29,8 +29,13 @@
   <Target Name="DownloadTestMods" BeforeTargets="BeforeBuild">
     <DownloadFile SourceUrl="https://thunderstore.io/package/download/%(TestMod.Owner)/%(TestMod.Package)/%(TestMod.Version)/"
                   DestinationFolder="$(TestModsDir)" DestinationFileName="%(TestMod.Identity).zip" Retries="3" RetryDelayMilliseconds="2000"
-                  Condition="!Exists('$(TestModsDir)/%(TestMod.Identity)/%(TestMod.Dll)')" />
+                  Condition="!Exists('$(TestModsDir)/%(TestMod.Identity)/.version-%(TestMod.Version)')" />
+    <!-- A mod left from a run that did not clean up (a build alone, a stopped run) is of the version it had then: what
+         another version left goes before this one's is unpacked, and a mark names the version that is there. -->
+    <RemoveDir Directories="$(TestModsDir)/%(TestMod.Identity)" Condition="Exists('$(TestModsDir)/%(TestMod.Identity).zip')" />
     <Unzip SourceFiles="$(TestModsDir)/%(TestMod.Identity).zip" DestinationFolder="$(TestModsDir)/%(TestMod.Identity)"
+           Condition="Exists('$(TestModsDir)/%(TestMod.Identity).zip')" />
+    <Touch Files="$(TestModsDir)/%(TestMod.Identity)/.version-%(TestMod.Version)" AlwaysCreate="true"
            Condition="Exists('$(TestModsDir)/%(TestMod.Identity).zip')" />
     <Delete Files="$(TestModsDir)/%(TestMod.Identity).zip" />
     <Error Text="%(TestMod.Identity) %(TestMod.Version) has no %(TestMod.Dll) after its download." Condition="!Exists('$(TestModsDir)/%(TestMod.Identity)/%(TestMod.Dll)')" />
