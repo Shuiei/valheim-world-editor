@@ -11,10 +11,10 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- The window's shots brought to its size and saved as JPEG: the SkiaSharp the app has through Avalonia. -->
-    <PackageReference Include="SkiaSharp" Version="4.156.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.156.1" />
+    <PackageReference Include="SkiaSharp" Version="4.157.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.157.0" />
     <!-- The captions drawn on the pictures shaped as the app shapes its text (Thai's marks placed over their letters). -->
-    <PackageReference Include="SkiaSharp.HarfBuzz" Version="4.156.1" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.4.0.101" />
+    <PackageReference Include="SkiaSharp.HarfBuzz" Version="4.157.0" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.4.0.200" />
   </ItemGroup>
 </Project>
