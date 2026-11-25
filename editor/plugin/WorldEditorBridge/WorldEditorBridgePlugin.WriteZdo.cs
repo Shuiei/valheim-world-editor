@@ -54,17 +54,17 @@ public sealed partial class WorldEditorBridgePlugin
     }
 
     /// <summary>One typed data section of ZDO.Save: item count, then key and value of each; nothing when empty.</summary>
-    private static void Section<T>(ZPackage pkg, List<KeyValuePair<int, T>> items, Action<T> write)
+    private static void Section<T>(ZPackage pkg, FastIterableKeyValues<int, T> items, Action<T> write)
     {
         if (items.Count == 0)
         {
             return;
         }
         pkg.WriteNumItems(items.Count);
-        foreach (var kv in items)
+        for (int i = 0; i < items.Count; i++)
         {
-            pkg.Write(kv.Key);
-            write(kv.Value);
+            pkg.Write(items[i].Key);
+            write(items[i].Value);
         }
     }
 }

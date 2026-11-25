@@ -61,7 +61,7 @@ public class ObjectDataTests
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 50, X = 1, Y = 0 });
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("SwordIron"), Quality = 3, Durability = 87.5f, X = 2, Y = 1, CrafterId = 1234567890123, CrafterName = "Ragnar", CustomData = { ["k"] = "v" } });
         byte[] bytes = inv.Write();
-        Assert.Equal(109, BitConverter.ToInt32(bytes, 0));
+        Assert.Equal(110, BitConverter.ToInt32(bytes, 0));
         var back = InventoryData.Read(bytes);
         Assert.Equal(2, back.Items.Count);
         Assert.Equal(50, back.Items[0].Stack);

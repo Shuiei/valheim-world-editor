@@ -5,6 +5,17 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.126.1 — unreleased
+
+### Fixed
+- **Works with Valheim 1.0.30.** The game's update changed how it hands out an object's values, and the
+  WorldEditorBridge plugin of 1.126.0 failed on it. Containers the editor saves now use the game's new item format,
+  so an item's cheated mark is kept in game.
+
+### WorldEditorBridge
+- Built against Valheim 1.0.30 (dedicated server build 26870897): reads and writes the object values the game now
+  keeps in its new lists. It needs Valheim 1.0.30 or later.
+
 ## v1.126.0 — 2026-11-17
 
 ### Added
