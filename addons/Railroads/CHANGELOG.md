@@ -3,6 +3,19 @@
 Changes to the Railroads add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.8.0 — unreleased
+
+### Added
+- **S bends.** Follows Railroads 0.5.2: the S bend left and right, which step the line 12 m to the side over 24 m, are
+  drawn and offered under Track.
+- **New lamps, upgrades and owners in the inspector.** The iron, green iron and blue iron torches and the Dvergr
+  lantern a vehicle's lamp now takes, a locomotive's upgrade tiers (engine, coal use, coal box, brakes, wagons: 0 to 3),
+  the players allowed to use it and its builder's name, and a station sign's own id.
+
+### Fixed
+- **A pasted station sign gets its own id.** Since Railroads 0.5.1 the players' favourite stations name a sign's id: a
+  pasted sign kept the original's, so two signs had one id. The copy now has none, and the mod gives it its own.
+
 ## v0.7.0 — 2026-11-12
 
 ### Added

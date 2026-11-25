@@ -23,6 +23,19 @@ public class PastedCopiesTests
         new("float", RailroadsMod.Keys.TripCoal),
     ];
 
+    [Fact]
+    public void APastedSignLeavesTheOriginalsId()
+    {
+        var copy = new FakeObject(RailroadsMod.Sign);
+        copy.Strings[RailroadsMod.Keys.Name] = "Fixture Halt";
+        copy.Longs[RailroadsMod.Keys.StationId] = 4242424242L;
+
+        Rewrite(copy);
+
+        // The mod gives a sign without an id one of its own (Railroads 0.5.1).
+        Assert.Equal([RailroadsMod.Keys.Name], copy.Keys);
+    }
+
     /// <summary>A value of a type under a key.</summary>
     private sealed record Key(string Type, string Name);
 

@@ -99,7 +99,14 @@ as the add-on pastes it (its wagons with new ids, the last one turned), the mod 
 too, where a copy still naming the original's turned wagon was turned back to face the train's way. The crossings were
 not built in a game: that needs a player.
 
-Railroads 0.5.0 is the version the add-on follows. 0.4.10 to 0.5.0 change none of the models the add-on read, the
+Railroads 0.5.2 is the version the add-on follows. 0.5.1 gives each station sign an id of its own, which the players'
+favourite stations name: a pasted sign is given its own. 0.5.2 adds the S bends (track the add-on draws and joins from
+their own models, as every piece of track), new torches for the lamps, the locomotive upgrades and the train owners
+(data the inspector names), and lets the first track snap onto the edge of a floor, which only a player building
+does. No other model the add-on read, the track or the placing of vehicles and signs changed (checked by comparing the
+versions' files and their data keys). The 0.5.2 changes were not tried on a server.
+
+Before, 0.5.0 was the version the add-on followed. 0.4.10 to 0.5.0 change none of the models the add-on read, the
 track, the placing of vehicles and signs or the data it knew (checked by comparing the versions' files, model by model,
 and their data keys). 0.4.13 changes where new supports end (on rocks, trees and pieces too), which the add-on never
 builds; 0.4.14 lets track be paid with core wood, kept as before. 0.4.15 adds the buffer stop, track of its own: a beam
@@ -145,7 +152,12 @@ torch and none were kept as written. No train was driven against a buffer stop: 
 - **Torches.** Since Railroads 0.5.0 the train workshop changes the torches on a locomotive's or wagon's lamps: a wood
   torch, none, or a wisp torch, which burns no fuel and clears the mist round the train. **First lamp's torch** and
   **Second lamp's torch** in the inspector say which (0 wood, 1 none, 2 wisp; not set is wood) and change it, at no
-  price: a torn down vehicle gives back the torches it has, as the mod pays for them.
+  price: a torn down vehicle gives back the torches it has, as the mod pays for them. Since 0.5.2 a lamp also takes an
+  iron torch (3), a green one (4), a blue one (5) or a Dvergr lantern (6).
+- **Upgrades and owners.** Since Railroads 0.5.2 the train workshop sells a locomotive upgrades in 3 tiers: **Engine**,
+  **Coal use**, **Coal box**, **Brakes** and **Wagons upgrade** in the inspector say which tier (0 none to 3) and change
+  it, at no price (a torn down locomotive gives back every tier it has). With the server's TrainOwners setting on, only
+  its builder (**Builder's name**), the players on its list (**Allowed players**) and admins drive it.
 - **Turned wagons.** Since Railroads 0.4.4 a wagon keeps the way it faced when it was coupled (a portal wagon can face
   either side of the track); the locomotive names the turned ones (**Turned wagons** in the inspector).
 
@@ -169,7 +181,7 @@ dotnet test --project addons/Railroads/tests/Railroads.WorldEditor.Tests
 tools/addons.sh dist                    # dist/ValheimWorldEditor-addon-Railroads-<version>.zip
 ```
 
-Building the tests downloads Railroads 0.5.0, the version the add-on follows, from Thunderstore (never kept in the
+Building the tests downloads Railroads 0.5.2, the version the add-on follows, from Thunderstore (never kept in the
 repository): every model of it is read and drawn. The tests also replay objects the real mod made on a local server
 (`tests/Railroads.WorldEditor.Tests/fixtures/railroads-reference.txt`: track, a station sign, a train sent to it with
 a wagon and a flatbed carrying a floor, a hand cart), and track and an old station a player built, with their prices
