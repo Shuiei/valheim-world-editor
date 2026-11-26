@@ -240,8 +240,38 @@ How it works, and what it leaves out:
   draws from, a key that is a number or an animation's, and what is no plain value ("items", "containerSize",
   "position", "rotation"…).
 - **The rules themselves do not run in the editor**: a "create" rule with a chance, a swap or a spawn is the game's.
-  The tool gives the data; what the rules then do with the object happens in the game.
+  The [Prefab rules tool](#the-prefab-rules-tool) shows which objects they act on. The tool gives the data; what the rules then do with the object happens in the game.
 - **The files are read when the tool is chosen**, but the card's lists are made once: after adding entries or rules,
+  restart the editor.
+
+## The Prefab rules tool
+
+Expand World Prefabs' rules (`expand_world/expand_prefabs*.yaml`) act on objects when something happens to them: one
+is made, destroyed, hit, poked, a player says a word nearby… The tool shows what the rules would do to the objects of
+the open area. It changes nothing: the rules run in the game.
+
+1. Open an area in the 3D editor and choose **Prefab rules** on the rail, under **Mods**.
+2. Choose a **Rule**, or "All rules on object creation". The card says what starts the rule, the objects it is for,
+   what it does (removes, swaps, spawns, sets data, drops, runs commands…) and which of its conditions only the game
+   checks.
+3. The objects it acts on are marked: **green** when every condition holds, **amber** when the rule also has
+   conditions only the game knows (an environment, a chance, nearby objects, a key…).
+4. Click an object: the status line lists the rules on it, and whether each surely or maybe acts.
+
+What the editor checks, and what it leaves to the game:
+
+- **Checked**: the object's name ("prefab", "excludePrefab"), its biome ("biomes", "bannedBiomes"), its distance from
+  the world's middle ("minDistance", "maxDistance"; below 1 a fraction of 10 000 m, as the mod reads it), its height
+  above the sea ("minAltitude", "maxAltitude"), its place ("minX"… "maxZ") and plain data filters (`int, key, 1`).
+  An object without the filter's value is amber: the game's default decides.
+- **Left to the game**: environments, global and player keys, events, nearby objects and locations, groups, day and
+  night, paint and terrain height, chance, conditions, filters with a weight, range or parameter, and a bound or
+  biome that is no plain value or a name the editor does not know (an alt biome, a biome a mod adds).
+- **Not marked**: a rule's objects named by wildcard (`Troll*`), value group or a name the game does not have, and
+  rules for the player. The card names them.
+- **Which trigger**: only "create" rules run while a world is made; the others (destroy, state, say, poke, time…) run
+  while it is played. Choosing one still marks the objects it is for, and the card says it is the game's.
+- **The file is read when the tool is chosen**, but the card's list is made once: after adding or reordering rules,
   restart the editor.
 
 ## With Riverheim

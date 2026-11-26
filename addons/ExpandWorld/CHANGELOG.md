@@ -3,7 +3,13 @@
 Changes to the Expand World add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
-## v0.3.1 — unreleased
+## v0.4.0 — unreleased
+
+### Added
+- **Expand World Prefabs' rules shown.** The new **Prefab rules** tool (under **Mods** on the 3D editor's rail) lists
+  the rules of `expand_world/expand_prefabs*.yaml`, says what starts each one, what it does and which of its
+  conditions only the game can check, and marks the objects of the open area a rule acts on: green when every
+  condition holds, amber when some are the game's. Clicking an object lists the rules on it. It changes nothing.
 
 ### Fixed
 - **Follows Expand World Data 1.82.** A location's `clearArea` given as a radius (`clearArea: 25`) keeps that circle
