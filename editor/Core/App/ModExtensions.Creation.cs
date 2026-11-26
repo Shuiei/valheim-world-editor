@@ -79,12 +79,23 @@ public static partial class ModExtensions
                     own[i] = data(i);
                     changed[i] = new CopyView(m.Prefab, m.Position, m.Rotation, [.. own[i]], m.Scale);
                 }
+                // What the objects are before the rules: put back whole when the rules throw part way (a swap whose
+                // removal is made but not its addition).
+                var before = mine.ToDictionary(i => i, i => (changed[i].Rotation, Data: changed[i].Data.ToList()));
                 var step = new Step([.. mine.Select(i => changed[i])], seed, biome, height);
-                Guard(l, () =>
+                if (!Guard(l, () =>
                 {
                     rules.Created(step);
                     return true;
-                }, false);
+                }, false))
+                {
+                    foreach (int i in mine)
+                    {
+                        var m = batch[i];
+                        changed[i] = new CopyView(m.Prefab, m.Position, before[i].Rotation, before[i].Data, m.Scale);
+                    }
+                    continue;
+                }
                 foreach (int i in mine)
                 {
                     if (step.Left.Contains(changed[i]))

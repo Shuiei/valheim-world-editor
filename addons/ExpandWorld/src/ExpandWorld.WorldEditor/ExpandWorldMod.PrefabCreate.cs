@@ -61,7 +61,8 @@ public static partial class ExpandWorldMod
     ];
 
     /// <summary>How the editor applies a rule as objects are made; null and why when it does not.</summary>
-    private static (CreatePlan? Plan, string Why) PlanOf(PrefabRule rule, IReadOnlyDictionary<string, object?> f, Func<string, bool> known)
+    private static (CreatePlan? Plan, string Why) PlanOf(PrefabRule rule, IReadOnlyDictionary<string, object?> f, Func<string, bool> known,
+        IReadOnlyDictionary<string, CustomData>? entries)
     {
         if (!rule.OnCreate)
         {
@@ -69,16 +70,9 @@ public static partial class ExpandWorldMod
         }
         string Text(string key) => f.GetValueOrDefault(key) is string s ? s.Trim() : "";
         static float? Plain(string text) => float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : null;
-        // A chance is drawn here; any other condition only the game knows keeps the rule the game's.
-        var gameOnly = rule.GameOnly.Where(k => k != "chance").ToList();
-        if (Text("chance") != "" && Plain(Text("chance")) == null)
-        {
-            gameOnly.Add("chance");
-        }
-        if (Text("weight") != "" && Plain(Text("weight")) == null)
-        {
-            gameOnly.Add("weight");
-        }
+        // A chance and a weight are drawn here (when plain numbers); any other condition only the game knows keeps the
+        // rule from the objects the editor makes.
+        var gameOnly = rule.GameOnly.Where(k => k is not ("chance" or "weight") || Plain(Text(k)) == null).ToList();
         if (gameOnly.Count > 0)
         {
             return (null, $"only the game checks {string.Join(", ", gameOnly)}");
@@ -102,6 +96,22 @@ public static partial class ExpandWorldMod
         if ((badSwap ?? badSpawn) is { } bad)
         {
             return (null, bad);
+        }
+        // A data entry the editor cannot give whole would leave the object, or what replaces it, part made.
+        foreach (string name in new[] { data }.Concat(swaps.Concat(spawns).Select(s => s.Data)).Where(n => n != "").Distinct(StringComparer.Ordinal))
+        {
+            if (entries == null)
+            {
+                break;
+            }
+            if (entries.GetValueOrDefault(name) is not { } entry)
+            {
+                return (null, $"it gives the data entry {name}, which no data file holds");
+            }
+            if (entry.Skipped.Count > 0)
+            {
+                return (null, $"its data entry {name} sets what the game works out ({string.Join(", ", entry.Skipped)})");
+            }
         }
         return (new CreatePlan
         {
@@ -179,12 +189,20 @@ public static partial class ExpandWorldMod
                 if (!hadPosition)
                 {
                     snap = p[i + 2] == "snap";
-                    offset = Xzy(p[i], p[i + 1], snap ? "0" : p[i + 2]) ?? Vector3.Zero;
+                    if (Xzy(p[i], p[i + 1], snap ? "0" : p[i + 2]) is not { } at)
+                    {
+                        return null;
+                    }
+                    offset = at;
                     hadPosition = true;
                 }
                 else if (Yxz(p[i], p[i + 1], p[i + 2]) is { } t)
                 {
                     turn = t;
+                }
+                else
+                {
+                    return null;
                 }
                 i += 2;
                 continue;
@@ -207,7 +225,8 @@ public static partial class ExpandWorldMod
         string Text(string key) => map.GetValueOrDefault(key) is string s ? s.Trim() : "";
         // Repeats, conditions and owners are the game's.
         if (Text("prefab") is not { Length: > 0 } prefab || prefab.Contains('<', StringComparison.Ordinal)
-            || GameSpawnFields.Any(k => Text(k) != "") || map.GetValueOrDefault("data") is not (null or string))
+            || GameSpawnFields.Any(k => Text(k) != "") || map.GetValueOrDefault("data") is not (null or string)
+            || Text("data").Contains('<', StringComparison.Ordinal))
         {
             return null;
         }
@@ -310,7 +329,8 @@ public static partial class ExpandWorldMod
                 yield return s;
             }
         }
-        if (Drawn([.. spawns.Where(s => s.Weight != null)], s => s.Weight, random) is { } one)
+        // The one drawn still has its chance drawn, as every spawn does.
+        if (Drawn([.. spawns.Where(s => s.Weight != null)], s => s.Weight, random) is { } one && (one.Chance is not { } chance || chance >= 1f || random.NextDouble() <= chance))
         {
             yield return one;
         }

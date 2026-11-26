@@ -178,4 +178,38 @@ public class PrefabCreationRulesTests
 
         Assert.Empty(Apply(rules, objects: new Made("Beech1", default)).Left);
     }
+
+    [Fact]
+    public void SpawnsTheGameWorksOutKeepTheRuleFromTheEditor()
+    {
+        var rules = Rules(
+            E(("prefab", "Beech1"), ("type", "create"), ("swap", "Oak1, 1,2,<par>")),
+            E(("prefab", "Beech1"), ("type", "create"), ("swap", L(new Dictionary<string, object?> { ["prefab"] = "Oak1", ["data"] = "<par>" }))));
+
+        Assert.All(rules, r => Assert.Null(r.Create));
+    }
+
+    [Fact]
+    public void AWeightedSpawnDrawnStillHasItsChance()
+    {
+        var rules = Rules(E(("prefab", "Rock_4"), ("type", "create"),
+            ("spawn", L(new Dictionary<string, object?> { ["prefab"] = "vfx_spawn", ["weight"] = "1", ["chance"] = "0" }))));
+
+        Assert.Empty(Apply(rules, objects: new Made("Rock_4", default)).Added);
+    }
+
+    [Fact]
+    public void ADataEntryTheEditorCannotGiveWholeKeepsTheRuleFromTheEditor()
+    {
+        var entries = ExpandWorldMod.CustomDataOf([E(("name", "marked"), ("ints", L("marked, 1"))), E(("name", "loot"), ("items", L("Wood")))], [], Game.Contains)
+            .ToDictionary(e => e.Name);
+
+        var rules = ExpandWorldMod.PrefabRulesOf([
+            E(("prefab", "Beech1"), ("type", "create"), ("swap", "Oak1, loot")),
+            E(("prefab", "Beech1"), ("type", "create"), ("data", "nothing")),
+            E(("prefab", "Beech1"), ("type", "create"), ("data", "marked"))], Game.Contains, BiomeTable.Vanilla, entries);
+
+        Assert.Equal(["its data entry loot sets what the game works out (items)", "it gives the data entry nothing, which no data file holds", ""],
+            rules.Select(r => r.NotApplied));
+    }
 }

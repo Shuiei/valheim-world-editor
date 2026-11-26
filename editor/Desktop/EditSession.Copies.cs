@@ -21,7 +21,7 @@ public sealed partial class EditSession
     {
         var t = Scene.Things[index];
         var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
-        return (new NewObject(0, t.Prefab, position, rotation, scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw, from?.Data), t.Piece);
+        return (new NewObject(0, t.Prefab, position, rotation, scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw, from?.Data, t.Id), t.Piece);
     }
 
     /// <summary>

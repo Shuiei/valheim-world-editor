@@ -29,10 +29,7 @@ internal sealed class PrefabCreationRules(IEditorHost host) : ICreationRules
             }
             var file = ReadPrefabRules(host.BepInExFolders);
             List<PrefabRule> rules = [.. file.Rules.Where(r => r.Create != null)];
-            var entries = rules.Count > 0
-                ? ReadCustomObjects(host.BepInExFolders).Entries.ToDictionary(e => e.Name, StringComparer.Ordinal)
-                : [];
-            _read = (rules, rules.SelectMany(r => r.Prefabs).ToHashSet(StringComparer.Ordinal), entries);
+            _read = (rules, rules.SelectMany(r => r.Prefabs).ToHashSet(StringComparer.Ordinal), file.Entries ?? new Dictionary<string, CustomData>());
             _readAt = DateTime.UtcNow;
             return _read.Value;
         }

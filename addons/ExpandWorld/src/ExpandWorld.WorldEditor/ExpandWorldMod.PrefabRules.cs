@@ -130,7 +130,10 @@ public static partial class ExpandWorldMod
     /// <param name="scripts">The entries of expand_prefabs*.yaml (data entries among them are passed over).</param>
     /// <param name="known">Whether a name is an object of the game.</param>
     /// <param name="biomes">The world's biomes, for the names.</param>
-    internal static List<PrefabRule> PrefabRulesOf(IReadOnlyList<Entry> scripts, Func<string, bool> known, BiomeTable biomes)
+    /// <param name="entries">The data entries, by name (a rule giving one that is missing, or sets values the editor
+    /// cannot, is not applied as objects are made); null: not checked.</param>
+    internal static List<PrefabRule> PrefabRulesOf(IReadOnlyList<Entry> scripts, Func<string, bool> known, BiomeTable biomes,
+        IReadOnlyDictionary<string, CustomData>? entries = null)
     {
         List<PrefabRule> rules = [];
         foreach (var entry in scripts.Where(IsRule))
@@ -214,7 +217,7 @@ public static partial class ExpandWorldMod
                 GameOnly = gameOnly,
                 Actions = ActionsOf(f),
             };
-            var (plan, why) = PlanOf(rule, f, known);
+            var (plan, why) = PlanOf(rule, f, known, entries);
             rules.Add(rule with { Create = plan, NotApplied = why });
         }
         return rules;
@@ -304,7 +307,7 @@ public static partial class ExpandWorldMod
         {
             return RuleMatch.No;
         }
-        bool unsure = rule.GameOnly.Any(k => !(drawn && k == "chance"));
+        bool unsure = rule.GameOnly.Any(k => !(drawn && k is "chance" or "weight"));
         foreach (var filter in rule.Filters)
         {
             bool? holds = Holds(filter, obj);
@@ -375,7 +378,8 @@ public static partial class ExpandWorldMod
     /// <summary>What was found of Expand World Prefabs' rules.</summary>
     /// <param name="Rules">The rules, in file order.</param>
     /// <param name="Problem">Why there are none, for the player ("": they were read).</param>
-    public sealed record PrefabRules(IReadOnlyList<PrefabRule> Rules, string Problem);
+    /// <param name="Entries">The data entries the rules may give, by name.</param>
+    public sealed record PrefabRules(IReadOnlyList<PrefabRule> Rules, string Problem, IReadOnlyDictionary<string, CustomData>? Entries = null);
 
     /// <summary>
     /// The rules of expand_prefabs*.yaml in the first BepInEx folder with Expand World Prefabs installed. Lines about
@@ -399,12 +403,17 @@ public static partial class ExpandWorldMod
             List<string> notes = [];
             string files = Path.Combine(folder.Path, "config", DataFolder);
             var scripts = ReadKind(Directory.Exists(files) ? files : null, "prefabs", yaml, notes) ?? [];
+            // The data entries, as the Custom object tool reads them: a rule giving one is applied only when the editor
+            // can set all of it.
+            var found = Found.None with { Folder = folder.Path, DataFiles = Directory.Exists(files) ? files : null };
+            List<Entry> named = [.. ReadDataEntries(found, yaml, notes), .. scripts.Where(e => e.Fields.ContainsKey("name") && !IsRule(e))];
+            var entries = CustomDataOf(named, [], Game.HasPrefab).ToDictionary(e => e.Name, StringComparer.Ordinal);
             foreach (string note in notes)
             {
                 Note($"Expand World: {note}");
             }
-            var rules = PrefabRulesOf(scripts, Game.HasPrefab, BiomeTable.Vanilla);
-            return new PrefabRules(rules, rules.Count > 0 ? "" : "No rule found in config/expand_world (expand_prefabs*.yaml).");
+            var rules = PrefabRulesOf(scripts, Game.HasPrefab, BiomeTable.Vanilla, entries);
+            return new PrefabRules(rules, rules.Count > 0 ? "" : "No rule found in config/expand_world (expand_prefabs*.yaml).", entries);
         }
         return new PrefabRules([], "Expand World Prefabs is not installed in the BepInEx folders the editor knows.");
     }

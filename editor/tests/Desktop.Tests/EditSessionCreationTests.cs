@@ -91,4 +91,24 @@ public sealed class EditSessionCreationTests : IDisposable
 
         Assert.Equal(Beech, s.Scene.Things[made[0]].Prefab);
     }
+
+    [Fact]
+    public void AnEditThatTurnsAnObjectIsNotMadeButANewOneBesideARemovalIs()
+    {
+        var s = TestScenes.Flat(1);
+        int rock = s.Commit("Put", null, [], [New(Rock, new Vector3(10, 30, 5))])[0];
+        int beech = s.Commit("Put", null, [], [New(Beech, new Vector3(20, 30, 5))])[0];
+        var rules = new Swapper();
+        ModExtensions.UseForTests(("Prefabs", rules));
+        int id = s.Scene.Things[rock].Id;
+
+        // The inspector turns the rock: it is the rock again.
+        var edited = s.Commit("Edit", null, [rock], [(new NewObject(0, Rock, new Vector3(10, 30, 5), new Vector3(0, 90, 0), 0, Remakes: id), false)]);
+        // The beech taken away and an unrelated beech put elsewhere: that one is made.
+        var made = s.Commit("Swap", null, [beech], [New(Beech, new Vector3(40, 30, 5))]);
+
+        Assert.Single(edited);
+        Assert.Null(Int(s, edited[0], "x"));
+        Assert.Equal(Oak, s.Scene.Things[Assert.Single(made)].Prefab);
+    }
 }

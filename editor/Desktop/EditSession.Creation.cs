@@ -13,9 +13,9 @@ public sealed partial class EditSession
 {
     /// <summary>
     /// A step's new objects with what the running creation rules do to those it makes: some left out, some with values
-    /// set or turned, some added. An object moved (made from a thing the step takes away) or changed where it stands
-    /// (standing exactly where a thing the step takes away of its kind stood, turned the same) is not made: it is
-    /// passed as it is.
+    /// set or turned, some added. A thing moved or edited (NewObject.Remakes names a thing the step takes away), or
+    /// replaced exactly where a thing of its kind the step takes away stood, turned the same, is not made: it is passed
+    /// as it is.
     /// </summary>
     /// <param name="remove">The things the step takes away, indices into the scene's things.</param>
     /// <param name="add">The step's new objects.</param>
@@ -26,17 +26,16 @@ public sealed partial class EditSession
             return add;
         }
         var world = Scene.World;
-        var removed = remove.Where(i => i >= 0 && i < Scene.Things.Count).Select(i => Scene.Things[i]).ToList();
+        // A thing already gone is not taken away by the step (ChangeThings passes it over).
+        var removed = remove.Where(i => i >= 0 && i < Scene.Things.Count && !Scene.Things[i].Gone).Select(i => Scene.Things[i]).ToList();
+        var removedIds = removed.Select(t => t.Id).ToHashSet();
         var inPlace = removed.Select(t => (t.Prefab, t.Position, t.Rotation)).ToHashSet();
-        // A thing moved comes back as a copy of what it was made from (MovedCopy): a saved one's id, or an added one's
-        // own making.
-        bool Moved(NewObject n) => removed.Any(t => t.Prefab == n.Prefab && (t.Id >= 0
-            ? !n.Fresh && n.SourceId == t.Id
-            : Edits.FindAdded(t.Id) is { } a && n.SourceId == a.SourceId && ReferenceEquals(n.Raw, a.Raw) && ReferenceEquals(n.Data, a.Data)));
+        // A thing moved or edited comes back as itself (NewObject.Remakes); a step that only replaces a thing exactly
+        // where it stood, turned the same, edits it too (as the placers see it).
         List<int> made = [.. Enumerable.Range(0, add.Count).Where(i =>
         {
             var n = add[i].Object;
-            return !inPlace.Contains((n.Prefab, n.Position, n.Rotation)) && !Moved(n);
+            return !(n.Remakes is { } id && removedIds.Contains(id)) && !inPlace.Contains((n.Prefab, n.Position, n.Rotation));
         })];
         if (made.Count == 0)
         {
