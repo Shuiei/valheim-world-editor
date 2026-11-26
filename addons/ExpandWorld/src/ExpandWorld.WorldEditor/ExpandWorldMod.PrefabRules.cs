@@ -89,6 +89,12 @@ public static partial class ExpandWorldMod
         /// <inheritdoc cref="MinX"/>
         public float? MaxZ { get; init; }
 
+        /// <summary>Whether it acts beside the rule drawn among an object's ("separate"), not drawn with them.</summary>
+        public bool Separate { get; init; }
+
+        /// <summary>Whether it acts only when no other rule of its trigger does ("fallback").</summary>
+        public bool Fallback { get; init; }
+
         /// <summary>The data filters the editor checks (plain "type, key, value").</summary>
         public IReadOnlyList<RuleFilter> Filters { get; init; } = [];
 
@@ -108,9 +114,10 @@ public static partial class ExpandWorldMod
     private static readonly string[] GameConditions =
     [
         "environments", "bannedEnvironments", "globalKeys", "bannedGlobalKeys", "keys", "bannedKeys", "events",
+        "eventDistance",
         "objects", "bannedObjects", "locations", "bannedLocations", "playerEvents", "bannedPlayerEvents", "groups",
         "bannedGroups", "day", "night", "paint", "minPaint", "maxPaint", "terrainHeight", "minTerrainHeight",
-        "maxTerrainHeight", "chance", "condition", "admin", "filterLimit",
+        "maxTerrainHeight", "chance", "weight", "condition", "admin", "filterLimit",
     ];
 
     /// <summary>Expand World Prefabs' rules among the entries of its files, in file order.</summary>
@@ -195,6 +202,8 @@ public static partial class ExpandWorldMod
                 MaxY = Num("maxY"),
                 MinZ = Num("minZ"),
                 MaxZ = Num("maxZ"),
+                Separate = Text("separate") == "true",
+                Fallback = Text("fallback") == "true",
                 Filters = filters,
                 GameOnly = gameOnly,
                 Actions = ActionsOf(f),
@@ -296,10 +305,37 @@ public static partial class ExpandWorldMod
             }
             else if (holds != !filter.Banned)
             {
-                return RuleMatch.No;
+                // With a limit, the game counts the filters that hold instead of asking for each.
+                if (!rule.GameOnly.Contains("filterLimit"))
+                {
+                    return RuleMatch.No;
+                }
+                unsure = true;
             }
         }
         return unsure ? RuleMatch.Maybe : RuleMatch.Yes;
+    }
+
+    /// <summary>
+    /// Whether a rule acts on an object among the other rules: as <see cref="Match"/>, but a rule the game draws among
+    /// others of its trigger (a plain one beside another plain one), or a "fallback" one another rule may take the
+    /// place of, is only Maybe.
+    /// </summary>
+    /// <param name="rule">The rule.</param>
+    /// <param name="all">Every rule of the files.</param>
+    /// <param name="obj">The object.</param>
+    /// <param name="biome">The biome under it (Heightmap.Biome).</param>
+    internal static RuleMatch MatchAmong(PrefabRule rule, IReadOnlyList<PrefabRule> all, IObjectView obj, int biome)
+    {
+        var match = Match(rule, obj, biome);
+        if (match != RuleMatch.Yes || rule.Separate)
+        {
+            return match;
+        }
+        var triggers = rule.Triggers.Select(FirstWord).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        bool Competes(PrefabRule other) => !ReferenceEquals(other, rule) && !other.Separate && (rule.Fallback || !other.Fallback)
+            && other.Triggers.Any(t => triggers.Contains(FirstWord(t))) && Match(other, obj, biome) != RuleMatch.No;
+        return all.Any(Competes) ? RuleMatch.Maybe : RuleMatch.Yes;
     }
 
     /// <summary>
