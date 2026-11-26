@@ -7,7 +7,7 @@ namespace ExpandWorld.WorldEditor;
 /// <summary>
 /// The Prefab rules tool: shows Expand World Prefabs' rules (expand_prefabs*.yaml) and marks the objects of the open
 /// area a rule would act on, green when every condition holds, amber when some only the game knows. It changes
-/// nothing: the rules run in the game.
+/// nothing itself: the "create" rules the editor can apply act as objects are made (PrefabCreationRules).
 /// </summary>
 /// <param name="host">The editor (its BepInEx folders).</param>
 internal sealed class PrefabRuleTool(IEditorHost host) : IEditorTool
@@ -24,7 +24,7 @@ internal sealed class PrefabRuleTool(IEditorHost host) : IEditorTool
 
     /// <inheritdoc/>
     public ToolInfo Info { get; } = new("prefab-rules", "Prefab rules",
-        "Shows Expand World Prefabs' rules and marks the objects a rule would act on. Changes nothing.")
+        "Shows Expand World Prefabs' rules and marks the objects a rule would act on.")
     {
         Icon = "M2 3h12v2H2zM2 7h8v2H2zM2 11h5v2H2zM12 9l3 3-3 3-1-1 2-2-2-2z",
     };
@@ -132,6 +132,15 @@ internal sealed class PrefabRuleTool(IEditorHost host) : IEditorTool
         if (rule.GameOnly.Count > 0)
         {
             parts.Add($"Only the game checks: {string.Join(", ", rule.GameOnly)}.");
+        }
+        if (rule.Create is { } plan)
+        {
+            parts.Add("The editor applies it to the objects you place, paste or regrow" +
+                (plan.LeftToGame.Count > 0 ? $", but for {string.Join(", ", plan.LeftToGame)}." : "."));
+        }
+        else if (rule.OnCreate)
+        {
+            parts.Add($"The editor does not apply it: {rule.NotApplied}.");
         }
         return string.Join(" ", parts);
     }

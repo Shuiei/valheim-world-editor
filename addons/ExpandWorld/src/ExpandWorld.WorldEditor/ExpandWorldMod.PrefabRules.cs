@@ -98,6 +98,12 @@ public static partial class ExpandWorldMod
         /// <summary>What it does, for the player ("removes it", "spawns vfx_spawn"…).</summary>
         public IReadOnlyList<string> Actions { get; init; } = [];
 
+        /// <summary>What the editor does when it applies the rule as an object is made (null: it does not; see <see cref="NotApplied"/>).</summary>
+        public CreatePlan? Create { get; init; }
+
+        /// <summary>Why the editor does not apply the rule as objects are made ("": it does).</summary>
+        public string NotApplied { get; init; } = "";
+
         /// <summary>One line for the rule's list: number, trigger, objects.</summary>
         public string Title => $"#{Number} {string.Join(" / ", Triggers.Select(FirstWord))}: {(Prefab.Length > 0 ? Prefab : "(no prefab)")}";
     }
@@ -175,7 +181,7 @@ public static partial class ExpandWorldMod
             List<string> named = [.. Rows(f.GetValueOrDefault("prefab")).SelectMany(SplitList)];
             var biome = Biomes("biomes", false);
             var banned = Biomes("bannedBiomes", true) ?? Heightmap.Biome.None;
-            rules.Add(new PrefabRule
+            var rule = new PrefabRule
             {
                 Number = rules.Count + 1,
                 Triggers = [.. Rows(f.GetValueOrDefault("types")).Concat(Rows(f.GetValueOrDefault("type"))).Select(t => t.Trim()).Where(t => t != "").DefaultIfEmpty("create")],
@@ -198,7 +204,9 @@ public static partial class ExpandWorldMod
                 Filters = filters,
                 GameOnly = gameOnly,
                 Actions = ActionsOf(f),
-            });
+            };
+            var (plan, why) = PlanOf(rule, f, known);
+            rules.Add(rule with { Create = plan, NotApplied = why });
         }
         return rules;
     }
@@ -267,7 +275,8 @@ public static partial class ExpandWorldMod
     /// <param name="rule">The rule.</param>
     /// <param name="obj">The object.</param>
     /// <param name="biome">The biome under it (Heightmap.Biome).</param>
-    internal static RuleMatch Match(PrefabRule rule, IObjectView obj, int biome)
+    /// <param name="drawn">Whether the rule's chance is drawn by the editor (applying it): no condition the game keeps.</param>
+    internal static RuleMatch Match(PrefabRule rule, IObjectView obj, int biome, bool drawn = false)
     {
         if (!rule.Prefabs.Contains(obj.Prefab) || rule.Excluded.Contains(obj.Prefab))
         {
@@ -286,7 +295,7 @@ public static partial class ExpandWorldMod
         {
             return RuleMatch.No;
         }
-        bool unsure = rule.GameOnly.Count > 0;
+        bool unsure = rule.GameOnly.Any(k => !(drawn && k == "chance"));
         foreach (var filter in rule.Filters)
         {
             bool? holds = Holds(filter, obj);

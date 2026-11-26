@@ -61,6 +61,9 @@ public static partial class ModExtensions
             loaded.Placers.Add((placer, prefabs.Distinct(StringComparer.Ordinal).ToDictionary(StableHash.Of, p => p)));
 
         /// <inheritdoc/>
+        public void AddCreationRules(ICreationRules rules) => loaded.CreationRules.Add(rules);
+
+        /// <inheritdoc/>
         public void AddShapes(IShapeProvider provider, params string[] prefabs)
         {
             foreach (string p in prefabs)

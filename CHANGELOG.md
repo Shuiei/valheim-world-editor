@@ -5,6 +5,15 @@ version number. Newest first. Changes to the plugin are under **WorldEditorBridg
 the plugin is unchanged in versions without that part. Mods newly supported, or a new version of one, are under
 **Mods**.
 
+## v1.127.0 — unreleased
+
+### Added
+- **Add-ons can change objects as they are made.** An add-on can now do what its mod does when the game creates an
+  object: swap it, remove it, add others beside it or set its values. The editor hands it the objects you place, paste
+  or regrow, which the game never creates itself. Moving or editing an object in place does not count as making it. The Expand World
+  add-on uses this to apply Expand World Prefabs' "create" rules. See `ICreationRules` in the
+  [modding guide](docs/modding.md#hooks).
+
 ## v1.126.2 — 2026-11-25
 
 ### Fixed

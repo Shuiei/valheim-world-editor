@@ -21,5 +21,6 @@ public sealed class ExpandWorldExtension : IWorldEditorExtension
         registry.AddTool(new PersistentEventTool(registry.Host));
         registry.AddTool(new CustomObjectTool(registry.Host));
         registry.AddTool(new PrefabRuleTool(registry.Host));
+        registry.AddCreationRules(new PrefabCreationRules(registry.Host));
     }
 }
