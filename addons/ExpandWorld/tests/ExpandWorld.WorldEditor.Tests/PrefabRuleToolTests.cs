@@ -1,9 +1,9 @@
 using System.Numerics;
 using ValheimGen;
-using Vector3 = System.Numerics.Vector3;
 using ValheimWorldEditor.Sdk;
 using Xunit;
 using static ExpandWorld.WorldEditor.Tests.ExpandWorldEntries;
+using Vector3 = System.Numerics.Vector3;
 
 namespace ExpandWorld.WorldEditor.Tests;
 
@@ -137,7 +137,8 @@ public class PrefabRuleToolTests
         Assert.Equal(ExpandWorldMod.RuleMatch.Yes, ExpandWorldMod.Match(rule, marked, Meadows));
         Assert.Equal(ExpandWorldMod.RuleMatch.No, ExpandWorldMod.Match(rule, other, Meadows));
         Assert.Equal(ExpandWorldMod.RuleMatch.No, ExpandWorldMod.Match(rule, banned, Meadows));
-        Assert.Equal(ExpandWorldMod.RuleMatch.Maybe, ExpandWorldMod.Match(rule, none, Meadows));
+        // No value: the game reads 0, which is not the 1 asked.
+        Assert.Equal(ExpandWorldMod.RuleMatch.No, ExpandWorldMod.Match(rule, none, Meadows));
     }
 
     [Fact]

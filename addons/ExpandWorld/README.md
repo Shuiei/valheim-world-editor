@@ -263,7 +263,7 @@ What the editor checks, and what it leaves to the game:
 - **Checked**: the object's name ("prefab", "excludePrefab"), its biome ("biomes", "bannedBiomes"), its distance from
   the world's middle ("minDistance", "maxDistance"; below 1 a fraction of 10 000 m, as the mod reads it), its height
   above the sea ("minAltitude", "maxAltitude"), its place ("minX"… "maxZ") and plain data filters (`int, key, 1`).
-  An object without the filter's value is amber: the game's default decides.
+  A value the object does not hold is read as the game reads it: 0, false or empty.
 - **Left to the game**: environments, global and player keys, events, nearby objects and locations, groups, day and
   night, paint and terrain height, chance, conditions, filters with a weight, range or parameter, and a bound or
   biome that is no plain value or a name the editor does not know (an alt biome, a biome a mod adds).

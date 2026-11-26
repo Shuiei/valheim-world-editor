@@ -302,19 +302,23 @@ public static partial class ExpandWorldMod
         return unsure ? RuleMatch.Maybe : RuleMatch.Yes;
     }
 
-    /// <summary>Whether an object has a filter's value; null when it holds no value of that key (the game's default then decides).</summary>
+    /// <summary>
+    /// Whether an object has a filter's value. A value the object does not hold reads as the game's default (0, false,
+    /// ""), as the game reads it; null for a value written as the editor cannot compare it.
+    /// </summary>
     private static bool? Holds(RuleFilter filter, IObjectView obj)
     {
         string key = filter.Key, text = filter.Value;
         var inv = CultureInfo.InvariantCulture;
+        int Int() => obj.TryGetInt(key, out int v) ? v : 0;
         return filter.Type switch
         {
-            "int" => obj.TryGetInt(key, out int i) ? int.TryParse(text, NumberStyles.Integer, inv, out int w) ? i == w : null : null,
-            "bool" => obj.TryGetInt(key, out int bi) ? bool.TryParse(text, out bool wb) ? (bi != 0) == wb : null : null,
-            "hash" => obj.TryGetInt(key, out int h) ? h == GameHash.Of(text) : null,
-            "long" => obj.TryGetLong(key, out long l) ? long.TryParse(text, NumberStyles.Integer, inv, out long wl) ? l == wl : null : null,
-            "float" => obj.TryGetFloat(key, out float fl) ? float.TryParse(text, NumberStyles.Float, inv, out float wf) ? Math.Abs(fl - wf) < 1e-4f : null : null,
-            "string" => obj.TryGetString(key, out string s) ? s == (text.Length > 1 && text[0] == '"' && text[^1] == '"' ? text[1..^1] : text) : null,
+            "int" => int.TryParse(text, NumberStyles.Integer, inv, out int w) ? Int() == w : null,
+            "bool" => bool.TryParse(text, out bool wb) ? (Int() != 0) == wb : null,
+            "hash" => Int() == GameHash.Of(text),
+            "long" => long.TryParse(text, NumberStyles.Integer, inv, out long wl) ? (obj.TryGetLong(key, out long l) ? l : 0) == wl : null,
+            "float" => float.TryParse(text, NumberStyles.Float, inv, out float wf) ? Math.Abs((obj.TryGetFloat(key, out float fl) ? fl : 0f) - wf) < 1e-4f : null,
+            "string" => (obj.TryGetString(key, out string s) ? s : "") == (text.Length > 1 && text[0] == '"' && text[^1] == '"' ? text[1..^1] : text),
             _ => null,
         };
     }
