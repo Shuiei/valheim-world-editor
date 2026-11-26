@@ -145,14 +145,52 @@ public class PrefabRuleToolTests
     public void TheAreasObjectsAreMarkedByTheSurestRule()
     {
         var rules = Rules(
-            E(("prefab", "Boar"), ("type", "create"), ("chance", "0.5")),
+            E(("prefab", "Boar"), ("type", "create"), ("chance", "0.5"), ("separate", "true")),
             E(("prefab", "Boar"), ("type", "create"), ("biomes", "Meadows")),
             E(("prefab", "Wolf"), ("type", "create"), ("biomes", "Swamp")));
         var boar = new Obj("Boar", default);
         var wolf = new Obj("Wolf", default);
 
-        var marked = PrefabRuleTool.Marked(new Area(Meadows, boar, wolf), rules);
+        var marked = PrefabRuleTool.Marked(new Area(Meadows, boar, wolf), rules, rules);
 
         Assert.Equal([(boar, ExpandWorldMod.RuleMatch.Yes)], marked.Select(m => ((Obj)m.Object, m.Match)));
+    }
+
+    [Fact]
+    public void AWeightAndAnEventDistanceAreTheGames()
+    {
+        var rules = Rules(E(("prefab", "Boar"), ("type", "create"), ("weight", "0.5")), E(("prefab", "Wolf"), ("type", "create"), ("eventDistance", "50")));
+
+        Assert.Equal(["weight"], rules[0].GameOnly);
+        Assert.Equal(["eventDistance"], rules[1].GameOnly);
+        Assert.Equal(ExpandWorldMod.RuleMatch.Maybe, ExpandWorldMod.Match(rules[1], new Obj("Wolf", default), Meadows));
+    }
+
+    [Fact]
+    public void WithAFilterLimitAFilterThatFailsLeavesAMaybe()
+    {
+        var rule = Assert.Single(Rules(E(("prefab", "Boar"), ("type", "create"), ("filters", L("int, a, 1", "int, b, 1")), ("filterLimit", "1"))));
+
+        Assert.Equal(ExpandWorldMod.RuleMatch.Maybe, ExpandWorldMod.Match(rule, new Obj("Boar", default, new() { ["a"] = 1 }), Meadows));
+    }
+
+    [Fact]
+    public void RulesDrawnAmongOthersOrAFallbackAnotherMayReplaceAreMaybes()
+    {
+        var rules = Rules(
+            E(("prefab", "Boar"), ("type", "create"), ("admin", "true")),
+            E(("prefab", "Boar"), ("type", "create"), ("fallback", "true")),
+            E(("prefab", "Boar"), ("type", "create"), ("separate", "true")),
+            E(("prefab", "Boar"), ("type", "destroy")),
+            E(("prefab", "Wolf"), ("type", "create")),
+            E(("prefab", "Wolf"), ("type", "create")));
+        var boar = new Obj("Boar", default);
+        var wolf = new Obj("Wolf", default);
+
+        // The fallback: the first rule may act instead. The separate one and the only destroy rule: sure.
+        Assert.Equal([ExpandWorldMod.RuleMatch.Maybe, ExpandWorldMod.RuleMatch.Maybe, ExpandWorldMod.RuleMatch.Yes, ExpandWorldMod.RuleMatch.Yes],
+            rules.Take(4).Select(r => ExpandWorldMod.MatchAmong(r, rules, boar, Meadows)));
+        // Two plain rules: one of them is drawn.
+        Assert.Equal(ExpandWorldMod.RuleMatch.Maybe, ExpandWorldMod.MatchAmong(rules[4], rules, wolf, Meadows));
     }
 }

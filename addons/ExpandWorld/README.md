@@ -267,9 +267,13 @@ What the editor checks, and what it leaves to the game:
   the world's middle ("minDistance", "maxDistance"; below 1 a fraction of 10 000 m, as the mod reads it), its height
   above the sea ("minAltitude", "maxAltitude"), its place ("minX"… "maxZ") and plain data filters (`int, key, 1`).
   A value the object does not hold is read as the game reads it: 0, false or empty.
-- **Left to the game**: environments, global and player keys, events, nearby objects and locations, groups, day and
-  night, paint and terrain height, chance, conditions, filters with a weight, range or parameter, and a bound or
-  biome that is no plain value or a name the editor does not know (an alt biome, a biome a mod adds).
+- **Left to the game**: environments, global and player keys, events and their distance, nearby objects and
+  locations, groups, day and night, paint and terrain height, chance and weight, conditions, filters with a weight,
+  range or parameter or a "filterLimit", and a bound or biome that is no plain value or a name the editor does not
+  know (an alt biome, a biome a mod adds).
+- **Rules drawn together are amber**: the game draws one of the plain rules an object meets on the same trigger, and
+  a "fallback" rule acts only when no other does, so such a rule is amber while another may act instead. A
+  "separate" rule acts beside the others.
 - **Not marked**: a rule's objects named by wildcard (`Troll*`), value group or a name the game does not have, and
   rules for the player. The card names them.
 - **Which trigger**: only "create" rules run while a world is made; the others (destroy, state, say, poke, time…) run

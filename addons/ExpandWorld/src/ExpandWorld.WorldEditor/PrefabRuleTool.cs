@@ -87,7 +87,7 @@ internal sealed class PrefabRuleTool(IEditorHost host) : IEditorTool
             ctx.SetText(InfoId, "The rule files changed: restart the editor to list their rules.");
             return;
         }
-        var marked = Marked(ctx.Area, rules);
+        var marked = Marked(ctx.Area, rules, _file.Rules);
         ctx.Preview([.. marked.Select(m => Mark(m.Object.Position, m.Match == RuleMatch.Yes ? SureMark : MaybeMark))]);
         int sure = marked.Count(m => m.Match == RuleMatch.Yes), maybe = marked.Count - sure;
         string found = $" In this area: {sure} object(s) it acts on (green), {maybe} it may act on (amber).";
@@ -97,7 +97,10 @@ internal sealed class PrefabRuleTool(IEditorHost host) : IEditorTool
     }
 
     /// <summary>The objects of the area the rules act on, each with how sure the editor is (the surest rule's).</summary>
-    internal static List<(IObjectView Object, RuleMatch Match)> Marked(IAreaView area, IReadOnlyList<PrefabRule> rules)
+    /// <param name="area">The area.</param>
+    /// <param name="rules">The rules shown.</param>
+    /// <param name="all">Every rule of the files (those the shown ones are drawn among).</param>
+    internal static List<(IObjectView Object, RuleMatch Match)> Marked(IAreaView area, IReadOnlyList<PrefabRule> rules, IReadOnlyList<PrefabRule> all)
     {
         Dictionary<IObjectView, RuleMatch> best = new(ReferenceEqualityComparer.Instance);
         foreach (string prefab in rules.SelectMany(r => r.Prefabs).Distinct(StringComparer.Ordinal))
@@ -105,7 +108,7 @@ internal sealed class PrefabRuleTool(IEditorHost host) : IEditorTool
             foreach (var obj in area.ObjectsOf(prefab))
             {
                 int biome = area.Biome(obj.Position.X, obj.Position.Z);
-                var match = rules.Select(r => Match(r, obj, biome)).Max();
+                var match = rules.Select(r => MatchAmong(r, all, obj, biome)).Max();
                 if (match != RuleMatch.No)
                 {
                     best[obj] = match;
@@ -158,7 +161,7 @@ internal sealed class PrefabRuleTool(IEditorHost host) : IEditorTool
             return;
         }
         int biome = ctx.Area.Biome(thing.Position.X, thing.Position.Z);
-        var on = _file.Rules.Select(r => (Rule: r, Match: Match(r, thing, biome))).Where(m => m.Match != RuleMatch.No).ToList();
+        var on = _file.Rules.Select(r => (Rule: r, Match: MatchAmong(r, _file.Rules, thing, biome))).Where(m => m.Match != RuleMatch.No).ToList();
         ctx.Status(on.Count == 0
             ? $"Prefab rules: no rule acts on this {thing.Prefab}."
             : $"Prefab rules on this {thing.Prefab}: " + string.Join("; ", on.Select(m =>
