@@ -149,8 +149,12 @@ public sealed partial class ZoneEdit(int zoneX, int zoneZ)
 /// backup); it is written with this position, rotation and scale instead of copying a source.
 /// </param>
 /// <param name="Data">Values set on it however it is made (a copy of a model, blank, or Raw), last; see ObjectField.</param>
+/// <param name="Remakes">
+/// The thing it stands in for, taken away in the same step (a move, an edit): it is that thing again, not an object
+/// made, so mods' creation rules leave it alone. Null: a new object.
+/// </param>
 public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale, int? SourceId = null, bool Fresh = true, byte[]? Raw = null,
-    IReadOnlyList<ObjectField>? Data = null);
+    IReadOnlyList<ObjectField>? Data = null, int? Remakes = null);
 
 /// <summary>
 /// A value of an object's data. As text (blueprints, the clipboard): "section;key;value in base64" ("-" for

@@ -39,6 +39,13 @@ public interface IExtensionRegistry
     void AddPlacer(IObjectPlacer placer, params string[] prefabs);
 
     /// <summary>
+    /// Lets the extension do what its mod does to objects as the game creates them (see <see cref="ICreationRules"/>):
+    /// swap, remove or add objects, or set their values, for the objects a step of the editor adds.
+    /// </summary>
+    /// <param name="rules">What the mod does to the objects made.</param>
+    void AddCreationRules(ICreationRules rules);
+
+    /// <summary>
     /// Keeps what the mod holds of a place with the editor's copies, and puts it down where they are pasted (see
     /// <see cref="IAreaCopier"/>): the mod's data that no copied object carries.
     /// </summary>

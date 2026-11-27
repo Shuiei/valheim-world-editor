@@ -64,7 +64,7 @@ internal static class ToolCommit
             var size = ScaleOf(z);
             change(copy);
             // A size the tool set, or one that differs by axis, is kept as the data has it; else the object's own.
-            AddNew(plan, new NewObject(0, z.Prefab, view.Position, copy.Rotation, ScaleOf(z) is { } set && (!Same(set, size) || !Same(set, new System.Numerics.Vector3(set.X))) ? 0 : view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize()));
+            AddNew(plan, new NewObject(0, z.Prefab, view.Position, copy.Rotation, ScaleOf(z) is { } set && (!Same(set, size) || !Same(set, new System.Numerics.Vector3(set.X))) ? 0 : view.Scale, SourceOf(s, view.Id!.Value), Fresh: false, Raw: z.Serialize(), Remakes: view.Id));
         }
         foreach (var obj in edit.Removed)
         {

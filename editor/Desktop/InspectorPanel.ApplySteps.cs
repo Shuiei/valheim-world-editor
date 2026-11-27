@@ -93,10 +93,13 @@ public sealed partial class InspectorPanel
     private void CommitEdit(EditSession s, int index, WorldScene.Thing t, ZdoData z, List<string> notes)
     {
         var name = PrefabCatalog.DisplayName(z.Prefab) is string shown ? Said.Raw(shown) : Said.Of("inspect.object");
-        var copies = s.Commit(Lang.T("inspect.undo.edited", name.Shown), null, [index], [(new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), t.Piece)]);
+        var copies = s.Commit(Lang.T("inspect.undo.edited", name.Shown), null, [index], [(new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize(), Remakes: t.Id), t.Piece)]);
         // The notes come from ObjectData in English, each its own sentence.
         Message?.Invoke(Said.Of("inspect.msg.changed", name) + Said.Join(" ", notes.Select(n => Said.Raw(n + "."))));
-        Open(copies[0]);
-        Replaced?.Invoke(copies[0]);
+        if (copies.Count > 0)
+        {
+            Open(copies[0]);
+            Replaced?.Invoke(copies[0]);
+        }
     }
 }
