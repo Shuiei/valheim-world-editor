@@ -172,8 +172,10 @@ public static partial class ExpandWorldMod
         string data = "";
         bool snap = false, hadPosition = false;
         static bool IsNum(string s) => float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
-        for (int i = 1; i < p.Length; i++)
+        // A position or rotation takes three fields; everything else one.
+        for (int i = 1, step = 1; i < p.Length; i += step)
         {
+            step = 1;
             if (bool.TryParse(p[i], out _))
             {
                 // Whether the spawned object triggers rules: the editor never hands what it adds back.
@@ -204,7 +206,7 @@ public static partial class ExpandWorldMod
                 {
                     return null;
                 }
-                i += 2;
+                step = 3;
                 continue;
             }
             if (p[i].Contains('<', StringComparison.Ordinal))
